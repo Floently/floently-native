@@ -1,0 +1,49 @@
+# Build outputs
+build/
+.gradle/
+**/build/
+*.apk
+*.aab
+*.ipa
+*.xcarchive
+
+# Generated bundles/logs
+bundles/
+build-artifacts/
+*.tar.gz
+*.zip
+*.log
+
+# Local tool downloads
+tools/gradle-*/
+tools/*.zip
+
+# Android local machine config
+apps/android/local.properties
+local.properties
+
+# IDE/editor
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Secrets
+.env
+.env.*
+*.keystore
+*.jks
+*.p8
+*.mobileprovision
+GoogleService-Info.plist
+google-services.json
+
+# Node leftovers, if any
+node_modules/
+
+# Raw generated audit/extraction data
+sanitation/audits/
+shared/api-contracts/backend-map-*/route_string_extract.txt
+shared/api-contracts/backend-map-*/backend_route_candidates.txt
+shared/api-contracts/backend-map-*/client_api_call_extract.txt
+shared/api-contracts/backend-map-*/client_source_files.txt
