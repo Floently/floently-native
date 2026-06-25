@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+set -u
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ANDROID_DIR="$ROOT/apps/android"
+GRADLE_VERSION="8.9"
+TOOLS_DIR="$ROOT/tools"
+GRADLE_HOME="$TOOLS_DIR/gradle-$GRADLE_VERSION"
+GRADLE_ZIP="$TOOLS_DIR/gradle-$GRADLE_VERSION-bin.zip"
+GRADLE_URL="https://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip"
+
+usage() {
+  cat <<'EOF'
+Floently native control script
+
+Usage:
+  ./scripts/nativectl status
+  ./scripts/nativectl preflight
+  ./scripts/nativectl build android-learn
+  ./scripts/nativectl clean
+
+Notes:
+  - Android build output is ignored by Git.
+  - Android SDK location is written to apps/android/local.properties locally only.
+  - This script does not modify the legacy Expo repository.
+EOF
+}
+
+find_android_sdk() {
+  for candidate in "${ANDROID_HOME:-}" "${ANDROID_SDK_ROOT:-}" /root/Android/Sdk /opt/android-sdk /usr/lib/android-sdk; do
+    if [ -n "$candidate" ] && [ -d "$candidate/platforms" ] && [ -d "$candidate/build-tools" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+ensure_android_sdk() {
+  SDK_DIR="$(find_android_sdk || true)"
+  if [ -z "${SDK_DIR:-}" ]; then
+    echo "ERROR: Android SDK not found. Set ANDROID_HOME or install SDK." >&2
+    return 2
+  fi
+  mkdir -p "$ANDROID_DIR"
+  printf 'sdk.dir=%s\n' "$SDK_DIR" > "$ANDROID_DIR/local.properties"
+  export ANDROID_HOME="$SDK_DIR"
+  export ANDROID_SDK_ROOT="$SDK_DIR"
+}
+
+ensure_gradle() {
+  if [ ! -x "$GRADLE_HOME/bin/gradle" ]; then
+    mkdir -p "$TOOLS_DIR"
+    python3 - <<PY
+import os
+import urllib.request
+import zipfile
+url = "$GRADLE_URL"
+zip_path = "$GRADLE_ZIP"
+tools_dir = "$TOOLS_DIR"
+gradle_home = "$GRADLE_HOME"
+os.makedirs(tools_dir, exist_ok=True)
+if not os.path.exists(zip_path):
+    print(f"download: {url}")
+    urllib.request.urlretrieve(url, zip_path)
+if not os.path.isdir(gradle_home):
+    print(f"extract: {zip_path}")
+    with zipfile.ZipFile(zip_path) as zf:
+        zf.extractall(tools_dir)
+PY
+    chmod +x "$GRADLE_HOME/bin/gradle" 2>/dev/null || true
+  fi
+
+  if [ ! -x "$GRADLE_HOME/bin/gradle" ]; then
+    echo "ERROR: Gradle runner missing at $GRADLE_HOME/bin/gradle" >&2
+    return 2
+  fi
+}
+
+status() {
+  echo "root=$ROOT"
+  echo "branch=$(git -C "$ROOT" branch --show-current 2>/dev/null || true)"
+  echo "commit=$(git -C "$ROOT" log --oneline -1 2>/dev/null || true)"
+  echo "git_status:"
+  git -C "$ROOT" status --short --ignored | sed -n '1,80p'
+}
+
+preflight() {
+  echo "=== Floently native preflight ==="
+  echo "=== forbidden generated files tracked by Git ==="
+  git -C "$ROOT" ls-files | grep -E '\.(apk|aab|ipa|xcarchive|tar\.gz|zip|log)$|(^|/)build/|(^|/)bundles/|(^|/)build-artifacts/|(^|/)tools/gradle' || true
+  echo "=== forbidden legacy repo path in Android source ==="
+  grep -Rni "/root/floently-finnish" "$ROOT/apps/android" 2>/dev/null || true
+  echo "=== Java/Kotlin toolchain ==="
+  grep -RniE "jvmToolchain|VERSION_17|sourceCompatibility|targetCompatibility" "$ROOT/apps/android" 2>/dev/null || true
+  echo "=== done ==="
+}
+
+build_android_learn() {
+  ensure_android_sdk || return $?
+  ensure_gradle || return $?
+  preflight
+  cd "$ANDROID_DIR" || return 1
+  "$GRADLE_HOME/bin/gradle" :FloentlyLearn:app:assembleDebug --no-daemon --stacktrace
+}
+
+clean() {
+  rm -rf "$ROOT/apps/android/.gradle" "$ROOT/apps/android/FloentlyLearn/app/build" "$ROOT/apps/android/shared/build"
+  rm -f "$ROOT/apps/android/local.properties"
+  echo "cleaned ignored Android build files"
+}
+
+case "${1:-}" in
+  status) status ;;
+  preflight) preflight ;;
+  clean) clean ;;
+  build)
+    case "${2:-}" in
+      android-learn) build_android_learn ;;
+      *) usage; exit 2 ;;
+    esac
+    ;;
+  *) usage; exit 2 ;;
+esac
