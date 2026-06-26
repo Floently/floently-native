@@ -8,6 +8,32 @@ interface FloentlyBillingRepository {
     suspend fun prepareCheckout(product: FloentlyAccessProduct): FloentlyBillingDashboardState
 }
 
+class ServiceFloentlyBillingRepository(
+    private val service: FloentlyBillingService,
+    private val fallback: FloentlyBillingRepository = PreviewFloentlyBillingRepository()
+) : FloentlyBillingRepository {
+    override suspend fun dashboard(): FloentlyBillingDashboardState {
+        return runCatching { service.dashboard() }.getOrElse { error ->
+            fallback.dashboard().copy(
+                errorMessage = error.message?.takeIf { it.isNotBlank() }
+                    ?: "Billing service is not available from the existing backend yet."
+            )
+        }
+    }
+
+    override suspend fun prepareCheckout(product: FloentlyAccessProduct): FloentlyBillingDashboardState {
+        return runCatching {
+            val intent = service.prepareCheckout(product)
+            dashboard().copy(latestCheckoutIntent = intent, errorMessage = null)
+        }.getOrElse { error ->
+            fallback.prepareCheckout(product).copy(
+                errorMessage = error.message?.takeIf { it.isNotBlank() }
+                    ?: "Checkout service is not available from the existing backend yet."
+            )
+        }
+    }
+}
+
 class PreviewFloentlyBillingRepository : FloentlyBillingRepository {
     private var latestIntent: FloentlyCheckoutIntent? = null
 
