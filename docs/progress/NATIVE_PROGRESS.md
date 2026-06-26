@@ -10,13 +10,13 @@ M01 production native foundation.
 
 ## Latest verified build
 
-Android Learn debug build succeeded after completing the Roleplay native foundation with:
+Android Learn debug build succeeded after verifying the Cards native foundation with:
 
 ```bash
 ./scripts/nativectl build android-learn
 ```
 
-Latest verified commit locally: `14d4e80`.
+Latest verified commit locally: `57b6573`.
 
 ## Completed
 
@@ -53,15 +53,16 @@ Latest verified commit locally: `14d4e80`.
 - YKI completion screen now calls the progress store and shows native animated progress capture feedback.
 - Professional Finnish native foundation added with domain models, module/session/scenario models, repository boundary, preview scenario data, animated dashboard, animated scenario flow, phrase cards, response input, progress animation, and Learn dashboard wiring.
 - Roleplay native foundation added with AI service boundary, beginner-safe coaching, anti-repetition state, animated native dashboard, animated conversation screen, and Learn dashboard wiring.
+- Cards native foundation verified with deck models, repository boundary, native deck screen, start-session boundary, and Learn dashboard wiring.
 
 ## Active task
 
-Continue the first real Learn feature foundation without losing YKI, Professional, roleplay, cards, subscriptions, device limits, animations, or interactions.
+Continue the native Learn foundation without losing YKI, Professional Finnish, roleplay, cards, progress, account, subscriptions, device limits, animations, or interactions.
 
 ## Next step
 
-Verify the GitHub-side Cards native foundation with a clean local pull/build, then continue with the next large GitHub-side batch.
+Verify the GitHub-side Progress and Account native foundation with a clean local pull/build, then continue with the next large GitHub-side batch.
 
 ## Pending verification
 
-- Cards native foundation was pushed from GitHub-side edits with deck models, repository boundary, native deck screen, start-session boundary, and Learn dashboard wiring. Local verification is pending.
+- Progress and Account native foundation was pushed from GitHub-side edits with progress dashboard models, repository boundary, native progress screen, account screen, profile/access/device sections, sign-out controls, and Learn dashboard wiring. Local verification is pending.
