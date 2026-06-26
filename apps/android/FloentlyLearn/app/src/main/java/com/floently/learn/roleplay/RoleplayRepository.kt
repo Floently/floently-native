@@ -12,6 +12,32 @@ sealed interface RoleplaySessionResult {
     data class Error(val message: String) : RoleplaySessionResult
 }
 
+class ServiceRoleplayRepository(
+    private val service: RoleplayService,
+    private val fallback: RoleplayRepository = PreviewRoleplayRepository()
+) : RoleplayRepository {
+    override suspend fun dashboard(selectedLevel: RoleplayLevel): RoleplayDashboardState {
+        return runCatching { service.dashboard(selectedLevel) }.getOrElse { error ->
+            fallback.dashboard(selectedLevel).copy(
+                errorMessage = error.message?.takeIf { it.isNotBlank() }
+                    ?: "Roleplay service is not available from the existing backend yet."
+            )
+        }
+    }
+
+    override suspend fun startSession(scenarioId: String): RoleplaySessionResult {
+        return runCatching { service.startSession(scenarioId) }.getOrElse {
+            fallback.startSession(scenarioId)
+        }
+    }
+
+    override suspend fun sendLearnerMessage(session: RoleplaySession, text: String): RoleplaySessionResult {
+        return runCatching { service.sendLearnerMessage(session, text) }.getOrElse {
+            fallback.sendLearnerMessage(session, text)
+        }
+    }
+}
+
 interface RoleplayConversationEngine {
     fun next(session: RoleplaySession, learnerText: String): RoleplayCoachResponse
 }
