@@ -10,13 +10,13 @@ M01 production native foundation.
 
 ## Latest verified build
 
-Android Learn debug build succeeded after verifying Progress and Account with:
+Android Learn debug build succeeded after verifying the Learn readiness dashboard with:
 
 ```bash
 ./scripts/nativectl build android-learn
 ```
 
-Latest verified commit locally: `efae0f7`.
+Latest verified commit locally: `1bbdc9b`.
 
 ## Completed
 
@@ -55,6 +55,7 @@ Latest verified commit locally: `efae0f7`.
 - Roleplay native foundation added with AI service boundary, beginner-safe coaching, anti-repetition state, animated native dashboard, animated conversation screen, and Learn dashboard wiring.
 - Cards native foundation verified with deck models, repository boundary, native deck screen, start-session boundary, and Learn dashboard wiring.
 - Progress and Account native foundation verified with progress dashboard, repository boundary, native progress screen, account screen, account sections, sign-out controls, and Learn dashboard wiring.
+- Learn readiness dashboard verified with per-feature native readiness status, verified commit labels, remaining gates, scrollable animated Learn home, and clearer parity messaging.
 
 ## Active task
 
@@ -62,8 +63,8 @@ Continue the native Learn foundation without losing YKI, Professional Finnish, r
 
 ## Next step
 
-Verify the GitHub-side Learn readiness dashboard polish with a clean local pull/build, then continue with the next large GitHub-side batch.
+Verify the GitHub-side production gates dashboard with a clean local pull/build, then continue with the next large GitHub-side batch.
 
 ## Pending verification
 
-- Learn readiness dashboard polish was pushed with per-feature native readiness status, verified commit labels, remaining gates, scrollable animated Learn home, and clearer parity messaging.
+- Production gates dashboard was pushed with native production-gate model, service-needed/release-blocked statuses, next-action messaging, and a production gate panel on Learn home.
