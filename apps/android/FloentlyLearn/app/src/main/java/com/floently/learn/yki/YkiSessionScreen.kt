@@ -26,7 +26,8 @@ import kotlinx.coroutines.launch
 fun YkiSessionScreen(
     initialSession: YkiSession,
     repository: YkiRepository,
-    onExit: () -> Unit
+    onExit: () -> Unit,
+    evaluator: YkiEvaluator = PreviewYkiEvaluator()
 ) {
     val scope = rememberCoroutineScope()
     var session by remember(initialSession.id) { mutableStateOf(initialSession) }
@@ -46,7 +47,7 @@ fun YkiSessionScreen(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Guarded YKI task flow. Scoring, audio capture, progress persistence, and backend sync are still protected by the release contract.",
+                text = "Guarded YKI task flow. Service scoring, speech features, progress persistence, and sync are still protected by the release contract.",
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -63,6 +64,8 @@ fun YkiSessionScreen(
             }
 
             if (session.completed) {
+                val summary = evaluator.evaluate(session)
+
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(
                         text = "Session complete",
@@ -70,15 +73,54 @@ fun YkiSessionScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Your answers are held only in the current native session. Persisted progress and scoring are not enabled until backend parity is wired.",
+                        text = "Your answers are held only in the current native session. Durable progress and scoring are not enabled until service parity is wired.",
                         style = MaterialTheme.typography.bodyMedium
                     )
-                    FloentlyPrimaryButton(
-                        title = "Back to YKI modules",
-                        product = FloentlyProduct.Learn,
-                        onClick = onExit
+                    Text(
+                        text = "Evaluated: ${summary.evaluatedAnswers.size} answer(s)",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "Progress-ready: ${summary.readyForDurableProgress}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "Persisted: ${summary.persisted}",
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
+
+                summary.evaluatedAnswers.forEach { evaluation ->
+                    FloentlyCard(product = FloentlyProduct.Learn) {
+                        Text(
+                            text = "Evaluation: ${evaluation.taskId}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Status: ${evaluation.status}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "Score: ${evaluation.scorePercent?.toString() ?: "Not final"}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "Release gate: ${evaluation.releaseGate}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = evaluation.feedback,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                FloentlyPrimaryButton(
+                    title = "Back to YKI modules",
+                    product = FloentlyProduct.Learn,
+                    onClick = onExit
+                )
             } else if (task != null) {
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(
