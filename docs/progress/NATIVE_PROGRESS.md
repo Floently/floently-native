@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M03 Native Read MVP vertical slice.
+M04 Create Studio MVP vertical slice.
 
 ## Branch
 
@@ -10,13 +10,13 @@ M03 Native Read MVP vertical slice.
 
 ## Latest verified build
 
-Android Learn debug build succeeded after verifying the Floently suite shell.
+Android Learn debug build succeeded after verifying the Native Read MVP vertical slice.
 
 ```bash
 ./scripts/nativectl build android-learn
 ```
 
-Latest verified commit locally: `4add0ef`.
+Latest verified commit locally: `e7ceea7`.
 
 ## Completed
 
@@ -26,15 +26,16 @@ Latest verified commit locally: `4add0ef`.
 - YKI, Professional Finnish, Roleplay, Cards, Progress, and Account native foundations are in place.
 - Learn readiness dashboard, production gates dashboard, Account boundary, and Progress sync boundary are verified.
 - Floently suite shell is verified with Learn, Read, Create, product selector, separate access checks, and product-neutral sign-in.
+- Native Read MVP vertical slice is verified with text/URL input, language detection boundary, generation boundary, Read automatically setting, reader panel, and saved library.
 
 ## Active task
 
-Fastest flow: build full vertical product slices, starting with native Read MVP, then Create Studio MVP, payments, backend wiring, and release build.
+Fastest flow: build full vertical product slices, then payments, backend wiring, release build, and store readiness.
 
 ## Next step
 
-Verify M03-A Native Read MVP vertical slice with a clean local pull/build, then continue directly into Create Studio MVP vertical slice.
+Verify M04-A Create Studio MVP vertical slice with a clean local pull/build, then continue directly into payments and entitlement wiring.
 
 ## Pending verification
 
-- M03-A Native Read MVP was pushed with Read models, Read repository boundary, text/URL input, language detection boundary, generation boundary, Read automatically setting, reader panel, saved library panel, and suite shell repository wiring.
+- M04-A Create Studio MVP was pushed with Create models, repository boundary, direct function cards, input screen, generation boundary, result panel, projects panel, export-ready state, and suite shell repository wiring.
