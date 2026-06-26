@@ -25,6 +25,8 @@ import com.floently.read.ReadShell
 import com.floently.shared.access.FloentlyAccessRepository
 import com.floently.shared.access.FloentlyAccessResult
 import com.floently.shared.auth.FloentlyAuthSession
+import com.floently.shared.backend.FloentlyBackendDashboardState
+import com.floently.shared.backend.PreviewFloentlyBackendRepository
 import com.floently.shared.billing.FloentlyBillingDashboardState
 import com.floently.shared.billing.PreviewFloentlyBillingRepository
 import com.floently.shared.design.FloentlyCard
@@ -42,14 +44,17 @@ fun FloentlySuiteShell(
     var selectedProduct by remember { mutableStateOf<FloentlySuiteProduct?>(null) }
     var accessState by remember { mutableStateOf<FloentlySuiteAccessState?>(null) }
     var billingState by remember { mutableStateOf<FloentlyBillingDashboardState?>(null) }
+    var backendState by remember { mutableStateOf<FloentlyBackendDashboardState?>(null) }
     val readRepository = remember { PreviewReadRepository() }
     val createRepository = remember { PreviewCreateStudioRepository() }
     val billingRepository = remember { PreviewFloentlyBillingRepository() }
+    val backendRepository = remember { PreviewFloentlyBackendRepository() }
     val scope = rememberCoroutineScope()
     val selected = selectedProduct
 
     LaunchedEffect(Unit) {
         billingState = billingRepository.dashboard()
+        backendState = backendRepository.dashboard()
     }
 
     LaunchedEffect(selected) {
@@ -66,6 +71,7 @@ fun FloentlySuiteShell(
         selected == null -> FloentlyProductSelector(
             session = session,
             billingState = billingState,
+            backendState = backendState,
             onPrepareCheckout = { product ->
                 scope.launch { billingState = billingRepository.prepareCheckout(product.accessProduct) }
             },
@@ -86,6 +92,7 @@ fun FloentlySuiteShell(
 private fun FloentlyProductSelector(
     session: FloentlyAuthSession,
     billingState: FloentlyBillingDashboardState?,
+    backendState: FloentlyBackendDashboardState?,
     onPrepareCheckout: (FloentlySuiteProduct) -> Unit,
     onSelect: (FloentlySuiteProduct) -> Unit,
     onSignOut: () -> Unit
@@ -98,6 +105,17 @@ private fun FloentlyProductSelector(
             Text("Floently", color = palette.text, style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
             Text("Signed in as ${session.user.email}", color = palette.muted, style = MaterialTheme.typography.titleMedium)
             Text("Choose a product. Learn, Read, and Create are checked separately.", color = palette.muted, style = MaterialTheme.typography.bodyLarge)
+
+            backendState?.let { state ->
+                FloentlyCard(product = FloentlyProduct.Learn) {
+                    Text("Backend contracts", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Ready: ${state.readyCount} | Pending services: ${state.pendingCount}", style = MaterialTheme.typography.bodySmall)
+                    state.contracts.take(4).forEach { contract ->
+                        Text("${contract.title}: ${contract.status.name}", style = MaterialTheme.typography.bodySmall)
+                        Text("${contract.method.name} ${contract.pathTemplate}", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
 
             billingState?.latestCheckoutIntent?.let { intent ->
                 FloentlyCard(product = FloentlyProduct.Learn) {
