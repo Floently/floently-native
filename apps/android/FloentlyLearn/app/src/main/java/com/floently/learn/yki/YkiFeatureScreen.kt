@@ -31,115 +31,128 @@ fun YkiFeatureScreen(
     var selectedLevel by remember { mutableStateOf(YkiLevel.Keskitaso) }
     var dashboardState by remember { mutableStateOf<YkiDashboardState?>(null) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
+    var activeSession by remember { mutableStateOf<YkiSession?>(null) }
 
-    LaunchedEffect(repository, selectedLevel) {
-        val dashboard = repository.dashboard(selectedLevel)
-        dashboardState = dashboard
-        statusMessage = dashboard.errorMessage
-    }
+    val session = activeSession
+    if (session != null) {
+        YkiSessionScreen(
+            initialSession = session,
+            repository = repository,
+            onExit = { activeSession = null }
+        )
+    } else {
+        LaunchedEffect(repository, selectedLevel) {
+            val dashboard = repository.dashboard(selectedLevel)
+            dashboardState = dashboard
+            statusMessage = dashboard.errorMessage
+        }
 
-    FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
-        Column(
-            modifier = Modifier.verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text(
-                text = "YKI practice",
-                color = palette.text,
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Native YKI foundation. Content, scoring, audio, progress, and release checks stay guarded until parity is complete.",
-                color = palette.muted,
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            FloentlyCard(product = FloentlyProduct.Learn) {
+        FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 Text(
-                    text = "Level",
-                    style = MaterialTheme.typography.titleLarge,
+                    text = "YKI practice",
+                    color = palette.text,
+                    style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold
                 )
-                YkiLevel.entries.forEach { level ->
-                    FloentlyPrimaryButton(
-                        title = if (level == selectedLevel) "Selected: ${level.name}" else level.name,
-                        product = FloentlyProduct.Learn,
-                        onClick = { selectedLevel = level }
-                    )
-                }
-            }
-
-            statusMessage?.let { message ->
-                FloentlyCard(product = FloentlyProduct.Learn) {
-                    Text(
-                        text = message,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-
-            val dashboard = dashboardState
-            if (dashboard == null || dashboard.isLoading) {
                 Text(
-                    text = "Loading YKI modules...",
+                    text = "Native YKI foundation. Content, scoring, audio, progress, and release checks stay guarded until parity is complete.",
                     color = palette.muted,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.titleMedium
                 )
-            } else if (dashboard.modules.isEmpty()) {
+
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(
-                        text = "No modules yet for ${dashboard.selectedLevel.name}.",
-                        style = MaterialTheme.typography.bodyMedium
+                        text = "Level",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
                     )
-                }
-            } else {
-                dashboard.modules.forEach { module ->
-                    val progress = dashboard.progress.firstOrNull { it.moduleId == module.id }
-                    FloentlyCard(product = FloentlyProduct.Learn) {
-                        Text(
-                            text = module.title,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = module.description,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "Skills: ${module.skills.joinToString()}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            text = "Estimated time: ${module.estimatedMinutes} min",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            text = "Progress: ${progress?.completedTasks ?: 0}/${progress?.totalTasks ?: 0}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                    YkiLevel.entries.forEach { level ->
                         FloentlyPrimaryButton(
-                            title = if (module.locked) "View lock reason" else "Start module",
+                            title = if (level == selectedLevel) "Selected: ${level.name}" else level.name,
                             product = FloentlyProduct.Learn,
-                            onClick = {
-                                scope.launch {
-                                    statusMessage = when (val result = repository.startSession(module.id)) {
-                                        is YkiSessionResult.Ready -> "Session ready: ${result.session.currentTask?.title ?: module.title}"
-                                        is YkiSessionResult.Blocked -> result.reason
-                                        is YkiSessionResult.Error -> result.message
-                                    }
-                                }
-                            }
+                            onClick = { selectedLevel = level }
                         )
                     }
                 }
-            }
 
-            FloentlyPrimaryButton(
-                title = "Back to Learn",
-                product = FloentlyProduct.Learn,
-                onClick = onBack
-            )
+                statusMessage?.let { message ->
+                    FloentlyCard(product = FloentlyProduct.Learn) {
+                        Text(
+                            text = message,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                val dashboard = dashboardState
+                if (dashboard == null || dashboard.isLoading) {
+                    Text(
+                        text = "Loading YKI modules...",
+                        color = palette.muted,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                } else if (dashboard.modules.isEmpty()) {
+                    FloentlyCard(product = FloentlyProduct.Learn) {
+                        Text(
+                            text = "No modules yet for ${dashboard.selectedLevel.name}.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                } else {
+                    dashboard.modules.forEach { module ->
+                        val progress = dashboard.progress.firstOrNull { it.moduleId == module.id }
+                        FloentlyCard(product = FloentlyProduct.Learn) {
+                            Text(
+                                text = module.title,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = module.description,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                text = "Skills: ${module.skills.joinToString()}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Text(
+                                text = "Estimated time: ${module.estimatedMinutes} min",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Text(
+                                text = "Progress: ${progress?.completedTasks ?: 0}/${progress?.totalTasks ?: 0}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            FloentlyPrimaryButton(
+                                title = if (module.locked) "View lock reason" else "Start module",
+                                product = FloentlyProduct.Learn,
+                                onClick = {
+                                    scope.launch {
+                                        when (val result = repository.startSession(module.id)) {
+                                            is YkiSessionResult.Ready -> {
+                                                statusMessage = null
+                                                activeSession = result.session
+                                            }
+                                            is YkiSessionResult.Blocked -> statusMessage = result.reason
+                                            is YkiSessionResult.Error -> statusMessage = result.message
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+
+                FloentlyPrimaryButton(
+                    title = "Back to Learn",
+                    product = FloentlyProduct.Learn,
+                    onClick = onBack
+                )
+            }
         }
     }
 }
