@@ -3,6 +3,21 @@ package com.floently.shared.billing
 import com.floently.shared.access.FloentlyAccessProduct
 import com.floently.shared.access.FloentlyAccessStatus
 
+fun billingProductFromApiName(value: String?): FloentlyAccessProduct? = when (value?.trim()?.lowercase()) {
+    FloentlyAccessProduct.Learn.apiName -> FloentlyAccessProduct.Learn
+    FloentlyAccessProduct.Read.apiName -> FloentlyAccessProduct.Read
+    FloentlyAccessProduct.Create.apiName -> FloentlyAccessProduct.Create
+    else -> null
+}
+
+fun billingStatusFromApiName(value: String?): FloentlyAccessStatus = when (value?.trim()?.lowercase()) {
+    "active" -> FloentlyAccessStatus.Active
+    "trialing", "trial" -> FloentlyAccessStatus.Trialing
+    "past_due", "pastdue" -> FloentlyAccessStatus.PastDue
+    "expired", "canceled", "cancelled" -> FloentlyAccessStatus.Expired
+    else -> FloentlyAccessStatus.None
+}
+
 enum class FloentlyBillingInterval {
     Monthly,
     Yearly
@@ -30,7 +45,8 @@ data class FloentlyCheckoutIntent(
     val product: FloentlyAccessProduct,
     val planId: String,
     val status: FloentlyCheckoutStatus,
-    val message: String
+    val message: String,
+    val checkoutUrl: String? = null
 )
 
 data class FloentlyBillingDashboardState(
