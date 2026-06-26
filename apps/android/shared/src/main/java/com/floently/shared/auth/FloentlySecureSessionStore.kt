@@ -11,17 +11,17 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-class FloentlySecureSessionStore(context: Context) {
+class FloentlySecureSessionStore(context: Context) : FloentlySessionStore {
     private val appContext = context.applicationContext
     private val prefs = appContext.getSharedPreferences("floently_native_auth_secure", Context.MODE_PRIVATE)
     private val keyAlias = "floently_native_auth_session_key"
     private val keyStoreType = "AndroidKeyStore"
     private val cipherName = "AES/GCM/NoPadding"
 
-    var session: FloentlyAuthSession? = load()
+    override var session: FloentlyAuthSession? = load()
         private set
 
-    fun save(session: FloentlyAuthSession) {
+    override fun save(session: FloentlyAuthSession) {
         val encrypted = encrypt(session.toJson().toString().toByteArray(Charsets.UTF_8))
         prefs.edit()
             .putString("session_ciphertext", encrypted.ciphertext)
@@ -31,7 +31,7 @@ class FloentlySecureSessionStore(context: Context) {
         this.session = session
     }
 
-    fun clear() {
+    override fun clear() {
         session = null
         prefs.edit()
             .remove("session_ciphertext")
