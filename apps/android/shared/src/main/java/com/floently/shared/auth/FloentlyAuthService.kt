@@ -5,7 +5,7 @@ import org.json.JSONObject
 
 class FloentlyAuthService(
     private val api: FloentlyApiClient,
-    private val store: FloentlySecureSessionStore
+    private val store: FloentlySessionStore
 ) {
     suspend fun login(email: String, password: String): FloentlyAuthSession {
         val response = api.post(
