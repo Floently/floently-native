@@ -28,7 +28,7 @@ import com.floently.shared.auth.FloentlyAuthSession
 import com.floently.shared.backend.FloentlyBackendDashboardState
 import com.floently.shared.backend.PreviewFloentlyBackendRepository
 import com.floently.shared.billing.FloentlyBillingDashboardState
-import com.floently.shared.billing.PreviewFloentlyBillingRepository
+import com.floently.shared.billing.FloentlyBillingRepository
 import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
@@ -41,6 +41,7 @@ import kotlinx.coroutines.launch
 fun FloentlySuiteShell(
     session: FloentlyAuthSession,
     accessRepository: FloentlyAccessRepository,
+    billingRepository: FloentlyBillingRepository,
     onSignOut: () -> Unit
 ) {
     var selectedProduct by remember { mutableStateOf<FloentlySuiteProduct?>(null) }
@@ -50,7 +51,6 @@ fun FloentlySuiteShell(
     var releaseState by remember { mutableStateOf<FloentlyReleaseReadinessState?>(null) }
     val readRepository = remember { PreviewReadRepository() }
     val createRepository = remember { PreviewCreateStudioRepository() }
-    val billingRepository = remember { PreviewFloentlyBillingRepository() }
     val backendRepository = remember { PreviewFloentlyBackendRepository() }
     val releaseRepository = remember { PreviewFloentlyReleaseReadinessRepository() }
     val scope = rememberCoroutineScope()
@@ -136,12 +136,21 @@ private fun FloentlyProductSelector(
                 }
             }
 
+            billingState?.errorMessage?.let { message ->
+                FloentlyCard(product = FloentlyProduct.Learn) {
+                    Text("Billing service fallback", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(message, style = MaterialTheme.typography.bodySmall)
+                    Text("The app keeps working with the existing environment while backend routes are completed.", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
             billingState?.latestCheckoutIntent?.let { intent ->
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text("Checkout boundary", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text("Product: ${intent.product.apiName}", style = MaterialTheme.typography.bodySmall)
                     Text("Plan: ${intent.planId}", style = MaterialTheme.typography.bodySmall)
                     Text("Status: ${intent.status.name}", style = MaterialTheme.typography.bodySmall)
+                    intent.checkoutUrl?.let { Text("Checkout URL ready", style = MaterialTheme.typography.bodySmall) }
                     Text(intent.message, style = MaterialTheme.typography.bodySmall)
                 }
             }
