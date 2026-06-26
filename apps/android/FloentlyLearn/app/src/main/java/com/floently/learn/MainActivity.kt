@@ -76,6 +76,8 @@ class MainActivity : ComponentActivity() {
                         session = state.session,
                         accessRepository = appContainer.accessRepository,
                         billingRepository = appContainer.billingRepository,
+                        readRepository = appContainer.readRepository,
+                        createStudioRepository = appContainer.createStudioRepository,
                         onSignOut = { scope.launch { controller.signOut() } }
                     )
                 }
