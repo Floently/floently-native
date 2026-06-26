@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M09 Payment provider and entitlement service wiring.
+M10 Backend service wiring for Read/Create/Learn.
 
 ## Branch
 
@@ -10,13 +10,14 @@ M09 Payment provider and entitlement service wiring.
 
 ## Latest verified build
 
-Learn UI/environment guardrail docs were pulled and verified.
+Android debug and release builds succeeded after verifying payment and entitlement service wiring.
 
 ```bash
-git pull --ff-only
+./scripts/nativectl build android-learn
+./scripts/nativectl build android-learn-release
 ```
 
-Latest verified commit locally: `7a7b652`.
+Latest verified commit locally: `e68bddf`.
 
 ## Completed
 
@@ -28,7 +29,7 @@ Latest verified commit locally: `7a7b652`.
 - Floently suite shell is verified with Learn, Read, Create, product selector, separate access checks, and product-neutral sign-in.
 - Native Read MVP vertical slice is verified with text/URL input, language detection boundary, generation boundary, Read automatically setting, reader panel, and saved library.
 - Create Studio MVP vertical slice is verified with direct function cards, input screen, generation boundary, result panel, projects panel, export-ready state, and suite shell repository wiring.
-- Payments and entitlement boundary is verified with separate Learn, Read, and Create plan snapshots and checkout intent boundary.
+- Payments and entitlement service wiring is verified using existing backend routes and fallback-safe UI without new Learn environment variables.
 - Backend integration contracts are verified with native API route registry and suite selector backend contract dashboard.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Final readiness gap dashboard is verified with release gate counts and blocker order.
@@ -36,12 +37,12 @@ Latest verified commit locally: `7a7b652`.
 
 ## Active task
 
-Wire payment and entitlement services using existing backend/environment assumptions first. Do not introduce new Learn environment variables.
+Wire Read and Create services into the native app using existing backend/environment assumptions first. Keep Learn UI improvement-only and avoid new Learn environment variables.
 
 ## Next step
 
-Verify M09-A payment and entitlement service wiring with a clean local pull, debug build, and release build.
+Verify M10-A Read/Create backend service wiring with a clean local pull, debug build, and release build.
 
 ## Pending verification
 
-- M09-A payment and entitlement service wiring was pushed with service billing repository injection into the suite, existing `/api/v1/billing/dashboard` and `/api/v1/billing/checkout` route usage, checkout URL recognition, and fallback-safe UI when existing backend routes are not ready.
+- M10-A Read/Create backend service wiring was pushed with Read service routes, Create Studio service routes, service repository fallbacks, app container injection, and suite shell repository injection.
