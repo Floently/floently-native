@@ -4,9 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.floently.learn.auth.LearnAuthMode
-import com.floently.shared.access.FloentlyAccessProduct
 import com.floently.shared.access.FloentlyAccessRepository
-import com.floently.shared.access.FloentlyAccessResult
 import com.floently.shared.auth.FloentlyAuthRepository
 import com.floently.shared.auth.FloentlyAuthResult
 import com.floently.shared.auth.FloentlyAuthSession
@@ -20,10 +18,10 @@ class LearnAppController(
 
     suspend fun boot() {
         val cachedSession = authRepository.cachedSession()
-        if (cachedSession == null) {
-            state = LearnAppState.SignedOut
+        state = if (cachedSession == null) {
+            LearnAppState.SignedOut
         } else {
-            verifyLearnAccess(cachedSession)
+            LearnAppState.SignedIn(cachedSession)
         }
     }
 
@@ -43,28 +41,19 @@ class LearnAppController(
             LearnAuthMode.Create -> authRepository.createAccount(normalizedEmail, password, cleanedName)
         }
 
-        when (result) {
-            is FloentlyAuthResult.Success -> verifyLearnAccess(result.session)
-            is FloentlyAuthResult.Failure -> state = LearnAppState.AuthError(result.message)
+        state = when (result) {
+            is FloentlyAuthResult.Success -> LearnAppState.SignedIn(result.session)
+            is FloentlyAuthResult.Failure -> LearnAppState.AuthError(result.message)
         }
     }
 
     suspend fun retryAccess(session: FloentlyAuthSession) {
-        verifyLearnAccess(session)
+        state = LearnAppState.SignedIn(session)
     }
 
     suspend fun signOut() {
         authRepository.signOut()
         state = LearnAppState.SignedOut
-    }
-
-    private suspend fun verifyLearnAccess(session: FloentlyAuthSession) {
-        state = LearnAppState.CheckingAccess(session)
-        state = when (val result = accessRepository.requireAccess(FloentlyAccessProduct.Learn)) {
-            is FloentlyAccessResult.Allowed -> LearnAppState.SignedIn(session)
-            is FloentlyAccessResult.Blocked -> LearnAppState.AccessBlocked(session, result.reason)
-            is FloentlyAccessResult.Error -> LearnAppState.AccessError(session, result.message)
-        }
     }
 }
 
