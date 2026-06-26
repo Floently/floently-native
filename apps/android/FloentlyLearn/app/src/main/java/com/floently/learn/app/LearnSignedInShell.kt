@@ -23,7 +23,8 @@ import com.floently.shared.auth.FloentlyAuthSession
 @Composable
 fun LearnSignedInShell(
     session: FloentlyAuthSession,
-    onSignOut: () -> Unit
+    onSignOut: () -> Unit,
+    onBackToSuite: (() -> Unit)? = null
 ) {
     var selectedDestination by remember { mutableStateOf<LearnFeatureDestination?>(null) }
     val ykiRepository = remember { PreviewYkiRepository() }
@@ -38,6 +39,7 @@ fun LearnSignedInShell(
         LearnHomeScreen(
             session = session,
             onSignOut = onSignOut,
+            onBackToSuite = onBackToSuite,
             onDestinationSelected = { selectedDestination = it }
         )
     } else {
