@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M06 Backend integration contracts.
+M07 Release build and signing preparation.
 
 ## Branch
 
@@ -10,13 +10,13 @@ M06 Backend integration contracts.
 
 ## Latest verified build
 
-Android Learn debug build succeeded after verifying the Payments and entitlement boundary.
+Android Learn debug build succeeded after verifying Backend integration contracts.
 
 ```bash
 ./scripts/nativectl build android-learn
 ```
 
-Latest verified commit locally: `c05df0a`.
+Latest verified commit locally: `a432592`.
 
 ## Completed
 
@@ -29,15 +29,16 @@ Latest verified commit locally: `c05df0a`.
 - Native Read MVP vertical slice is verified with text/URL input, language detection boundary, generation boundary, Read automatically setting, reader panel, and saved library.
 - Create Studio MVP vertical slice is verified with direct function cards, input screen, generation boundary, result panel, projects panel, export-ready state, and suite shell repository wiring.
 - Payments and entitlement boundary is verified with separate Learn, Read, and Create plan snapshots and checkout intent boundary.
+- Backend integration contracts are verified with native API route registry and suite selector backend contract dashboard.
 
 ## Active task
 
-Fastest flow: define backend contracts, then wire real services, release build, and store readiness.
+Fastest flow: prepare release build, signing documentation, backend wiring, QA, and store readiness.
 
 ## Next step
 
-Verify M06-A Backend integration contracts with a clean local pull/build, then continue directly into release build/signing preparation.
+Verify M07-A release build preparation with a clean local pull, debug build, and release build.
 
 ## Pending verification
 
-- M06-A Backend integration contracts were pushed with backend contract models, backend repository boundary, native API route registry, service status counts, and suite selector backend contract dashboard.
+- M07-A release preparation was pushed with production application ID, Floently app label, version bump, release build type, native release build command, and Android release checklist.
