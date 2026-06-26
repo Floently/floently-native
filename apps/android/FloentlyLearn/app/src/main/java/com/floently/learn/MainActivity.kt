@@ -11,8 +11,8 @@ import com.floently.learn.app.LearnAccessGateScreen
 import com.floently.learn.app.LearnAppContainer
 import com.floently.learn.app.LearnAppController
 import com.floently.learn.app.LearnAppState
-import com.floently.learn.app.LearnHomeScreen
 import com.floently.learn.app.LearnLoadingScreen
+import com.floently.learn.app.LearnSignedInShell
 import com.floently.learn.auth.LearnAuthScreen
 import kotlinx.coroutines.launch
 
@@ -72,7 +72,7 @@ class MainActivity : ComponentActivity() {
                         onRetry = { scope.launch { controller.retryAccess(state.session) } },
                         onSignOut = { scope.launch { controller.signOut() } }
                     )
-                    is LearnAppState.SignedIn -> LearnHomeScreen(
+                    is LearnAppState.SignedIn -> LearnSignedInShell(
                         session = state.session,
                         onSignOut = { scope.launch { controller.signOut() } }
                     )
