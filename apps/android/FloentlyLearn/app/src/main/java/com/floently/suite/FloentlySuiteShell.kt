@@ -17,10 +17,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.floently.create.CreateStudioRepository
 import com.floently.create.CreateStudioShell
-import com.floently.create.PreviewCreateStudioRepository
 import com.floently.learn.app.LearnSignedInShell
-import com.floently.read.PreviewReadRepository
+import com.floently.read.ReadRepository
 import com.floently.read.ReadShell
 import com.floently.shared.access.FloentlyAccessRepository
 import com.floently.shared.access.FloentlyAccessResult
@@ -42,6 +42,8 @@ fun FloentlySuiteShell(
     session: FloentlyAuthSession,
     accessRepository: FloentlyAccessRepository,
     billingRepository: FloentlyBillingRepository,
+    readRepository: ReadRepository,
+    createStudioRepository: CreateStudioRepository,
     onSignOut: () -> Unit
 ) {
     var selectedProduct by remember { mutableStateOf<FloentlySuiteProduct?>(null) }
@@ -49,8 +51,6 @@ fun FloentlySuiteShell(
     var billingState by remember { mutableStateOf<FloentlyBillingDashboardState?>(null) }
     var backendState by remember { mutableStateOf<FloentlyBackendDashboardState?>(null) }
     var releaseState by remember { mutableStateOf<FloentlyReleaseReadinessState?>(null) }
-    val readRepository = remember { PreviewReadRepository() }
-    val createRepository = remember { PreviewCreateStudioRepository() }
     val backendRepository = remember { PreviewFloentlyBackendRepository() }
     val releaseRepository = remember { PreviewFloentlyReleaseReadinessRepository() }
     val scope = rememberCoroutineScope()
@@ -88,7 +88,7 @@ fun FloentlySuiteShell(
         accessState?.isAllowed == true -> when (selected) {
             FloentlySuiteProduct.Learn -> LearnSignedInShell(session, onSignOut, onBackToSuite = { selectedProduct = null })
             FloentlySuiteProduct.Read -> ReadShell(session, repository = readRepository, onBackToSuite = { selectedProduct = null })
-            FloentlySuiteProduct.Create -> CreateStudioShell(session, repository = createRepository, onBackToSuite = { selectedProduct = null })
+            FloentlySuiteProduct.Create -> CreateStudioShell(session, repository = createStudioRepository, onBackToSuite = { selectedProduct = null })
         }
         else -> FloentlySuiteBlocked(selected, accessState?.message ?: "This product needs its own access.", onBack = { selectedProduct = null })
     }
