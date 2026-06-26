@@ -8,6 +8,8 @@ import androidx.compose.runtime.setValue
 import com.floently.learn.navigation.LearnFeatureDestination
 import com.floently.learn.professional.PreviewProfessionalFinnishRepository
 import com.floently.learn.professional.ProfessionalFinnishScreen
+import com.floently.learn.roleplay.PreviewRoleplayRepository
+import com.floently.learn.roleplay.RoleplayScreen
 import com.floently.learn.yki.PreviewYkiRepository
 import com.floently.learn.yki.YkiFeatureScreen
 import com.floently.shared.auth.FloentlyAuthSession
@@ -20,6 +22,7 @@ fun LearnSignedInShell(
     var selectedDestination by remember { mutableStateOf<LearnFeatureDestination?>(null) }
     val ykiRepository = remember { PreviewYkiRepository() }
     val professionalFinnishRepository = remember { PreviewProfessionalFinnishRepository() }
+    val roleplayRepository = remember { PreviewRoleplayRepository() }
     val destination = selectedDestination
 
     if (destination == null) {
@@ -36,6 +39,10 @@ fun LearnSignedInShell(
             )
             LearnFeatureDestination.ProfessionalFinnish -> ProfessionalFinnishScreen(
                 repository = professionalFinnishRepository,
+                onBack = { selectedDestination = null }
+            )
+            LearnFeatureDestination.Roleplay -> RoleplayScreen(
+                repository = roleplayRepository,
                 onBack = { selectedDestination = null }
             )
             else -> LearnFeaturePlaceholderScreen(

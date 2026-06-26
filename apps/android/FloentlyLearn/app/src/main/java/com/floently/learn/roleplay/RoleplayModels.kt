@@ -8,24 +8,24 @@ enum class RoleplayLevel {
 }
 
 enum class RoleplayScenarioType {
-    EverydayLife,
+    Everyday,
     Work,
     Healthcare,
     Interview,
-    CustomerService,
-    OfficialErrand
+    PhoneCall,
+    Service
 }
 
-enum class RoleplayMessageRole {
-    User,
-    Assistant,
+enum class RoleplaySpeaker {
+    Learner,
     Coach,
-    System
+    Partner
 }
 
 enum class RoleplayCoachingMode {
     BeginnerSafe,
-    Balanced,
+    Natural,
+    Professional,
     ExamStyle
 }
 
@@ -35,15 +35,15 @@ data class RoleplayScenario(
     val level: RoleplayLevel,
     val type: RoleplayScenarioType,
     val description: String,
-    val firstPrompt: String,
-    val targetPhrases: List<String>,
-    val estimatedMinutes: Int,
+    val openingLine: String,
+    val targetPhrases: List<String> = emptyList(),
+    val beginnerSafe: Boolean,
     val locked: Boolean
 )
 
 data class RoleplayMessage(
     val id: String,
-    val role: RoleplayMessageRole,
+    val speaker: RoleplaySpeaker,
     val text: String,
     val coachingNote: String? = null
 )
@@ -51,23 +51,21 @@ data class RoleplayMessage(
 data class RoleplaySession(
     val id: String,
     val scenario: RoleplayScenario,
-    val coachingMode: RoleplayCoachingMode,
     val messages: List<RoleplayMessage>,
-    val userPhraseHistory: List<String>,
-    val turnCount: Int,
-    val isComplete: Boolean
-)
-
-data class RoleplayProgress(
-    val scenarioId: String,
-    val completedSessions: Int,
-    val lastFeedback: String?
+    val learnerTurns: Int,
+    val repeatedCueCount: Int,
+    val releaseGate: String
 )
 
 data class RoleplayDashboardState(
     val scenarios: List<RoleplayScenario>,
-    val progress: List<RoleplayProgress>,
     val selectedLevel: RoleplayLevel,
     val isLoading: Boolean,
     val errorMessage: String?
+)
+
+data class RoleplayCoachResponse(
+    val partnerMessage: RoleplayMessage,
+    val coachMessage: RoleplayMessage?,
+    val repeatedCuePrevented: Boolean
 )

@@ -10,13 +10,13 @@ M01 production native foundation.
 
 ## Latest verified build
 
-Android Learn debug build succeeded after showing the guarded YKI evaluation summary with:
+Android Learn debug build succeeded after adding the Professional Finnish native foundation with:
 
 ```bash
 ./scripts/nativectl build android-learn
 ```
 
-Latest verified commit locally: `b195bac`.
+Latest verified commit locally: `8e7eb70`.
 
 ## Completed
 
@@ -49,6 +49,9 @@ Latest verified commit locally: `b195bac`.
 - YKI module start now enters the guarded task/session flow.
 - YKI evaluation boundary added with evaluator interface, answer evaluation model, status, release gates, and non-persistent session summary.
 - YKI completion screen now displays evaluation count, progress-ready state, persisted state, per-answer status, release gate, preview score, and feedback.
+- YKI progress store boundary added with explicit deferred durable-save behavior.
+- YKI completion screen now calls the progress store and shows native animated progress capture feedback.
+- Professional Finnish native foundation added with domain models, module/session/scenario models, repository boundary, preview scenario data, animated dashboard, animated scenario flow, phrase cards, response input, progress animation, and Learn dashboard wiring.
 
 ## Active task
 
@@ -56,4 +59,4 @@ Continue the first real Learn feature foundation without losing YKI, Professiona
 
 ## Next step
 
-Add the YKI durable progress boundary so completed native sessions have a clear persistence contract before real service sync is wired.
+Build the Roleplay native foundation with conversation service boundary, beginner-safe coaching, anti-repetition state, animated native session UI, and Learn dashboard wiring.
