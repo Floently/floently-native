@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.floently.create.CreateStudioShell
+import com.floently.create.PreviewCreateStudioRepository
 import com.floently.learn.app.LearnSignedInShell
 import com.floently.read.PreviewReadRepository
 import com.floently.read.ReadShell
@@ -37,6 +38,7 @@ fun FloentlySuiteShell(
     var selectedProduct by remember { mutableStateOf<FloentlySuiteProduct?>(null) }
     var accessState by remember { mutableStateOf<FloentlySuiteAccessState?>(null) }
     val readRepository = remember { PreviewReadRepository() }
+    val createRepository = remember { PreviewCreateStudioRepository() }
     val selected = selectedProduct
 
     LaunchedEffect(selected) {
@@ -55,7 +57,7 @@ fun FloentlySuiteShell(
         accessState?.isAllowed == true -> when (selected) {
             FloentlySuiteProduct.Learn -> LearnSignedInShell(session, onSignOut, onBackToSuite = { selectedProduct = null })
             FloentlySuiteProduct.Read -> ReadShell(session, repository = readRepository, onBackToSuite = { selectedProduct = null })
-            FloentlySuiteProduct.Create -> CreateStudioShell(session, onBackToSuite = { selectedProduct = null })
+            FloentlySuiteProduct.Create -> CreateStudioShell(session, repository = createRepository, onBackToSuite = { selectedProduct = null })
         }
         else -> FloentlySuiteBlocked(selected, accessState?.message ?: "This product needs its own access.", onBack = { selectedProduct = null })
     }
