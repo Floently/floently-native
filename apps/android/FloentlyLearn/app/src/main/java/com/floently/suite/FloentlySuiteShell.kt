@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.floently.create.CreateStudioShell
 import com.floently.learn.app.LearnSignedInShell
+import com.floently.read.PreviewReadRepository
 import com.floently.read.ReadShell
 import com.floently.shared.access.FloentlyAccessRepository
 import com.floently.shared.access.FloentlyAccessResult
@@ -35,6 +36,7 @@ fun FloentlySuiteShell(
 ) {
     var selectedProduct by remember { mutableStateOf<FloentlySuiteProduct?>(null) }
     var accessState by remember { mutableStateOf<FloentlySuiteAccessState?>(null) }
+    val readRepository = remember { PreviewReadRepository() }
     val selected = selectedProduct
 
     LaunchedEffect(selected) {
@@ -52,7 +54,7 @@ fun FloentlySuiteShell(
         accessState?.isChecking == true -> FloentlySuiteMessage(selected, "Checking ${selected.title} access...", "Each product is checked separately.")
         accessState?.isAllowed == true -> when (selected) {
             FloentlySuiteProduct.Learn -> LearnSignedInShell(session, onSignOut, onBackToSuite = { selectedProduct = null })
-            FloentlySuiteProduct.Read -> ReadShell(session, onBackToSuite = { selectedProduct = null })
+            FloentlySuiteProduct.Read -> ReadShell(session, repository = readRepository, onBackToSuite = { selectedProduct = null })
             FloentlySuiteProduct.Create -> CreateStudioShell(session, onBackToSuite = { selectedProduct = null })
         }
         else -> FloentlySuiteBlocked(selected, accessState?.message ?: "This product needs its own access.", onBack = { selectedProduct = null })
