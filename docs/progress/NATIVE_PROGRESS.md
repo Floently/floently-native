@@ -10,61 +10,35 @@ M01 production native foundation.
 
 ## Latest verified build
 
-Android Learn debug build succeeded after verifying the Learn readiness dashboard with:
+Android Learn debug build succeeded after verifying the production gates dashboard.
 
 ```bash
 ./scripts/nativectl build android-learn
 ```
 
-Latest verified commit locally: `1bbdc9b`.
+Latest verified commit locally: `d31a3e2`.
 
 ## Completed
 
 - Native repository created and pushed.
-- Old Expo repository archived separately.
-- Single build interface added: `scripts/nativectl`.
-- Temporary one-off build scripts removed.
 - Android Learn debug build verified.
-- Android auth moved out of screen-local state.
-- Secure session storage placed behind a session-store boundary.
-- Auth repository boundary added.
-- API client path/auth/error handling hardened.
-- Learn app container and controller added.
-- Learn loading, signed-out, auth-error, busy, and signed-in states added.
-- Product access boundary added for Learn, Read, and Create.
-- Learn access gate screen added.
-- Learn controller now checks product access before entering the signed-in Learn shell.
-- Learn activity now handles loading, signed-out, auth, access-check, access-blocked, access-error, and signed-in states.
-- Typed Learn feature destinations added for YKI practice, Professional Finnish, Roleplay, Cards, Progress, and Account.
-- Signed-in Learn dashboard renders typed destinations with release guards.
-- Guarded native feature placeholder screen added.
-- Signed-in shell now supports dashboard to guarded feature screen navigation and back.
-- Learn feature contract models added with parity, access, interaction, and release requirements.
-- Guarded feature placeholder screens now display their contract requirements.
-- YKI native models added for levels, skills, task types, modules, tasks, sessions, progress, and dashboard state.
-- YKI repository boundary added with preview seed data, dashboard loading, start-session, save-answer, and locked-module handling.
-- YKI native screen shell added with level selection, module cards, progress display, guarded start-session handling, and back navigation.
-- Learn dashboard now opens the native YKI shell for YKI practice while other features remain guarded placeholders.
-- YKI task/session screen added with prompt display, answer input, save-answer boundary, in-session progress, completion state, and exit handling.
-- YKI module start now enters the guarded task/session flow.
-- YKI evaluation boundary added with evaluator interface, answer evaluation model, status, release gates, and non-persistent session summary.
-- YKI completion screen now displays evaluation count, progress-ready state, persisted state, per-answer status, release gate, preview score, and feedback.
-- YKI progress store boundary added with explicit deferred durable-save behavior.
-- YKI completion screen now calls the progress store and shows native animated progress capture feedback.
-- Professional Finnish native foundation added with domain models, module/session/scenario models, repository boundary, preview scenario data, animated dashboard, animated scenario flow, phrase cards, response input, progress animation, and Learn dashboard wiring.
-- Roleplay native foundation added with AI service boundary, beginner-safe coaching, anti-repetition state, animated native dashboard, animated conversation screen, and Learn dashboard wiring.
-- Cards native foundation verified with deck models, repository boundary, native deck screen, start-session boundary, and Learn dashboard wiring.
-- Progress and Account native foundation verified with progress dashboard, repository boundary, native progress screen, account screen, account sections, sign-out controls, and Learn dashboard wiring.
-- Learn readiness dashboard verified with per-feature native readiness status, verified commit labels, remaining gates, scrollable animated Learn home, and clearer parity messaging.
+- Auth, secure session storage, API client, product access gate, Learn app container, and signed-in shell are in place.
+- YKI native foundation is in place.
+- Professional Finnish native foundation is in place.
+- Roleplay native foundation is in place.
+- Cards native foundation is in place.
+- Progress and Account native foundation is in place.
+- Learn readiness dashboard is verified.
+- Production gates dashboard is verified.
 
 ## Active task
 
-Continue the native Learn foundation without losing YKI, Professional Finnish, roleplay, cards, progress, account, subscriptions, device limits, animations, or interactions.
+Continue the native Learn foundation with account, plan, device, progress, and product access boundaries.
 
 ## Next step
 
-Verify the GitHub-side production gates dashboard with a clean local pull/build, then continue with the next large GitHub-side batch.
+Verify the GitHub-side Account service boundary with a clean local pull/build, then continue with the next large GitHub-side batch.
 
 ## Pending verification
 
-- Production gates dashboard was pushed with native production-gate model, service-needed/release-blocked statuses, next-action messaging, and a production gate panel on Learn home.
+- Account service boundary was pushed with account models, repository boundary, plan snapshot, device snapshot, loading state, plan UI, device UI, and signed-in shell wiring.
