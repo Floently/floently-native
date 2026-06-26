@@ -6,6 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.floently.learn.navigation.LearnFeatureDestination
+import com.floently.learn.yki.PreviewYkiRepository
+import com.floently.learn.yki.YkiFeatureScreen
 import com.floently.shared.auth.FloentlyAuthSession
 
 @Composable
@@ -14,6 +16,7 @@ fun LearnSignedInShell(
     onSignOut: () -> Unit
 ) {
     var selectedDestination by remember { mutableStateOf<LearnFeatureDestination?>(null) }
+    val ykiRepository = remember { PreviewYkiRepository() }
     val destination = selectedDestination
 
     if (destination == null) {
@@ -23,9 +26,15 @@ fun LearnSignedInShell(
             onDestinationSelected = { selectedDestination = it }
         )
     } else {
-        LearnFeaturePlaceholderScreen(
-            destination = destination,
-            onBack = { selectedDestination = null }
-        )
+        when (destination) {
+            LearnFeatureDestination.YkiPractice -> YkiFeatureScreen(
+                repository = ykiRepository,
+                onBack = { selectedDestination = null }
+            )
+            else -> LearnFeaturePlaceholderScreen(
+                destination = destination,
+                onBack = { selectedDestination = null }
+            )
+        }
     }
 }
