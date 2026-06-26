@@ -3,40 +3,58 @@ package com.floently.learn
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.rememberCoroutineScope
+import com.floently.learn.app.LearnAppContainer
+import com.floently.learn.app.LearnAppController
+import com.floently.learn.app.LearnAppState
+import com.floently.learn.app.LearnHomeScreen
+import com.floently.learn.app.LearnLoadingScreen
 import com.floently.learn.auth.LearnAuthScreen
-import com.floently.shared.design.FloentlyProduct
-import com.floently.shared.design.FloentlyScreen
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                val signedIn = remember { mutableStateOf(false) }
+                val appContainer = remember { LearnAppContainer(applicationContext) }
+                val controller = remember { LearnAppController(appContainer.authRepository) }
+                val scope = rememberCoroutineScope()
 
-                if (signedIn.value) {
-                    FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(
-                                text = "Floently Learn",
-                                color = palette.text,
-                                style = MaterialTheme.typography.displaySmall
-                            )
-                            Text(
-                                text = "Native build foundation is running.",
-                                color = palette.muted
-                            )
+                LaunchedEffect(Unit) {
+                    controller.boot()
+                }
+
+                when (val state = controller.state) {
+                    LearnAppState.Loading -> LearnLoadingScreen()
+                    LearnAppState.SignedOut -> LearnAuthScreen(
+                        isBusy = false,
+                        errorMessage = null,
+                        onSubmit = { mode, email, credential, name ->
+                            scope.launch { controller.submitAuth(mode, email, credential, name) }
                         }
-                    }
-                } else {
-                    LearnAuthScreen(onContinue = { signedIn.value = true })
+                    )
+                    is LearnAppState.Authenticating -> LearnAuthScreen(
+                        isBusy = true,
+                        errorMessage = null,
+                        onSubmit = { mode, email, credential, name ->
+                            scope.launch { controller.submitAuth(mode, email, credential, name) }
+                        }
+                    )
+                    is LearnAppState.AuthError -> LearnAuthScreen(
+                        isBusy = false,
+                        errorMessage = state.message,
+                        onSubmit = { mode, email, credential, name ->
+                            scope.launch { controller.submitAuth(mode, email, credential, name) }
+                        }
+                    )
+                    is LearnAppState.SignedIn -> LearnHomeScreen(
+                        session = state.session,
+                        onSignOut = { scope.launch { controller.signOut() } }
+                    )
                 }
             }
         }

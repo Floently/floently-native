@@ -32,14 +32,14 @@ import com.floently.shared.design.FloentlyScreen
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LearnAuthScreen(
-    onContinue: () -> Unit
+    isBusy: Boolean,
+    errorMessage: String?,
+    onSubmit: (LearnAuthMode, String, String, String?) -> Unit
 ) {
-    var mode by remember { mutableStateOf(AuthMode.SignIn) }
+    var mode by remember { mutableStateOf(LearnAuthMode.SignIn) }
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var isBusy by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var credential by remember { mutableStateOf("") }
 
     FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
         Column(
@@ -48,7 +48,7 @@ fun LearnAuthScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             Text(
-                text = if (mode == AuthMode.SignIn) "Welcome back" else "Create your account",
+                text = if (mode == LearnAuthMode.SignIn) "Welcome back" else "Create your account",
                 color = palette.text,
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold
@@ -63,23 +63,22 @@ fun LearnAuthScreen(
             )
 
             Spacer(Modifier.height(28.dp))
-
             FloentlyCard(product = FloentlyProduct.Learn) {
                 SingleChoiceSegmentedButtonRow {
                     SegmentedButton(
-                        selected = mode == AuthMode.SignIn,
-                        onClick = { mode = AuthMode.SignIn },
+                        selected = mode == LearnAuthMode.SignIn,
+                        onClick = { mode = LearnAuthMode.SignIn },
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
                     ) { Text("Sign in") }
 
                     SegmentedButton(
-                        selected = mode == AuthMode.Create,
-                        onClick = { mode = AuthMode.Create },
+                        selected = mode == LearnAuthMode.Create,
+                        onClick = { mode = LearnAuthMode.Create },
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
                     ) { Text("Create") }
                 }
 
-                if (mode == AuthMode.Create) {
+                if (mode == LearnAuthMode.Create) {
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
@@ -97,35 +96,28 @@ fun LearnAuthScreen(
                 )
 
                 OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
+                    value = credential,
+                    onValueChange = { credential = it },
                     label = { Text("Password") },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation()
                 )
 
-                if (error != null) {
-                    Text(text = error.orEmpty(), color = androidx.compose.ui.graphics.Color.Red)
+                if (!errorMessage.isNullOrBlank()) {
+                    Text(text = errorMessage, color = androidx.compose.ui.graphics.Color.Red)
                 }
 
                 FloentlyPrimaryButton(
-                    title = if (isBusy) "Please wait..." else if (mode == AuthMode.SignIn) "Sign in" else "Create account",
-                    product = FloentlyProduct.Learn
-                ) {
-                    if (email.isBlank() || password.length < 6) {
-                        error = "Enter a valid email and at least 6 characters."
-                    } else {
-                        isBusy = true
-                        error = null
-                        onContinue()
-                    }
-                }
+                    title = if (isBusy) "Please wait..." else if (mode == LearnAuthMode.SignIn) "Sign in" else "Create account",
+                    product = FloentlyProduct.Learn,
+                    onClick = { if (!isBusy) onSubmit(mode, email, credential, name) }
+                )
             }
         }
     }
 }
 
-private enum class AuthMode {
+enum class LearnAuthMode {
     SignIn,
     Create
 }
