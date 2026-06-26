@@ -47,7 +47,7 @@ fun LearnProgressScreen(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Native learning progress overview with clear parity gates before durable sync is released.",
+                text = "Native learning progress overview with sync boundary, timeline, and clear release gates.",
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -61,6 +61,14 @@ fun LearnProgressScreen(
                     Text(text = "Active streak: ${dashboard.activeStreakDays} day(s)", style = MaterialTheme.typography.bodyMedium)
                 }
 
+                FloentlyCard(product = FloentlyProduct.Learn) {
+                    Text(text = "Sync boundary", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(text = "Status: ${dashboard.syncBoundary.status.name}", style = MaterialTheme.typography.bodyMedium)
+                    Text(text = "Pending events: ${dashboard.syncBoundary.pendingEvents}", style = MaterialTheme.typography.bodySmall)
+                    Text(text = dashboard.syncBoundary.lastSyncText, style = MaterialTheme.typography.bodySmall)
+                    Text(text = dashboard.syncBoundary.releaseGate, style = MaterialTheme.typography.bodySmall)
+                }
+
                 dashboard.summaries.forEach { summary ->
                     val animatedProgress by animateFloatAsState(
                         targetValue = (summary.completionPercent.toFloat() / 100f).coerceIn(0f, 1f),
@@ -71,8 +79,18 @@ fun LearnProgressScreen(
                         LinearProgressIndicator(progress = { animatedProgress }, modifier = Modifier.fillMaxWidth())
                         Text(text = "${summary.completionPercent}% complete", style = MaterialTheme.typography.bodySmall)
                         Text(text = "${summary.completedUnits}/${summary.totalUnits} units", style = MaterialTheme.typography.bodySmall)
+                        Text(text = "Sync status: ${summary.syncStatus.name}", style = MaterialTheme.typography.bodySmall)
                         Text(text = "Last activity: ${summary.lastActivity}", style = MaterialTheme.typography.bodySmall)
                         Text(text = summary.releaseGate, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+
+                FloentlyCard(product = FloentlyProduct.Learn) {
+                    Text(text = "Recent activity", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    dashboard.timeline.forEach { item ->
+                        Text(text = item.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        Text(text = item.detail, style = MaterialTheme.typography.bodySmall)
+                        Text(text = "${item.whenText} | durable: ${item.durable}", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
