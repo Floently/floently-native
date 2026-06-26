@@ -12,6 +12,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -24,10 +25,13 @@ import com.floently.read.ReadShell
 import com.floently.shared.access.FloentlyAccessRepository
 import com.floently.shared.access.FloentlyAccessResult
 import com.floently.shared.auth.FloentlyAuthSession
+import com.floently.shared.billing.FloentlyBillingDashboardState
+import com.floently.shared.billing.PreviewFloentlyBillingRepository
 import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
 import com.floently.shared.design.FloentlyScreen
+import kotlinx.coroutines.launch
 
 @Composable
 fun FloentlySuiteShell(
@@ -37,9 +41,16 @@ fun FloentlySuiteShell(
 ) {
     var selectedProduct by remember { mutableStateOf<FloentlySuiteProduct?>(null) }
     var accessState by remember { mutableStateOf<FloentlySuiteAccessState?>(null) }
+    var billingState by remember { mutableStateOf<FloentlyBillingDashboardState?>(null) }
     val readRepository = remember { PreviewReadRepository() }
     val createRepository = remember { PreviewCreateStudioRepository() }
+    val billingRepository = remember { PreviewFloentlyBillingRepository() }
+    val scope = rememberCoroutineScope()
     val selected = selectedProduct
+
+    LaunchedEffect(Unit) {
+        billingState = billingRepository.dashboard()
+    }
 
     LaunchedEffect(selected) {
         val product = selected ?: return@LaunchedEffect
@@ -52,7 +63,15 @@ fun FloentlySuiteShell(
     }
 
     when {
-        selected == null -> FloentlyProductSelector(session, onSelect = { selectedProduct = it }, onSignOut = onSignOut)
+        selected == null -> FloentlyProductSelector(
+            session = session,
+            billingState = billingState,
+            onPrepareCheckout = { product ->
+                scope.launch { billingState = billingRepository.prepareCheckout(product.accessProduct) }
+            },
+            onSelect = { selectedProduct = it },
+            onSignOut = onSignOut
+        )
         accessState?.isChecking == true -> FloentlySuiteMessage(selected, "Checking ${selected.title} access...", "Each product is checked separately.")
         accessState?.isAllowed == true -> when (selected) {
             FloentlySuiteProduct.Learn -> LearnSignedInShell(session, onSignOut, onBackToSuite = { selectedProduct = null })
@@ -66,6 +85,8 @@ fun FloentlySuiteShell(
 @Composable
 private fun FloentlyProductSelector(
     session: FloentlyAuthSession,
+    billingState: FloentlyBillingDashboardState?,
+    onPrepareCheckout: (FloentlySuiteProduct) -> Unit,
     onSelect: (FloentlySuiteProduct) -> Unit,
     onSignOut: () -> Unit
 ) {
@@ -77,11 +98,30 @@ private fun FloentlyProductSelector(
             Text("Floently", color = palette.text, style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
             Text("Signed in as ${session.user.email}", color = palette.muted, style = MaterialTheme.typography.titleMedium)
             Text("Choose a product. Learn, Read, and Create are checked separately.", color = palette.muted, style = MaterialTheme.typography.bodyLarge)
+
+            billingState?.latestCheckoutIntent?.let { intent ->
+                FloentlyCard(product = FloentlyProduct.Learn) {
+                    Text("Checkout boundary", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Product: ${intent.product.apiName}", style = MaterialTheme.typography.bodySmall)
+                    Text("Plan: ${intent.planId}", style = MaterialTheme.typography.bodySmall)
+                    Text("Status: ${intent.status.name}", style = MaterialTheme.typography.bodySmall)
+                    Text(intent.message, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
             FloentlySuiteProduct.entries.forEach { product ->
+                val plan = billingState?.plans?.firstOrNull { it.product == product.accessProduct }
                 FloentlyCard(product = product.designProduct) {
                     Text(product.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text(product.subtitle, style = MaterialTheme.typography.bodyMedium)
+                    plan?.let {
+                        Text("Plan: ${it.displayPrice}", style = MaterialTheme.typography.bodySmall)
+                        Text("Status: ${it.status.name}", style = MaterialTheme.typography.bodySmall)
+                        Text("Checkout: ${it.checkoutStatus.name}", style = MaterialTheme.typography.bodySmall)
+                        Text(it.accessNote, style = MaterialTheme.typography.bodySmall)
+                    } ?: Text("Plan boundary loading...", style = MaterialTheme.typography.bodySmall)
                     FloentlyPrimaryButton("Open ${product.title}", product.designProduct, onClick = { onSelect(product) })
+                    FloentlyPrimaryButton("Prepare checkout", product.designProduct, onClick = { onPrepareCheckout(product) })
                 }
             }
             FloentlyPrimaryButton("Sign out", FloentlyProduct.Learn, onClick = onSignOut)
