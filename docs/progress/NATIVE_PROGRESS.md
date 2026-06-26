@@ -10,13 +10,13 @@ M01 production native foundation.
 
 ## Latest verified build
 
-Android Learn debug build succeeded after wiring the guarded YKI task/session flow with:
+Android Learn debug build succeeded after showing the guarded YKI evaluation summary with:
 
 ```bash
 ./scripts/nativectl build android-learn
 ```
 
-Latest verified commit locally: `c0dc3c7`.
+Latest verified commit locally: `b195bac`.
 
 ## Completed
 
@@ -47,6 +47,8 @@ Latest verified commit locally: `c0dc3c7`.
 - Learn dashboard now opens the native YKI shell for YKI practice while other features remain guarded placeholders.
 - YKI task/session screen added with prompt display, answer input, save-answer boundary, in-session progress, completion state, and exit handling.
 - YKI module start now enters the guarded task/session flow.
+- YKI evaluation boundary added with evaluator interface, answer evaluation model, status, release gates, and non-persistent session summary.
+- YKI completion screen now displays evaluation count, progress-ready state, persisted state, per-answer status, release gate, preview score, and feedback.
 
 ## Active task
 
@@ -54,4 +56,4 @@ Continue the first real Learn feature foundation without losing YKI, Professiona
 
 ## Next step
 
-Add YKI scoring and progress boundary models so native sessions have an explicit non-persistent evaluation contract before backend scoring and durable progress are wired.
+Add the YKI durable progress boundary so completed native sessions have a clear persistence contract before real service sync is wired.
