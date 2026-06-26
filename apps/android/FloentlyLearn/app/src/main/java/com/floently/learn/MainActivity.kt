@@ -7,6 +7,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import com.floently.learn.app.LearnAccessGateScreen
 import com.floently.learn.app.LearnAppContainer
 import com.floently.learn.app.LearnAppController
 import com.floently.learn.app.LearnAppState
@@ -21,7 +22,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 val appContainer = remember { LearnAppContainer(applicationContext) }
-                val controller = remember { LearnAppController(appContainer.authRepository) }
+                val controller = remember {
+                    LearnAppController(
+                        authRepository = appContainer.authRepository,
+                        accessRepository = appContainer.accessRepository
+                    )
+                }
                 val scope = rememberCoroutineScope()
 
                 LaunchedEffect(Unit) {
@@ -50,6 +56,21 @@ class MainActivity : ComponentActivity() {
                         onSubmit = { mode, email, credential, name ->
                             scope.launch { controller.submitAuth(mode, email, credential, name) }
                         }
+                    )
+                    is LearnAppState.CheckingAccess -> LearnLoadingScreen()
+                    is LearnAppState.AccessBlocked -> LearnAccessGateScreen(
+                        session = state.session,
+                        message = state.reason,
+                        canRetry = false,
+                        onRetry = {},
+                        onSignOut = { scope.launch { controller.signOut() } }
+                    )
+                    is LearnAppState.AccessError -> LearnAccessGateScreen(
+                        session = state.session,
+                        message = state.message,
+                        canRetry = true,
+                        onRetry = { scope.launch { controller.retryAccess(state.session) } },
+                        onSignOut = { scope.launch { controller.signOut() } }
                     )
                     is LearnAppState.SignedIn -> LearnHomeScreen(
                         session = state.session,
