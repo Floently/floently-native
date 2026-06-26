@@ -13,6 +13,34 @@ sealed interface CardsSessionResult {
     data class Error(val message: String) : CardsSessionResult
 }
 
+class ServiceCardsRepository(
+    private val service: CardsService,
+    private val fallback: CardsRepository = PreviewCardsRepository()
+) : CardsRepository {
+    override suspend fun dashboard(selectedDeckType: CardsDeckType): CardsDashboardState {
+        return runCatching { service.dashboard(selectedDeckType) }.getOrElse { error ->
+            fallback.dashboard(selectedDeckType).copy(
+                errorMessage = error.message?.takeIf { it.isNotBlank() }
+                    ?: "Cards service is not available from the existing backend yet."
+            )
+        }
+    }
+
+    override suspend fun startSession(deckId: String, mode: CardsPracticeMode): CardsSessionResult {
+        return runCatching { CardsSessionResult.Ready(service.startSession(deckId, mode)) }.getOrElse {
+            fallback.startSession(deckId, mode)
+        }
+    }
+
+    override suspend fun reviewCard(session: CardsPracticeSession, cardId: String, rating: CardsReviewRating): CardsSessionResult {
+        return runCatching { CardsSessionResult.Ready(service.reviewCard(session, cardId, rating)) }.getOrElse {
+            fallback.reviewCard(session, cardId, rating)
+        }
+    }
+
+    override fun summarize(session: CardsPracticeSession): CardsSessionSummary = fallback.summarize(session)
+}
+
 class PreviewCardsRepository : CardsRepository {
     private val decks = listOf(
         CardsDeck("cards-vocabulary-a1", "A1 daily vocabulary", CardsDeckType.Vocabulary, "High-frequency everyday Finnish.", 3, 3, false),
