@@ -10,13 +10,13 @@ M01 production native foundation.
 
 ## Latest verified build
 
-Android Learn debug build succeeded after showing Learn feature contract requirements with:
+Android Learn debug build succeeded after wiring the native YKI feature shell from the Learn dashboard with:
 
 ```bash
 ./scripts/nativectl build android-learn
 ```
 
-Latest verified commit locally: `7a7081e`.
+Latest verified commit locally: `4a18e6a`.
 
 ## Completed
 
@@ -41,11 +41,15 @@ Latest verified commit locally: `7a7081e`.
 - Signed-in shell now supports dashboard to guarded feature screen navigation and back.
 - Learn feature contract models added with parity, access, interaction, and release requirements.
 - Guarded feature placeholder screens now display their contract requirements.
+- YKI native models added for levels, skills, task types, modules, tasks, sessions, progress, and dashboard state.
+- YKI repository boundary added with preview seed data, dashboard loading, start-session, save-answer, and locked-module handling.
+- YKI native screen shell added with level selection, module cards, progress display, guarded start-session handling, and back navigation.
+- Learn dashboard now opens the native YKI shell for YKI practice while other features remain guarded placeholders.
 
 ## Active task
 
-Start the first real Learn feature foundation without losing YKI, Professional, roleplay, cards, subscriptions, device limits, animations, or interactions.
+Continue the first real Learn feature foundation without losing YKI, Professional, roleplay, cards, subscriptions, device limits, animations, or interactions.
 
 ## Next step
 
-Add the YKI native feature foundation: typed YKI module/session models, repository boundary, and guarded screen shell before any backend wiring.
+Add the YKI session screen/state layer so a selected module can enter a guarded task flow before backend scoring, audio, and progress persistence are wired.
