@@ -8,6 +8,15 @@
 - Debug package suffix: `.debug`.
 - Release task: `./scripts/nativectl build android-learn-release`.
 
+## Compatibility guardrails
+
+- Learn UI must be preserved as the existing Learn product experience, with only visual/functionality improvements, animations, icons, polish, and usability upgrades.
+- Do not rebuild Learn UI from scratch unless explicitly approved.
+- Preserve Learn functions and product intent while improving native quality.
+- Do not require new environment variables for Learn unless explicitly approved.
+- Keep the app plug-and-play with the existing backend/environment assumptions.
+- Read and Create can be added as separate products around Learn, but must not be mixed into Learn screens.
+
 ## Release gates before store submission
 
 - Configure Play/App signing outside Git.
