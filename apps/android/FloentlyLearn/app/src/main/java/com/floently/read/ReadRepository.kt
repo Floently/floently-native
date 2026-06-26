@@ -7,6 +7,47 @@ interface ReadRepository {
     suspend fun toggleReadAutomatically(enabled: Boolean): ReadDashboardState
 }
 
+class ServiceReadRepository(
+    private val service: ReadService,
+    private val fallback: ReadRepository = PreviewReadRepository()
+) : ReadRepository {
+    override suspend fun dashboard(): ReadDashboardState {
+        return runCatching { service.dashboard() }.getOrElse { error ->
+            fallback.dashboard().copy(
+                errorMessage = error.message?.takeIf { it.isNotBlank() }
+                    ?: "Read service is not available from the existing backend yet."
+            )
+        }
+    }
+
+    override suspend fun detectLanguage(input: String): ReadInputDraft {
+        return runCatching { service.detectLanguage(input) }.getOrElse { error ->
+            fallback.detectLanguage(input).copy(
+                message = error.message?.takeIf { it.isNotBlank() }
+                    ?: "Read language detection is using the local fallback."
+            )
+        }
+    }
+
+    override suspend fun generate(input: String, readAutomatically: Boolean): ReadDashboardState {
+        return runCatching { service.generate(input, readAutomatically) }.getOrElse { error ->
+            fallback.generate(input, readAutomatically).copy(
+                errorMessage = error.message?.takeIf { it.isNotBlank() }
+                    ?: "Read generation service is not available from the existing backend yet."
+            )
+        }
+    }
+
+    override suspend fun toggleReadAutomatically(enabled: Boolean): ReadDashboardState {
+        return runCatching { service.toggleReadAutomatically(enabled) }.getOrElse { error ->
+            fallback.toggleReadAutomatically(enabled).copy(
+                errorMessage = error.message?.takeIf { it.isNotBlank() }
+                    ?: "Read settings service is not available from the existing backend yet."
+            )
+        }
+    }
+}
+
 class PreviewReadRepository : ReadRepository {
     private var readAutomatically: Boolean = true
 
@@ -70,8 +111,9 @@ class PreviewReadRepository : ReadRepository {
 
     override suspend fun toggleReadAutomatically(enabled: Boolean): ReadDashboardState {
         readAutomatically = enabled
-        return dashboard().copy(
-            draft = dashboard().draft.copy(
+        val current = dashboard()
+        return current.copy(
+            draft = current.draft.copy(
                 readAutomatically = enabled,
                 message = if (enabled) "Read automatically is on." else "Read automatically is off."
             )
