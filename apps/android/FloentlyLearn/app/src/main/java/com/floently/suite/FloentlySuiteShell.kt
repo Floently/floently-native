@@ -33,6 +33,8 @@ import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
 import com.floently.shared.design.FloentlyScreen
+import com.floently.shared.release.FloentlyReleaseReadinessState
+import com.floently.shared.release.PreviewFloentlyReleaseReadinessRepository
 import kotlinx.coroutines.launch
 
 @Composable
@@ -45,16 +47,19 @@ fun FloentlySuiteShell(
     var accessState by remember { mutableStateOf<FloentlySuiteAccessState?>(null) }
     var billingState by remember { mutableStateOf<FloentlyBillingDashboardState?>(null) }
     var backendState by remember { mutableStateOf<FloentlyBackendDashboardState?>(null) }
+    var releaseState by remember { mutableStateOf<FloentlyReleaseReadinessState?>(null) }
     val readRepository = remember { PreviewReadRepository() }
     val createRepository = remember { PreviewCreateStudioRepository() }
     val billingRepository = remember { PreviewFloentlyBillingRepository() }
     val backendRepository = remember { PreviewFloentlyBackendRepository() }
+    val releaseRepository = remember { PreviewFloentlyReleaseReadinessRepository() }
     val scope = rememberCoroutineScope()
     val selected = selectedProduct
 
     LaunchedEffect(Unit) {
         billingState = billingRepository.dashboard()
         backendState = backendRepository.dashboard()
+        releaseState = releaseRepository.dashboard()
     }
 
     LaunchedEffect(selected) {
@@ -72,6 +77,7 @@ fun FloentlySuiteShell(
             session = session,
             billingState = billingState,
             backendState = backendState,
+            releaseState = releaseState,
             onPrepareCheckout = { product ->
                 scope.launch { billingState = billingRepository.prepareCheckout(product.accessProduct) }
             },
@@ -93,6 +99,7 @@ private fun FloentlyProductSelector(
     session: FloentlyAuthSession,
     billingState: FloentlyBillingDashboardState?,
     backendState: FloentlyBackendDashboardState?,
+    releaseState: FloentlyReleaseReadinessState?,
     onPrepareCheckout: (FloentlySuiteProduct) -> Unit,
     onSelect: (FloentlySuiteProduct) -> Unit,
     onSignOut: () -> Unit
@@ -105,6 +112,18 @@ private fun FloentlyProductSelector(
             Text("Floently", color = palette.text, style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
             Text("Signed in as ${session.user.email}", color = palette.muted, style = MaterialTheme.typography.titleMedium)
             Text("Choose a product. Learn, Read, and Create are checked separately.", color = palette.muted, style = MaterialTheme.typography.bodyLarge)
+
+            releaseState?.let { state ->
+                FloentlyCard(product = FloentlyProduct.Learn) {
+                    Text("Release readiness", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Verified: ${state.verifiedCount} | Wiring: ${state.wiringCount} | Blockers: ${state.blockerCount}", style = MaterialTheme.typography.bodySmall)
+                    Text("Store ready: ${state.storeReady}", style = MaterialTheme.typography.bodySmall)
+                    state.gates.take(5).forEach { gate ->
+                        Text("${gate.title}: ${gate.status.name}", style = MaterialTheme.typography.bodySmall)
+                        Text("Next: ${gate.nextAction}", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
 
             backendState?.let { state ->
                 FloentlyCard(product = FloentlyProduct.Learn) {
