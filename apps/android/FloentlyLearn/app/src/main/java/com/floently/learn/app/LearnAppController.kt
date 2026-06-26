@@ -4,20 +4,27 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.floently.learn.auth.LearnAuthMode
+import com.floently.shared.access.FloentlyAccessProduct
+import com.floently.shared.access.FloentlyAccessRepository
+import com.floently.shared.access.FloentlyAccessResult
 import com.floently.shared.auth.FloentlyAuthRepository
 import com.floently.shared.auth.FloentlyAuthResult
 import com.floently.shared.auth.FloentlyAuthSession
 
 class LearnAppController(
-    private val authRepository: FloentlyAuthRepository
+    private val authRepository: FloentlyAuthRepository,
+    private val accessRepository: FloentlyAccessRepository
 ) {
     var state by mutableStateOf<LearnAppState>(LearnAppState.Loading)
         private set
 
-    fun boot() {
-        state = authRepository.cachedSession()
-            ?.let { LearnAppState.SignedIn(it) }
-            ?: LearnAppState.SignedOut
+    suspend fun boot() {
+        val cachedSession = authRepository.cachedSession()
+        if (cachedSession == null) {
+            state = LearnAppState.SignedOut
+        } else {
+            verifyLearnAccess(cachedSession)
+        }
     }
 
     suspend fun submitAuth(mode: LearnAuthMode, email: String, password: String, name: String?) {
@@ -36,15 +43,28 @@ class LearnAppController(
             LearnAuthMode.Create -> authRepository.createAccount(normalizedEmail, password, cleanedName)
         }
 
-        state = when (result) {
-            is FloentlyAuthResult.Success -> LearnAppState.SignedIn(result.session)
-            is FloentlyAuthResult.Failure -> LearnAppState.AuthError(result.message)
+        when (result) {
+            is FloentlyAuthResult.Success -> verifyLearnAccess(result.session)
+            is FloentlyAuthResult.Failure -> state = LearnAppState.AuthError(result.message)
         }
+    }
+
+    suspend fun retryAccess(session: FloentlyAuthSession) {
+        verifyLearnAccess(session)
     }
 
     suspend fun signOut() {
         authRepository.signOut()
         state = LearnAppState.SignedOut
+    }
+
+    private suspend fun verifyLearnAccess(session: FloentlyAuthSession) {
+        state = LearnAppState.CheckingAccess(session)
+        state = when (val result = accessRepository.requireAccess(FloentlyAccessProduct.Learn)) {
+            is FloentlyAccessResult.Allowed -> LearnAppState.SignedIn(session)
+            is FloentlyAccessResult.Blocked -> LearnAppState.AccessBlocked(session, result.reason)
+            is FloentlyAccessResult.Error -> LearnAppState.AccessError(session, result.message)
+        }
     }
 }
 
@@ -53,5 +73,8 @@ sealed interface LearnAppState {
     data object SignedOut : LearnAppState
     data class Authenticating(val mode: LearnAuthMode) : LearnAppState
     data class AuthError(val message: String) : LearnAppState
+    data class CheckingAccess(val session: FloentlyAuthSession) : LearnAppState
+    data class AccessBlocked(val session: FloentlyAuthSession, val reason: String) : LearnAppState
+    data class AccessError(val session: FloentlyAuthSession, val message: String) : LearnAppState
     data class SignedIn(val session: FloentlyAuthSession) : LearnAppState
 }
