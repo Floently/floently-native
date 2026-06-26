@@ -75,6 +75,7 @@ class MainActivity : ComponentActivity() {
                     is LearnAppState.SignedIn -> FloentlySuiteShell(
                         session = state.session,
                         accessRepository = appContainer.accessRepository,
+                        billingRepository = appContainer.billingRepository,
                         onSignOut = { scope.launch { controller.signOut() } }
                     )
                 }
