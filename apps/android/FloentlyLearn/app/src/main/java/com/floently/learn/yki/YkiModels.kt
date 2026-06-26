@@ -1,7 +1,5 @@
 package com.floently.learn.yki
 
-import kotlinx.datetime.Instant
-
 enum class YkiLevel {
     Perustaso,
     Keskitaso,
@@ -54,7 +52,7 @@ data class YkiSession(
     val tasks: List<YkiTask>,
     val currentTaskIndex: Int,
     val answers: Map<String, String>,
-    val startedAt: Instant?
+    val startedAtEpochMillis: Long?
 ) {
     val currentTask: YkiTask?
         get() = tasks.getOrNull(currentTaskIndex)
@@ -68,7 +66,7 @@ data class YkiModuleProgress(
     val completedTasks: Int,
     val totalTasks: Int,
     val lastScorePercent: Int?,
-    val updatedAt: Instant?
+    val updatedAtEpochMillis: Long?
 )
 
 data class YkiDashboardState(
