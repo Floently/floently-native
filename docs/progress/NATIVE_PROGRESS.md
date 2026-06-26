@@ -10,13 +10,13 @@ M01 production native foundation.
 
 ## Latest verified build
 
-Android Learn debug build succeeded after wiring the Learn access gate with:
+Android Learn debug build succeeded after wiring the typed Learn navigation shell with:
 
 ```bash
 ./scripts/nativectl build android-learn
 ```
 
-Latest verified commit locally: `a781436`.
+Latest verified commit locally: `10408b2`.
 
 ## Completed
 
@@ -35,11 +35,15 @@ Latest verified commit locally: `a781436`.
 - Learn access gate screen added.
 - Learn controller now checks product access before entering the signed-in Learn shell.
 - Learn activity now handles loading, signed-out, auth, access-check, access-blocked, access-error, and signed-in states.
+- Typed Learn feature destinations added for YKI practice, Professional Finnish, Roleplay, Cards, Progress, and Account.
+- Signed-in Learn dashboard renders typed destinations with release guards.
+- Guarded native feature placeholder screen added.
+- Signed-in shell now supports dashboard to guarded feature screen navigation and back.
 
 ## Active task
 
-Build the typed Learn feature navigation shell, then rebuild Learn features without losing YKI, Professional, roleplay, cards, subscriptions, device limits, animations, or interactions.
+Create feature-specific native contracts and rebuild Learn features one by one without losing YKI, Professional, roleplay, cards, subscriptions, device limits, animations, or interactions.
 
 ## Next step
 
-Add typed Learn feature destinations and a dashboard shell for the rebuilt native Learn product.
+Add Learn feature contract models so every rebuilt feature has explicit parity, access, interaction, and release requirements before implementation.
