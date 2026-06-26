@@ -54,6 +54,28 @@ fun LearnHomeScreen(
                 )
             }
 
+            FloentlyCard(product = FloentlyProduct.Learn) {
+                Text(
+                    text = "Production gates",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                PreviewLearnProductionGates.items.forEach { gate ->
+                    Text(
+                        text = "${gate.title}: ${gate.status.name}",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                    Text(
+                        text = gate.summary,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "Next: ${gate.nextAction}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
             LearnFeatureDestination.primary.forEach { destination ->
                 val readiness = PreviewLearnFeatureReadiness.items[destination]
                 FloentlyCard(product = FloentlyProduct.Learn) {
