@@ -6,6 +6,33 @@ interface CreateStudioRepository {
     suspend fun generate(toolType: CreateStudioToolType, input: String): CreateStudioDashboardState
 }
 
+class ServiceCreateStudioRepository(
+    private val service: CreateStudioService,
+    private val fallback: CreateStudioRepository = PreviewCreateStudioRepository()
+) : CreateStudioRepository {
+    override suspend fun dashboard(): CreateStudioDashboardState {
+        return runCatching { service.dashboard() }.getOrElse { error ->
+            fallback.dashboard().copy(
+                errorMessage = error.message?.takeIf { it.isNotBlank() }
+                    ?: "Create Studio service is not available from the existing backend yet."
+            )
+        }
+    }
+
+    override suspend fun selectTool(toolType: CreateStudioToolType): CreateStudioDashboardState {
+        return fallback.selectTool(toolType)
+    }
+
+    override suspend fun generate(toolType: CreateStudioToolType, input: String): CreateStudioDashboardState {
+        return runCatching { service.generate(toolType, input) }.getOrElse { error ->
+            fallback.generate(toolType, input).copy(
+                errorMessage = error.message?.takeIf { it.isNotBlank() }
+                    ?: "Create Studio generation service is not available from the existing backend yet."
+            )
+        }
+    }
+}
+
 class PreviewCreateStudioRepository : CreateStudioRepository {
     private val tools = listOf(
         CreateStudioTool(CreateStudioToolType.Hooks, "Hooks", "Generate hooks for a topic or product.", "Paste topic, audience, and goal."),
