@@ -10,13 +10,13 @@ M01 production native foundation.
 
 ## Latest verified build
 
-Android Learn debug build succeeded after verifying the production gates dashboard.
+Android Learn debug build succeeded after verifying the Account service boundary.
 
 ```bash
 ./scripts/nativectl build android-learn
 ```
 
-Latest verified commit locally: `d31a3e2`.
+Latest verified commit locally: `acc9075`.
 
 ## Completed
 
@@ -30,15 +30,16 @@ Latest verified commit locally: `d31a3e2`.
 - Progress and Account native foundation is in place.
 - Learn readiness dashboard is verified.
 - Production gates dashboard is verified.
+- Account service boundary is verified.
 
 ## Active task
 
-Continue the native Learn foundation with account, plan, device, progress, and product access boundaries.
+Continue the native Learn foundation with progress sync, timeline, account, plan, device, and product access boundaries.
 
 ## Next step
 
-Verify the GitHub-side Account service boundary with a clean local pull/build, then continue with the next large GitHub-side batch.
+Verify the GitHub-side Progress sync boundary with a clean local pull/build, then continue with the next large GitHub-side batch.
 
 ## Pending verification
 
-- Account service boundary was pushed with account models, repository boundary, plan snapshot, device snapshot, loading state, plan UI, device UI, and signed-in shell wiring.
+- Progress sync boundary was pushed with expanded progress models, timeline items, sync status, sync boundary, pending event count, and progress screen timeline UI.
