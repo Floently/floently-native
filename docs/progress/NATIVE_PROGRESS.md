@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M05 Payments and entitlement wiring.
+M06 Backend integration contracts.
 
 ## Branch
 
@@ -10,13 +10,13 @@ M05 Payments and entitlement wiring.
 
 ## Latest verified build
 
-Android Learn debug build succeeded after verifying the Create Studio MVP vertical slice.
+Android Learn debug build succeeded after verifying the Payments and entitlement boundary.
 
 ```bash
 ./scripts/nativectl build android-learn
 ```
 
-Latest verified commit locally: `6c10e8a`.
+Latest verified commit locally: `c05df0a`.
 
 ## Completed
 
@@ -28,15 +28,16 @@ Latest verified commit locally: `6c10e8a`.
 - Floently suite shell is verified with Learn, Read, Create, product selector, separate access checks, and product-neutral sign-in.
 - Native Read MVP vertical slice is verified with text/URL input, language detection boundary, generation boundary, Read automatically setting, reader panel, and saved library.
 - Create Studio MVP vertical slice is verified with direct function cards, input screen, generation boundary, result panel, projects panel, export-ready state, and suite shell repository wiring.
+- Payments and entitlement boundary is verified with separate Learn, Read, and Create plan snapshots and checkout intent boundary.
 
 ## Active task
 
-Fastest flow: wire payments and entitlement boundaries, then backend services, release build, and store readiness.
+Fastest flow: define backend contracts, then wire real services, release build, and store readiness.
 
 ## Next step
 
-Verify M05-A Payments and entitlement boundary with a clean local pull/build, then continue directly into backend integration contracts.
+Verify M06-A Backend integration contracts with a clean local pull/build, then continue directly into release build/signing preparation.
 
 ## Pending verification
 
-- M05-A Payments and entitlement boundary was pushed with billing models, billing repository boundary, separate Learn/Read/Create plan snapshots, checkout intent boundary, suite product plan display, and checkout preparation UI.
+- M06-A Backend integration contracts were pushed with backend contract models, backend repository boundary, native API route registry, service status counts, and suite selector backend contract dashboard.
