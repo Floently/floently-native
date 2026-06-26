@@ -10,13 +10,13 @@ M01 production native foundation.
 
 ## Latest verified build
 
-Android Learn debug build succeeded after verifying the Cards native foundation with:
+Android Learn debug build succeeded after verifying Progress and Account with:
 
 ```bash
 ./scripts/nativectl build android-learn
 ```
 
-Latest verified commit locally: `57b6573`.
+Latest verified commit locally: `efae0f7`.
 
 ## Completed
 
@@ -54,6 +54,7 @@ Latest verified commit locally: `57b6573`.
 - Professional Finnish native foundation added with domain models, module/session/scenario models, repository boundary, preview scenario data, animated dashboard, animated scenario flow, phrase cards, response input, progress animation, and Learn dashboard wiring.
 - Roleplay native foundation added with AI service boundary, beginner-safe coaching, anti-repetition state, animated native dashboard, animated conversation screen, and Learn dashboard wiring.
 - Cards native foundation verified with deck models, repository boundary, native deck screen, start-session boundary, and Learn dashboard wiring.
+- Progress and Account native foundation verified with progress dashboard, repository boundary, native progress screen, account screen, account sections, sign-out controls, and Learn dashboard wiring.
 
 ## Active task
 
@@ -61,8 +62,8 @@ Continue the native Learn foundation without losing YKI, Professional Finnish, r
 
 ## Next step
 
-Verify the GitHub-side Progress and Account native foundation with a clean local pull/build, then continue with the next large GitHub-side batch.
+Verify the GitHub-side Learn readiness dashboard polish with a clean local pull/build, then continue with the next large GitHub-side batch.
 
 ## Pending verification
 
-- Progress and Account native foundation was pushed from GitHub-side edits with progress dashboard models, repository boundary, native progress screen, account screen, profile/access/device sections, sign-out controls, and Learn dashboard wiring. Local verification is pending.
+- Learn readiness dashboard polish was pushed with per-feature native readiness status, verified commit labels, remaining gates, scrollable animated Learn home, and clearer parity messaging.
