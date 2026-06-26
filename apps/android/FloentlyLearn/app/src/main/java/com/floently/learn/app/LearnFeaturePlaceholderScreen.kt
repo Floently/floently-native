@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.floently.learn.features.LearnFeatureContracts
 import com.floently.learn.navigation.LearnFeatureDestination
 import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
@@ -18,6 +19,8 @@ fun LearnFeaturePlaceholderScreen(
     destination: LearnFeatureDestination,
     onBack: () -> Unit
 ) {
+    val contract = LearnFeatureContracts.require(destination)
+
     FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(
@@ -39,12 +42,28 @@ fun LearnFeaturePlaceholderScreen(
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
-                    text = "This screen is intentionally guarded. It is not release-ready until the rebuilt native feature matches the existing Learn product behavior, animations, access rules, and user flow.",
+                    text = "This screen is intentionally protected. It is not release-ready until the rebuilt native feature matches the existing Learn product behavior, animations, access rules, and user flow.",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    text = "Guard: ${destination.releaseGuard.name}",
+                    text = "Requires release review: ${contract.isReleaseBlocked}",
                     style = MaterialTheme.typography.labelMedium
+                )
+                Text(
+                    text = "Parity: ${contract.parityRequirements.joinToString()}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "Access: ${contract.accessRequirements.joinToString()}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "Interactions: ${contract.interactionRequirements.joinToString()}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "Release review: ${contract.releaseRequirements.joinToString()}",
+                    style = MaterialTheme.typography.bodySmall
                 )
                 FloentlyPrimaryButton(
                     title = "Back to Learn",
