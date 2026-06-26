@@ -5,6 +5,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.floently.learn.cards.CardsScreen
+import com.floently.learn.cards.PreviewCardsRepository
 import com.floently.learn.navigation.LearnFeatureDestination
 import com.floently.learn.professional.PreviewProfessionalFinnishRepository
 import com.floently.learn.professional.ProfessionalFinnishScreen
@@ -23,6 +25,7 @@ fun LearnSignedInShell(
     val ykiRepository = remember { PreviewYkiRepository() }
     val professionalFinnishRepository = remember { PreviewProfessionalFinnishRepository() }
     val roleplayRepository = remember { PreviewRoleplayRepository() }
+    val cardsRepository = remember { PreviewCardsRepository() }
     val destination = selectedDestination
 
     if (destination == null) {
@@ -43,6 +46,10 @@ fun LearnSignedInShell(
             )
             LearnFeatureDestination.Roleplay -> RoleplayScreen(
                 repository = roleplayRepository,
+                onBack = { selectedDestination = null }
+            )
+            LearnFeatureDestination.Cards -> CardsScreen(
+                repository = cardsRepository,
                 onBack = { selectedDestination = null }
             )
             else -> LearnFeaturePlaceholderScreen(
