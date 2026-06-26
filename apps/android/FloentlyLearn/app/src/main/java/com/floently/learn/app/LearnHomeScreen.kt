@@ -22,6 +22,7 @@ import com.floently.shared.design.FloentlyScreen
 fun LearnHomeScreen(
     session: FloentlyAuthSession,
     onSignOut: () -> Unit,
+    onBackToSuite: (() -> Unit)? = null,
     onDestinationSelected: (LearnFeatureDestination) -> Unit = {}
 ) {
     FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
@@ -41,6 +42,14 @@ fun LearnHomeScreen(
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
+
+            onBackToSuite?.let { back ->
+                FloentlyPrimaryButton(
+                    title = "Back to Floently",
+                    product = FloentlyProduct.Learn,
+                    onClick = back
+                )
+            }
 
             FloentlyCard(product = FloentlyProduct.Learn) {
                 Text(
