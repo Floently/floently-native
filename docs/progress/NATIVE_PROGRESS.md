@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M01 production native foundation.
+M02 fastest suite flow.
 
 ## Branch
 
@@ -10,13 +10,13 @@ M01 production native foundation.
 
 ## Latest verified build
 
-Android Learn debug build succeeded after verifying the Account service boundary.
+Android Learn debug build succeeded after verifying the Progress sync boundary.
 
 ```bash
 ./scripts/nativectl build android-learn
 ```
 
-Latest verified commit locally: `acc9075`.
+Latest verified commit locally: `35d312e`.
 
 ## Completed
 
@@ -31,15 +31,16 @@ Latest verified commit locally: `acc9075`.
 - Learn readiness dashboard is verified.
 - Production gates dashboard is verified.
 - Account service boundary is verified.
+- Progress sync boundary is verified.
 
 ## Active task
 
-Continue the native Learn foundation with progress sync, timeline, account, plan, device, and product access boundaries.
+Fastest flow: freeze Learn preview expansion and build the suite vertically with Learn, Read, Create, separate access, then payments and backend wiring.
 
 ## Next step
 
-Verify the GitHub-side Progress sync boundary with a clean local pull/build, then continue with the next large GitHub-side batch.
+Verify M02-A Floently suite shell with a clean local pull/build, then continue directly into native Read MVP vertical slice.
 
 ## Pending verification
 
-- Progress sync boundary was pushed with expanded progress models, timeline items, sync status, sync boundary, pending event count, and progress screen timeline UI.
+- M02-A suite shell was pushed with product selector, Learn/Read/Create product entries, separate product access checks, native Read shell, Create Studio shell, suite back navigation, product-neutral sign-in, and MainActivity routing to the suite shell.
