@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M07 Release build and signing preparation.
+M08 Final readiness gap closure.
 
 ## Branch
 
@@ -10,13 +10,14 @@ M07 Release build and signing preparation.
 
 ## Latest verified build
 
-Android Learn debug build succeeded after verifying Backend integration contracts.
+Android debug and release builds succeeded after verifying release build preparation.
 
 ```bash
 ./scripts/nativectl build android-learn
+./scripts/nativectl build android-learn-release
 ```
 
-Latest verified commit locally: `a432592`.
+Latest verified commit locally: `e49608b`.
 
 ## Completed
 
@@ -30,15 +31,16 @@ Latest verified commit locally: `a432592`.
 - Create Studio MVP vertical slice is verified with direct function cards, input screen, generation boundary, result panel, projects panel, export-ready state, and suite shell repository wiring.
 - Payments and entitlement boundary is verified with separate Learn, Read, and Create plan snapshots and checkout intent boundary.
 - Backend integration contracts are verified with native API route registry and suite selector backend contract dashboard.
+- Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 
 ## Active task
 
-Fastest flow: prepare release build, signing documentation, backend wiring, QA, and store readiness.
+Fastest flow: close real release blockers in order: payment provider, backend service wiring, signing, manual QA, and store assets.
 
 ## Next step
 
-Verify M07-A release build preparation with a clean local pull, debug build, and release build.
+Verify M08-A final readiness gap dashboard with a clean local pull, debug build, and release build.
 
 ## Pending verification
 
-- M07-A release preparation was pushed with production application ID, Floently app label, version bump, release build type, native release build command, and Android release checklist.
+- M08-A final readiness gap dashboard was pushed with release readiness models, release readiness repository, verified/wiring/blocker counts, store-ready status, top release gates, and suite selector release readiness card.
