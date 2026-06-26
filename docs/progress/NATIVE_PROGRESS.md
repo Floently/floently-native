@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M08 Final readiness gap closure.
+M09 Payment provider and entitlement service wiring.
 
 ## Branch
 
@@ -10,14 +10,13 @@ M08 Final readiness gap closure.
 
 ## Latest verified build
 
-Android debug and release builds succeeded after verifying final readiness gap dashboard.
+Learn UI/environment guardrail docs were pulled and verified.
 
 ```bash
-./scripts/nativectl build android-learn
-./scripts/nativectl build android-learn-release
+git pull --ff-only
 ```
 
-Latest verified commit locally: `754a6bc`.
+Latest verified commit locally: `7a7b652`.
 
 ## Completed
 
@@ -33,16 +32,16 @@ Latest verified commit locally: `754a6bc`.
 - Backend integration contracts are verified with native API route registry and suite selector backend contract dashboard.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Final readiness gap dashboard is verified with release gate counts and blocker order.
-- Learn UI and environment guardrails are documented: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
+- Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
 ## Active task
 
-Fastest flow with compatibility guardrails: close real release blockers in order without rebuilding Learn or changing environment assumptions.
+Wire payment and entitlement services using existing backend/environment assumptions first. Do not introduce new Learn environment variables.
 
 ## Next step
 
-Verify the Learn UI/environment guardrail docs with a clean local pull, then continue into payment provider and entitlement service wiring using the existing environment assumptions.
+Verify M09-A payment and entitlement service wiring with a clean local pull, debug build, and release build.
 
 ## Pending verification
 
-- M08-B Learn UI and environment guardrails were pushed with a dedicated architecture note and release checklist guardrails.
+- M09-A payment and entitlement service wiring was pushed with service billing repository injection into the suite, existing `/api/v1/billing/dashboard` and `/api/v1/billing/checkout` route usage, checkout URL recognition, and fallback-safe UI when existing backend routes are not ready.
