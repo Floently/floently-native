@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M14 Final local QA runbook.
+M15 Native QA execution.
 
 ## Branch
 
@@ -10,18 +10,16 @@ M14 Final local QA runbook.
 
 ## Latest verified build
 
-Final release blocker dashboard cleanup was pulled and verified with debug build, release build, release bundle build, final blocker document, and progress tracker check.
+Final local QA runbook and QA result template were pulled and documentation was verified.
 
 ```bash
 git pull --ff-only
-./scripts/nativectl build android-learn
-./scripts/nativectl build android-learn-release
-./scripts/nativectl build android-learn-bundle
-sed -n '1,220p' docs/release/FINAL_RELEASE_BLOCKERS.md
+sed -n '1,260p' docs/release/FINAL_LOCAL_QA_RUNBOOK.md
+sed -n '1,220p' docs/release/QA_RESULTS_TEMPLATE.md
 sed -n '1,140p' docs/progress/NATIVE_PROGRESS.md
 ```
 
-Latest verified commit locally: `aa53fa0`.
+Latest verified commit locally: `e090bbf`.
 
 ## Completed
 
@@ -39,18 +37,19 @@ Latest verified commit locally: `aa53fa0`.
 - Store/signing readiness is verified with ignored signing properties, optional signing config, signing status command, release build, and release bundle build.
 - Store submission and manual QA pack is verified with listing draft, screenshot checklist, data-safety prompts, release notes draft, and real-device checklist.
 - Final release blocker dashboard cleanup is verified with only true blockers remaining: live backend QA, payment provider checkout, local release signing, privacy/data-safety/screenshots, and manual real-device QA.
+- Final local QA runbook is verified with fixed-order build, install, auth, suite, Learn, Read, Create, payment/access, offline/error, signing, and result-recording instructions.
 - Backend integration contracts are verified with native API route registry and suite selector backend contract dashboard.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
 ## Active task
 
-Prepare final local QA runbook and QA result template so testing can start in a fixed order without guessing.
+Start actual QA execution by producing a debug APK, copying it to `/home/vitus/`, and recording the exact build commit and artifact location for device testing.
 
 ## Next step
 
-Verify M14-A final local QA runbook with a clean local pull and documentation check.
+Run M15-A QA artifact preparation locally, then install/copy the APK to a test device and begin the manual QA runbook.
 
 ## Pending verification
 
-- M14-A final local QA runbook was pushed with fixed-order build, install, auth, suite, Learn, Read, Create, payment/access, offline/error, signing, and result-recording instructions.
+- M15-A QA artifact preparation should verify clean status, build debug APK, copy the APK and QA template to `/home/vitus/`, and print the exact artifact path and commit for testing.
