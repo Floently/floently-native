@@ -58,7 +58,7 @@ fun ProfessionalFinnishScreen(
                 modifier = Modifier
                     .verticalScroll(rememberScrollState())
                     .animateContentSize(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 Text(
                     text = "Professional Finnish",
@@ -67,20 +67,24 @@ fun ProfessionalFinnishScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Native workplace Finnish foundation with guarded professional scenarios, phrase support, and parity gates.",
+                    text = "Practise Finnish for work, interviews, customer situations, and everyday professional messages.",
                     color = palette.muted,
                     style = MaterialTheme.typography.titleMedium
                 )
 
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(
-                        text = "Domain",
+                        text = "Choose a work situation",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
+                    Text(
+                        text = "Pick the area closest to your real life. You will see model phrases and write your own Finnish response.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                     ProfessionalFinnishDomain.entries.forEach { domain ->
                         FloentlyPrimaryButton(
-                            title = if (domain == selectedDomain) "Selected: ${domain.name}" else domain.name,
+                            title = if (domain == selectedDomain) "${domain.displayName()} selected" else domain.displayName(),
                             product = FloentlyProduct.Learn,
                             onClick = { selectedDomain = domain }
                         )
@@ -89,6 +93,11 @@ fun ProfessionalFinnishScreen(
 
                 statusMessage?.let { message ->
                     FloentlyCard(product = FloentlyProduct.Learn) {
+                        Text(
+                            text = "Note",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
                         Text(
                             text = message,
                             style = MaterialTheme.typography.bodyMedium
@@ -99,14 +108,19 @@ fun ProfessionalFinnishScreen(
                 val dashboard = dashboardState
                 if (dashboard == null || dashboard.isLoading) {
                     Text(
-                        text = "Loading professional modules...",
+                        text = "Loading professional Finnish...",
                         color = palette.muted,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 } else if (dashboard.modules.isEmpty()) {
                     FloentlyCard(product = FloentlyProduct.Learn) {
                         Text(
-                            text = "No modules yet for ${dashboard.selectedDomain.name}.",
+                            text = "No modules yet",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Try another work situation or come back when new practice is available.",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -124,19 +138,25 @@ fun ProfessionalFinnishScreen(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
-                                text = "Domain: ${module.domain}",
+                                text = "Area: ${module.domain.displayName()}",
                                 style = MaterialTheme.typography.bodySmall
                             )
                             Text(
-                                text = "Estimated time: ${module.estimatedMinutes} min",
+                                text = "Time: about ${module.estimatedMinutes} minutes",
                                 style = MaterialTheme.typography.bodySmall
                             )
                             Text(
-                                text = "Progress: ${progress?.completedScenarios ?: 0}/${progress?.totalScenarios ?: 0}",
+                                text = "Completed: ${progress?.completedScenarios ?: 0} of ${progress?.totalScenarios ?: 0}",
                                 style = MaterialTheme.typography.bodySmall
                             )
+                            progress?.lastPracticeSummary?.let { summary ->
+                                Text(
+                                    text = summary,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                             FloentlyPrimaryButton(
-                                title = if (module.locked) "View lock reason" else "Start scenario",
+                                title = if (module.locked) "See why locked" else "Start practice",
                                 product = FloentlyProduct.Learn,
                                 onClick = {
                                     scope.launch {
@@ -187,7 +207,7 @@ private fun ProfessionalFinnishSessionScreen(
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
                 .animateContentSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Text(
                 text = session.module.title,
@@ -196,7 +216,7 @@ private fun ProfessionalFinnishSessionScreen(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Native professional Finnish scenario flow. Feedback, scoring, audio, and durable progress remain guarded until parity is wired.",
+                text = "Read the situation, use the model phrases, and write a natural Finnish response.",
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -207,7 +227,7 @@ private fun ProfessionalFinnishSessionScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    text = "Progress: ${session.currentScenarioIndex}/${session.scenarios.size}",
+                    text = "Scenario ${session.currentScenarioIndex + 1} of ${session.scenarios.size}",
                     style = MaterialTheme.typography.labelMedium
                 )
                 Text(
@@ -219,16 +239,16 @@ private fun ProfessionalFinnishSessionScreen(
             if (session.completed) {
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(
-                        text = "Scenario set complete",
+                        text = "Practice complete",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Responses are captured only in this native preview session. Professional feedback and durable progress are still gated.",
+                        text = "You completed ${session.responses.size} professional Finnish response(s). Repeat this practice when you want more confidence.",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        text = "Captured responses: ${session.responses.size}",
+                        text = "Next step: try another work situation or practise roleplay.",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -241,7 +261,7 @@ private fun ProfessionalFinnishSessionScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Type: ${scenario.type}",
+                            text = scenario.type.displayName(),
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
@@ -269,15 +289,15 @@ private fun ProfessionalFinnishSessionScreen(
                                 )
                             }
                         }
-                        Text(
-                            text = scenario.releaseGate,
-                            style = MaterialTheme.typography.bodySmall
-                        )
                         OutlinedTextField(
                             value = response,
                             onValueChange = { response = it },
-                            label = { Text("Your professional Finnish response") },
+                            label = { Text("Your Finnish response") },
                             modifier = Modifier.fillMaxWidth()
+                        )
+                        Text(
+                            text = "Tip: use one model phrase and adapt it to the situation.",
+                            style = MaterialTheme.typography.bodySmall
                         )
                         statusMessage?.let { message ->
                             Text(
@@ -286,7 +306,7 @@ private fun ProfessionalFinnishSessionScreen(
                             )
                         }
                         FloentlyPrimaryButton(
-                            title = "Save response",
+                            title = "Save and continue",
                             product = FloentlyProduct.Learn,
                             onClick = {
                                 val cleanResponse = response.trim()
@@ -306,10 +326,27 @@ private fun ProfessionalFinnishSessionScreen(
             }
 
             FloentlyPrimaryButton(
-                title = if (session.completed) "Back to Professional Finnish" else "Exit scenario",
+                title = if (session.completed) "Back to Professional Finnish" else "Exit practice",
                 product = FloentlyProduct.Learn,
                 onClick = onExit
             )
         }
     }
+}
+
+private fun ProfessionalFinnishDomain.displayName(): String = when (this) {
+    ProfessionalFinnishDomain.Healthcare -> "Healthcare"
+    ProfessionalFinnishDomain.Office -> "Office"
+    ProfessionalFinnishDomain.CustomerService -> "Customer service"
+    ProfessionalFinnishDomain.JobSearch -> "Job search"
+    ProfessionalFinnishDomain.Safety -> "Safety"
+    ProfessionalFinnishDomain.SmallTalk -> "Small talk"
+}
+
+private fun ProfessionalFinnishScenarioType.displayName(): String = when (this) {
+    ProfessionalFinnishScenarioType.PhrasePractice -> "Phrase practice"
+    ProfessionalFinnishScenarioType.DialoguePractice -> "Dialogue practice"
+    ProfessionalFinnishScenarioType.EmailWriting -> "Email writing"
+    ProfessionalFinnishScenarioType.MeetingResponse -> "Meeting response"
+    ProfessionalFinnishScenarioType.PhoneCall -> "Phone call"
 }
