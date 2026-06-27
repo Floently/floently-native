@@ -38,7 +38,7 @@ fun AccountScreen(
     FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
         Column(
             modifier = Modifier.verticalScroll(rememberScrollState()).animateContentSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Text(
                 text = "Account",
@@ -47,7 +47,7 @@ fun AccountScreen(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Native account foundation for profile, plan access, devices, and sign-out controls.",
+                text = "Manage your Learn access, devices, and sign-out.",
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -58,31 +58,36 @@ fun AccountScreen(
             } else {
                 dashboard.errorMessage?.let { message ->
                     FloentlyCard(product = FloentlyProduct.Learn) {
+                        Text(text = "Account note", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Text(text = message, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
 
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(text = "Profile", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text(text = "Email: ${dashboard.email}", style = MaterialTheme.typography.bodyMedium)
+                    Text(text = dashboard.email, style = MaterialTheme.typography.bodyMedium)
                 }
 
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(text = "Learn access", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text(text = "Product: ${dashboard.plan.product}", style = MaterialTheme.typography.bodyMedium)
-                    Text(text = "Status: ${dashboard.plan.status.name}", style = MaterialTheme.typography.bodySmall)
-                    Text(text = "Plan: ${dashboard.plan.planName}", style = MaterialTheme.typography.bodySmall)
+                    Text(text = dashboard.plan.planName, style = MaterialTheme.typography.bodyMedium)
+                    Text(text = dashboard.plan.status.friendlyText(), style = MaterialTheme.typography.bodySmall)
                     Text(text = dashboard.plan.renewalText, style = MaterialTheme.typography.bodySmall)
                     Text(text = dashboard.plan.accessNote, style = MaterialTheme.typography.bodySmall)
                 }
 
                 FloentlyCard(product = FloentlyProduct.Learn) {
-                    Text(text = "Device access", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text(text = "Device slots: ${dashboard.usedDeviceSlots}/${dashboard.maxDevices}", style = MaterialTheme.typography.bodyMedium)
-                    dashboard.devices.forEach { device ->
-                        Text(text = "${device.name}: ${device.status.name}", style = MaterialTheme.typography.bodySmall)
-                        Text(text = "Last seen: ${device.lastSeenText}", style = MaterialTheme.typography.bodySmall)
-                        Text(text = "Revoke available: ${device.revokeAvailable}", style = MaterialTheme.typography.bodySmall)
+                    Text(text = "Devices", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(text = "${dashboard.usedDeviceSlots} of ${dashboard.maxDevices} device slot(s) used", style = MaterialTheme.typography.bodyMedium)
+                    if (dashboard.devices.isEmpty()) {
+                        Text(text = "This device will appear here after device access is confirmed.", style = MaterialTheme.typography.bodySmall)
+                    } else {
+                        dashboard.devices.forEach { device ->
+                            Text(text = device.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                            Text(text = device.status.friendlyText(), style = MaterialTheme.typography.bodySmall)
+                            Text(text = "Last seen: ${device.lastSeenText}", style = MaterialTheme.typography.bodySmall)
+                            Text(text = if (device.revokeAvailable) "Can be removed from account" else "Current device cannot be removed here", style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                 }
             }
@@ -91,4 +96,15 @@ fun AccountScreen(
             FloentlyPrimaryButton(title = "Sign out", product = FloentlyProduct.Learn, onClick = onSignOut)
         }
     }
+}
+
+private fun LearnPlanStatus.friendlyText(): String = when (this) {
+    LearnPlanStatus.Active -> "Access active"
+    LearnPlanStatus.Pending -> "Access pending"
+    LearnPlanStatus.Missing -> "Access needed"
+}
+
+private fun LearnDeviceStatus.friendlyText(): String = when (this) {
+    LearnDeviceStatus.Current -> "Current device"
+    LearnDeviceStatus.Registered -> "Registered device"
 }
