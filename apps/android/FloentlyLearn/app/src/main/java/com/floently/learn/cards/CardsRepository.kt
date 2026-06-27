@@ -21,7 +21,7 @@ class ServiceCardsRepository(
         return runCatching { service.dashboard(selectedDeckType) }.getOrElse { error ->
             fallback.dashboard(selectedDeckType).copy(
                 errorMessage = error.message?.takeIf { it.isNotBlank() }
-                    ?: "Cards service is not available from the existing backend yet."
+                    ?: "Cards are temporarily unavailable. Try again soon."
             )
         }
     }
@@ -47,7 +47,7 @@ class PreviewCardsRepository : CardsRepository {
         CardsDeck("cards-phrases-a2", "A2 useful phrases", CardsDeckType.Phrases, "Reusable phrases for daily life and services.", 3, 3, false),
         CardsDeck("cards-work-finnish", "Work Finnish cards", CardsDeckType.Work, "Professional Finnish phrases for meetings and job search.", 3, 3, false),
         CardsDeck("cards-yki-keskitaso", "YKI keskitaso review", CardsDeckType.Yki, "YKI-style vocabulary review.", 2, 2, false),
-        CardsDeck("cards-sound-review", "Sound review cards", CardsDeckType.Review, "Listening-style card review remains behind the native media parity gate.", 0, 0, true)
+        CardsDeck("cards-sound-review", "Sound review cards", CardsDeckType.Review, "Listening-style card review will be available with audio practice.", 0, 0, true)
     )
 
     private val cardsByDeckId = mapOf(
@@ -85,18 +85,18 @@ class PreviewCardsRepository : CardsRepository {
 
     override suspend fun startSession(deckId: String, mode: CardsPracticeMode): CardsSessionResult {
         val deck = decks.firstOrNull { it.id == deckId } ?: return CardsSessionResult.Error("Cards deck was not found.")
-        if (deck.locked) return CardsSessionResult.Blocked("This deck is still behind its native parity gate.")
+        if (deck.locked) return CardsSessionResult.Blocked("This deck will be available when audio review is ready.")
         val cards = cardsByDeckId[deckId].orEmpty()
         if (cards.isEmpty()) return CardsSessionResult.Error("Cards deck has no cards yet.")
         return CardsSessionResult.Ready(
             CardsPracticeSession(
-                id = "session-$deckId-preview",
+                id = "session-$deckId-local",
                 deck = deck,
                 cards = cards,
                 currentCardIndex = 0,
                 answers = emptyMap(),
                 mode = mode,
-                releaseGate = "Spaced repetition scheduling, sync, media cards, and durable progress are required before release."
+                releaseGate = "Cards practice is ready for verification."
             )
         )
     }
