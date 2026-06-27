@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.floently.learn.i18n.LearnCopy
 import com.floently.learn.i18n.LearnLanguage
+import com.floently.learn.i18n.LearnTranslationStatus
 import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
@@ -65,13 +66,13 @@ fun LearnSettingsScreen(
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
-                LearnLanguage.enabledLanguages.forEach { language ->
+                Text(
+                    text = "All ${LearnLanguage.entries.size} old Learn language options are preserved here. Finnish, Swedish, and English have native UI copy now; other selected languages remain available and fall back safely while full translations are completed.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                LearnLanguage.entries.forEach { language ->
                     FloentlyPrimaryButton(
-                        title = if (language == selectedLanguage) {
-                            "${language.displayLabel} selected"
-                        } else {
-                            language.displayLabel
-                        },
+                        title = language.optionLabel(selectedLanguage),
                         product = FloentlyProduct.Learn,
                         onClick = { onLanguageSelected(language) }
                     )
@@ -118,4 +119,14 @@ fun LearnSettingsScreen(
             )
         }
     }
+}
+
+private fun LearnLanguage.optionLabel(selectedLanguage: LearnLanguage): String {
+    val selectedText = if (this == selectedLanguage) " selected" else ""
+    val statusText = when (translationStatus) {
+        LearnTranslationStatus.Complete -> "complete"
+        LearnTranslationStatus.Fallback -> "fallback"
+        LearnTranslationStatus.InProgress -> "in progress"
+    }
+    return "$displayLabel - $statusText$selectedText"
 }
