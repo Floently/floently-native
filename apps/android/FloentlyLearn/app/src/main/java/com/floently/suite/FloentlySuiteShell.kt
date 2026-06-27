@@ -20,6 +20,9 @@ import androidx.compose.ui.unit.dp
 import com.floently.create.CreateStudioRepository
 import com.floently.create.CreateStudioShell
 import com.floently.learn.app.LearnSignedInShell
+import com.floently.learn.cards.CardsRepository
+import com.floently.learn.progress.LearnProgressRepository
+import com.floently.learn.roleplay.RoleplayRepository
 import com.floently.read.ReadRepository
 import com.floently.read.ReadShell
 import com.floently.shared.access.FloentlyAccessRepository
@@ -44,6 +47,9 @@ fun FloentlySuiteShell(
     billingRepository: FloentlyBillingRepository,
     readRepository: ReadRepository,
     createStudioRepository: CreateStudioRepository,
+    roleplayRepository: RoleplayRepository,
+    cardsRepository: CardsRepository,
+    progressRepository: LearnProgressRepository,
     onSignOut: () -> Unit
 ) {
     var selectedProduct by remember { mutableStateOf<FloentlySuiteProduct?>(null) }
@@ -86,7 +92,14 @@ fun FloentlySuiteShell(
         )
         accessState?.isChecking == true -> FloentlySuiteMessage(selected, "Checking ${selected.title} access...", "Each product is checked separately.")
         accessState?.isAllowed == true -> when (selected) {
-            FloentlySuiteProduct.Learn -> LearnSignedInShell(session, onSignOut, onBackToSuite = { selectedProduct = null })
+            FloentlySuiteProduct.Learn -> LearnSignedInShell(
+                session = session,
+                roleplayRepository = roleplayRepository,
+                cardsRepository = cardsRepository,
+                progressRepository = progressRepository,
+                onSignOut = onSignOut,
+                onBackToSuite = { selectedProduct = null }
+            )
             FloentlySuiteProduct.Read -> ReadShell(session, repository = readRepository, onBackToSuite = { selectedProduct = null })
             FloentlySuiteProduct.Create -> CreateStudioShell(session, repository = createStudioRepository, onBackToSuite = { selectedProduct = null })
         }
