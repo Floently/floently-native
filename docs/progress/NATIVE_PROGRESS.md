@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M16 Learn-first release completion and polish.
+M17 Learn 150% parity augmentation.
 
 ## Branch
 
@@ -10,19 +10,18 @@ M16 Learn-first release completion and polish.
 
 ## Latest verified build
 
-M16-E Learn release-candidate audit/build/QA artifact prep was pulled and verified with debug, release, and bundle builds.
+M16-F wording cleanup was pulled and verified with debug, release, and bundle builds.
 
 ```bash
 git pull --ff-only
-./scripts/nativectl signing-status
 ./scripts/nativectl build android-learn
 ./scripts/nativectl build android-learn-release
 ./scripts/nativectl build android-learn-bundle
 ```
 
-Latest verified commit locally: `73ab08b`.
+Latest verified commit locally: `0d2958b`.
 
-Latest QA artifact: `/home/vitus/floently-learn-rc-debug-73ab08b.apk`.
+Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 
 ## Completed
 
@@ -47,18 +46,19 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-73ab08b.apk`.
 - M16-C polished YKI and Professional Finnish with learner-facing copy, improved practice/session guidance, cleaner module cards, answer/response guidance, and completion summaries.
 - M16-D polished Progress and Account with learner-facing progress, access, device, empty, and sign-out copy.
 - M16-E prepared a fresh Learn release-candidate QA APK and exposed remaining wording-audit matches.
-- M16-F started cleaning user-facing fallback/audit wording in Roleplay, Cards, Account, YKI, and Professional Finnish.
+- M16-F cleaned user-facing fallback/audit wording in Roleplay, Cards, Account, YKI, and Professional Finnish; debug, release, and bundle builds passed.
+- M16-G recorded the Learn 150% parity audit and augment-build backlog in `docs/release/LEARN_150_PARITY_AUDIT.md`.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
 ## Active task
 
-Verify M16-F wording cleanup, rerun builds, and prepare a new Learn QA APK if the audit is clean enough for real-device/backend QA.
+Build Learn to 150% of the old app before release. The native app is no longer treated as release-ready until the 150% parity backlog is addressed or explicitly gated.
 
 ## Next step
 
-Run M16-F wording cleanup verification locally.
+Start M17-A Native i18n foundation: add language metadata, FI/SV/EN strings, language selector, persistence, and wire translations into main Learn screens.
 
 ## Pending verification
 
-- M16-F should rerun wording audit and builds after cleanup. Some non-user-facing internal model fields may still contain release-gate or preview enum/property names, but user-facing strings should be clear learner-facing copy.
+- M17-A should restore old i18n direction in native Learn and preserve review-language metadata for future expansion.
