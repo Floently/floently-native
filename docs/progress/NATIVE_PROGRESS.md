@@ -10,17 +10,17 @@ M16 Learn-first release completion and polish.
 
 ## Latest verified build
 
-M16-A Learn home polish was pulled and verified with debug and release builds.
+M16-B Roleplay and Cards polish was pulled and verified with debug and release builds.
 
 ```bash
 git pull --ff-only
 ./scripts/nativectl build android-learn
 ./scripts/nativectl build android-learn-release
-sed -n '1,220p' docs/release/LEARN_PREMIUM_POLISH_AUDIT.md
-sed -n '1,140p' docs/progress/NATIVE_PROGRESS.md
+sed -n '1,240p' docs/release/LEARN_PREMIUM_POLISH_AUDIT.md
+sed -n '1,150p' docs/progress/NATIVE_PROGRESS.md
 ```
 
-Latest verified commit locally: `1687377`.
+Latest verified commit locally: `c2c895d`.
 
 Latest QA artifact: `/home/vitus/floently-qa-debug-6d15f07.apk`.
 
@@ -44,6 +44,7 @@ Latest QA artifact: `/home/vitus/floently-qa-debug-6d15f07.apk`.
 - Learn-first release decision is recorded: complete and polish Learn first, release Learn, then continue Read and Create to release quality.
 - M16-A replaced the Learn home engineering/status dashboard with a user-facing learning home.
 - M16-B polished Roleplay and Cards with learner-facing copy, improved practice flow, conversation guidance, card reveal, card rating, and review summary.
+- M16-C polished YKI and Professional Finnish with learner-facing copy, improved practice/session guidance, cleaner module cards, answer/response guidance, and completion summaries.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
@@ -53,8 +54,8 @@ Complete and polish Floently Learn to match or improve the previous pre-native L
 
 ## Next step
 
-Verify M16-B Roleplay and Cards polish, then continue with YKI and Professional Finnish premium polish.
+Verify M16-C YKI and Professional Finnish polish, then continue with Progress and Account polish plus a user-facing wording audit.
 
 ## Pending verification
 
-- M16-B Roleplay and Cards polish was pushed with user-facing roleplay copy, improved conversation flow, learner guidance, card practice screen, answer reveal, rating flow, and session summary.
+- M16-C YKI and Professional Finnish polish was pushed with learner-facing YKI exam practice copy, polished YKI task session, learner-facing workplace Finnish copy, polished professional scenario flow, and removal of release-gate wording from those user-facing screens.
