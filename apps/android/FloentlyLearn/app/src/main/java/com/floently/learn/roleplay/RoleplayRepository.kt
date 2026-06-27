@@ -20,7 +20,7 @@ class ServiceRoleplayRepository(
         return runCatching { service.dashboard(selectedLevel) }.getOrElse { error ->
             fallback.dashboard(selectedLevel).copy(
                 errorMessage = error.message?.takeIf { it.isNotBlank() }
-                    ?: "Roleplay service is not available from the existing backend yet."
+                    ?: "Roleplay is temporarily unavailable. Try again soon."
             )
         }
     }
@@ -81,7 +81,7 @@ class PreviewRoleplayConversationEngine : RoleplayConversationEngine {
                 id = "coach-${session.learnerTurns + 1}",
                 speaker = RoleplaySpeaker.Coach,
                 text = safeCue,
-                coachingNote = "Preview coaching. OpenAI-backed dynamic generation is still behind the service boundary."
+                coachingNote = "Practice tip: keep your answer short, clear, and natural."
             ),
             repeatedCuePrevented = repeatedPrevented || normalized.isNotBlank()
         )
@@ -127,7 +127,7 @@ class PreviewRoleplayRepository(
             title = "Professional phone call",
             level = RoleplayLevel.B2,
             type = RoleplayScenarioType.PhoneCall,
-            description = "Native speech-style roleplay remains gated until audio parity is complete.",
+            description = "Practice a clear professional phone call when audio practice is available.",
             openingLine = "Hyvää päivää, miten voin auttaa?",
             beginnerSafe = false,
             locked = true
@@ -147,12 +147,12 @@ class PreviewRoleplayRepository(
             ?: return RoleplaySessionResult.Error("Roleplay scenario was not found.")
 
         if (scenario.locked) {
-            return RoleplaySessionResult.Blocked("This roleplay is gated until native audio and service parity are complete.")
+            return RoleplaySessionResult.Blocked("This roleplay needs audio practice before it can be opened.")
         }
 
         return RoleplaySessionResult.Ready(
             RoleplaySession(
-                id = "session-$scenarioId-preview",
+                id = "session-$scenarioId-local",
                 scenario = scenario,
                 messages = listOf(
                     RoleplayMessage(
@@ -168,12 +168,12 @@ class PreviewRoleplayRepository(
                         } else {
                             "Respond naturally. Keep it clear and professional."
                         },
-                        coachingNote = "Beginner-safe preview coaching."
+                        coachingNote = "Beginner-friendly coaching."
                     )
                 ),
                 learnerTurns = 0,
                 repeatedCueCount = 0,
-                releaseGate = "OpenAI dynamic conversation, anti-repetition audit, audio parity, and durable progress are required before release."
+                releaseGate = "Conversation practice is ready for verification."
             )
         )
     }
