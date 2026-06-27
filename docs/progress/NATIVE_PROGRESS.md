@@ -10,17 +10,17 @@ M16 Learn-first release completion and polish.
 
 ## Latest verified build
 
-M16-C YKI and Professional Finnish polish was pulled and verified with debug and release builds.
+M16-D Progress and Account polish was pulled and verified with debug and release builds.
 
 ```bash
 git pull --ff-only
 ./scripts/nativectl build android-learn
 ./scripts/nativectl build android-learn-release
-sed -n '1,260p' docs/release/LEARN_PREMIUM_POLISH_AUDIT.md
-sed -n '1,160p' docs/progress/NATIVE_PROGRESS.md
+sed -n '1,280p' docs/release/LEARN_PREMIUM_POLISH_AUDIT.md
+sed -n '1,170p' docs/progress/NATIVE_PROGRESS.md
 ```
 
-Latest verified commit locally: `6a73465`.
+Latest verified commit locally: `d7ab6ec`.
 
 Latest QA artifact: `/home/vitus/floently-qa-debug-6d15f07.apk`.
 
@@ -51,12 +51,12 @@ Latest QA artifact: `/home/vitus/floently-qa-debug-6d15f07.apk`.
 
 ## Active task
 
-Race toward Learn release readiness by verifying M16-D, running a Learn wording audit, preparing a fresh QA APK, and starting real-device/backend QA.
+Run the Learn release-candidate wording audit, build debug/release/bundle, prepare a fresh QA APK under `/home/vitus/`, then start real-device/backend QA.
 
 ## Next step
 
-Verify M16-D Progress and Account polish, then run Learn wording audit plus fresh QA APK preparation.
+Run M16-E Learn release-candidate audit and QA artifact preparation locally.
 
 ## Pending verification
 
-- M16-D Progress and Account polish was pushed with learner-facing progress dashboard copy, polished summary/activity states, account access copy, device copy, and updated Learn premium polish audit.
+- M16-E should check for remaining user-facing engineering wording, run debug/release/bundle builds, copy the fresh QA APK and QA result template to `/home/vitus/`, and print the exact artifact paths for real-device testing.
