@@ -57,10 +57,10 @@ class PreviewYkiEvaluator : YkiEvaluator {
                 status = status,
                 scorePercent = if (status == YkiEvaluationStatus.PreviewAccepted && answer.isNotBlank()) 100 else null,
                 feedback = when (status) {
-                    YkiEvaluationStatus.PreviewAccepted -> "Preview answer captured. Final scoring still requires parity checks."
-                    YkiEvaluationStatus.NeedsServiceScoring -> "Answer captured. Service scoring is required before release."
-                    YkiEvaluationStatus.NeedsSpeechReview -> "Speech-style task captured as text preview. Speech feature parity is required before release."
-                    YkiEvaluationStatus.NotEvaluated -> "Answer captured but no matching task was found."
+                    YkiEvaluationStatus.PreviewAccepted -> "Answer captured. Good work."
+                    YkiEvaluationStatus.NeedsServiceScoring -> "Answer captured. Final feedback will appear after scoring is available."
+                    YkiEvaluationStatus.NeedsSpeechReview -> "Answer captured. Speaking and listening feedback will appear when audio review is available."
+                    YkiEvaluationStatus.NotEvaluated -> "Answer captured, but this task could not be matched."
                 },
                 releaseGate = when (status) {
                     YkiEvaluationStatus.PreviewAccepted -> YkiEvaluationReleaseGate.RequiresParityReview
