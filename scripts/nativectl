@@ -16,15 +16,17 @@ Floently native control script
 Usage:
   ./scripts/nativectl status
   ./scripts/nativectl preflight
+  ./scripts/nativectl signing-status
   ./scripts/nativectl build android-learn
   ./scripts/nativectl build android-learn-release
+  ./scripts/nativectl build android-learn-bundle
   ./scripts/nativectl clean
 
 Notes:
   - Android build output is ignored by Git.
   - Android SDK location is written to apps/android/local.properties locally only.
+  - Android signing secrets belong in ignored apps/android/signing.properties or local environment only.
   - This script does not modify the legacy Expo repository.
-  - Release build creates an unsigned release artifact until Play/App signing secrets are configured.
 EOF
 }
 
@@ -87,16 +89,50 @@ status() {
   git -C "$ROOT" status --short --ignored | sed -n '1,80p'
 }
 
+secret_present() {
+  key="$1"
+  signing_file="$ANDROID_DIR/signing.properties"
+  if [ -n "${!key:-}" ]; then
+    return 0
+  fi
+  if [ -f "$signing_file" ] && grep -Eq "^${key}=" "$signing_file"; then
+    return 0
+  fi
+  return 1
+}
+
+signing_status() {
+  echo "=== Android signing status ==="
+  echo "signing_file=$ANDROID_DIR/signing.properties"
+  echo "signing_file_tracked=$(git -C "$ROOT" ls-files --error-unmatch apps/android/signing.properties >/dev/null 2>&1 && echo yes || echo no)"
+  missing=0
+  for key in FLOENTLY_RELEASE_STORE_FILE FLOENTLY_RELEASE_STORE_PASSWORD FLOENTLY_RELEASE_KEY_ALIAS FLOENTLY_RELEASE_KEY_PASSWORD; do
+    if secret_present "$key"; then
+      echo "$key=present"
+    else
+      echo "$key=missing"
+      missing=$((missing + 1))
+    fi
+  done
+  if [ "$missing" -eq 0 ]; then
+    echo "release_signing=configured"
+  else
+    echo "release_signing=not_configured"
+  fi
+  echo "=== done ==="
+}
+
 preflight() {
   echo "=== Floently native preflight ==="
   echo "=== forbidden generated files tracked by Git ==="
-  git -C "$ROOT" ls-files | grep -E '\.(apk|aab|ipa|xcarchive|tar\.gz|zip|log)$|(^|/)build/|(^|/)bundles/|(^|/)build-artifacts/|(^|/)tools/gradle' || true
+  git -C "$ROOT" ls-files | grep -E '\.(apk|aab|ipa|xcarchive|tar\.gz|zip|log)$|(^|/)build/|(^|/)bundles/|(^|/)build-artifacts/|(^|/)tools/gradle|(^|/)signing\.properties$' || true
   echo "=== forbidden legacy repo path in Android source ==="
   grep -Rni "/root/floently-finnish" "$ROOT/apps/android" 2>/dev/null || true
   echo "=== Java/Kotlin toolchain ==="
   grep -RniE "jvmToolchain|VERSION_17|sourceCompatibility|targetCompatibility" "$ROOT/apps/android" 2>/dev/null || true
   echo "=== release config ==="
-  grep -RniE "applicationId|versionCode|versionName|buildTypes|release" "$ROOT/apps/android/FloentlyLearn/app/build.gradle.kts" 2>/dev/null || true
+  grep -RniE "applicationId|versionCode|versionName|buildTypes|release|signingConfig" "$ROOT/apps/android/FloentlyLearn/app/build.gradle.kts" 2>/dev/null || true
+  signing_status
   echo "=== done ==="
 }
 
@@ -116,6 +152,10 @@ build_android_learn_release() {
   run_gradle :FloentlyLearn:app:assembleRelease
 }
 
+build_android_learn_bundle() {
+  run_gradle :FloentlyLearn:app:bundleRelease
+}
+
 clean() {
   rm -rf "$ROOT/apps/android/.gradle" "$ROOT/apps/android/FloentlyLearn/app/build" "$ROOT/apps/android/shared/build"
   rm -f "$ROOT/apps/android/local.properties"
@@ -125,11 +165,13 @@ clean() {
 case "${1:-}" in
   status) status ;;
   preflight) preflight ;;
+  signing-status) signing_status ;;
   clean) clean ;;
   build)
     case "${2:-}" in
       android-learn) build_android_learn ;;
       android-learn-release) build_android_learn_release ;;
+      android-learn-bundle) build_android_learn_bundle ;;
       *) usage; exit 2 ;;
     esac
     ;;
