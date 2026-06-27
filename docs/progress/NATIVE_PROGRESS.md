@@ -10,17 +10,17 @@ M16 Learn-first release completion and polish.
 
 ## Latest verified build
 
-M16-B Roleplay and Cards polish was pulled and verified with debug and release builds.
+M16-C YKI and Professional Finnish polish was pulled and verified with debug and release builds.
 
 ```bash
 git pull --ff-only
 ./scripts/nativectl build android-learn
 ./scripts/nativectl build android-learn-release
-sed -n '1,240p' docs/release/LEARN_PREMIUM_POLISH_AUDIT.md
-sed -n '1,150p' docs/progress/NATIVE_PROGRESS.md
+sed -n '1,260p' docs/release/LEARN_PREMIUM_POLISH_AUDIT.md
+sed -n '1,160p' docs/progress/NATIVE_PROGRESS.md
 ```
 
-Latest verified commit locally: `c2c895d`.
+Latest verified commit locally: `6a73465`.
 
 Latest QA artifact: `/home/vitus/floently-qa-debug-6d15f07.apk`.
 
@@ -45,17 +45,18 @@ Latest QA artifact: `/home/vitus/floently-qa-debug-6d15f07.apk`.
 - M16-A replaced the Learn home engineering/status dashboard with a user-facing learning home.
 - M16-B polished Roleplay and Cards with learner-facing copy, improved practice flow, conversation guidance, card reveal, card rating, and review summary.
 - M16-C polished YKI and Professional Finnish with learner-facing copy, improved practice/session guidance, cleaner module cards, answer/response guidance, and completion summaries.
+- M16-D polished Progress and Account with learner-facing progress, access, device, empty, and sign-out copy.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
 ## Active task
 
-Complete and polish Floently Learn to match or improve the previous pre-native Learn experience, then release Learn first. Read and Create remain later release-quality tracks after Learn release.
+Race toward Learn release readiness by verifying M16-D, running a Learn wording audit, preparing a fresh QA APK, and starting real-device/backend QA.
 
 ## Next step
 
-Verify M16-C YKI and Professional Finnish polish, then continue with Progress and Account polish plus a user-facing wording audit.
+Verify M16-D Progress and Account polish, then run Learn wording audit plus fresh QA APK preparation.
 
 ## Pending verification
 
-- M16-C YKI and Professional Finnish polish was pushed with learner-facing YKI exam practice copy, polished YKI task session, learner-facing workplace Finnish copy, polished professional scenario flow, and removal of release-gate wording from those user-facing screens.
+- M16-D Progress and Account polish was pushed with learner-facing progress dashboard copy, polished summary/activity states, account access copy, device copy, and updated Learn premium polish audit.
