@@ -67,7 +67,7 @@ fun LearnSettingsScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "All ${LearnLanguage.entries.size} old Learn language options are preserved here. Finnish, Swedish, and English have native UI copy now; other selected languages remain available and fall back safely while full translations are completed.",
+                    text = "All ${LearnLanguage.entries.size} final web Learn language options are enabled here. The web build is the source of truth for language availability.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 LearnLanguage.entries.forEach { language ->

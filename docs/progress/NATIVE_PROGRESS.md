@@ -47,7 +47,7 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M16-F cleaned user-facing fallback/audit wording in Roleplay, Cards, Account, YKI, and Professional Finnish; debug, release, and bundle builds passed.
 - M16-G recorded the Learn 150% parity audit and augment-build backlog in `docs/release/LEARN_150_PARITY_AUDIT.md`.
 - M17-A started native i18n restoration: old language metadata is present, FI/SV/EN copy is available, Settings exists, language persistence is added, and Learn home/shell are wired to language settings.
-- M17-A follow-up corrected the release-contract compile error and changed Settings to show all 20 old Learn language options, not only FI/SV/EN.
+- M17-A follow-up corrected the release-contract compile error and changed Settings to show all 20 final web Learn language options. A later correction aligned native metadata with the final web build: all 20 languages are enabled and complete.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
@@ -61,4 +61,4 @@ Verify the M17-A compile fix and all-language settings patch locally, then conti
 
 ## Pending verification
 
-- M17-A follow-up should compile, show all 20 language options in Settings, preserve FI/SV/EN complete status, preserve the remaining review/in-progress languages, and persist selected language on device.
+- M17-A follow-up should compile, show all 20 enabled final web Learn language options in Settings, preserve complete status for every language, and persist selected language on device.
