@@ -10,15 +10,14 @@ M17 Learn 150% parity augmentation.
 
 ## Latest verified build
 
-M16-G Learn 150% parity audit was pulled and verified.
+M17-A first i18n patch was pulled, but the first local build failed because `LearnFeatureContract` did not yet handle the new Settings destination.
 
 ```bash
 git pull --ff-only
-sed -n '1,260p' docs/release/LEARN_150_PARITY_AUDIT.md
-sed -n '1,180p' docs/progress/NATIVE_PROGRESS.md
+./scripts/nativectl build android-learn
 ```
 
-Latest verified commit locally: `9648efc`.
+Latest verified commit locally: `8c65af8` pulled; build failed and required follow-up patch.
 
 Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 
@@ -48,6 +47,7 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M16-F cleaned user-facing fallback/audit wording in Roleplay, Cards, Account, YKI, and Professional Finnish; debug, release, and bundle builds passed.
 - M16-G recorded the Learn 150% parity audit and augment-build backlog in `docs/release/LEARN_150_PARITY_AUDIT.md`.
 - M17-A started native i18n restoration: old language metadata is present, FI/SV/EN copy is available, Settings exists, language persistence is added, and Learn home/shell are wired to language settings.
+- M17-A follow-up corrected the release-contract compile error and changed Settings to show all 20 old Learn language options, not only FI/SV/EN.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
@@ -57,8 +57,8 @@ Build Learn to 150% of the old app before release. The native app is no longer t
 
 ## Next step
 
-Verify M17-A Native i18n foundation with a local build, then continue wiring FI/SV/EN copy into YKI, Professional Finnish, Roleplay, Cards, Progress, and Account.
+Verify the M17-A compile fix and all-language settings patch locally, then continue wiring language/copy into YKI, Professional Finnish, Roleplay, Cards, Progress, and Account.
 
 ## Pending verification
 
-- M17-A first patch should compile and show Settings in the Learn home, allow FI/SV/EN language selection, preserve review-language metadata, and persist the selected language on device.
+- M17-A follow-up should compile, show all 20 language options in Settings, preserve FI/SV/EN complete status, preserve the remaining review/in-progress languages, and persist selected language on device.
