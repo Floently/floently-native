@@ -10,15 +10,17 @@ M16 Learn-first release completion and polish.
 
 ## Latest verified build
 
-Learn-first release direction was pulled and verified.
+M16-A Learn home polish was pulled and verified with debug and release builds.
 
 ```bash
 git pull --ff-only
-sed -n '1,220p' docs/release/LEARN_FIRST_RELEASE_PLAN.md
+./scripts/nativectl build android-learn
+./scripts/nativectl build android-learn-release
+sed -n '1,220p' docs/release/LEARN_PREMIUM_POLISH_AUDIT.md
 sed -n '1,140p' docs/progress/NATIVE_PROGRESS.md
 ```
 
-Latest verified commit locally: `c6d1eb2`.
+Latest verified commit locally: `1687377`.
 
 Latest QA artifact: `/home/vitus/floently-qa-debug-6d15f07.apk`.
 
@@ -40,7 +42,8 @@ Latest QA artifact: `/home/vitus/floently-qa-debug-6d15f07.apk`.
 - Final release blocker dashboard cleanup is verified with only true blockers remaining: live backend QA, payment provider checkout, local release signing, privacy/data-safety/screenshots, and manual real-device QA.
 - Final local QA runbook is verified with fixed-order build, install, auth, suite, Learn, Read, Create, payment/access, offline/error, signing, and result-recording instructions.
 - Learn-first release decision is recorded: complete and polish Learn first, release Learn, then continue Read and Create to release quality.
-- M16-A started the Learn premium polish pass by replacing the Learn home engineering/status dashboard with a user-facing learning home.
+- M16-A replaced the Learn home engineering/status dashboard with a user-facing learning home.
+- M16-B polished Roleplay and Cards with learner-facing copy, improved practice flow, conversation guidance, card reveal, card rating, and review summary.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
@@ -50,8 +53,8 @@ Complete and polish Floently Learn to match or improve the previous pre-native L
 
 ## Next step
 
-Verify M16-A Learn home polish, then continue with Roleplay and Cards premium polish.
+Verify M16-B Roleplay and Cards polish, then continue with YKI and Professional Finnish premium polish.
 
 ## Pending verification
 
-- M16-A Learn home polish was pushed with user-facing release copy, a welcome/recommendation card, clean Learn area cards, account controls, and removal of internal native foundation/status language from the Learn home.
+- M16-B Roleplay and Cards polish was pushed with user-facing roleplay copy, improved conversation flow, learner guidance, card practice screen, answer reveal, rating flow, and session summary.
