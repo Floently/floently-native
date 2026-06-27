@@ -10,16 +10,15 @@ M17 Learn 150% parity augmentation.
 
 ## Latest verified build
 
-M16-F wording cleanup was pulled and verified with debug, release, and bundle builds.
+M16-G Learn 150% parity audit was pulled and verified.
 
 ```bash
 git pull --ff-only
-./scripts/nativectl build android-learn
-./scripts/nativectl build android-learn-release
-./scripts/nativectl build android-learn-bundle
+sed -n '1,260p' docs/release/LEARN_150_PARITY_AUDIT.md
+sed -n '1,180p' docs/progress/NATIVE_PROGRESS.md
 ```
 
-Latest verified commit locally: `0d2958b`.
+Latest verified commit locally: `9648efc`.
 
 Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 
@@ -48,6 +47,7 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M16-E prepared a fresh Learn release-candidate QA APK and exposed remaining wording-audit matches.
 - M16-F cleaned user-facing fallback/audit wording in Roleplay, Cards, Account, YKI, and Professional Finnish; debug, release, and bundle builds passed.
 - M16-G recorded the Learn 150% parity audit and augment-build backlog in `docs/release/LEARN_150_PARITY_AUDIT.md`.
+- M17-A started native i18n restoration: old language metadata is present, FI/SV/EN copy is available, Settings exists, language persistence is added, and Learn home/shell are wired to language settings.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
@@ -57,8 +57,8 @@ Build Learn to 150% of the old app before release. The native app is no longer t
 
 ## Next step
 
-Start M17-A Native i18n foundation: add language metadata, FI/SV/EN strings, language selector, persistence, and wire translations into main Learn screens.
+Verify M17-A Native i18n foundation with a local build, then continue wiring FI/SV/EN copy into YKI, Professional Finnish, Roleplay, Cards, Progress, and Account.
 
 ## Pending verification
 
-- M17-A should restore old i18n direction in native Learn and preserve review-language metadata for future expansion.
+- M17-A first patch should compile and show Settings in the Learn home, allow FI/SV/EN language selection, preserve review-language metadata, and persist the selected language on device.
