@@ -50,7 +50,7 @@ fun YkiFeatureScreen(
         FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 Text(
                     text = "YKI practice",
@@ -59,20 +59,24 @@ fun YkiFeatureScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Native YKI foundation. Content, scoring, audio, progress, and release checks stay guarded until parity is complete.",
+                    text = "Practise exam-style Finnish with focused reading, writing, vocabulary, and grammar tasks.",
                     color = palette.muted,
                     style = MaterialTheme.typography.titleMedium
                 )
 
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(
-                        text = "Level",
+                        text = "Choose your exam level",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
+                    Text(
+                        text = "Keskitaso is the usual target for work and citizenship. You can still practise easier or harder levels anytime.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                     YkiLevel.entries.forEach { level ->
                         FloentlyPrimaryButton(
-                            title = if (level == selectedLevel) "Selected: ${level.name}" else level.name,
+                            title = if (level == selectedLevel) "${level.displayName()} selected" else level.displayName(),
                             product = FloentlyProduct.Learn,
                             onClick = { selectedLevel = level }
                         )
@@ -81,6 +85,11 @@ fun YkiFeatureScreen(
 
                 statusMessage?.let { message ->
                     FloentlyCard(product = FloentlyProduct.Learn) {
+                        Text(
+                            text = "Note",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
                         Text(
                             text = message,
                             style = MaterialTheme.typography.bodyMedium
@@ -91,14 +100,19 @@ fun YkiFeatureScreen(
                 val dashboard = dashboardState
                 if (dashboard == null || dashboard.isLoading) {
                     Text(
-                        text = "Loading YKI modules...",
+                        text = "Loading YKI practice...",
                         color = palette.muted,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 } else if (dashboard.modules.isEmpty()) {
                     FloentlyCard(product = FloentlyProduct.Learn) {
                         Text(
-                            text = "No modules yet for ${dashboard.selectedLevel.name}.",
+                            text = "No YKI modules yet",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Try another level or come back when new practice is available.",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -116,19 +130,25 @@ fun YkiFeatureScreen(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
-                                text = "Skills: ${module.skills.joinToString()}",
+                                text = "Skills: ${module.skills.joinToString { it.displayName() }}",
                                 style = MaterialTheme.typography.bodySmall
                             )
                             Text(
-                                text = "Estimated time: ${module.estimatedMinutes} min",
+                                text = "Time: about ${module.estimatedMinutes} minutes",
                                 style = MaterialTheme.typography.bodySmall
                             )
                             Text(
-                                text = "Progress: ${progress?.completedTasks ?: 0}/${progress?.totalTasks ?: 0}",
+                                text = "Completed: ${progress?.completedTasks ?: 0} of ${progress?.totalTasks ?: 0}",
                                 style = MaterialTheme.typography.bodySmall
                             )
+                            progress?.lastScorePercent?.let { score ->
+                                Text(
+                                    text = "Last score: $score%",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                             FloentlyPrimaryButton(
-                                title = if (module.locked) "View lock reason" else "Start module",
+                                title = if (module.locked) "See why locked" else "Start practice",
                                 product = FloentlyProduct.Learn,
                                 onClick = {
                                     scope.launch {
@@ -155,4 +175,19 @@ fun YkiFeatureScreen(
             }
         }
     }
+}
+
+private fun YkiLevel.displayName(): String = when (this) {
+    YkiLevel.Perustaso -> "Perustaso"
+    YkiLevel.Keskitaso -> "Keskitaso"
+    YkiLevel.YlinTaso -> "Ylin taso"
+}
+
+private fun YkiSkill.displayName(): String = when (this) {
+    YkiSkill.Reading -> "Reading"
+    YkiSkill.Writing -> "Writing"
+    YkiSkill.Listening -> "Listening"
+    YkiSkill.Speaking -> "Speaking"
+    YkiSkill.Vocabulary -> "Vocabulary"
+    YkiSkill.Grammar -> "Grammar"
 }
