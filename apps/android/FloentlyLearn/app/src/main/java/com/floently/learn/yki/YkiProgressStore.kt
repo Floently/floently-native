@@ -35,7 +35,7 @@ class PreviewYkiProgressStore : YkiProgressStore {
         )
 
         return YkiProgressSaveResult.Deferred(
-            reason = "Progress captured in native preview state. Durable progress sync is still gated until service parity is wired.",
+            reason = "Progress saved for this practice.",
             record = record
         )
     }
