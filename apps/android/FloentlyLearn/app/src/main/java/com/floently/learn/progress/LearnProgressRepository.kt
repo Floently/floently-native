@@ -4,6 +4,20 @@ interface LearnProgressRepository {
     suspend fun dashboard(): LearnProgressDashboardState
 }
 
+class ServiceLearnProgressRepository(
+    private val service: LearnProgressService,
+    private val fallback: LearnProgressRepository = PreviewLearnProgressRepository()
+) : LearnProgressRepository {
+    override suspend fun dashboard(): LearnProgressDashboardState {
+        return runCatching { service.dashboard() }.getOrElse { error ->
+            fallback.dashboard().copy(
+                errorMessage = error.message?.takeIf { it.isNotBlank() }
+                    ?: "Learn progress service is not available from the existing backend yet."
+            )
+        }
+    }
+}
+
 class PreviewLearnProgressRepository : LearnProgressRepository {
     override suspend fun dashboard(): LearnProgressDashboardState {
         val summaries = listOf(
