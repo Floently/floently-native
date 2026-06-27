@@ -20,6 +20,7 @@ tools/*.zip
 
 # Android local machine config
 apps/android/local.properties
+apps/android/signing.properties
 local.properties
 
 # IDE/editor
