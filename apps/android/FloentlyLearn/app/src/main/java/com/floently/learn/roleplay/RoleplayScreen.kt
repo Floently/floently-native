@@ -57,7 +57,7 @@ fun RoleplayScreen(
                 modifier = Modifier
                     .verticalScroll(rememberScrollState())
                     .animateContentSize(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 Text(
                     text = "Roleplay",
@@ -66,20 +66,24 @@ fun RoleplayScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Native conversation practice with beginner-safe coaching, anti-repetition state, and OpenAI service boundary.",
+                    text = "Practise real Finnish conversations with a partner and gentle coaching.",
                     color = palette.muted,
                     style = MaterialTheme.typography.titleMedium
                 )
 
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(
-                        text = "Level",
+                        text = "Choose your level",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
+                    Text(
+                        text = "Start simple and build confidence. A1 and A2 keep the language short, safe, and practical.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                     RoleplayLevel.entries.forEach { level ->
                         FloentlyPrimaryButton(
-                            title = if (level == selectedLevel) "Selected: ${level.name}" else level.name,
+                            title = if (level == selectedLevel) "${level.name} selected" else "Practice ${level.name}",
                             product = FloentlyProduct.Learn,
                             onClick = { selectedLevel = level }
                         )
@@ -88,6 +92,11 @@ fun RoleplayScreen(
 
                 statusMessage?.let { message ->
                     FloentlyCard(product = FloentlyProduct.Learn) {
+                        Text(
+                            text = "Note",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
                         Text(
                             text = message,
                             style = MaterialTheme.typography.bodyMedium
@@ -98,14 +107,19 @@ fun RoleplayScreen(
                 val dashboard = dashboardState
                 if (dashboard == null || dashboard.isLoading) {
                     Text(
-                        text = "Loading roleplays...",
+                        text = "Loading conversations...",
                         color = palette.muted,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 } else if (dashboard.scenarios.isEmpty()) {
                     FloentlyCard(product = FloentlyProduct.Learn) {
                         Text(
-                            text = "No roleplays yet for ${dashboard.selectedLevel.name}.",
+                            text = "No conversations yet for ${dashboard.selectedLevel.name}.",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Try another level or come back after new practice content is available.",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -122,11 +136,11 @@ fun RoleplayScreen(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
-                                text = "Type: ${scenario.type} | Beginner-safe: ${scenario.beginnerSafe}",
+                                text = scenario.helperText(),
                                 style = MaterialTheme.typography.bodySmall
                             )
                             FloentlyPrimaryButton(
-                                title = if (scenario.locked) "View lock reason" else "Start roleplay",
+                                title = if (scenario.locked) "See why locked" else "Start conversation",
                                 product = FloentlyProduct.Learn,
                                 onClick = {
                                     scope.launch {
@@ -171,7 +185,7 @@ private fun RoleplaySessionScreen(
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
                 .animateContentSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Text(
                 text = session.scenario.title,
@@ -180,23 +194,24 @@ private fun RoleplaySessionScreen(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = session.releaseGate,
+                text = "Reply in Finnish. Keep it short if you are unsure — the coach will help.",
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
 
             FloentlyCard(product = FloentlyProduct.Learn) {
                 Text(
-                    text = "Learner turns: ${session.learnerTurns}",
-                    style = MaterialTheme.typography.labelMedium
+                    text = "Conversation progress",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Anti-repetition events: ${session.repeatedCueCount}",
-                    style = MaterialTheme.typography.labelMedium
+                    text = "Your turns: ${session.learnerTurns}",
+                    style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    text = "Scenario type: ${session.scenario.type}",
-                    style = MaterialTheme.typography.labelMedium
+                    text = "Coaching variety checks: ${session.repeatedCueCount}",
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
 
@@ -204,11 +219,7 @@ private fun RoleplaySessionScreen(
                 AnimatedVisibility(visible = true) {
                     FloentlyCard(product = FloentlyProduct.Learn) {
                         Text(
-                            text = when (message.speaker) {
-                                RoleplaySpeaker.Learner -> "You"
-                                RoleplaySpeaker.Coach -> "Coach"
-                                RoleplaySpeaker.Partner -> "Partner"
-                            },
+                            text = message.displayName(),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -218,7 +229,7 @@ private fun RoleplaySessionScreen(
                         )
                         message.coachingNote?.let { note ->
                             Text(
-                                text = note,
+                                text = "Coach note: $note",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -227,11 +238,20 @@ private fun RoleplaySessionScreen(
             }
 
             FloentlyCard(product = FloentlyProduct.Learn) {
+                Text(
+                    text = "Your reply",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
                 OutlinedTextField(
                     value = reply,
                     onValueChange = { reply = it },
-                    label = { Text("Your Finnish reply") },
+                    label = { Text("Write in Finnish") },
                     modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    text = "Tip: one clear sentence is enough. Example: Kiitos, se sopii hyvin.",
+                    style = MaterialTheme.typography.bodySmall
                 )
                 statusMessage?.let { message ->
                     Text(
@@ -245,7 +265,7 @@ private fun RoleplaySessionScreen(
                     onClick = {
                         val cleanReply = reply.trim()
                         if (cleanReply.isBlank()) {
-                            statusMessage = "Write a reply before sending."
+                            statusMessage = "Write a short Finnish reply before sending."
                         } else {
                             scope.launch {
                                 when (val result = repository.sendLearnerMessage(session, cleanReply)) {
@@ -264,10 +284,21 @@ private fun RoleplaySessionScreen(
             }
 
             FloentlyPrimaryButton(
-                title = "Exit roleplay",
+                title = "Exit conversation",
                 product = FloentlyProduct.Learn,
                 onClick = onExit
             )
         }
     }
+}
+
+private fun RoleplayScenario.helperText(): String {
+    val safety = if (beginnerSafe) "Beginner-friendly" else "More advanced"
+    return "$safety conversation for ${type.name.lowercase()} practice."
+}
+
+private fun RoleplayMessage.displayName(): String = when (speaker) {
+    RoleplaySpeaker.Learner -> "You"
+    RoleplaySpeaker.Coach -> "Coach"
+    RoleplaySpeaker.Partner -> "Partner"
 }
