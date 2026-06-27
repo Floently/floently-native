@@ -10,16 +10,15 @@ M16 Learn-first release completion and polish.
 
 ## Latest verified build
 
-M15-A prepared the debug QA APK and QA result file for device testing.
+Learn-first release direction was pulled and verified.
 
 ```bash
 git pull --ff-only
-./scripts/nativectl signing-status
-./scripts/nativectl build android-learn
-cp -f apps/android/FloentlyLearn/app/build/outputs/apk/debug/*.apk /home/vitus/
+sed -n '1,220p' docs/release/LEARN_FIRST_RELEASE_PLAN.md
+sed -n '1,140p' docs/progress/NATIVE_PROGRESS.md
 ```
 
-Latest verified commit locally: `6d15f07`.
+Latest verified commit locally: `c6d1eb2`.
 
 Latest QA artifact: `/home/vitus/floently-qa-debug-6d15f07.apk`.
 
@@ -41,6 +40,7 @@ Latest QA artifact: `/home/vitus/floently-qa-debug-6d15f07.apk`.
 - Final release blocker dashboard cleanup is verified with only true blockers remaining: live backend QA, payment provider checkout, local release signing, privacy/data-safety/screenshots, and manual real-device QA.
 - Final local QA runbook is verified with fixed-order build, install, auth, suite, Learn, Read, Create, payment/access, offline/error, signing, and result-recording instructions.
 - Learn-first release decision is recorded: complete and polish Learn first, release Learn, then continue Read and Create to release quality.
+- M16-A started the Learn premium polish pass by replacing the Learn home engineering/status dashboard with a user-facing learning home.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
@@ -50,8 +50,8 @@ Complete and polish Floently Learn to match or improve the previous pre-native L
 
 ## Next step
 
-Run M16-A Learn-first release scope verification, inspect current Learn files, then patch Learn UI/function gaps without rebuilding it from scratch.
+Verify M16-A Learn home polish, then continue with Roleplay and Cards premium polish.
 
 ## Pending verification
 
-- M16-A should lock Learn as the first release target, keep Read/Create non-blocking for first release, and start the Learn premium polish/completion pass.
+- M16-A Learn home polish was pushed with user-facing release copy, a welcome/recommendation card, clean Learn area cards, account controls, and removal of internal native foundation/status language from the Learn home.
