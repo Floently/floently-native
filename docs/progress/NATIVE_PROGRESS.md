@@ -10,19 +10,19 @@ M16 Learn-first release completion and polish.
 
 ## Latest verified build
 
-M16-D Progress and Account polish was pulled and verified with debug and release builds.
+M16-E Learn release-candidate audit/build/QA artifact prep was pulled and verified with debug, release, and bundle builds.
 
 ```bash
 git pull --ff-only
+./scripts/nativectl signing-status
 ./scripts/nativectl build android-learn
 ./scripts/nativectl build android-learn-release
-sed -n '1,280p' docs/release/LEARN_PREMIUM_POLISH_AUDIT.md
-sed -n '1,170p' docs/progress/NATIVE_PROGRESS.md
+./scripts/nativectl build android-learn-bundle
 ```
 
-Latest verified commit locally: `d7ab6ec`.
+Latest verified commit locally: `73ab08b`.
 
-Latest QA artifact: `/home/vitus/floently-qa-debug-6d15f07.apk`.
+Latest QA artifact: `/home/vitus/floently-learn-rc-debug-73ab08b.apk`.
 
 ## Completed
 
@@ -46,17 +46,19 @@ Latest QA artifact: `/home/vitus/floently-qa-debug-6d15f07.apk`.
 - M16-B polished Roleplay and Cards with learner-facing copy, improved practice flow, conversation guidance, card reveal, card rating, and review summary.
 - M16-C polished YKI and Professional Finnish with learner-facing copy, improved practice/session guidance, cleaner module cards, answer/response guidance, and completion summaries.
 - M16-D polished Progress and Account with learner-facing progress, access, device, empty, and sign-out copy.
+- M16-E prepared a fresh Learn release-candidate QA APK and exposed remaining wording-audit matches.
+- M16-F started cleaning user-facing fallback/audit wording in Roleplay, Cards, Account, YKI, and Professional Finnish.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
 ## Active task
 
-Run the Learn release-candidate wording audit, build debug/release/bundle, prepare a fresh QA APK under `/home/vitus/`, then start real-device/backend QA.
+Verify M16-F wording cleanup, rerun builds, and prepare a new Learn QA APK if the audit is clean enough for real-device/backend QA.
 
 ## Next step
 
-Run M16-E Learn release-candidate audit and QA artifact preparation locally.
+Run M16-F wording cleanup verification locally.
 
 ## Pending verification
 
-- M16-E should check for remaining user-facing engineering wording, run debug/release/bundle builds, copy the fresh QA APK and QA result template to `/home/vitus/`, and print the exact artifact paths for real-device testing.
+- M16-F should rerun wording audit and builds after cleanup. Some non-user-facing internal model fields may still contain release-gate or preview enum/property names, but user-facing strings should be clear learner-facing copy.
