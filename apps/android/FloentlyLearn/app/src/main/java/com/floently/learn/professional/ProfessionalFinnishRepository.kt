@@ -42,7 +42,7 @@ class PreviewProfessionalFinnishRepository : ProfessionalFinnishRepository {
             id = "professional-phone-call-1",
             title = "Phone call Finnish",
             domain = ProfessionalFinnishDomain.CustomerService,
-            description = "Native phone-call flow is gated until speech and call-style interaction parity are complete.",
+            description = "Practice professional phone-call Finnish when audio practice is available.",
             estimatedMinutes = 8,
             locked = true
         )
@@ -69,7 +69,7 @@ class PreviewProfessionalFinnishRepository : ProfessionalFinnishRepository {
                         usageNote = "Use clear helper language for safety."
                     )
                 ),
-                releaseGate = "Requires healthcare content parity review before release."
+                releaseGate = "Healthcare practice ready for review."
             )
         ),
         "professional-office-meeting-1" to listOf(
@@ -87,7 +87,7 @@ class PreviewProfessionalFinnishRepository : ProfessionalFinnishRepository {
                         usageNote = "Polite and direct in meetings."
                     )
                 ),
-                releaseGate = "Requires professional scenario parity review before release."
+                releaseGate = "Professional scenario ready for review."
             )
         ),
         "professional-job-search-1" to listOf(
@@ -105,7 +105,7 @@ class PreviewProfessionalFinnishRepository : ProfessionalFinnishRepository {
                         usageNote = "Useful for simple interview scheduling."
                     )
                 ),
-                releaseGate = "Requires job-search content parity review before release."
+                releaseGate = "Job-search practice ready for review."
             )
         ),
         "professional-phone-call-1" to listOf(
@@ -117,7 +117,7 @@ class PreviewProfessionalFinnishRepository : ProfessionalFinnishRepository {
                 context = "You call a customer or colleague.",
                 prompt = "Start the call politely and state why you are calling.",
                 modelPhrases = emptyList(),
-                releaseGate = "Requires native speech/call interaction parity before release."
+                releaseGate = "Phone-call practice ready for audio review."
             )
         )
     )
@@ -145,7 +145,7 @@ class PreviewProfessionalFinnishRepository : ProfessionalFinnishRepository {
             ?: return ProfessionalFinnishSessionResult.Error("Professional Finnish module was not found.")
 
         if (module.locked) {
-            return ProfessionalFinnishSessionResult.Blocked("This module is still gated until native interaction parity is complete.")
+            return ProfessionalFinnishSessionResult.Blocked("This module will be available when audio interaction is ready.")
         }
 
         val scenarios = scenariosByModuleId[moduleId].orEmpty()
@@ -155,7 +155,7 @@ class PreviewProfessionalFinnishRepository : ProfessionalFinnishRepository {
 
         return ProfessionalFinnishSessionResult.Ready(
             ProfessionalFinnishSession(
-                id = "session-$moduleId-preview",
+                id = "session-$moduleId-local",
                 module = module,
                 scenarios = scenarios,
                 currentScenarioIndex = 0,
