@@ -12,64 +12,88 @@ class PreviewFloentlyReleaseReadinessRepository : FloentlyReleaseReadinessReposi
                 area = FloentlyReleaseArea.AppShell,
                 title = "Native suite shell",
                 status = FloentlyReleaseGateStatus.Verified,
-                summary = "Learn, Read, and Create are separated inside the native suite.",
-                nextAction = "Keep shell stable while wiring services."
+                summary = "Learn, Read, and Create are separated inside the native suite with product-specific access checks.",
+                nextAction = "Keep product separation stable during final QA."
             ),
             FloentlyReleaseGate(
-                id = "release-build",
+                id = "android-builds",
                 area = FloentlyReleaseArea.Store,
-                title = "Debug and release builds",
+                title = "Android debug, release, and bundle builds",
                 status = FloentlyReleaseGateStatus.Verified,
-                summary = "Debug and unsigned release builds compile successfully.",
-                nextAction = "Add signing outside Git before store upload."
+                summary = "Debug, release, and Play bundle builds compile successfully. Signing remains intentionally local.",
+                nextAction = "Configure signing outside Git only when store upload is ready."
             ),
             FloentlyReleaseGate(
-                id = "read-services",
+                id = "read-service-wiring",
                 area = FloentlyReleaseArea.Read,
                 title = "Read service wiring",
-                status = FloentlyReleaseGateStatus.ReadyForWiring,
-                summary = "Native Read UI is ready for upload, detection, generation, reader, and library services.",
-                nextAction = "Connect real Read backend endpoints and native file picker."
+                status = FloentlyReleaseGateStatus.Verified,
+                summary = "Read has service routes, repository fallback, app container injection, and suite shell injection.",
+                nextAction = "Run real backend QA for upload, language detection, generation, reader session, and library."
             ),
             FloentlyReleaseGate(
-                id = "create-services",
+                id = "create-service-wiring",
                 area = FloentlyReleaseArea.Create,
-                title = "Create service wiring",
-                status = FloentlyReleaseGateStatus.ReadyForWiring,
-                summary = "Create Studio UI is ready for direct functions, result, project, and export services.",
-                nextAction = "Connect Create backend generation and saved project endpoints."
+                title = "Create Studio service wiring",
+                status = FloentlyReleaseGateStatus.Verified,
+                summary = "Create Studio has generation service routes, repository fallback, app container injection, and suite shell injection.",
+                nextAction = "Run real backend QA for generation, saved projects, export, and share."
             ),
             FloentlyReleaseGate(
-                id = "learn-services",
+                id = "learn-service-wiring",
                 area = FloentlyReleaseArea.Learn,
                 title = "Learn service wiring",
-                status = FloentlyReleaseGateStatus.ReadyForWiring,
-                summary = "Learn native screens are ready for real content, roleplay generation, scoring, and progress sync.",
-                nextAction = "Connect OpenAI-backed roleplay, scoring, cards scheduling, and durable progress."
+                status = FloentlyReleaseGateStatus.Verified,
+                summary = "Learn roleplay, cards, and progress services are injected while preserving the existing Learn UI/function structure.",
+                nextAction = "Run real backend QA for roleplay generation, anti-repetition, cards scheduling, scoring, and durable progress."
             ),
             FloentlyReleaseGate(
-                id = "payments",
-                area = FloentlyReleaseArea.Payments,
-                title = "Payments and entitlements",
-                status = FloentlyReleaseGateStatus.Blocked,
-                summary = "Plan boundaries are ready, but real provider checkout and entitlement refresh are not connected.",
-                nextAction = "Wire checkout provider and product-specific entitlement refresh."
-            ),
-            FloentlyReleaseGate(
-                id = "signing",
+                id = "store-submission-pack",
                 area = FloentlyReleaseArea.Store,
-                title = "Play signing and store assets",
-                status = FloentlyReleaseGateStatus.Blocked,
-                summary = "Release builds exist, but signing secrets and store listing assets are not configured.",
-                nextAction = "Configure signing outside Git and prepare privacy, screenshots, listing, and data safety."
+                title = "Store submission pack",
+                status = FloentlyReleaseGateStatus.Verified,
+                summary = "Store listing draft, screenshot checklist, data safety prompts, release notes draft, and manual QA checklist are documented.",
+                nextAction = "Fill final privacy URL, support email, data-safety answers, screenshots, and release notes after QA."
             ),
             FloentlyReleaseGate(
-                id = "manual-qa",
-                area = FloentlyReleaseArea.Qa,
-                title = "Manual device QA",
+                id = "live-backend-qa",
+                area = FloentlyReleaseArea.Backend,
+                title = "Live backend verification",
                 status = FloentlyReleaseGateStatus.Blocked,
-                summary = "Builds pass, but real-device test coverage is not complete.",
-                nextAction = "Run login, product access, Read, Create, Learn, checkout, offline, and sign-out tests on device."
+                summary = "Service boundaries are wired, but real backend behaviour still needs end-to-end verification with production-like data.",
+                nextAction = "Test auth, access, Learn, Read, Create, progress, and fallback states against the live backend."
+            ),
+            FloentlyReleaseGate(
+                id = "payments-live-checkout",
+                area = FloentlyReleaseArea.Payments,
+                title = "Payment provider checkout",
+                status = FloentlyReleaseGateStatus.Blocked,
+                summary = "Billing routes and entitlement boundary are wired, but real checkout/provider flow is not verified yet.",
+                nextAction = "Verify provider checkout URL creation, return/cancel flow, entitlement refresh, and separate product access."
+            ),
+            FloentlyReleaseGate(
+                id = "local-release-signing",
+                area = FloentlyReleaseArea.Store,
+                title = "Local release signing",
+                status = FloentlyReleaseGateStatus.Blocked,
+                summary = "Signing support exists and secrets are not tracked, but local release signing values are not configured yet.",
+                nextAction = "Create local signing file or build-machine variables outside Git before Play upload."
+            ),
+            FloentlyReleaseGate(
+                id = "privacy-data-safety-assets",
+                area = FloentlyReleaseArea.Store,
+                title = "Privacy, data safety, and screenshots",
+                status = FloentlyReleaseGateStatus.Blocked,
+                summary = "Store text is drafted, but final privacy URL, data-safety answers, screenshots, and support details are unresolved.",
+                nextAction = "Complete policy URL, account deletion path, AI/payment disclosures, device screenshots, and listing assets."
+            ),
+            FloentlyReleaseGate(
+                id = "manual-device-qa",
+                area = FloentlyReleaseArea.Qa,
+                title = "Manual real-device QA",
+                status = FloentlyReleaseGateStatus.Blocked,
+                summary = "Builds pass, but real-device QA across login, suite, Learn, Read, Create, checkout, offline, and sign-out is not complete.",
+                nextAction = "Run the native manual QA checklist and record pass/fail notes before submission."
             )
         ),
         isLoading = false,
