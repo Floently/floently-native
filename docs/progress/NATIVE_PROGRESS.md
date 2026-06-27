@@ -10,14 +10,17 @@ M17 Learn 150% parity augmentation.
 
 ## Latest verified build
 
-M17-A first i18n patch was pulled, but the first local build failed because `LearnFeatureContract` did not yet handle the new Settings destination.
+M17-A2 final web language alignment was pulled, committed locally, pushed, and verified with debug and release builds.
 
 ```bash
 git pull --ff-only
+git commit -m "Align Learn languages with final web build"
+git push
 ./scripts/nativectl build android-learn
+./scripts/nativectl build android-learn-release
 ```
 
-Latest verified commit locally: `8c65af8` pulled; build failed and required follow-up patch.
+Latest verified commit locally: `cfca5d9`.
 
 Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 
@@ -47,18 +50,19 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M16-F cleaned user-facing fallback/audit wording in Roleplay, Cards, Account, YKI, and Professional Finnish; debug, release, and bundle builds passed.
 - M16-G recorded the Learn 150% parity audit and augment-build backlog in `docs/release/LEARN_150_PARITY_AUDIT.md`.
 - M17-A started native i18n restoration: old language metadata is present, FI/SV/EN copy is available, Settings exists, language persistence is added, and Learn home/shell are wired to language settings.
-- M17-A follow-up corrected the release-contract compile error and changed Settings to show all 20 final web Learn language options. A later correction aligned native metadata with the final web build: all 20 languages are enabled and complete.
+- M17-A follow-up corrected the release-contract compile error and changed Settings to show all 20 final web Learn language options.
+- M17-A2 aligned native language availability with the final web build: all 20 languages are enabled and complete, debug build passed, and release build passed.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
 ## Active task
 
-Build Learn to 150% of the old app before release. The native app is no longer treated as release-ready until the 150% parity backlog is addressed or explicitly gated.
+Build Learn to 150% of the old app before release, using the final web build as the source of truth for parity.
 
 ## Next step
 
-Verify the M17-A compile fix and all-language settings patch locally, then continue wiring language/copy into YKI, Professional Finnish, Roleplay, Cards, Progress, and Account.
+Start M17-A3: import or mirror final web translations into native Learn so all 20 selected languages have real native translated UI copy, not only enabled metadata.
 
 ## Pending verification
 
-- M17-A follow-up should compile, show all 20 enabled final web Learn language options in Settings, preserve complete status for every language, and persist selected language on device.
+- M17-A3 should compare native translation keys against the final web build, add complete translated Learn copy for all 20 languages where available, preserve RTL metadata for Arabic, Persian, and Urdu, and build debug/release successfully.
