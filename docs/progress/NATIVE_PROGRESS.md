@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M11 Store and signing readiness.
+M12 Store submission and manual QA pack.
 
 ## Branch
 
@@ -10,14 +10,16 @@ M11 Store and signing readiness.
 
 ## Latest verified build
 
-Android debug and release builds succeeded after verifying Learn service wiring.
+Android signing status, debug build, release build, and release bundle build succeeded after verifying store/signing readiness.
 
 ```bash
+./scripts/nativectl signing-status
 ./scripts/nativectl build android-learn
 ./scripts/nativectl build android-learn-release
+./scripts/nativectl build android-learn-bundle
 ```
 
-Latest verified commit locally: `46d29a1`.
+Latest verified commit locally: `b5ba294`.
 
 ## Completed
 
@@ -32,6 +34,7 @@ Latest verified commit locally: `46d29a1`.
 - Payments and entitlement service wiring is verified using existing backend routes and fallback-safe UI without new Learn environment variables.
 - Read/Create backend service wiring is verified with service routes, repository fallbacks, app container injection, and suite shell repository injection.
 - Learn roleplay, cards, and progress service wiring is verified while preserving the existing Learn UI/function structure.
+- Store/signing readiness is verified with ignored signing properties, optional signing config, signing status command, release build, and release bundle build.
 - Backend integration contracts are verified with native API route registry and suite selector backend contract dashboard.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Final readiness gap dashboard is verified with release gate counts and blocker order.
@@ -39,12 +42,12 @@ Latest verified commit locally: `46d29a1`.
 
 ## Active task
 
-Prepare store/signing readiness without committing private signing values or generated artifacts.
+Prepare store submission text, screenshot requirements, data safety prompts, and real-device manual QA checklist before final release testing.
 
 ## Next step
 
-Verify M11-A store/signing readiness with a clean local pull, signing status, debug build, release build, and release bundle build.
+Verify M12-A store submission and manual QA pack with a clean local pull and documentation check.
 
 ## Pending verification
 
-- M11-A store/signing readiness was pushed with ignored signing properties, optional release signing configuration, signing status command, Android release bundle command, and signing documentation.
+- M12-A store submission and manual QA pack was pushed with Play Store listing draft, screenshot checklist, data safety preparation, release notes draft, and native manual QA checklist.
