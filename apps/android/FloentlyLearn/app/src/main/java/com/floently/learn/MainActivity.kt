@@ -78,6 +78,9 @@ class MainActivity : ComponentActivity() {
                         billingRepository = appContainer.billingRepository,
                         readRepository = appContainer.readRepository,
                         createStudioRepository = appContainer.createStudioRepository,
+                        roleplayRepository = appContainer.roleplayRepository,
+                        cardsRepository = appContainer.cardsRepository,
+                        progressRepository = appContainer.progressRepository,
                         onSignOut = { scope.launch { controller.signOut() } }
                     )
                 }
