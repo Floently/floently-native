@@ -7,14 +7,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.floently.learn.account.AccountScreen
 import com.floently.learn.account.PreviewAccountRepository
+import com.floently.learn.cards.CardsRepository
 import com.floently.learn.cards.CardsScreen
-import com.floently.learn.cards.PreviewCardsRepository
 import com.floently.learn.navigation.LearnFeatureDestination
 import com.floently.learn.professional.PreviewProfessionalFinnishRepository
 import com.floently.learn.professional.ProfessionalFinnishScreen
+import com.floently.learn.progress.LearnProgressRepository
 import com.floently.learn.progress.LearnProgressScreen
-import com.floently.learn.progress.PreviewLearnProgressRepository
-import com.floently.learn.roleplay.PreviewRoleplayRepository
+import com.floently.learn.roleplay.RoleplayRepository
 import com.floently.learn.roleplay.RoleplayScreen
 import com.floently.learn.yki.PreviewYkiRepository
 import com.floently.learn.yki.YkiFeatureScreen
@@ -23,15 +23,15 @@ import com.floently.shared.auth.FloentlyAuthSession
 @Composable
 fun LearnSignedInShell(
     session: FloentlyAuthSession,
+    roleplayRepository: RoleplayRepository,
+    cardsRepository: CardsRepository,
+    progressRepository: LearnProgressRepository,
     onSignOut: () -> Unit,
     onBackToSuite: (() -> Unit)? = null
 ) {
     var selectedDestination by remember { mutableStateOf<LearnFeatureDestination?>(null) }
     val ykiRepository = remember { PreviewYkiRepository() }
     val professionalFinnishRepository = remember { PreviewProfessionalFinnishRepository() }
-    val roleplayRepository = remember { PreviewRoleplayRepository() }
-    val cardsRepository = remember { PreviewCardsRepository() }
-    val progressRepository = remember { PreviewLearnProgressRepository() }
     val accountRepository = remember { PreviewAccountRepository() }
     val destination = selectedDestination
 
