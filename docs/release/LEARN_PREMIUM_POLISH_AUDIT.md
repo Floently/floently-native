@@ -64,37 +64,45 @@ Professional Finnish changes:
 - Removed release-gate wording from user-facing scenario cards.
 - Kept repository behavior intact.
 
+## M16-D Progress and Account polish patch
+
+Progress and Account were updated to remove internal wording and make the first-release Learn experience feel complete.
+
+Progress changes:
+
+- Replaced sync-boundary/release-gate wording with learner-facing progress copy.
+- Added a learning snapshot card.
+- Polished progress summaries, empty state, recent activity, and saved/session labels.
+- Kept progress repository behavior intact.
+
+Account changes:
+
+- Replaced native foundation wording with simple account-management copy.
+- Polished profile, Learn access, device list, empty device state, and sign-out controls.
+- Kept account repository behavior intact.
+
 ## Remaining Learn polish gaps
 
 These are still required before release:
 
-### YKI
+### Backend and real-device QA
 
-- Verify backend scoring, progress, and real-device task layout.
+- Verify login/session persistence.
+- Verify Learn access.
+- Verify YKI backend scoring, progress, and real-device task layout.
+- Verify Professional Finnish backend feedback, progress, and real-device keyboard behaviour.
+- Verify Roleplay dynamic OpenAI-backed responses and anti-repetition against backend.
+- Verify Cards progress/scheduling behaviour against backend.
+- Verify Progress dashboard data.
+- Verify Account/sign-out.
 
-### Professional Finnish
+### Final release checks
 
-- Verify backend feedback, progress, and real-device keyboard behaviour.
-
-### Roleplay
-
-- Verify dynamic OpenAI-backed responses and anti-repetition against backend.
-- Check real-device chat layout and keyboard behaviour.
-
-### Cards
-
-- Verify progress/scheduling behaviour against backend.
-- Check real-device card layout and rating ergonomics.
-
-### Progress
-
-- Polish progress dashboard, empty states, and fallback states.
-- Verify backend progress data.
-
-### Account
-
-- Polish profile/access/sign-out layout.
-- Keep account clear and simple for first release.
+- Run a user-facing wording audit for internal engineering phrases.
+- Build a fresh QA APK after M16-D.
+- Capture Learn screenshots.
+- Configure signing outside Git.
+- Build signed release bundle.
 
 ## Release rule
 
@@ -102,4 +110,4 @@ Do not ship Learn while screens contain engineering phrases such as native found
 
 ## Next patch target
 
-M16-D should polish Progress and Account, then run a search for remaining internal engineering wording in Learn user-facing screens.
+M16-E should run the Learn wording audit, build checks, and fresh QA APK preparation for real-device release-candidate testing.
