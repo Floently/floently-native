@@ -44,20 +44,37 @@ Cards changes:
 - Added review summary after session completion.
 - Kept repository/service behavior intact.
 
+## M16-C YKI and Professional Finnish polish patch
+
+YKI and Professional Finnish were updated because they define the original Learn value and are important for the Learn-first release.
+
+YKI changes:
+
+- Replaced internal guarded/parity wording with learner-facing exam practice copy.
+- Polished level selection and module cards.
+- Improved task session copy, progress text, answer guidance, and completion summary.
+- Removed release-gate wording from user-facing YKI feedback cards.
+- Kept repository, evaluator, and progress-store behavior intact.
+
+Professional Finnish changes:
+
+- Replaced internal guarded/parity wording with learner-facing workplace practice copy.
+- Polished domain selection and module cards.
+- Improved scenario session copy, model phrase presentation, response guidance, and completion summary.
+- Removed release-gate wording from user-facing scenario cards.
+- Kept repository behavior intact.
+
 ## Remaining Learn polish gaps
 
 These are still required before release:
 
 ### YKI
 
-- Replace any internal foundation wording with learner-facing copy.
-- Improve task/session layout for small mobile screens.
-- Polish answer, feedback, loading, and empty states.
+- Verify backend scoring, progress, and real-device task layout.
 
 ### Professional Finnish
 
-- Replace any internal foundation wording.
-- Polish scenario cards, phrase cards, response input, and result states.
+- Verify backend feedback, progress, and real-device keyboard behaviour.
 
 ### Roleplay
 
@@ -85,4 +102,4 @@ Do not ship Learn while screens contain engineering phrases such as native found
 
 ## Next patch target
 
-M16-C should polish YKI and Professional Finnish because they define the original Learn product value and must match or improve the pre-native experience.
+M16-D should polish Progress and Account, then run a search for remaining internal engineering wording in Learn user-facing screens.
