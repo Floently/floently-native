@@ -20,7 +20,9 @@ enum class LearnParityRequirement {
     ExistingAudioParity,
     ExistingConversationParity,
     ExistingSubscriptionParity,
-    ExistingDeviceLimitParity
+    ExistingDeviceLimitParity,
+    ExistingLanguageParity,
+    ExistingSettingsParity
 }
 
 enum class LearnAccessRequirement {
@@ -36,7 +38,8 @@ enum class LearnInteractionRequirement {
     OfflineSafeState,
     ErrorRecovery,
     BeginnerSafeFlow,
-    AntiRepetitionFlow
+    AntiRepetitionFlow,
+    LanguageSelectionFlow
 }
 
 enum class LearnReleaseRequirement {
@@ -45,6 +48,7 @@ enum class LearnReleaseRequirement {
     SubscriptionAudit,
     DeviceLimitAudit,
     InteractionAudit,
+    LanguageAudit,
     NativeQaPass
 }
 
@@ -130,6 +134,20 @@ object LearnFeatureContracts {
                 ),
                 releaseRequirements = defaultReleaseRequirements()
             )
+            LearnFeatureDestination.Settings -> LearnFeatureContract(
+                destination = destination,
+                parityRequirements = listOf(
+                    LearnParityRequirement.ExistingLanguageParity,
+                    LearnParityRequirement.ExistingSettingsParity
+                ),
+                accessRequirements = defaultAccessRequirements(),
+                interactionRequirements = listOf(
+                    LearnInteractionRequirement.NativeNavigation,
+                    LearnInteractionRequirement.LanguageSelectionFlow,
+                    LearnInteractionRequirement.ErrorRecovery
+                ),
+                releaseRequirements = defaultReleaseRequirements()
+            )
             LearnFeatureDestination.Account -> LearnFeatureContract(
                 destination = destination,
                 parityRequirements = listOf(
@@ -162,6 +180,7 @@ object LearnFeatureContracts {
         LearnReleaseRequirement.SubscriptionAudit,
         LearnReleaseRequirement.DeviceLimitAudit,
         LearnReleaseRequirement.InteractionAudit,
+        LearnReleaseRequirement.LanguageAudit,
         LearnReleaseRequirement.NativeQaPass
     )
 }
