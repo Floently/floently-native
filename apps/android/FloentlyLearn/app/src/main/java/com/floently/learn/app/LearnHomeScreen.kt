@@ -11,6 +11,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.floently.learn.i18n.LearnCopy
+import com.floently.learn.i18n.LearnLanguage
+import com.floently.learn.i18n.LearnTranslations
 import com.floently.learn.navigation.LearnFeatureDestination
 import com.floently.shared.auth.FloentlyAuthSession
 import com.floently.shared.design.FloentlyCard
@@ -21,6 +24,7 @@ import com.floently.shared.design.FloentlyScreen
 @Composable
 fun LearnHomeScreen(
     session: FloentlyAuthSession,
+    copy: LearnCopy = LearnTranslations.copy(LearnLanguage.EN),
     onSignOut: () -> Unit,
     onBackToSuite: (() -> Unit)? = null,
     onDestinationSelected: (LearnFeatureDestination) -> Unit = {}
@@ -31,42 +35,42 @@ fun LearnHomeScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Text(
-                text = "Floently Learn",
+                text = copy.appTitle,
                 color = palette.text,
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold
             )
 
             Text(
-                text = "Practice Finnish for real life, work, YKI, and everyday conversations.",
+                text = copy.appSubtitle,
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
 
             FloentlyCard(product = FloentlyProduct.Learn) {
                 Text(
-                    text = "Welcome back, ${session.user.email.substringBefore("@")}.",
+                    text = copy.welcome(session.user.email.substringBefore("@")),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Choose one focused practice area and keep moving. Learn is now the first release target, so these screens stay clean, stable, and close to the original Floently learning experience.",
+                    text = copy.homeBody,
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    text = "Recommended next step: conversation practice",
+                    text = copy.recommendedNextStep,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold
                 )
                 FloentlyPrimaryButton(
-                    title = "Continue with Roleplay",
+                    title = copy.continueRoleplay,
                     product = FloentlyProduct.Learn,
                     onClick = { onDestinationSelected(LearnFeatureDestination.Roleplay) }
                 )
             }
 
             Text(
-                text = "Learn areas",
+                text = copy.learnAreas,
                 color = palette.text,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
@@ -75,20 +79,20 @@ fun LearnHomeScreen(
             LearnFeatureDestination.primary.forEach { destination ->
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(
-                        text = destination.title,
+                        text = destination.title(copy),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = destination.subtitle,
+                        text = destination.subtitle(copy),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        text = destination.releaseMessage(),
+                        text = destination.releaseMessage(copy),
                         style = MaterialTheme.typography.bodySmall
                     )
                     FloentlyPrimaryButton(
-                        title = destination.actionTitle(),
+                        title = destination.actionTitle(copy),
                         product = FloentlyProduct.Learn,
                         onClick = { onDestinationSelected(destination) }
                     )
@@ -97,21 +101,21 @@ fun LearnHomeScreen(
 
             FloentlyCard(product = FloentlyProduct.Learn) {
                 Text(
-                    text = "Account",
+                    text = copy.accountTitle,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Signed in as ${session.user.email}. Manage your account or sign out when you are done.",
+                    text = copy.signedIn(session.user.email),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 FloentlyPrimaryButton(
-                    title = "Open account",
+                    title = copy.openAccount,
                     product = FloentlyProduct.Learn,
                     onClick = { onDestinationSelected(LearnFeatureDestination.Account) }
                 )
                 FloentlyPrimaryButton(
-                    title = "Sign out",
+                    title = copy.signOut,
                     product = FloentlyProduct.Learn,
                     onClick = onSignOut
                 )
@@ -119,7 +123,7 @@ fun LearnHomeScreen(
 
             onBackToSuite?.let { back ->
                 FloentlyPrimaryButton(
-                    title = "Back to Floently products",
+                    title = copy.backToProducts,
                     product = FloentlyProduct.Learn,
                     onClick = back
                 )
@@ -128,20 +132,42 @@ fun LearnHomeScreen(
     }
 }
 
-private fun LearnFeatureDestination.actionTitle(): String = when (this) {
-    LearnFeatureDestination.YkiPractice -> "Practice YKI"
-    LearnFeatureDestination.ProfessionalFinnish -> "Practice work Finnish"
-    LearnFeatureDestination.Roleplay -> "Start roleplay"
-    LearnFeatureDestination.Cards -> "Review cards"
-    LearnFeatureDestination.Progress -> "View progress"
-    LearnFeatureDestination.Account -> "Open account"
+private fun LearnFeatureDestination.title(copy: LearnCopy): String = when (this) {
+    LearnFeatureDestination.YkiPractice -> copy.ykiTitle
+    LearnFeatureDestination.ProfessionalFinnish -> copy.professionalTitle
+    LearnFeatureDestination.Roleplay -> copy.roleplayTitle
+    LearnFeatureDestination.Cards -> copy.cardsTitle
+    LearnFeatureDestination.Progress -> copy.progressTitle
+    LearnFeatureDestination.Settings -> copy.settingsTitle
+    LearnFeatureDestination.Account -> copy.accountTitle
 }
 
-private fun LearnFeatureDestination.releaseMessage(): String = when (this) {
-    LearnFeatureDestination.YkiPractice -> "Exam-style tasks for structured practice and store-ready Learn release polish."
-    LearnFeatureDestination.ProfessionalFinnish -> "Workplace Finnish for interviews, meetings, messages, and professional confidence."
-    LearnFeatureDestination.Roleplay -> "Dynamic conversation practice with coaching and anti-repetition verification before release."
-    LearnFeatureDestination.Cards -> "Fast vocabulary and sentence review for daily retention."
-    LearnFeatureDestination.Progress -> "Track streaks, activity, and learning progress."
-    LearnFeatureDestination.Account -> "Profile, access, and sign-out controls."
+private fun LearnFeatureDestination.subtitle(copy: LearnCopy): String = when (this) {
+    LearnFeatureDestination.YkiPractice -> copy.ykiSubtitle
+    LearnFeatureDestination.ProfessionalFinnish -> copy.professionalSubtitle
+    LearnFeatureDestination.Roleplay -> copy.roleplaySubtitle
+    LearnFeatureDestination.Cards -> copy.cardsSubtitle
+    LearnFeatureDestination.Progress -> copy.progressSubtitle
+    LearnFeatureDestination.Settings -> copy.settingsSubtitle
+    LearnFeatureDestination.Account -> copy.signedInTemplate.replace("{email}", "")
+}
+
+private fun LearnFeatureDestination.actionTitle(copy: LearnCopy): String = when (this) {
+    LearnFeatureDestination.YkiPractice -> copy.ykiAction
+    LearnFeatureDestination.ProfessionalFinnish -> copy.professionalAction
+    LearnFeatureDestination.Roleplay -> copy.roleplayAction
+    LearnFeatureDestination.Cards -> copy.cardsAction
+    LearnFeatureDestination.Progress -> copy.progressAction
+    LearnFeatureDestination.Settings -> copy.settingsAction
+    LearnFeatureDestination.Account -> copy.openAccount
+}
+
+private fun LearnFeatureDestination.releaseMessage(copy: LearnCopy): String = when (this) {
+    LearnFeatureDestination.YkiPractice -> copy.ykiMessage
+    LearnFeatureDestination.ProfessionalFinnish -> copy.professionalMessage
+    LearnFeatureDestination.Roleplay -> copy.roleplayMessage
+    LearnFeatureDestination.Cards -> copy.cardsMessage
+    LearnFeatureDestination.Progress -> copy.progressMessage
+    LearnFeatureDestination.Settings -> copy.settingsMessage
+    LearnFeatureDestination.Account -> copy.accountTitle
 }
