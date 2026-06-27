@@ -30,6 +30,11 @@ enum class LearnFeatureDestination(
         subtitle = "Learning progress, streaks, and completed activity history.",
         releaseGuard = LearnReleaseGuard.RequiresParityAudit
     ),
+    Settings(
+        title = "Settings",
+        subtitle = "Language, preferences, support, privacy, and Learn controls.",
+        releaseGuard = LearnReleaseGuard.RequiresParityAudit
+    ),
     Account(
         title = "Account",
         subtitle = "Subscription, device access, profile, and sign-out controls.",
@@ -43,6 +48,7 @@ enum class LearnFeatureDestination(
             Roleplay,
             Cards,
             Progress,
+            Settings,
             Account
         )
     }
