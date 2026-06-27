@@ -10,23 +10,23 @@ class PreviewAccountRepository : AccountRepository {
         plan = LearnPlanSnapshot(
             product = "Floently Learn",
             status = LearnPlanStatus.Active,
-            planName = "Preview Learn access",
-            renewalText = "Plan service is not connected yet.",
-            accessNote = "Learn access is checked before the signed-in shell opens."
+            planName = "Learn access",
+            renewalText = "Plan details are being prepared.",
+            accessNote = "Learn access is active."
         ),
         devices = listOf(
             LearnDeviceSnapshot(
                 id = "current-device",
                 name = "This Android device",
                 status = LearnDeviceStatus.Current,
-                lastSeenText = "Current session",
+                lastSeenText = "Now",
                 revokeAvailable = false
             ),
             LearnDeviceSnapshot(
-                id = "saved-device-preview",
-                name = "Saved device preview",
+                id = "saved-device-local",
+                name = "Saved device",
                 status = LearnDeviceStatus.Registered,
-                lastSeenText = "Device service pending",
+                lastSeenText = "Recently used",
                 revokeAvailable = false
             )
         ),
