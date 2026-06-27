@@ -53,7 +53,7 @@ fun YkiSessionScreen(
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
                 .animateContentSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Text(
                 text = session.module.title,
@@ -62,7 +62,7 @@ fun YkiSessionScreen(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Guarded YKI task flow. Service scoring, speech features, progress persistence, and sync are still protected by the release contract.",
+                text = "Answer one task at a time. Write clearly, then continue to the next exercise.",
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -73,7 +73,7 @@ fun YkiSessionScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    text = "Progress: ${session.currentTaskIndex}/${session.tasks.size}",
+                    text = "Task ${session.currentTaskIndex + 1} of ${session.tasks.size}",
                     style = MaterialTheme.typography.labelMedium
                 )
                 Text(
@@ -91,24 +91,16 @@ fun YkiSessionScreen(
 
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(
-                        text = "Session complete",
+                        text = "Practice complete",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Your answers are held only in the current native session. Durable progress and scoring are not enabled until service parity is wired.",
+                        text = "You completed ${summary.evaluatedAnswers.size} answer(s). Review the feedback below and repeat this module when you want more practice.",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        text = "Evaluated: ${summary.evaluatedAnswers.size} answer(s)",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Text(
-                        text = "Progress-ready: ${summary.readyForDurableProgress}",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Text(
-                        text = "Persisted: ${summary.persisted}",
+                        text = if (summary.readyForDurableProgress) "Progress is ready to sync." else "Progress is captured for this practice session.",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -123,13 +115,13 @@ fun YkiSessionScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "Score: ${result.record.scorePercent?.toString() ?: "Not final"}",
+                                    text = "Score: ${result.record.scorePercent?.toString() ?: "Not final yet"}",
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
                             is YkiProgressSaveResult.Deferred -> {
                                 Text(
-                                    text = "Progress captured locally",
+                                    text = "Progress captured",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -138,17 +130,13 @@ fun YkiSessionScreen(
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
-                                    text = "Durable: ${result.record.durable}",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                                Text(
-                                    text = "Score: ${result.record.scorePercent?.toString() ?: "Not final"}",
+                                    text = "Score: ${result.record.scorePercent?.toString() ?: "Not final yet"}",
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
                             is YkiProgressSaveResult.Failed -> {
                                 Text(
-                                    text = "Progress capture failed",
+                                    text = "Progress was not saved",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -162,10 +150,10 @@ fun YkiSessionScreen(
                     }
                 }
 
-                summary.evaluatedAnswers.forEach { evaluation ->
+                summary.evaluatedAnswers.forEachIndexed { index, evaluation ->
                     FloentlyCard(product = FloentlyProduct.Learn) {
                         Text(
-                            text = "Evaluation: ${evaluation.taskId}",
+                            text = "Feedback ${index + 1}",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -174,11 +162,7 @@ fun YkiSessionScreen(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
-                            text = "Score: ${evaluation.scorePercent?.toString() ?: "Not final"}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            text = "Release gate: ${evaluation.releaseGate}",
+                            text = "Score: ${evaluation.scorePercent?.toString() ?: "Not final yet"}",
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
@@ -202,7 +186,7 @@ fun YkiSessionScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Skill: ${task.skill} | Type: ${task.type}",
+                            text = "${task.skill.displayName()} • ${task.type.displayName()}",
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
@@ -221,6 +205,10 @@ fun YkiSessionScreen(
                             label = { Text("Your answer") },
                             modifier = Modifier.fillMaxWidth()
                         )
+                        Text(
+                            text = "Tip: write the best answer you can. Short answers are okay when the task asks for them.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                         statusMessage?.let { message ->
                             Text(
                                 text = message,
@@ -228,7 +216,7 @@ fun YkiSessionScreen(
                             )
                         }
                         FloentlyPrimaryButton(
-                            title = "Save answer",
+                            title = "Save and continue",
                             product = FloentlyProduct.Learn,
                             onClick = {
                                 val cleanAnswer = answer.trim()
@@ -248,10 +236,28 @@ fun YkiSessionScreen(
             }
 
             FloentlyPrimaryButton(
-                title = "Exit session",
+                title = "Exit practice",
                 product = FloentlyProduct.Learn,
                 onClick = onExit
             )
         }
     }
+}
+
+private fun YkiSkill.displayName(): String = when (this) {
+    YkiSkill.Reading -> "Reading"
+    YkiSkill.Writing -> "Writing"
+    YkiSkill.Listening -> "Listening"
+    YkiSkill.Speaking -> "Speaking"
+    YkiSkill.Vocabulary -> "Vocabulary"
+    YkiSkill.Grammar -> "Grammar"
+}
+
+private fun YkiTaskType.displayName(): String = when (this) {
+    YkiTaskType.MultipleChoice -> "Multiple choice"
+    YkiTaskType.ShortAnswer -> "Short answer"
+    YkiTaskType.WritingPrompt -> "Writing"
+    YkiTaskType.ListeningPrompt -> "Listening"
+    YkiTaskType.SpeakingPrompt -> "Speaking"
+    YkiTaskType.Cloze -> "Fill the gap"
 }
