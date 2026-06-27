@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M13 Final release blocker dashboard cleanup.
+M14 Final local QA runbook.
 
 ## Branch
 
@@ -10,16 +10,18 @@ M13 Final release blocker dashboard cleanup.
 
 ## Latest verified build
 
-Store submission and manual QA pack was pulled and documentation was verified.
+Final release blocker dashboard cleanup was pulled and verified with debug build, release build, release bundle build, final blocker document, and progress tracker check.
 
 ```bash
 git pull --ff-only
-sed -n '1,220p' docs/release/PLAY_STORE_SUBMISSION_PACK.md
-sed -n '1,260p' docs/release/NATIVE_MANUAL_QA_CHECKLIST.md
-sed -n '1,120p' docs/progress/NATIVE_PROGRESS.md
+./scripts/nativectl build android-learn
+./scripts/nativectl build android-learn-release
+./scripts/nativectl build android-learn-bundle
+sed -n '1,220p' docs/release/FINAL_RELEASE_BLOCKERS.md
+sed -n '1,140p' docs/progress/NATIVE_PROGRESS.md
 ```
 
-Latest verified commit locally: `cb336dd`.
+Latest verified commit locally: `aa53fa0`.
 
 ## Completed
 
@@ -36,18 +38,19 @@ Latest verified commit locally: `cb336dd`.
 - Learn roleplay, cards, and progress service wiring is verified while preserving the existing Learn UI/function structure.
 - Store/signing readiness is verified with ignored signing properties, optional signing config, signing status command, release build, and release bundle build.
 - Store submission and manual QA pack is verified with listing draft, screenshot checklist, data-safety prompts, release notes draft, and real-device checklist.
+- Final release blocker dashboard cleanup is verified with only true blockers remaining: live backend QA, payment provider checkout, local release signing, privacy/data-safety/screenshots, and manual real-device QA.
 - Backend integration contracts are verified with native API route registry and suite selector backend contract dashboard.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
 ## Active task
 
-Clean up the in-app release readiness dashboard and docs so only true final blockers remain.
+Prepare final local QA runbook and QA result template so testing can start in a fixed order without guessing.
 
 ## Next step
 
-Verify M13-A final release blocker dashboard cleanup with a clean local pull, debug build, release build, bundle build, and final blocker document check.
+Verify M14-A final local QA runbook with a clean local pull and documentation check.
 
 ## Pending verification
 
-- M13-A final release blocker dashboard cleanup was pushed with verified service wiring gates and true remaining blockers: live backend QA, payment provider checkout, local release signing, privacy/data-safety/screenshots, and manual real-device QA.
+- M14-A final local QA runbook was pushed with fixed-order build, install, auth, suite, Learn, Read, Create, payment/access, offline/error, signing, and result-recording instructions.
