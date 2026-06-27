@@ -5,10 +5,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import com.floently.learn.account.AccountScreen
 import com.floently.learn.account.PreviewAccountRepository
 import com.floently.learn.cards.CardsRepository
 import com.floently.learn.cards.CardsScreen
+import com.floently.learn.i18n.LearnTranslations
+import com.floently.learn.i18n.persistLearnLanguage
+import com.floently.learn.i18n.rememberLearnLanguageState
 import com.floently.learn.navigation.LearnFeatureDestination
 import com.floently.learn.professional.PreviewProfessionalFinnishRepository
 import com.floently.learn.professional.ProfessionalFinnishScreen
@@ -16,6 +20,7 @@ import com.floently.learn.progress.LearnProgressRepository
 import com.floently.learn.progress.LearnProgressScreen
 import com.floently.learn.roleplay.RoleplayRepository
 import com.floently.learn.roleplay.RoleplayScreen
+import com.floently.learn.settings.LearnSettingsScreen
 import com.floently.learn.yki.PreviewYkiRepository
 import com.floently.learn.yki.YkiFeatureScreen
 import com.floently.shared.auth.FloentlyAuthSession
@@ -29,6 +34,9 @@ fun LearnSignedInShell(
     onSignOut: () -> Unit,
     onBackToSuite: (() -> Unit)? = null
 ) {
+    val context = LocalContext.current
+    val languageState = rememberLearnLanguageState()
+    val copy = LearnTranslations.copy(languageState.value)
     var selectedDestination by remember { mutableStateOf<LearnFeatureDestination?>(null) }
     val ykiRepository = remember { PreviewYkiRepository() }
     val professionalFinnishRepository = remember { PreviewProfessionalFinnishRepository() }
@@ -38,6 +46,7 @@ fun LearnSignedInShell(
     if (destination == null) {
         LearnHomeScreen(
             session = session,
+            copy = copy,
             onSignOut = onSignOut,
             onBackToSuite = onBackToSuite,
             onDestinationSelected = { selectedDestination = it }
@@ -63,6 +72,16 @@ fun LearnSignedInShell(
             LearnFeatureDestination.Progress -> LearnProgressScreen(
                 repository = progressRepository,
                 onBack = { selectedDestination = null }
+            )
+            LearnFeatureDestination.Settings -> LearnSettingsScreen(
+                copy = copy,
+                selectedLanguage = languageState.value,
+                onLanguageSelected = { language ->
+                    languageState.value = language
+                    persistLearnLanguage(context, language)
+                },
+                onBack = { selectedDestination = null },
+                onSignOut = onSignOut
             )
             LearnFeatureDestination.Account -> AccountScreen(
                 session = session,
