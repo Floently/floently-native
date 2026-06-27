@@ -28,7 +28,7 @@ fun LearnHomeScreen(
     FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
         Column(
             modifier = Modifier.verticalScroll(rememberScrollState()).animateContentSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Text(
                 text = "Floently Learn",
@@ -38,55 +38,41 @@ fun LearnHomeScreen(
             )
 
             Text(
-                text = "Signed in as ${session.user.email}",
+                text = "Practice Finnish for real life, work, YKI, and everyday conversations.",
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
 
-            onBackToSuite?.let { back ->
-                FloentlyPrimaryButton(
-                    title = "Back to Floently",
-                    product = FloentlyProduct.Learn,
-                    onClick = back
-                )
-            }
-
             FloentlyCard(product = FloentlyProduct.Learn) {
                 Text(
-                    text = "Native foundation status",
+                    text = "Welcome back, ${session.user.email.substringBefore("@")}.",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "All core Learn destinations now open into native screens or native service boundaries. Remaining work is parity wiring, durable sync, and production data.",
+                    text = "Choose one focused practice area and keep moving. Learn is now the first release target, so these screens stay clean, stable, and close to the original Floently learning experience.",
                     style = MaterialTheme.typography.bodyMedium
                 )
-            }
-
-            FloentlyCard(product = FloentlyProduct.Learn) {
                 Text(
-                    text = "Production gates",
-                    style = MaterialTheme.typography.titleLarge,
+                    text = "Recommended next step: conversation practice",
+                    style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold
                 )
-                PreviewLearnProductionGates.items.forEach { gate ->
-                    Text(
-                        text = "${gate.title}: ${gate.status.name}",
-                        style = MaterialTheme.typography.labelMedium
-                    )
-                    Text(
-                        text = gate.summary,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Text(
-                        text = "Next: ${gate.nextAction}",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+                FloentlyPrimaryButton(
+                    title = "Continue with Roleplay",
+                    product = FloentlyProduct.Learn,
+                    onClick = { onDestinationSelected(LearnFeatureDestination.Roleplay) }
+                )
             }
 
+            Text(
+                text = "Learn areas",
+                color = palette.text,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+
             LearnFeatureDestination.primary.forEach { destination ->
-                val readiness = PreviewLearnFeatureReadiness.items[destination]
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(
                         text = destination.title,
@@ -97,42 +83,65 @@ fun LearnHomeScreen(
                         text = destination.subtitle,
                         style = MaterialTheme.typography.bodyMedium
                     )
-                    readiness?.let { item ->
-                        Text(
-                            text = "Native status: ${item.status.name}",
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                        Text(
-                            text = item.nativeSummary,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            text = "Remaining gate: ${item.remainingGate}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        item.verifiedCommit?.let { commit ->
-                            Text(
-                                text = "Verified through: $commit",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    } ?: Text(
-                        text = "Release guard: ${destination.releaseGuard.name}",
-                        style = MaterialTheme.typography.labelMedium
+                    Text(
+                        text = destination.releaseMessage(),
+                        style = MaterialTheme.typography.bodySmall
                     )
                     FloentlyPrimaryButton(
-                        title = "Open",
+                        title = destination.actionTitle(),
                         product = FloentlyProduct.Learn,
                         onClick = { onDestinationSelected(destination) }
                     )
                 }
             }
 
-            FloentlyPrimaryButton(
-                title = "Sign out",
-                product = FloentlyProduct.Learn,
-                onClick = onSignOut
-            )
+            FloentlyCard(product = FloentlyProduct.Learn) {
+                Text(
+                    text = "Account",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Signed in as ${session.user.email}. Manage your account or sign out when you are done.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                FloentlyPrimaryButton(
+                    title = "Open account",
+                    product = FloentlyProduct.Learn,
+                    onClick = { onDestinationSelected(LearnFeatureDestination.Account) }
+                )
+                FloentlyPrimaryButton(
+                    title = "Sign out",
+                    product = FloentlyProduct.Learn,
+                    onClick = onSignOut
+                )
+            }
+
+            onBackToSuite?.let { back ->
+                FloentlyPrimaryButton(
+                    title = "Back to Floently products",
+                    product = FloentlyProduct.Learn,
+                    onClick = back
+                )
+            }
         }
     }
+}
+
+private fun LearnFeatureDestination.actionTitle(): String = when (this) {
+    LearnFeatureDestination.YkiPractice -> "Practice YKI"
+    LearnFeatureDestination.ProfessionalFinnish -> "Practice work Finnish"
+    LearnFeatureDestination.Roleplay -> "Start roleplay"
+    LearnFeatureDestination.Cards -> "Review cards"
+    LearnFeatureDestination.Progress -> "View progress"
+    LearnFeatureDestination.Account -> "Open account"
+}
+
+private fun LearnFeatureDestination.releaseMessage(): String = when (this) {
+    LearnFeatureDestination.YkiPractice -> "Exam-style tasks for structured practice and store-ready Learn release polish."
+    LearnFeatureDestination.ProfessionalFinnish -> "Workplace Finnish for interviews, meetings, messages, and professional confidence."
+    LearnFeatureDestination.Roleplay -> "Dynamic conversation practice with coaching and anti-repetition verification before release."
+    LearnFeatureDestination.Cards -> "Fast vocabulary and sentence review for daily retention."
+    LearnFeatureDestination.Progress -> "Track streaks, activity, and learning progress."
+    LearnFeatureDestination.Account -> "Profile, access, and sign-out controls."
 }
