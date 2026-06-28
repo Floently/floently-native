@@ -177,13 +177,15 @@ class PreviewCardsRepository : CardsRepository {
 
     override suspend fun dashboard(selectedDeckType: CardsDeckType): CardsDashboardState {
         val visibleDecks = decks.filter { it.type == selectedDeckType }
+        val visibleCards = visibleDecks.flatMap { deck -> cardsByDeckId[deck.id].orEmpty() }
         return CardsDashboardState(
             decks = visibleDecks,
             progress = visibleDecks.map { deck -> CardsDeckProgress(deck.id, 0, deck.totalCards, deck.dueCards, 0, null) },
             selectedDeckType = selectedDeckType,
             isLoading = false,
             errorMessage = null,
-            banks = banks
+            banks = banks,
+            buckets = bucketsFor(visibleCards)
         )
     }
 
@@ -205,8 +207,27 @@ class PreviewCardsRepository : CardsRepository {
         )
     }
 
-    override suspend fun reviewCard(session: CardsPracticeSession, cardId: String, rating: CardsReviewRating): CardsSessionResult =
-        CardsSessionResult.Ready(session.copy(answers = session.answers + (cardId to rating), currentCardIndex = session.currentCardIndex + 1))
+    override suspend fun reviewCard(session: CardsPracticeSession, cardId: String, rating: CardsReviewRating): CardsSessionResult {
+        val updatedCards = session.cards.map { card ->
+            if (card.id == cardId) {
+                card.copy(
+                    state = nextState(card, rating),
+                    seenCount = card.seenCount + 1,
+                    dueNow = rating == CardsReviewRating.Again || rating == CardsReviewRating.Hard,
+                    nextReviewText = nextReviewText(rating)
+                )
+            } else {
+                card
+            }
+        }
+        return CardsSessionResult.Ready(
+            session.copy(
+                cards = updatedCards,
+                answers = session.answers + (cardId to rating),
+                currentCardIndex = session.currentCardIndex + 1
+            )
+        )
+    }
 
     override fun summarize(session: CardsPracticeSession): CardsSessionSummary {
         val ratings = session.answers.values
@@ -231,4 +252,26 @@ class PreviewCardsRepository : CardsRepository {
             nextReviewText = nextReview
         )
     }
+}
+
+
+private fun bucketsFor(cards: List<StudyCard>): CardBankBuckets {
+    val learned = cards.filter { it.state == CardsCardState.Mastered }
+    val difficult = cards.filter { it.state == CardsCardState.Difficult || ((it.correctRate ?: 1.0) <= 0.45 && it.seenCount >= 4) }
+    val learning = cards.filter { card -> learned.none { it.id == card.id } && difficult.none { it.id == card.id } }
+    return CardBankBuckets(difficult = difficult, learned = learned, learning = learning)
+}
+
+private fun nextState(card: StudyCard, rating: CardsReviewRating): CardsCardState = when (rating) {
+    CardsReviewRating.Again -> if (card.seenCount >= 1) CardsCardState.Difficult else CardsCardState.Learning
+    CardsReviewRating.Hard -> CardsCardState.Difficult
+    CardsReviewRating.Good -> if (card.seenCount >= 1) CardsCardState.Mastered else CardsCardState.Learning
+    CardsReviewRating.Easy -> CardsCardState.Mastered
+}
+
+private fun nextReviewText(rating: CardsReviewRating): String = when (rating) {
+    CardsReviewRating.Again -> "Review again soon."
+    CardsReviewRating.Hard -> "Review hard cards again this week."
+    CardsReviewRating.Good -> "Good recall. Review later."
+    CardsReviewRating.Easy -> "Strong recall. Keep moving."
 }

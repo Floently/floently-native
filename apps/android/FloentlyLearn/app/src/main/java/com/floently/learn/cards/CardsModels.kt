@@ -23,6 +23,19 @@ enum class CardsReviewRating {
     Easy
 }
 
+enum class CardsCardState {
+    New,
+    Learning,
+    Difficult,
+    Mastered
+}
+
+data class CardBankBuckets(
+    val difficult: List<StudyCard> = emptyList(),
+    val learned: List<StudyCard> = emptyList(),
+    val learning: List<StudyCard> = emptyList()
+)
+
 data class CardsDeckBank(
     val id: String,
     val title: String,
@@ -63,7 +76,11 @@ data class StudyCard(
     val hint: String,
     val tags: List<String>,
     val overlays: List<CardI18nOverlay> = emptyList(),
-    val nextReviewText: String? = null
+    val nextReviewText: String? = null,
+    val state: CardsCardState = CardsCardState.New,
+    val seenCount: Int = 0,
+    val correctRate: Double? = null,
+    val dueNow: Boolean = true
 )
 
 data class CardsDeckProgress(
@@ -81,7 +98,8 @@ data class CardsDashboardState(
     val selectedDeckType: CardsDeckType,
     val isLoading: Boolean,
     val errorMessage: String?,
-    val banks: List<CardsDeckBank> = emptyList()
+    val banks: List<CardsDeckBank> = emptyList(),
+    val buckets: CardBankBuckets = CardBankBuckets()
 )
 
 data class CardsPracticeSession(
@@ -119,3 +137,19 @@ data class CardsSessionSummary(
 fun StudyCard.overlayFor(languageCode: String): CardI18nOverlay? =
     overlays.firstOrNull { it.languageCode == languageCode }
         ?: overlays.firstOrNull { it.languageCode == "en" }
+
+
+fun CardsCardState.displayLabel(): String = when (this) {
+    CardsCardState.New -> "Fresh card"
+    CardsCardState.Learning -> "Learning"
+    CardsCardState.Difficult -> "Difficult"
+    CardsCardState.Mastered -> "Mastered"
+}
+
+fun StudyCard.schedulingLabel(): String = nextReviewText
+    ?: when (state) {
+        CardsCardState.Mastered -> "Strong recall. Review later."
+        CardsCardState.Difficult -> "Needs extra repetition soon."
+        CardsCardState.Learning -> if (seenCount >= 2) "Still consolidating." else "Fresh learning card."
+        CardsCardState.New -> "Fresh card."
+    }

@@ -34,6 +34,7 @@ class CardsService(private val api: FloentlyApiClient) {
         val decksJson = json.optJSONArray("decks") ?: JSONArray()
         val progressJson = json.optJSONArray("progress") ?: JSONArray()
         val banksJson = json.optJSONArray("banks") ?: JSONArray()
+        val bucketsJson = json.optJSONObject("buckets")
         val decks = List(decksJson.length()) { index -> deckFromJson(decksJson.getJSONObject(index), selectedDeckType) }
         val banks = if (banksJson.length() > 0) {
             List(banksJson.length()) { index -> bankFromJson(banksJson.getJSONObject(index)) }
@@ -55,7 +56,8 @@ class CardsService(private val api: FloentlyApiClient) {
             selectedDeckType = selectedDeckType,
             isLoading = false,
             errorMessage = json.optString("error_message").takeIf { it.isNotBlank() },
-            banks = banks
+            banks = banks,
+            buckets = bucketsFromJson(bucketsJson)
         )
     }
 
@@ -113,7 +115,11 @@ class CardsService(private val api: FloentlyApiClient) {
         hint = json.optString("hint"),
         tags = stringList(json.optJSONArray("tags")),
         overlays = overlayList(json.optJSONArray("overlays")),
-        nextReviewText = json.optString("next_review_text").ifBlank { json.optString("nextReviewText").takeIf { it.isNotBlank() } }
+        nextReviewText = json.optString("next_review_text").ifBlank { json.optString("nextReviewText").takeIf { it.isNotBlank() } },
+        state = cardStateFromApi(json.optString("state")),
+        seenCount = json.optInt("seen_count", json.optInt("seenCount", 0)),
+        correctRate = correctRateFromJson(json),
+        dueNow = json.optBoolean("due_now", json.optBoolean("dueNow", true))
     )
 
     private fun overlayList(array: JSONArray?): List<CardI18nOverlay> = if (array == null) emptyList() else List(array.length()) { index ->
@@ -126,6 +132,18 @@ class CardsService(private val api: FloentlyApiClient) {
             source = json.optString("source").ifBlank { "service" }
         )
     }
+
+    private fun bucketsFromJson(json: JSONObject?): CardBankBuckets {
+        if (json == null) return CardBankBuckets()
+        return CardBankBuckets(
+            difficult = cardList(json.optJSONArray("difficult")),
+            learned = cardList(json.optJSONArray("learned") ?: json.optJSONArray("mastered")),
+            learning = cardList(json.optJSONArray("learning"))
+        )
+    }
+
+    private fun cardList(array: JSONArray?): List<StudyCard> =
+        if (array == null) emptyList() else List(array.length()) { index -> cardFromJson(array.getJSONObject(index), "cards") }
 
     private fun progressFromJson(json: JSONObject): CardsDeckProgress = CardsDeckProgress(
         deckId = json.optString("deck_id").ifBlank { json.optString("deckId") },
@@ -166,6 +184,20 @@ private fun practiceModeFromApi(value: String?, fallback: CardsPracticeMode): Ca
     "review" -> CardsPracticeMode.Review
     "flip" -> CardsPracticeMode.Flip
     else -> fallback
+}
+
+private fun correctRateFromJson(json: JSONObject): Double? = when {
+    json.has("correct_rate") -> json.optDouble("correct_rate")
+    json.has("correctRate") -> json.optDouble("correctRate")
+    else -> null
+}
+
+private fun cardStateFromApi(value: String?): CardsCardState = when (value?.trim()?.lowercase()) {
+    "mastered", "learned" -> CardsCardState.Mastered
+    "difficult" -> CardsCardState.Difficult
+    "learning" -> CardsCardState.Learning
+    "new", "fresh" -> CardsCardState.New
+    else -> CardsCardState.New
 }
 
 private fun reviewRatingFromApi(value: String?): CardsReviewRating = when (value?.trim()?.lowercase()) {

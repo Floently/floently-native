@@ -80,6 +80,10 @@ fun CardsScreen(
             FloentlyCard(product = FloentlyProduct.Learn) {
                 Text(text = "Card banks", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Text(text = "Choose a bank and review due cards, matching the completed web card-bank flow.", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = "Buckets: ${dashboard.buckets.difficult.size} difficult • ${dashboard.buckets.learning.size} learning • ${dashboard.buckets.learned.size} mastered",
+                    style = MaterialTheme.typography.bodySmall
+                )
                 if (dashboard == null || dashboard.banks.isEmpty()) {
                     Text(text = "Card banks are loading.", style = MaterialTheme.typography.bodySmall)
                 } else {
@@ -224,7 +228,7 @@ private fun CardsPracticeScreen(
                         Text(text = overlay?.meaning ?: card.back, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         Text(text = overlay?.example ?: card.example, style = MaterialTheme.typography.bodyMedium)
                         Text(text = "Overlay: ${overlay?.languageCode ?: "default"}", style = MaterialTheme.typography.bodySmall)
-                        card.nextReviewText?.let { Text(text = it, style = MaterialTheme.typography.bodySmall) }
+                        Text(text = "${card.state.displayLabel()} • ${card.schedulingLabel()}", style = MaterialTheme.typography.bodySmall)
                         if (card.tags.isNotEmpty()) {
                             Text(text = "Tags: ${card.tags.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
                         }
