@@ -10,17 +10,17 @@ M17 Learn 150% parity augmentation.
 
 ## Latest verified build
 
-M17-A2 final web language alignment was pulled, committed locally, pushed, and verified with debug and release builds. M17-A3 has been prepared to import final web CG5 translated copy into native Learn.
+M17-A3 final web CG5 translation import was committed, pushed, and verified with debug and release builds.
 
 ```bash
 git pull --ff-only
-git commit -m "Align Learn languages with final web build"
-git push
 ./scripts/nativectl build android-learn
 ./scripts/nativectl build android-learn-release
+git commit -m "Import final web Learn translations into native"
+git push
 ```
 
-Latest verified commit locally: `cfca5d9`.
+Latest verified commit locally: `56d1f8a`.
 
 Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 
@@ -52,7 +52,7 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M17-A started native i18n restoration: old language metadata is present, FI/SV/EN copy is available, Settings exists, language persistence is added, and Learn home/shell are wired to language settings.
 - M17-A follow-up corrected the release-contract compile error and changed Settings to show all 20 final web Learn language options.
 - M17-A2 aligned native language availability with the final web build: all 20 languages are enabled and complete, debug build passed, and release build passed.
-- M17-A3 imported final web CG5 translated copy into native Learn home/settings copy and removed English-only completion labels from the language selector.
+- M17-A3 imported final web CG5 translated copy into native Learn home/settings copy, removed English-only completion labels from the language selector, and passed debug/release builds.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
@@ -62,8 +62,8 @@ Build Learn to 150% of the old app before release, using the final web build as 
 
 ## Next step
 
-Verify M17-A3 final web translation import with debug and release builds, then continue wiring language copy into YKI, Professional Finnish, Roleplay, Cards, Progress, and Account detail screens.
+Run M17-A4 to propagate selected-language/native translated copy into YKI, Professional Finnish, Roleplay, Cards, Progress, and Account detail screens, then prepare a fresh translated QA APK.
 
 ## Pending verification
 
-- M17-A3 should compile, use final web CG5 copy for all 20 languages on Learn home/settings, preserve RTL metadata for Arabic, Persian, and Urdu, and build debug/release successfully.
+- M17-A4 should compile, keep all 20 language options enabled, avoid English-only settings labels where final web copy exists, and make the selected language visible beyond the Learn home/settings screens.
