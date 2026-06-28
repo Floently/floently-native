@@ -80,8 +80,9 @@ fun CardsScreen(
             FloentlyCard(product = FloentlyProduct.Learn) {
                 Text(text = "Card banks", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Text(text = "Choose a bank and review due cards, matching the completed web card-bank flow.", style = MaterialTheme.typography.bodyMedium)
+                val buckets = dashboard?.buckets ?: CardBankBuckets()
                 Text(
-                    text = "Buckets: ${dashboard.buckets.difficult.size} difficult • ${dashboard.buckets.learning.size} learning • ${dashboard.buckets.learned.size} mastered",
+                    text = "Buckets: ${buckets.difficult.size} difficult • ${buckets.learning.size} learning • ${buckets.learned.size} mastered",
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (dashboard == null || dashboard.banks.isEmpty()) {
