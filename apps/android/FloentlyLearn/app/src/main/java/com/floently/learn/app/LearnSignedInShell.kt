@@ -71,6 +71,7 @@ fun LearnSignedInShell(
             LearnFeatureDestination.Cards -> CardsScreen(
                 repository = cardsRepository,
                 copy = copy,
+                selectedLanguage = languageState.value,
                 onBack = { selectedDestination = null }
             )
             LearnFeatureDestination.Progress -> LearnProgressScreen(

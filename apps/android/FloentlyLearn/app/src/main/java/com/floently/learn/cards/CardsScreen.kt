@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.floently.learn.i18n.LearnCopy
+import com.floently.learn.i18n.LearnLanguage
 import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
@@ -28,10 +29,12 @@ import kotlinx.coroutines.launch
 fun CardsScreen(
     repository: CardsRepository,
     copy: LearnCopy,
+    selectedLanguage: LearnLanguage,
     onBack: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     var selectedDeckType by remember { mutableStateOf(CardsDeckType.Vocabulary) }
+    var selectedOverlayCode by remember(selectedLanguage.code) { mutableStateOf(selectedLanguage.code) }
     var dashboardState by remember { mutableStateOf<CardsDashboardState?>(null) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var activeSession by remember { mutableStateOf<CardsPracticeSession?>(null) }
@@ -42,6 +45,7 @@ fun CardsScreen(
             session = session,
             repository = repository,
             copy = copy,
+            selectedOverlayCode = selectedOverlayCode,
             onSessionChange = { activeSession = it },
             onExit = { activeSession = null }
         )
@@ -71,6 +75,38 @@ fun CardsScreen(
                 style = MaterialTheme.typography.titleMedium
             )
 
+            val dashboard = dashboardState
+
+            FloentlyCard(product = FloentlyProduct.Learn) {
+                Text(text = "Card banks", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(text = "Choose a bank and review due cards, matching the completed web card-bank flow.", style = MaterialTheme.typography.bodyMedium)
+                if (dashboard == null || dashboard.banks.isEmpty()) {
+                    Text(text = "Card banks are loading.", style = MaterialTheme.typography.bodySmall)
+                } else {
+                    dashboard.banks.forEach { bank ->
+                        Text(text = bank.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(text = bank.description, style = MaterialTheme.typography.bodySmall)
+                        Text(text = "${bank.deckCount} deck(s) • ${bank.dueCards} due", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+
+            FloentlyCard(product = FloentlyProduct.Learn) {
+                Text(text = "Overlay language", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(text = "Card meanings and helper text follow the selected overlay where available.", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = LearnLanguage.entries.firstOrNull { it.code == selectedOverlayCode }?.displayLabel ?: selectedLanguage.displayLabel,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                LearnLanguage.entries.forEach { language ->
+                    FloentlyPrimaryButton(
+                        title = if (language.code == selectedOverlayCode) "${language.displayLabel} ✓" else language.displayLabel,
+                        product = FloentlyProduct.Learn,
+                        onClick = { selectedOverlayCode = language.code }
+                    )
+                }
+            }
+
             FloentlyCard(product = FloentlyProduct.Learn) {
                 Text(text = copy.cardsMessage, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Text(text = copy.cardsSubtitle, style = MaterialTheme.typography.bodyMedium)
@@ -90,7 +126,6 @@ fun CardsScreen(
                 }
             }
 
-            val dashboard = dashboardState
             if (dashboard == null || dashboard.isLoading) {
                 Text(text = "Loading cards...", color = palette.muted, style = MaterialTheme.typography.bodyMedium)
             } else if (dashboard.decks.isEmpty()) {
@@ -104,6 +139,9 @@ fun CardsScreen(
                     FloentlyCard(product = FloentlyProduct.Learn) {
                         Text(text = deck.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         Text(text = deck.description, style = MaterialTheme.typography.bodyMedium)
+                        Text(text = "Bank: ${deck.bankTitle}", style = MaterialTheme.typography.bodySmall)
+                        deck.cefrLevel?.let { level -> Text(text = "Level: $level", style = MaterialTheme.typography.bodySmall) }
+                        Text(text = "Overlay languages: ${deck.overlayLanguageCodes.size}", style = MaterialTheme.typography.bodySmall)
                         Text(text = "Due now: ${deck.dueCards} of ${deck.totalCards}", style = MaterialTheme.typography.bodySmall)
                         Text(text = "Reviewed: ${progress?.reviewedCards ?: 0} of ${progress?.totalCards ?: 0}", style = MaterialTheme.typography.bodySmall)
                         progress?.lastAccuracyPercent?.let { accuracy ->
@@ -139,6 +177,7 @@ private fun CardsPracticeScreen(
     session: CardsPracticeSession,
     repository: CardsRepository,
     copy: LearnCopy,
+    selectedOverlayCode: String,
     onSessionChange: (CardsPracticeSession) -> Unit,
     onExit: () -> Unit
 ) {
@@ -167,21 +206,25 @@ private fun CardsPracticeScreen(
             if (session.completed || card == null) {
                 val summary = repository.summarize(session)
                 FloentlyCard(product = FloentlyProduct.Learn) {
-                    Text(text = copy.cardsTitle, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(text = "Review complete", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text(text = "You reviewed ${summary.reviewedCards} of ${summary.totalCards} cards.", style = MaterialTheme.typography.bodyMedium)
                     summary.accuracyPreviewPercent?.let { accuracy ->
                         Text(text = "Strong ratings: $accuracy%", style = MaterialTheme.typography.bodyMedium)
                     }
                     Text(text = "Again: ${summary.againCount} | Hard: ${summary.hardCount} | Good: ${summary.goodCount} | Easy: ${summary.easyCount}", style = MaterialTheme.typography.bodySmall)
+                    Text(text = summary.nextReviewText, style = MaterialTheme.typography.bodySmall)
                 }
                 FloentlyPrimaryButton(title = copy.cardsTitle, product = FloentlyProduct.Learn, onClick = onExit)
             } else {
+                val overlay = card.overlayFor(selectedOverlayCode)
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(text = card.front, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    Text(text = card.hint, style = MaterialTheme.typography.bodyMedium)
+                    Text(text = overlay?.hint ?: card.hint, style = MaterialTheme.typography.bodyMedium)
                     if (showAnswer) {
-                        Text(text = card.back, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        Text(text = card.example, style = MaterialTheme.typography.bodyMedium)
+                        Text(text = overlay?.meaning ?: card.back, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text(text = overlay?.example ?: card.example, style = MaterialTheme.typography.bodyMedium)
+                        Text(text = "Overlay: ${overlay?.languageCode ?: "default"}", style = MaterialTheme.typography.bodySmall)
+                        card.nextReviewText?.let { Text(text = it, style = MaterialTheme.typography.bodySmall) }
                         if (card.tags.isNotEmpty()) {
                             Text(text = "Tags: ${card.tags.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
                         }

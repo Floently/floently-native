@@ -10,7 +10,7 @@ M17 Learn 150% parity augmentation.
 
 ## Latest verified build
 
-M17-A4 selected-language propagation was verified with debug and release builds.
+M17-B1 Cards web parity overlay foundation was prepared for local verification.
 
 ```bash
 git pull --ff-only
@@ -56,6 +56,7 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M17-A3 imported final web CG5 translated copy into native Learn home/settings copy, removed English-only completion labels from the language selector, and passed debug/release builds.
 - M17-A4 recorded `docs/release/LEARN_WEB_SOURCE_OF_TRUTH_PARITY_MAP.md`: completed web Learn is now the source of truth for navigation, home, settings, billing/access, YKI, Professional Finnish, Roleplay, Cards, Progress, smart hints, utility drawer, i18n, overlays, backend contracts, and release QA.
 - M17-A4 propagated selected-language native copy into YKI, Professional Finnish, Roleplay, Cards, Progress, and Account entry/session screens; debug and release builds passed.
+- M17-B1 added card-bank panel foundation, overlay language selector, overlay model/service contract, translated helper display layer, and stronger review summary foundation from the completed web Cards source.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
@@ -65,8 +66,8 @@ Build Learn to 150% of the completed web app before release. The completed web b
 
 ## Next step
 
-Start M17-B Cards web parity and overlays using the completed web Cards source as the source of truth.
+Verify M17-B1 Cards web parity overlay foundation locally, then continue backend overlay contract verification and scheduling/progress parity.
 
 ## Pending verification
 
-- M17-B should rebuild card banks panel behavior, overlay language selector, overlay backend contract, translated helper/meaning layer, card session summary, and scheduling/progress parity from the completed web source.
+- M17-B1 should compile, show card banks, show all 20 overlay language choices, display overlay helper/meaning/example where present, keep card review usable, and preserve completed web Cards source-of-truth tracking.

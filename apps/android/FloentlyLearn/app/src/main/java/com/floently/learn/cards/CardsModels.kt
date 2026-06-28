@@ -23,6 +23,15 @@ enum class CardsReviewRating {
     Easy
 }
 
+data class CardsDeckBank(
+    val id: String,
+    val title: String,
+    val description: String,
+    val deckCount: Int,
+    val dueCards: Int,
+    val source: String
+)
+
 data class CardsDeck(
     val id: String,
     val title: String,
@@ -30,7 +39,19 @@ data class CardsDeck(
     val description: String,
     val totalCards: Int,
     val dueCards: Int,
-    val locked: Boolean
+    val locked: Boolean,
+    val bankId: String = "core",
+    val bankTitle: String = "Core cards",
+    val cefrLevel: String? = null,
+    val overlayLanguageCodes: List<String> = emptyList()
+)
+
+data class CardI18nOverlay(
+    val languageCode: String,
+    val meaning: String,
+    val example: String,
+    val hint: String,
+    val source: String
 )
 
 data class StudyCard(
@@ -40,7 +61,9 @@ data class StudyCard(
     val back: String,
     val example: String,
     val hint: String,
-    val tags: List<String>
+    val tags: List<String>,
+    val overlays: List<CardI18nOverlay> = emptyList(),
+    val nextReviewText: String? = null
 )
 
 data class CardsDeckProgress(
@@ -57,7 +80,8 @@ data class CardsDashboardState(
     val progress: List<CardsDeckProgress>,
     val selectedDeckType: CardsDeckType,
     val isLoading: Boolean,
-    val errorMessage: String?
+    val errorMessage: String?,
+    val banks: List<CardsDeckBank> = emptyList()
 )
 
 data class CardsPracticeSession(
@@ -88,5 +112,10 @@ data class CardsSessionSummary(
     val goodCount: Int,
     val easyCount: Int,
     val accuracyPreviewPercent: Int?,
-    val durable: Boolean
+    val durable: Boolean,
+    val nextReviewText: String = "Review difficult cards again soon."
 )
+
+fun StudyCard.overlayFor(languageCode: String): CardI18nOverlay? =
+    overlays.firstOrNull { it.languageCode == languageCode }
+        ?: overlays.firstOrNull { it.languageCode == "en" }
