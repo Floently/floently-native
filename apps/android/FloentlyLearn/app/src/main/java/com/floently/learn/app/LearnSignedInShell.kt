@@ -55,22 +55,27 @@ fun LearnSignedInShell(
         when (destination) {
             LearnFeatureDestination.YkiPractice -> YkiFeatureScreen(
                 repository = ykiRepository,
+                copy = copy,
                 onBack = { selectedDestination = null }
             )
             LearnFeatureDestination.ProfessionalFinnish -> ProfessionalFinnishScreen(
                 repository = professionalFinnishRepository,
+                copy = copy,
                 onBack = { selectedDestination = null }
             )
             LearnFeatureDestination.Roleplay -> RoleplayScreen(
                 repository = roleplayRepository,
+                copy = copy,
                 onBack = { selectedDestination = null }
             )
             LearnFeatureDestination.Cards -> CardsScreen(
                 repository = cardsRepository,
+                copy = copy,
                 onBack = { selectedDestination = null }
             )
             LearnFeatureDestination.Progress -> LearnProgressScreen(
                 repository = progressRepository,
+                copy = copy,
                 onBack = { selectedDestination = null }
             )
             LearnFeatureDestination.Settings -> LearnSettingsScreen(
@@ -86,6 +91,7 @@ fun LearnSignedInShell(
             LearnFeatureDestination.Account -> AccountScreen(
                 session = session,
                 repository = accountRepository,
+                copy = copy,
                 onBack = { selectedDestination = null },
                 onSignOut = onSignOut
             )

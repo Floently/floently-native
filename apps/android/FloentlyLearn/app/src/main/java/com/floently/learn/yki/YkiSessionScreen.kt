@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.floently.learn.i18n.LearnCopy
 import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
@@ -32,6 +33,7 @@ import kotlinx.coroutines.launch
 fun YkiSessionScreen(
     initialSession: YkiSession,
     repository: YkiRepository,
+    copy: LearnCopy,
     onExit: () -> Unit,
     evaluator: YkiEvaluator = PreviewYkiEvaluator(),
     progressStore: YkiProgressStore = PreviewYkiProgressStore()
@@ -62,7 +64,7 @@ fun YkiSessionScreen(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Answer one task at a time. Write clearly, then continue to the next exercise.",
+                text = copy.ykiSubtitle,
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -173,7 +175,7 @@ fun YkiSessionScreen(
                 }
 
                 FloentlyPrimaryButton(
-                    title = "Back to YKI modules",
+                    title = copy.ykiTitle,
                     product = FloentlyProduct.Learn,
                     onClick = onExit
                 )
@@ -236,7 +238,7 @@ fun YkiSessionScreen(
             }
 
             FloentlyPrimaryButton(
-                title = "Exit practice",
+                title = copy.backToLearn,
                 product = FloentlyProduct.Learn,
                 onClick = onExit
             )

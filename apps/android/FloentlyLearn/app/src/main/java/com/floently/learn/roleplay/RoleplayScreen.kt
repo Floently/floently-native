@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.floently.learn.i18n.LearnCopy
 import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
@@ -29,6 +30,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun RoleplayScreen(
     repository: RoleplayRepository,
+    copy: LearnCopy,
     onBack: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -42,6 +44,7 @@ fun RoleplayScreen(
         RoleplaySessionScreen(
             session = session,
             repository = repository,
+            copy = copy,
             onSessionChange = { activeSession = it },
             onExit = { activeSession = null }
         )
@@ -60,25 +63,25 @@ fun RoleplayScreen(
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 Text(
-                    text = "Roleplay",
+                    text = copy.roleplayTitle,
                     color = palette.text,
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Practise real Finnish conversations with a partner and gentle coaching.",
+                    text = copy.roleplaySubtitle,
                     color = palette.muted,
                     style = MaterialTheme.typography.titleMedium
                 )
 
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(
-                        text = "Choose your level",
+                        text = copy.roleplayMessage,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Start simple and build confidence. A1 and A2 keep the language short, safe, and practical.",
+                        text = copy.roleplaySubtitle,
                         style = MaterialTheme.typography.bodyMedium
                     )
                     RoleplayLevel.entries.forEach { level ->
@@ -140,7 +143,7 @@ fun RoleplayScreen(
                                 style = MaterialTheme.typography.bodySmall
                             )
                             FloentlyPrimaryButton(
-                                title = if (scenario.locked) "See why locked" else "Start conversation",
+                                title = if (scenario.locked) "See why locked" else copy.roleplayAction,
                                 product = FloentlyProduct.Learn,
                                 onClick = {
                                     scope.launch {
@@ -160,7 +163,7 @@ fun RoleplayScreen(
                 }
 
                 FloentlyPrimaryButton(
-                    title = "Back to Learn",
+                    title = copy.backToLearn,
                     product = FloentlyProduct.Learn,
                     onClick = onBack
                 )
@@ -173,6 +176,7 @@ fun RoleplayScreen(
 private fun RoleplaySessionScreen(
     session: RoleplaySession,
     repository: RoleplayRepository,
+    copy: LearnCopy,
     onSessionChange: (RoleplaySession) -> Unit,
     onExit: () -> Unit
 ) {
@@ -194,7 +198,7 @@ private fun RoleplaySessionScreen(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Reply in Finnish. Keep it short if you are unsure — the coach will help.",
+                text = copy.roleplaySubtitle,
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -284,7 +288,7 @@ private fun RoleplaySessionScreen(
             }
 
             FloentlyPrimaryButton(
-                title = "Exit conversation",
+                title = copy.backToLearn,
                 product = FloentlyProduct.Learn,
                 onClick = onExit
             )

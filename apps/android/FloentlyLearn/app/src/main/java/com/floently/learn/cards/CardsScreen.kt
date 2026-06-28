@@ -17,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.floently.learn.i18n.LearnCopy
 import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
@@ -26,6 +27,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun CardsScreen(
     repository: CardsRepository,
+    copy: LearnCopy,
     onBack: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -39,6 +41,7 @@ fun CardsScreen(
         CardsPracticeScreen(
             session = session,
             repository = repository,
+            copy = copy,
             onSessionChange = { activeSession = it },
             onExit = { activeSession = null }
         )
@@ -57,20 +60,20 @@ fun CardsScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Text(
-                text = "Cards",
+                text = copy.cardsTitle,
                 color = palette.text,
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Review useful Finnish words and phrases in short daily sessions.",
+                text = copy.cardsSubtitle,
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
 
             FloentlyCard(product = FloentlyProduct.Learn) {
-                Text(text = "Choose what to review", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(text = "Pick one deck type. Keep sessions short and repeat difficult cards more often.", style = MaterialTheme.typography.bodyMedium)
+                Text(text = copy.cardsMessage, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(text = copy.cardsSubtitle, style = MaterialTheme.typography.bodyMedium)
                 CardsDeckType.entries.forEach { type ->
                     FloentlyPrimaryButton(
                         title = if (type == selectedDeckType) "${type.displayName()} selected" else type.displayName(),
@@ -107,7 +110,7 @@ fun CardsScreen(
                             Text(text = "Last accuracy: $accuracy%", style = MaterialTheme.typography.bodySmall)
                         }
                         FloentlyPrimaryButton(
-                            title = if (deck.locked) "See why locked" else "Start review",
+                            title = if (deck.locked) "See why locked" else copy.cardsAction,
                             product = FloentlyProduct.Learn,
                             onClick = {
                                 scope.launch {
@@ -126,7 +129,7 @@ fun CardsScreen(
                 }
             }
 
-            FloentlyPrimaryButton(title = "Back to Learn", product = FloentlyProduct.Learn, onClick = onBack)
+            FloentlyPrimaryButton(title = copy.backToLearn, product = FloentlyProduct.Learn, onClick = onBack)
         }
     }
 }
@@ -135,6 +138,7 @@ fun CardsScreen(
 private fun CardsPracticeScreen(
     session: CardsPracticeSession,
     repository: CardsRepository,
+    copy: LearnCopy,
     onSessionChange: (CardsPracticeSession) -> Unit,
     onExit: () -> Unit
 ) {
@@ -163,14 +167,14 @@ private fun CardsPracticeScreen(
             if (session.completed || card == null) {
                 val summary = repository.summarize(session)
                 FloentlyCard(product = FloentlyProduct.Learn) {
-                    Text(text = "Review complete", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(text = copy.cardsTitle, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text(text = "You reviewed ${summary.reviewedCards} of ${summary.totalCards} cards.", style = MaterialTheme.typography.bodyMedium)
                     summary.accuracyPreviewPercent?.let { accuracy ->
                         Text(text = "Strong ratings: $accuracy%", style = MaterialTheme.typography.bodyMedium)
                     }
                     Text(text = "Again: ${summary.againCount} | Hard: ${summary.hardCount} | Good: ${summary.goodCount} | Easy: ${summary.easyCount}", style = MaterialTheme.typography.bodySmall)
                 }
-                FloentlyPrimaryButton(title = "Back to decks", product = FloentlyProduct.Learn, onClick = onExit)
+                FloentlyPrimaryButton(title = copy.cardsTitle, product = FloentlyProduct.Learn, onClick = onExit)
             } else {
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(text = card.front, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
@@ -222,7 +226,7 @@ private fun CardsPracticeScreen(
                     }
                 }
 
-                FloentlyPrimaryButton(title = "Exit review", product = FloentlyProduct.Learn, onClick = onExit)
+                FloentlyPrimaryButton(title = copy.backToLearn, product = FloentlyProduct.Learn, onClick = onExit)
             }
         }
     }

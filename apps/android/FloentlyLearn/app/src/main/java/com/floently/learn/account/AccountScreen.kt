@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.floently.learn.i18n.LearnCopy
 import com.floently.shared.auth.FloentlyAuthSession
 import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
@@ -26,6 +27,7 @@ import com.floently.shared.design.FloentlyScreen
 fun AccountScreen(
     session: FloentlyAuthSession,
     repository: AccountRepository,
+    copy: LearnCopy,
     onBack: () -> Unit,
     onSignOut: () -> Unit
 ) {
@@ -41,13 +43,13 @@ fun AccountScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Text(
-                text = "Account",
+                text = copy.accountTitle,
                 color = palette.text,
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Manage your Learn access, devices, and sign-out.",
+                text = copy.signedIn(session.user.email),
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -64,12 +66,12 @@ fun AccountScreen(
                 }
 
                 FloentlyCard(product = FloentlyProduct.Learn) {
-                    Text(text = "Profile", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(text = copy.settingsTitle, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text(text = dashboard.email, style = MaterialTheme.typography.bodyMedium)
                 }
 
                 FloentlyCard(product = FloentlyProduct.Learn) {
-                    Text(text = "Learn access", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(text = copy.openAccount, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text(text = dashboard.plan.planName, style = MaterialTheme.typography.bodyMedium)
                     Text(text = dashboard.plan.status.friendlyText(), style = MaterialTheme.typography.bodySmall)
                     Text(text = dashboard.plan.renewalText, style = MaterialTheme.typography.bodySmall)
@@ -92,8 +94,8 @@ fun AccountScreen(
                 }
             }
 
-            FloentlyPrimaryButton(title = "Back to Learn", product = FloentlyProduct.Learn, onClick = onBack)
-            FloentlyPrimaryButton(title = "Sign out", product = FloentlyProduct.Learn, onClick = onSignOut)
+            FloentlyPrimaryButton(title = copy.backToLearn, product = FloentlyProduct.Learn, onClick = onBack)
+            FloentlyPrimaryButton(title = copy.signOut, product = FloentlyProduct.Learn, onClick = onSignOut)
         }
     }
 }

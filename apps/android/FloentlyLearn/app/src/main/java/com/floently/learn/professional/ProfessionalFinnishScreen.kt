@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.floently.learn.i18n.LearnCopy
 import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
@@ -31,6 +32,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ProfessionalFinnishScreen(
     repository: ProfessionalFinnishRepository,
+    copy: LearnCopy,
     onBack: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -44,6 +46,7 @@ fun ProfessionalFinnishScreen(
         ProfessionalFinnishSessionScreen(
             initialSession = session,
             repository = repository,
+            copy = copy,
             onExit = { activeSession = null }
         )
     } else {
@@ -61,25 +64,25 @@ fun ProfessionalFinnishScreen(
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 Text(
-                    text = "Professional Finnish",
+                    text = copy.professionalTitle,
                     color = palette.text,
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Practise Finnish for work, interviews, customer situations, and everyday professional messages.",
+                    text = copy.professionalSubtitle,
                     color = palette.muted,
                     style = MaterialTheme.typography.titleMedium
                 )
 
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(
-                        text = "Choose a work situation",
+                        text = copy.professionalMessage,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Pick the area closest to your real life. You will see model phrases and write your own Finnish response.",
+                        text = copy.professionalSubtitle,
                         style = MaterialTheme.typography.bodyMedium
                     )
                     ProfessionalFinnishDomain.entries.forEach { domain ->
@@ -156,7 +159,7 @@ fun ProfessionalFinnishScreen(
                                 )
                             }
                             FloentlyPrimaryButton(
-                                title = if (module.locked) "See why locked" else "Start practice",
+                                title = if (module.locked) "See why locked" else copy.professionalAction,
                                 product = FloentlyProduct.Learn,
                                 onClick = {
                                     scope.launch {
@@ -176,7 +179,7 @@ fun ProfessionalFinnishScreen(
                 }
 
                 FloentlyPrimaryButton(
-                    title = "Back to Learn",
+                    title = copy.backToLearn,
                     product = FloentlyProduct.Learn,
                     onClick = onBack
                 )
@@ -189,6 +192,7 @@ fun ProfessionalFinnishScreen(
 private fun ProfessionalFinnishSessionScreen(
     initialSession: ProfessionalFinnishSession,
     repository: ProfessionalFinnishRepository,
+    copy: LearnCopy,
     onExit: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -216,7 +220,7 @@ private fun ProfessionalFinnishSessionScreen(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Read the situation, use the model phrases, and write a natural Finnish response.",
+                text = copy.professionalSubtitle,
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -326,7 +330,7 @@ private fun ProfessionalFinnishSessionScreen(
             }
 
             FloentlyPrimaryButton(
-                title = if (session.completed) "Back to Professional Finnish" else "Exit practice",
+                title = if (session.completed) copy.professionalTitle else copy.backToLearn,
                 product = FloentlyProduct.Learn,
                 onClick = onExit
             )

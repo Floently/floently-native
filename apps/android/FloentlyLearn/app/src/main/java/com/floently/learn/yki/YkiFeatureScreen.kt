@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.floently.learn.i18n.LearnCopy
 import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
@@ -25,6 +26,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun YkiFeatureScreen(
     repository: YkiRepository,
+    copy: LearnCopy,
     onBack: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -38,6 +40,7 @@ fun YkiFeatureScreen(
         YkiSessionScreen(
             initialSession = session,
             repository = repository,
+            copy = copy,
             onExit = { activeSession = null }
         )
     } else {
@@ -53,25 +56,25 @@ fun YkiFeatureScreen(
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 Text(
-                    text = "YKI practice",
+                    text = copy.ykiTitle,
                     color = palette.text,
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Practise exam-style Finnish with focused reading, writing, vocabulary, and grammar tasks.",
+                    text = copy.ykiSubtitle,
                     color = palette.muted,
                     style = MaterialTheme.typography.titleMedium
                 )
 
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(
-                        text = "Choose your exam level",
+                        text = copy.ykiMessage,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Keskitaso is the usual target for work and citizenship. You can still practise easier or harder levels anytime.",
+                        text = copy.ykiSubtitle,
                         style = MaterialTheme.typography.bodyMedium
                     )
                     YkiLevel.entries.forEach { level ->
@@ -148,7 +151,7 @@ fun YkiFeatureScreen(
                                 )
                             }
                             FloentlyPrimaryButton(
-                                title = if (module.locked) "See why locked" else "Start practice",
+                                title = if (module.locked) "See why locked" else copy.ykiAction,
                                 product = FloentlyProduct.Learn,
                                 onClick = {
                                     scope.launch {
@@ -168,7 +171,7 @@ fun YkiFeatureScreen(
                 }
 
                 FloentlyPrimaryButton(
-                    title = "Back to Learn",
+                    title = copy.backToLearn,
                     product = FloentlyProduct.Learn,
                     onClick = onBack
                 )

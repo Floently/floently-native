@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.floently.learn.i18n.LearnCopy
 import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
@@ -27,6 +28,7 @@ import com.floently.shared.design.FloentlyScreen
 @Composable
 fun LearnProgressScreen(
     repository: LearnProgressRepository,
+    copy: LearnCopy,
     onBack: () -> Unit
 ) {
     var dashboardState by remember { mutableStateOf<LearnProgressDashboardState?>(null) }
@@ -41,13 +43,13 @@ fun LearnProgressScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Text(
-                text = "Progress",
+                text = copy.progressTitle,
                 color = palette.text,
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "See your Finnish practice progress, streak, and recent activity.",
+                text = copy.progressSubtitle.replace("{count}", "0"),
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -112,7 +114,7 @@ fun LearnProgressScreen(
                 }
             }
 
-            FloentlyPrimaryButton(title = "Back to Learn", product = FloentlyProduct.Learn, onClick = onBack)
+            FloentlyPrimaryButton(title = copy.backToLearn, product = FloentlyProduct.Learn, onClick = onBack)
         }
     }
 }
