@@ -5,29 +5,125 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 class CardsService(private val api: FloentlyApiClient) {
+    private data class RuntimeCardFilters(
+        val domain: String,
+        val contentType: String,
+        val profession: String?,
+        val level: String?
+    )
+
     suspend fun dashboard(selectedDeckType: CardsDeckType): CardsDashboardState {
-        val response = api.get("/api/v1/learn/cards/dashboard?deck_type=${selectedDeckType.apiName()}")
+        val response = runCatching {
+            api.get(runtimeDeckPath(selectedDeckType))
+        }.getOrElse {
+            api.get("/api/v1/learn/cards/dashboard?deck_type=${selectedDeckType.apiName()}")
+        }
         return dashboardFromJson(response, selectedDeckType)
     }
 
     suspend fun startSession(deckId: String, mode: CardsPracticeMode): CardsPracticeSession {
-        val response = api.post(
-            "/api/v1/learn/cards/sessions",
-            JSONObject()
-                .put("deck_id", deckId)
-                .put("mode", mode.apiName())
-        )
+        val response = runCatching {
+            api.get(runtimeStartPath(deckId, mode))
+        }.getOrElse {
+            api.post(
+                "/api/v1/learn/cards/sessions",
+                JSONObject()
+                    .put("deck_id", deckId)
+                    .put("mode", mode.apiName())
+            )
+        }
         return sessionFromJson(response.optJSONObject("session") ?: response, root = response)
     }
 
     suspend fun reviewCard(session: CardsPracticeSession, cardId: String, rating: CardsReviewRating): CardsPracticeSession {
-        val response = api.post(
-            "/api/v1/learn/cards/sessions/${session.id}/review",
-            JSONObject()
-                .put("card_id", cardId)
-                .put("rating", rating.apiName())
+        val response = runCatching {
+            api.post(
+                "/api/v1/cards/session/${session.id}/answer",
+                JSONObject().put("user_answer", answerForRuntimeReview(session, cardId, rating))
+            )
+        }.getOrElse {
+            api.post(
+                "/api/v1/learn/cards/sessions/${session.id}/review",
+                JSONObject()
+                    .put("card_id", cardId)
+                    .put("rating", rating.apiName())
+            )
+        }
+        val parsed = sessionFromJson(response.optJSONObject("session") ?: response, fallback = session, root = response)
+        return parsed.copy(answers = parsed.answers + (cardId to rating))
+    }
+
+    private fun runtimeDeckPath(selectedDeckType: CardsDeckType): String {
+        val filters = filtersFor(selectedDeckType.apiName(), selectedDeckType = selectedDeckType)
+        return "/api/v1/cards/deck?${filters.toQueryString()}"
+    }
+
+    private fun runtimeStartPath(deckId: String, mode: CardsPracticeMode): String {
+        val filters = filtersFor(deckId, mode = mode)
+        return "/api/v1/cards/session/adaptive/start?${filters.toQueryString(includeLimit = true)}"
+    }
+
+    private fun RuntimeCardFilters.toQueryString(includeLimit: Boolean = false): String {
+        val parts = mutableListOf(
+            "domain=$domain",
+            "content_type=$contentType"
         )
-        return sessionFromJson(response.optJSONObject("session") ?: response, fallback = session, root = response)
+        profession?.let { parts += "profession=$it" }
+        level?.let { parts += "level=$it" }
+        if (includeLimit) parts += "limit=10"
+        return parts.joinToString("&")
+    }
+
+    private fun filtersFor(
+        deckId: String,
+        mode: CardsPracticeMode? = null,
+        selectedDeckType: CardsDeckType? = null
+    ): RuntimeCardFilters {
+        val value = "$deckId ${mode?.apiName().orEmpty()} ${selectedDeckType?.apiName().orEmpty()}".lowercase()
+        val contentType = when {
+            "grammar" in value -> "grammar_card"
+            "phrase" in value || "sentence" in value || selectedDeckType == CardsDeckType.Phrases -> "sentence_card"
+            else -> "vocabulary_card"
+        }
+        val professional = "work" in value || "professional" in value || "doctor" in value || "nurse" in value
+        val profession = when {
+            "doctor" in value -> "doctor"
+            "practical" in value -> "practical_nurse"
+            "nurse" in value -> "nurse"
+            professional -> "general_workplace"
+            else -> null
+        }
+        val level = when {
+            "a1_a2" in value || ("a1" in value && "a2" in value) -> "A1_A2"
+            "b1_b2" in value || ("b1" in value && "b2" in value) -> "B1_B2"
+            "c1_c2" in value || ("c1" in value && "c2" in value) -> "C1_C2"
+            "a1" in value -> "A1"
+            "a2" in value -> "A2"
+            "b1" in value -> "B1"
+            "b2" in value -> "B2"
+            "c1" in value -> "C1"
+            "c2" in value -> "C2"
+            else -> null
+        }
+        return RuntimeCardFilters(
+            domain = if (professional) "professional" else "general",
+            contentType = contentType,
+            profession = profession,
+            level = level
+        )
+    }
+
+    private fun answerForRuntimeReview(session: CardsPracticeSession, cardId: String, rating: CardsReviewRating): String {
+        val card = session.cards.firstOrNull { it.id == cardId } ?: session.currentCard
+        return when (rating) {
+            CardsReviewRating.Good,
+            CardsReviewRating.Easy -> card?.back?.takeIf { it.isNotBlank() }
+                ?: card?.overlays?.firstOrNull()?.meaning?.takeIf { it.isNotBlank() }
+                ?: card?.front?.takeIf { it.isNotBlank() }
+                ?: "known"
+            CardsReviewRating.Again,
+            CardsReviewRating.Hard -> "__needs_review__"
+        }
     }
 
     private fun dashboardFromJson(json: JSONObject, selectedDeckType: CardsDeckType): CardsDashboardState {

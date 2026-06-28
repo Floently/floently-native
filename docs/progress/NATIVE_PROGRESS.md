@@ -10,12 +10,12 @@ M17 Learn 150% parity augmentation.
 
 ## Latest verified build
 
-M17-B3 Cards runtime response and overlay guards were verified locally with debug and release builds.
+M17-B4 Cards runtime answer route and coach hint parity were verified locally with debug and release builds.
 
 ```bash
 ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn
 ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn-release
-git commit -m "Guard native Cards runtime overlay contract"
+git commit -m "Bridge native Cards to runtime answer routes"
 git push
 ```
 
@@ -60,6 +60,8 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M17-B2 repair fixed nullable dashboard bucket labels; debug and release builds passed locally after the repair.
 - M17-B3 guarded Cards against completed web runtime card responses: first_card/next_card, session_id, runtime prompt/answer/hint fields, synthesized overlay fallback, and runtime bucket derivation.
 - M17-B3 local verification passed: debug and release builds completed after runtime response and overlay guard patch.
+- M17-B4 bridged native Cards ratings to the real completed web runtime answer route, added runtime deck/start route fallback, and labelled backend materialized hints as coach hints.
+- M17-B4 local verification passed: debug and release builds completed after runtime answer route and coach hint parity patch.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
@@ -69,8 +71,8 @@ Build Learn to 150% of the completed web app before release. The completed web b
 
 ## Next step
 
-Continue M17-B4 Cards session answer/coach parity and UI polish.
+Continue M17-B5 Cards issue flag/skip/audio parity.
 
 ## Pending verification
 
-- M17-B4 should continue Cards session answer/coach parity and preserve completed web practice flow behavior.
+- M17-B5 should continue Cards issue flag, skip/next, and audio parity against the completed web runtime flow.

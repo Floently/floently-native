@@ -224,7 +224,7 @@ private fun CardsPracticeScreen(
                 val overlay = card.overlayFor(selectedOverlayCode)
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(text = card.front, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    Text(text = overlay?.hint ?: card.hint, style = MaterialTheme.typography.bodyMedium)
+                    Text(text = "Coach hint: ${overlay?.hint ?: card.hint}", style = MaterialTheme.typography.bodyMedium)
                     if (showAnswer) {
                         Text(text = overlay?.meaning ?: card.back, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         Text(text = overlay?.example ?: card.example, style = MaterialTheme.typography.bodyMedium)
