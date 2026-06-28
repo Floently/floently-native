@@ -13,7 +13,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.floently.learn.i18n.LearnCopy
 import com.floently.learn.i18n.LearnLanguage
-import com.floently.learn.i18n.LearnTranslationStatus
 import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
@@ -67,7 +66,7 @@ fun LearnSettingsScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "All ${LearnLanguage.entries.size} final web Learn language options are enabled here. The web build is the source of truth for language availability.",
+                    text = copy.futureLanguagesBody,
                     style = MaterialTheme.typography.bodySmall
                 )
                 LearnLanguage.entries.forEach { language ->
@@ -77,22 +76,6 @@ fun LearnSettingsScreen(
                         onClick = { onLanguageSelected(language) }
                     )
                 }
-            }
-
-            FloentlyCard(product = FloentlyProduct.Learn) {
-                Text(
-                    text = copy.futureLanguages,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = copy.futureLanguagesBody,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    text = LearnLanguage.reviewLanguages.joinToString { it.displayLabel },
-                    style = MaterialTheme.typography.bodySmall
-                )
             }
 
             FloentlyCard(product = FloentlyProduct.Learn) {
@@ -121,12 +104,5 @@ fun LearnSettingsScreen(
     }
 }
 
-private fun LearnLanguage.optionLabel(selectedLanguage: LearnLanguage): String {
-    val selectedText = if (this == selectedLanguage) " selected" else ""
-    val statusText = when (translationStatus) {
-        LearnTranslationStatus.Complete -> "complete"
-        LearnTranslationStatus.Fallback -> "fallback"
-        LearnTranslationStatus.InProgress -> "in progress"
-    }
-    return "$displayLabel - $statusText$selectedText"
-}
+private fun LearnLanguage.optionLabel(selectedLanguage: LearnLanguage): String =
+    if (this == selectedLanguage) "$displayLabel ✓" else displayLabel

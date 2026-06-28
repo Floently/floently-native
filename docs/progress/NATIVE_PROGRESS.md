@@ -10,7 +10,7 @@ M17 Learn 150% parity augmentation.
 
 ## Latest verified build
 
-M17-A2 final web language alignment was pulled, committed locally, pushed, and verified with debug and release builds.
+M17-A2 final web language alignment was pulled, committed locally, pushed, and verified with debug and release builds. M17-A3 has been prepared to import final web CG5 translated copy into native Learn.
 
 ```bash
 git pull --ff-only
@@ -52,6 +52,7 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M17-A started native i18n restoration: old language metadata is present, FI/SV/EN copy is available, Settings exists, language persistence is added, and Learn home/shell are wired to language settings.
 - M17-A follow-up corrected the release-contract compile error and changed Settings to show all 20 final web Learn language options.
 - M17-A2 aligned native language availability with the final web build: all 20 languages are enabled and complete, debug build passed, and release build passed.
+- M17-A3 imported final web CG5 translated copy into native Learn home/settings copy and removed English-only completion labels from the language selector.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
@@ -61,8 +62,8 @@ Build Learn to 150% of the old app before release, using the final web build as 
 
 ## Next step
 
-Start M17-A3: import or mirror final web translations into native Learn so all 20 selected languages have real native translated UI copy, not only enabled metadata.
+Verify M17-A3 final web translation import with debug and release builds, then continue wiring language copy into YKI, Professional Finnish, Roleplay, Cards, Progress, and Account detail screens.
 
 ## Pending verification
 
-- M17-A3 should compare native translation keys against the final web build, add complete translated Learn copy for all 20 languages where available, preserve RTL metadata for Arabic, Persian, and Urdu, and build debug/release successfully.
+- M17-A3 should compile, use final web CG5 copy for all 20 languages on Learn home/settings, preserve RTL metadata for Arabic, Persian, and Urdu, and build debug/release successfully.
