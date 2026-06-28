@@ -10,14 +10,13 @@ M17 Learn 150% parity augmentation.
 
 ## Latest verified build
 
-M17-B1 Cards web parity overlay foundation was prepared for local verification.
+M17-B1 Cards web parity overlay foundation was verified locally with debug and release builds.
 
 ```bash
 git pull --ff-only
-./scripts/nativectl build android-learn
-./scripts/nativectl build android-learn-release
-git commit -m "Propagate Learn translations into feature screens"
-git commit -m "Track M17-A4 selected-language propagation"
+ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn
+ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn-release
+git commit -m "Track local M17-B1 build verification"
 git push
 ```
 
@@ -57,6 +56,7 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M17-A4 recorded `docs/release/LEARN_WEB_SOURCE_OF_TRUTH_PARITY_MAP.md`: completed web Learn is now the source of truth for navigation, home, settings, billing/access, YKI, Professional Finnish, Roleplay, Cards, Progress, smart hints, utility drawer, i18n, overlays, backend contracts, and release QA.
 - M17-A4 propagated selected-language native copy into YKI, Professional Finnish, Roleplay, Cards, Progress, and Account entry/session screens; debug and release builds passed.
 - M17-B1 added card-bank panel foundation, overlay language selector, overlay model/service contract, translated helper display layer, and stronger review summary foundation from the completed web Cards source.
+- M17-B1 local verification passed: Android SDK 36 and Build Tools 34 were installed/licensed locally, then debug and release builds completed successfully.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
@@ -66,8 +66,8 @@ Build Learn to 150% of the completed web app before release. The completed web b
 
 ## Next step
 
-Verify M17-B1 Cards web parity overlay foundation locally, then continue backend overlay contract verification and scheduling/progress parity.
+Continue M17-B2 backend overlay contract verification and scheduling/progress parity.
 
 ## Pending verification
 
-- M17-B1 should compile, show card banks, show all 20 overlay language choices, display overlay helper/meaning/example where present, keep card review usable, and preserve completed web Cards source-of-truth tracking.
+- M17-B2 should verify the completed web card overlay backend contract, connect/guard native overlay fields against real backend responses, and continue scheduling/progress parity.
