@@ -16,11 +16,12 @@ M17-A4 selected-language propagation was verified with debug and release builds.
 git pull --ff-only
 ./scripts/nativectl build android-learn
 ./scripts/nativectl build android-learn-release
-git commit -m "Import final web Learn translations into native"
+git commit -m "Propagate Learn translations into feature screens"
+git commit -m "Track M17-A4 selected-language propagation"
 git push
 ```
 
-Latest verified commit locally: `56d1f8a`.
+Latest verified commit locally: `59d1174`.
 
 Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 
@@ -53,7 +54,8 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M17-A follow-up corrected the release-contract compile error and changed Settings to show all 20 final web Learn language options.
 - M17-A2 aligned native language availability with the final web build: all 20 languages are enabled and complete, debug build passed, and release build passed.
 - M17-A3 imported final web CG5 translated copy into native Learn home/settings copy, removed English-only completion labels from the language selector, and passed debug/release builds.
-- M17-A4 started by recording `docs/release/LEARN_WEB_SOURCE_OF_TRUTH_PARITY_MAP.md`: completed web Learn is now the source of truth for navigation, home, settings, billing/access, YKI, Professional Finnish, Roleplay, Cards, Progress, smart hints, utility drawer, i18n, overlays, backend contracts, and release QA.
+- M17-A4 recorded `docs/release/LEARN_WEB_SOURCE_OF_TRUTH_PARITY_MAP.md`: completed web Learn is now the source of truth for navigation, home, settings, billing/access, YKI, Professional Finnish, Roleplay, Cards, Progress, smart hints, utility drawer, i18n, overlays, backend contracts, and release QA.
+- M17-A4 propagated selected-language native copy into YKI, Professional Finnish, Roleplay, Cards, Progress, and Account entry/session screens; debug and release builds passed.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
