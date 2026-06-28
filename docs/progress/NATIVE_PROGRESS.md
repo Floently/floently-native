@@ -53,17 +53,18 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M17-A follow-up corrected the release-contract compile error and changed Settings to show all 20 final web Learn language options.
 - M17-A2 aligned native language availability with the final web build: all 20 languages are enabled and complete, debug build passed, and release build passed.
 - M17-A3 imported final web CG5 translated copy into native Learn home/settings copy, removed English-only completion labels from the language selector, and passed debug/release builds.
+- M17-A4 started by recording `docs/release/LEARN_WEB_SOURCE_OF_TRUTH_PARITY_MAP.md`: completed web Learn is now the source of truth for navigation, home, settings, billing/access, YKI, Professional Finnish, Roleplay, Cards, Progress, smart hints, utility drawer, i18n, overlays, backend contracts, and release QA.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
 ## Active task
 
-Build Learn to 150% of the old app before release, using the final web build as the source of truth for parity.
+Build Learn to 150% of the completed web app before release. The completed web build is the source of truth for all Learn behavior, not only language.
 
 ## Next step
 
-Run M17-A4 to propagate selected-language/native translated copy into YKI, Professional Finnish, Roleplay, Cards, Progress, and Account detail screens, then prepare a fresh translated QA APK.
+Verify the new web source-of-truth parity map locally, then continue M17-A4 by propagating selected-language/native translated copy into YKI, Professional Finnish, Roleplay, Cards, Progress, and Account detail screens.
 
 ## Pending verification
 
-- M17-A4 should compile, keep all 20 language options enabled, avoid English-only settings labels where final web copy exists, and make the selected language visible beyond the Learn home/settings screens.
+- M17-A4 should compile, keep all 20 language options enabled, use completed web source files as parity references, avoid English-only labels where final web copy exists, and make selected language visible beyond Learn home/settings.
