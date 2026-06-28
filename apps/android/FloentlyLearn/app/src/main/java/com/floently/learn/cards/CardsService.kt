@@ -17,7 +17,7 @@ class CardsService(private val api: FloentlyApiClient) {
                 .put("deck_id", deckId)
                 .put("mode", mode.apiName())
         )
-        return sessionFromJson(response.optJSONObject("session") ?: response)
+        return sessionFromJson(response.optJSONObject("session") ?: response, root = response)
     }
 
     suspend fun reviewCard(session: CardsPracticeSession, cardId: String, rating: CardsReviewRating): CardsPracticeSession {
@@ -27,7 +27,7 @@ class CardsService(private val api: FloentlyApiClient) {
                 .put("card_id", cardId)
                 .put("rating", rating.apiName())
         )
-        return sessionFromJson(response.optJSONObject("session") ?: response, fallback = session)
+        return sessionFromJson(response.optJSONObject("session") ?: response, fallback = session, root = response)
     }
 
     private fun dashboardFromJson(json: JSONObject, selectedDeckType: CardsDeckType): CardsDashboardState {
@@ -35,10 +35,34 @@ class CardsService(private val api: FloentlyApiClient) {
         val progressJson = json.optJSONArray("progress") ?: JSONArray()
         val banksJson = json.optJSONArray("banks") ?: JSONArray()
         val bucketsJson = json.optJSONObject("buckets")
-        val decks = List(decksJson.length()) { index -> deckFromJson(decksJson.getJSONObject(index), selectedDeckType) }
+        val runtimeCardsJson = json.optJSONArray("cards") ?: JSONArray()
+        val runtimeCards = List(runtimeCardsJson.length()) { index -> cardFromJson(runtimeCardsJson.getJSONObject(index), selectedDeckType.apiName()) }
+
+        val decks = if (decksJson.length() > 0) {
+            List(decksJson.length()) { index -> deckFromJson(decksJson.getJSONObject(index), selectedDeckType) }
+        } else if (runtimeCards.isNotEmpty()) {
+            listOf(
+                CardsDeck(
+                    id = selectedDeckType.apiName(),
+                    title = "${selectedDeckType.label()} runtime cards",
+                    type = selectedDeckType,
+                    description = "Cards loaded from the completed web runtime contract.",
+                    totalCards = runtimeCards.size,
+                    dueCards = runtimeCards.count { it.dueNow },
+                    locked = false,
+                    bankId = "runtime",
+                    bankTitle = "Runtime cards",
+                    cefrLevel = runtimeCards.firstNotNullOfOrNull { card -> card.tags.firstOrNull { it.startsWith("A") || it.startsWith("B") || it.startsWith("C") } },
+                    overlayLanguageCodes = listOf("en")
+                )
+            )
+        } else {
+            emptyList()
+        }
+
         val banks = if (banksJson.length() > 0) {
             List(banksJson.length()) { index -> bankFromJson(banksJson.getJSONObject(index)) }
-        } else {
+        } else if (decks.isNotEmpty()) {
             decks.groupBy { it.bankId }.map { (bankId, bankDecks) ->
                 CardsDeckBank(
                     id = bankId,
@@ -49,7 +73,17 @@ class CardsService(private val api: FloentlyApiClient) {
                     source = "service"
                 )
             }
+        } else {
+            emptyList()
         }
+
+        val parsedBuckets = bucketsFromJson(bucketsJson)
+        val buckets = if (parsedBuckets.difficult.isEmpty() && parsedBuckets.learned.isEmpty() && parsedBuckets.learning.isEmpty() && runtimeCards.isNotEmpty()) {
+            bucketsFor(runtimeCards)
+        } else {
+            parsedBuckets
+        }
+
         return CardsDashboardState(
             decks = decks,
             progress = List(progressJson.length()) { index -> progressFromJson(progressJson.getJSONObject(index)) },
@@ -57,81 +91,136 @@ class CardsService(private val api: FloentlyApiClient) {
             isLoading = false,
             errorMessage = json.optString("error_message").takeIf { it.isNotBlank() },
             banks = banks,
-            buckets = bucketsFromJson(bucketsJson)
+            buckets = buckets
         )
     }
 
-    private fun sessionFromJson(json: JSONObject, fallback: CardsPracticeSession? = null): CardsPracticeSession {
+    private fun sessionFromJson(
+        json: JSONObject,
+        fallback: CardsPracticeSession? = null,
+        root: JSONObject = json
+    ): CardsPracticeSession {
         val deck = json.optJSONObject("deck")?.let { deckFromJson(it, fallback?.deck?.type ?: CardsDeckType.Vocabulary) }
             ?: fallback?.deck
-            ?: deckFromJson(JSONObject().put("id", json.optString("deck_id")), CardsDeckType.Vocabulary)
+            ?: deckFromJson(JSONObject().put("id", firstNonBlank(json, "deck_id", "deckId", "mode")), CardsDeckType.Vocabulary)
+
         val cardsJson = json.optJSONArray("cards") ?: JSONArray()
-        val cards = if (cardsJson.length() > 0) {
+        val directCards = if (cardsJson.length() > 0) {
             List(cardsJson.length()) { index -> cardFromJson(cardsJson.getJSONObject(index), deck.id) }
         } else {
-            fallback?.cards.orEmpty()
+            listOfNotNull(
+                root.optJSONObject("first_card") ?: root.optJSONObject("firstCard"),
+                root.optJSONObject("next_card") ?: root.optJSONObject("nextCard") ?: root.optJSONObject("card")
+            ).map { cardFromJson(it, deck.id) }
         }
+
+        val cards = when {
+            directCards.isNotEmpty() && fallback != null -> mergeCards(fallback.cards, directCards)
+            directCards.isNotEmpty() -> directCards
+            else -> fallback?.cards.orEmpty()
+        }
+
+        val runtimeAdvanced = fallback != null && (
+            root.has("next_card") ||
+                root.has("nextCard") ||
+                root.has("session_completed") ||
+                root.has("sessionCompleted") ||
+                root.has("completed")
+            )
+        val defaultIndex = if (runtimeAdvanced) fallback.currentCardIndex + 1 else fallback?.currentCardIndex ?: 0
+
         val answersJson = json.optJSONObject("answers")
         return CardsPracticeSession(
-            id = json.optString("id").ifBlank { fallback?.id ?: "cards-session" },
+            id = firstNonBlank(json, "id", "session_id", "sessionId").ifBlank { fallback?.id ?: "cards-session" },
             deck = deck,
             cards = cards,
-            currentCardIndex = json.optInt("current_card_index", fallback?.currentCardIndex ?: 0),
+            currentCardIndex = json.optInt("current_card_index", json.optInt("currentCardIndex", defaultIndex)),
             answers = answersFromJson(answersJson, fallback?.answers.orEmpty()),
-            mode = practiceModeFromApi(json.optString("mode"), fallback?.mode ?: CardsPracticeMode.Flip),
-            releaseGate = json.optString("release_gate").ifBlank { "Cards practice is ready." }
+            mode = practiceModeFromApi(firstNonBlank(json, "mode"), fallback?.mode ?: CardsPracticeMode.Flip),
+            releaseGate = firstNonBlank(json, "release_gate", "releaseGate").ifBlank { "Cards practice is ready." }
         )
+    }
+
+    private fun mergeCards(existing: List<StudyCard>, incoming: List<StudyCard>): List<StudyCard> {
+        val incomingIds = incoming.map { it.id }.toSet()
+        return existing.filterNot { it.id in incomingIds } + incoming
     }
 
     private fun bankFromJson(json: JSONObject): CardsDeckBank = CardsDeckBank(
-        id = json.optString("id").ifBlank { "card-bank" },
-        title = json.optString("title").ifBlank { "Card bank" },
-        description = json.optString("description"),
+        id = firstNonBlank(json, "id").ifBlank { "card-bank" },
+        title = firstNonBlank(json, "title").ifBlank { "Card bank" },
+        description = firstNonBlank(json, "description"),
         deckCount = json.optInt("deck_count", json.optInt("deckCount", 0)),
         dueCards = json.optInt("due_cards", json.optInt("dueCards", 0)),
-        source = json.optString("source").ifBlank { "service" }
+        source = firstNonBlank(json, "source").ifBlank { "service" }
     )
 
     private fun deckFromJson(json: JSONObject, fallbackType: CardsDeckType): CardsDeck = CardsDeck(
-        id = json.optString("id").ifBlank { "cards-deck" },
-        title = json.optString("title").ifBlank { "Cards deck" },
-        type = deckTypeFromApi(json.optString("type"), fallbackType),
-        description = json.optString("description"),
+        id = firstNonBlank(json, "id").ifBlank { "cards-deck" },
+        title = firstNonBlank(json, "title").ifBlank { "Cards deck" },
+        type = deckTypeFromApi(firstNonBlank(json, "type", "mode"), fallbackType),
+        description = firstNonBlank(json, "description"),
         totalCards = json.optInt("total_cards", json.optInt("totalCards", 0)),
         dueCards = json.optInt("due_cards", json.optInt("dueCards", 0)),
         locked = json.optBoolean("locked", false),
-        bankId = json.optString("bank_id").ifBlank { json.optString("bankId").ifBlank { "core" } },
-        bankTitle = json.optString("bank_title").ifBlank { json.optString("bankTitle").ifBlank { "Core cards" } },
-        cefrLevel = json.optString("cefr_level").ifBlank { json.optString("cefrLevel").takeIf { it.isNotBlank() } },
-        overlayLanguageCodes = stringList(json.optJSONArray("overlay_language_codes"))
+        bankId = firstNonBlank(json, "bank_id", "bankId").ifBlank { "core" },
+        bankTitle = firstNonBlank(json, "bank_title", "bankTitle").ifBlank { "Core cards" },
+        cefrLevel = firstNonBlank(json, "cefr_level", "cefrLevel", "cefr").takeIf { it.isNotBlank() },
+        overlayLanguageCodes = stringList(json.optJSONArray("overlay_language_codes") ?: json.optJSONArray("overlayLanguageCodes")).ifEmpty { listOf("en") }
     )
 
-    private fun cardFromJson(json: JSONObject, fallbackDeckId: String): StudyCard = StudyCard(
-        id = json.optString("id").ifBlank { "study-card" },
-        deckId = json.optString("deck_id").ifBlank { fallbackDeckId },
-        front = json.optString("front"),
-        back = json.optString("back"),
-        example = json.optString("example"),
-        hint = json.optString("hint"),
-        tags = stringList(json.optJSONArray("tags")),
-        overlays = overlayList(json.optJSONArray("overlays")),
-        nextReviewText = json.optString("next_review_text").ifBlank { json.optString("nextReviewText").takeIf { it.isNotBlank() } },
-        state = cardStateFromApi(json.optString("state")),
-        seenCount = json.optInt("seen_count", json.optInt("seenCount", 0)),
-        correctRate = correctRateFromJson(json),
-        dueNow = json.optBoolean("due_now", json.optBoolean("dueNow", true))
-    )
+    private fun cardFromJson(json: JSONObject, fallbackDeckId: String): StudyCard {
+        val front = firstNonBlank(json, "front", "front_text", "frontText", "term", "word")
+        val answerValue = firstNonBlank(json, "answer_value", "answerValue", "meaning", "translation", "back").ifBlank { correctAnswerValue(json) }
+        val prompt = firstNonBlank(json, "prompt", "back_prompt", "backPrompt", "follow_up_prompt", "followUpPrompt")
+        val explanation = firstNonBlank(json, "explanation", "rule_summary", "ruleSummary")
+        val back = firstNonBlank(json, "back", "back_text", "backText").ifBlank { answerValue.ifBlank { explanation.ifBlank { prompt } } }
+        val example = firstNonBlank(json, "example", "context_text", "contextText", "stimulus_text", "stimulusText", "blank_template", "blankTemplate").ifBlank { explanation }
+        val hint = firstNonBlank(json, "hint", "usage_note", "usageNote").ifBlank { prompt.ifBlank { explanation } }
+        val parsedOverlays = overlayList(json.optJSONArray("overlays"))
+
+        return StudyCard(
+            id = firstNonBlank(json, "id").ifBlank { "study-card" },
+            deckId = firstNonBlank(json, "deck_id", "deckId").ifBlank { fallbackDeckId },
+            front = front,
+            back = back,
+            example = example,
+            hint = hint,
+            tags = tagsFromJson(json),
+            overlays = parsedOverlays.ifEmpty { synthesizedOverlay(back = back, example = example, hint = hint) },
+            nextReviewText = firstNonBlank(json, "next_review_text", "nextReviewText", "next_review", "nextReview").takeIf { it.isNotBlank() },
+            state = cardStateFromApi(firstNonBlank(json, "state")),
+            seenCount = json.optInt("seen_count", json.optInt("seenCount", 0)),
+            correctRate = correctRateFromJson(json),
+            dueNow = json.optBoolean("due_now", json.optBoolean("dueNow", cardStateFromApi(firstNonBlank(json, "state")) != CardsCardState.Mastered))
+        )
+    }
 
     private fun overlayList(array: JSONArray?): List<CardI18nOverlay> = if (array == null) emptyList() else List(array.length()) { index ->
         val json = array.getJSONObject(index)
         CardI18nOverlay(
-            languageCode = json.optString("language_code").ifBlank { json.optString("languageCode") },
-            meaning = json.optString("meaning").ifBlank { json.optString("back") },
-            example = json.optString("example"),
-            hint = json.optString("hint"),
-            source = json.optString("source").ifBlank { "service" }
+            languageCode = firstNonBlank(json, "language_code", "languageCode", "code").ifBlank { "en" },
+            meaning = firstNonBlank(json, "meaning", "back", "answer_value", "answerValue"),
+            example = firstNonBlank(json, "example", "context_text", "contextText"),
+            hint = firstNonBlank(json, "hint", "prompt"),
+            source = firstNonBlank(json, "source").ifBlank { "service" }
         )
     }
+
+    private fun synthesizedOverlay(back: String, example: String, hint: String): List<CardI18nOverlay> =
+        if (back.isBlank() && example.isBlank() && hint.isBlank()) {
+            emptyList()
+        } else {
+            listOf(
+                CardI18nOverlay(
+                    languageCode = "en",
+                    meaning = back,
+                    example = example,
+                    hint = hint,
+                    source = "runtime-card-contract"
+                )
+            )
+        }
 
     private fun bucketsFromJson(json: JSONObject?): CardBankBuckets {
         if (json == null) return CardBankBuckets()
@@ -142,11 +231,18 @@ class CardsService(private val api: FloentlyApiClient) {
         )
     }
 
+    private fun bucketsFor(cards: List<StudyCard>): CardBankBuckets {
+        val learned = cards.filter { it.state == CardsCardState.Mastered }
+        val difficult = cards.filter { it.state == CardsCardState.Difficult || ((it.correctRate ?: 1.0) <= 0.45 && it.seenCount >= 4) }
+        val learning = cards.filter { card -> learned.none { it.id == card.id } && difficult.none { it.id == card.id } }
+        return CardBankBuckets(difficult = difficult, learned = learned, learning = learning)
+    }
+
     private fun cardList(array: JSONArray?): List<StudyCard> =
         if (array == null) emptyList() else List(array.length()) { index -> cardFromJson(array.getJSONObject(index), "cards") }
 
     private fun progressFromJson(json: JSONObject): CardsDeckProgress = CardsDeckProgress(
-        deckId = json.optString("deck_id").ifBlank { json.optString("deckId") },
+        deckId = firstNonBlank(json, "deck_id", "deckId"),
         reviewedCards = json.optInt("reviewed_cards", json.optInt("reviewedCards", 0)),
         totalCards = json.optInt("total_cards", json.optInt("totalCards", 0)),
         dueCards = json.optInt("due_cards", json.optInt("dueCards", 0)),
@@ -161,26 +257,70 @@ class CardsService(private val api: FloentlyApiClient) {
         return map
     }
 
-    private fun stringList(array: JSONArray?): List<String> = if (array == null) emptyList() else List(array.length()) { index -> array.optString(index) }
+    private fun tagsFromJson(json: JSONObject): List<String> {
+        val explicit = stringList(json.optJSONArray("tags"))
+        val derived = listOf(
+            firstNonBlank(json, "cefr"),
+            firstNonBlank(json, "domain"),
+            firstNonBlank(json, "profession"),
+            firstNonBlank(json, "content_type", "contentType"),
+            firstNonBlank(json, "mode")
+        )
+        return (explicit + derived).map { it.trim() }.filter { it.isNotBlank() }.distinct()
+    }
+
+    private fun stringList(array: JSONArray?): List<String> =
+        if (array == null) emptyList() else List(array.length()) { index -> array.optString(index) }.filter { it.isNotBlank() }
+
+    private fun firstNonBlank(json: JSONObject, vararg keys: String): String {
+        for (key in keys) {
+            val value = json.opt(key)
+            when (value) {
+                is JSONObject -> firstNonBlank(value, "value", "text", "label", "answer").takeIf { it.isNotBlank() }?.let { return it }
+                is JSONArray -> Unit
+                null -> Unit
+                else -> value.toString().trim().takeIf { it.isNotBlank() && it != "null" }?.let { return it }
+            }
+        }
+        return ""
+    }
+
+    private fun correctAnswerValue(json: JSONObject): String {
+        val value = json.opt("correct_answer") ?: json.opt("correctAnswer")
+        return when (value) {
+            is JSONObject -> firstNonBlank(value, "value", "text", "label", "answer")
+            null -> ""
+            else -> value.toString()
+        }.trim()
+    }
 }
 
 private fun CardsDeckType.apiName(): String = name.lowercase()
 private fun CardsPracticeMode.apiName(): String = name.lowercase()
 private fun CardsReviewRating.apiName(): String = name.lowercase()
 
+private fun CardsDeckType.label(): String = when (this) {
+    CardsDeckType.Vocabulary -> "Vocabulary"
+    CardsDeckType.Phrases -> "Phrases"
+    CardsDeckType.Grammar -> "Grammar"
+    CardsDeckType.Work -> "Work Finnish"
+    CardsDeckType.Yki -> "YKI"
+    CardsDeckType.Review -> "Review"
+}
+
 private fun deckTypeFromApi(value: String?, fallback: CardsDeckType): CardsDeckType = when (value?.trim()?.lowercase()) {
     "vocabulary" -> CardsDeckType.Vocabulary
-    "phrases" -> CardsDeckType.Phrases
+    "phrases", "sentence", "sentences" -> CardsDeckType.Phrases
     "grammar" -> CardsDeckType.Grammar
-    "work" -> CardsDeckType.Work
+    "work", "professional" -> CardsDeckType.Work
     "yki" -> CardsDeckType.Yki
     "review" -> CardsDeckType.Review
     else -> fallback
 }
 
 private fun practiceModeFromApi(value: String?, fallback: CardsPracticeMode): CardsPracticeMode = when (value?.trim()?.lowercase()) {
-    "type_answer", "typeanswer" -> CardsPracticeMode.TypeAnswer
-    "multiple_choice", "multiplechoice" -> CardsPracticeMode.MultipleChoice
+    "type_answer", "typeanswer", "typed_recall" -> CardsPracticeMode.TypeAnswer
+    "multiple_choice", "multiplechoice", "recognition" -> CardsPracticeMode.MultipleChoice
     "review" -> CardsPracticeMode.Review
     "flip" -> CardsPracticeMode.Flip
     else -> fallback
@@ -196,7 +336,7 @@ private fun cardStateFromApi(value: String?): CardsCardState = when (value?.trim
     "mastered", "learned" -> CardsCardState.Mastered
     "difficult" -> CardsCardState.Difficult
     "learning" -> CardsCardState.Learning
-    "new", "fresh" -> CardsCardState.New
+    "new", "fresh", "fresh_card" -> CardsCardState.New
     else -> CardsCardState.New
 }
 

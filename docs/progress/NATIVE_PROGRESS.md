@@ -10,12 +10,12 @@ M17 Learn 150% parity augmentation.
 
 ## Latest verified build
 
-M17-B2 Cards state buckets and scheduling parity were verified locally with debug and release builds.
+M17-B3 Cards runtime response and overlay guards were verified locally with debug and release builds.
 
 ```bash
 ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn
 ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn-release
-git commit -m "Repair M17-B2 nullable Cards bucket label"
+git commit -m "Guard native Cards runtime overlay contract"
 git push
 ```
 
@@ -58,6 +58,8 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M17-B1 local verification passed: Android SDK 36 and Build Tools 34 were installed/licensed locally, then debug and release builds completed successfully.
 - M17-B2 added native card state buckets, backend parsing for state/seen/correct/due fields, preview scheduling transitions, and visible bucket labels to align Cards with the completed web bank flow.
 - M17-B2 repair fixed nullable dashboard bucket labels; debug and release builds passed locally after the repair.
+- M17-B3 guarded Cards against completed web runtime card responses: first_card/next_card, session_id, runtime prompt/answer/hint fields, synthesized overlay fallback, and runtime bucket derivation.
+- M17-B3 local verification passed: debug and release builds completed after runtime response and overlay guard patch.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
@@ -67,8 +69,8 @@ Build Learn to 150% of the completed web app before release. The completed web b
 
 ## Next step
 
-Continue M17-B3 Cards backend overlay runtime endpoint verification.
+Continue M17-B4 Cards session answer/coach parity and UI polish.
 
 ## Pending verification
 
-- M17-B3 should verify the Cards backend overlay runtime endpoint and ensure native overlay fields match real backend responses.
+- M17-B4 should continue Cards session answer/coach parity and preserve completed web practice flow behavior.
