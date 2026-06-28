@@ -10,7 +10,7 @@ M17 Learn 150% parity augmentation.
 
 ## Latest verified build
 
-M17-A3 final web CG5 translation import was committed, pushed, and verified with debug and release builds.
+M17-A4 selected-language propagation was verified with debug and release builds.
 
 ```bash
 git pull --ff-only
@@ -63,8 +63,8 @@ Build Learn to 150% of the completed web app before release. The completed web b
 
 ## Next step
 
-Verify the new web source-of-truth parity map locally, then continue M17-A4 by propagating selected-language/native translated copy into YKI, Professional Finnish, Roleplay, Cards, Progress, and Account detail screens.
+Start M17-B Cards web parity and overlays using the completed web Cards source as the source of truth.
 
 ## Pending verification
 
-- M17-A4 should compile, keep all 20 language options enabled, use completed web source files as parity references, avoid English-only labels where final web copy exists, and make selected language visible beyond Learn home/settings.
+- M17-B should rebuild card banks panel behavior, overlay language selector, overlay backend contract, translated helper/meaning layer, card session summary, and scheduling/progress parity from the completed web source.
