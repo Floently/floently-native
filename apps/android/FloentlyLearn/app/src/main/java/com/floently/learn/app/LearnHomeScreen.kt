@@ -69,6 +69,13 @@ fun LearnHomeScreen(
                 )
             }
 
+            LearnSmartHelperCard(
+                title = "Helpful hint",
+                body = "Choose one focused action. The native helper keeps quick guidance visible without opening a separate web-style drawer.",
+                actions = learnHomeSmartHelperActions(),
+                onOpenDestination = onDestinationSelected
+            )
+
             Text(
                 text = copy.learnAreas,
                 color = palette.text,

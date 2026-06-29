@@ -1,5 +1,7 @@
 package com.floently.learn.settings
 
+import com.floently.learn.app.LearnSmartHelperCard
+import com.floently.learn.app.learnSettingsSmartHelperActions
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -137,6 +139,12 @@ fun LearnSettingsScreen(
                     )
                 }
             }
+
+            LearnSmartHelperCard(
+                title = "Smart hints and quick helper",
+                body = "Helpful hints are on by default in the completed web app. Native now exposes the same guidance surface as lightweight helper cards.",
+                actions = learnSettingsSmartHelperActions()
+            )
 
             FloentlyPrimaryButton(
                 title = copy.backToLearn,

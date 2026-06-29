@@ -10,12 +10,12 @@ M17 Learn 150% parity augmentation.
 
 ## Latest verified build
 
-M17-C3 billing provider action wiring was verified locally with debug and release builds.
+M17-D1 native smart helper surface was verified locally with debug and release builds.
 
 ```bash
 ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn
 ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn-release
-git commit -m "Wire native billing provider actions"
+git commit -m "Add native smart helper surface"
 git push
 ```
 
@@ -72,6 +72,8 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M17-C2 repair verification passed: debug and release builds completed after real Account billing/access code changes.
 - M17-C3 wired native billing provider actions for subscription checkout, trial, portal, cancel trial or renewal, and reactivate using existing backend routes without adding Learn environment variables.
 - M17-C3 local verification passed: debug and release builds completed after billing provider action wiring.
+- M17-D1 added a reusable native smart helper surface with Home quick actions and Settings helper guidance as the first native replacement for the completed web UtilityDrawer/hints behavior.
+- M17-D1 local verification passed: debug and release builds completed after native smart helper surface patch.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
