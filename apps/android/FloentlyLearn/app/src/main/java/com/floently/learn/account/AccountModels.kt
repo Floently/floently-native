@@ -27,13 +27,21 @@ data class LearnDeviceSnapshot(
     val revokeAvailable: Boolean
 )
 
+data class LearnBillingActionSnapshot(
+    val title: String,
+    val body: String,
+    val statusText: String
+)
+
 data class AccountDashboardState(
     val email: String,
     val plan: LearnPlanSnapshot,
     val devices: List<LearnDeviceSnapshot>,
     val maxDevices: Int,
     val isLoading: Boolean,
-    val errorMessage: String?
+    val errorMessage: String?,
+    val billingActions: List<LearnBillingActionSnapshot> = emptyList(),
+    val productAccessNotes: List<String> = emptyList()
 ) {
     val usedDeviceSlots: Int
         get() = devices.size

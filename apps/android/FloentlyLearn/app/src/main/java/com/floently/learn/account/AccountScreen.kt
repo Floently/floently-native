@@ -79,6 +79,28 @@ fun AccountScreen(
                 }
 
                 FloentlyCard(product = FloentlyProduct.Learn) {
+                    Text(text = "Billing and subscription", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(text = "Current plan: ${dashboard.plan.planName}", style = MaterialTheme.typography.bodyMedium)
+                    Text(text = dashboard.plan.status.friendlyText(), style = MaterialTheme.typography.bodySmall)
+                    dashboard.billingActions.forEach { action ->
+                        Text(text = action.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        Text(text = action.statusText, style = MaterialTheme.typography.bodySmall)
+                        Text(text = action.body, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+
+                FloentlyCard(product = FloentlyProduct.Learn) {
+                    Text(text = "Product access boundaries", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    if (dashboard.productAccessNotes.isEmpty()) {
+                        Text(text = "Learn, Read, and Create access are checked separately.", style = MaterialTheme.typography.bodySmall)
+                    } else {
+                        dashboard.productAccessNotes.forEach { note ->
+                            Text(text = note, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+
+                FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(text = "Devices", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text(text = "${dashboard.usedDeviceSlots} of ${dashboard.maxDevices} device slot(s) used", style = MaterialTheme.typography.bodyMedium)
                     if (dashboard.devices.isEmpty()) {
