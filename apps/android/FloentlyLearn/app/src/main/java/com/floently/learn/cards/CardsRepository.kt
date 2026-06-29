@@ -4,6 +4,8 @@ interface CardsRepository {
     suspend fun dashboard(selectedDeckType: CardsDeckType): CardsDashboardState
     suspend fun startSession(deckId: String, mode: CardsPracticeMode): CardsSessionResult
     suspend fun reviewCard(session: CardsPracticeSession, cardId: String, rating: CardsReviewRating): CardsSessionResult
+    suspend fun skipCard(session: CardsPracticeSession): CardsSessionResult
+    suspend fun flagCard(session: CardsPracticeSession, cardId: String, reason: String = "malformed_card"): Boolean
     fun summarize(session: CardsPracticeSession): CardsSessionSummary
 }
 
@@ -35,6 +37,18 @@ class ServiceCardsRepository(
     override suspend fun reviewCard(session: CardsPracticeSession, cardId: String, rating: CardsReviewRating): CardsSessionResult {
         return runCatching { CardsSessionResult.Ready(service.reviewCard(session, cardId, rating)) }.getOrElse {
             fallback.reviewCard(session, cardId, rating)
+        }
+    }
+
+    override suspend fun skipCard(session: CardsPracticeSession): CardsSessionResult {
+        return runCatching { CardsSessionResult.Ready(service.skipCard(session)) }.getOrElse {
+            fallback.skipCard(session)
+        }
+    }
+
+    override suspend fun flagCard(session: CardsPracticeSession, cardId: String, reason: String): Boolean {
+        return runCatching { service.flagCard(session, cardId, reason) }.getOrElse {
+            fallback.flagCard(session, cardId, reason)
         }
     }
 
@@ -228,6 +242,11 @@ class PreviewCardsRepository : CardsRepository {
             )
         )
     }
+
+    override suspend fun skipCard(session: CardsPracticeSession): CardsSessionResult =
+        CardsSessionResult.Ready(session.copy(currentCardIndex = session.currentCardIndex + 1))
+
+    override suspend fun flagCard(session: CardsPracticeSession, cardId: String, reason: String): Boolean = true
 
     override fun summarize(session: CardsPracticeSession): CardsSessionSummary {
         val ratings = session.answers.values

@@ -53,6 +53,22 @@ class CardsService(private val api: FloentlyApiClient) {
         return parsed.copy(answers = parsed.answers + (cardId to rating))
     }
 
+    suspend fun skipCard(session: CardsPracticeSession): CardsPracticeSession {
+        val response = api.get("/api/v1/cards/session/${session.id}/next")
+        return sessionFromJson(response.optJSONObject("session") ?: response, fallback = session, root = response)
+    }
+
+    suspend fun flagCard(session: CardsPracticeSession, cardId: String, reason: String = "malformed_card"): Boolean {
+        api.post(
+            "/api/v1/cards/flag",
+            JSONObject()
+                .put("card_id", cardId)
+                .put("reason", reason)
+                .put("session_id", session.id)
+        )
+        return true
+    }
+
     private fun runtimeDeckPath(selectedDeckType: CardsDeckType): String {
         val filters = filtersFor(selectedDeckType.apiName(), selectedDeckType = selectedDeckType)
         return "/api/v1/cards/deck?${filters.toQueryString()}"
@@ -288,7 +304,9 @@ class CardsService(private val api: FloentlyApiClient) {
             state = cardStateFromApi(firstNonBlank(json, "state")),
             seenCount = json.optInt("seen_count", json.optInt("seenCount", 0)),
             correctRate = correctRateFromJson(json),
-            dueNow = json.optBoolean("due_now", json.optBoolean("dueNow", cardStateFromApi(firstNonBlank(json, "state")) != CardsCardState.Mastered))
+            dueNow = json.optBoolean("due_now", json.optBoolean("dueNow", cardStateFromApi(firstNonBlank(json, "state")) != CardsCardState.Mastered)),
+            audioSegments = audioSegmentsFromJson(json.optJSONObject("audio")),
+            audioTranscriptVisible = json.optJSONObject("audio")?.optBoolean("transcript_visible", false) ?: false
         )
     }
 
@@ -301,6 +319,19 @@ class CardsService(private val api: FloentlyApiClient) {
             hint = firstNonBlank(json, "hint", "prompt"),
             source = firstNonBlank(json, "source").ifBlank { "service" }
         )
+    }
+
+    private fun audioSegmentsFromJson(audio: JSONObject?): List<CardAudioSegment> {
+        val segments = audio?.optJSONArray("segments") ?: return emptyList()
+        return List(segments.length()) { index ->
+            val json = segments.getJSONObject(index)
+            CardAudioSegment(
+                url = firstNonBlank(json, "url"),
+                speakerLabel = firstNonBlank(json, "speaker_label", "speakerLabel"),
+                durationSeconds = json.optDouble("duration_seconds", json.optDouble("durationSeconds", 0.0)),
+                sequenceIndex = json.optInt("sequence_index", json.optInt("sequenceIndex", index))
+            )
+        }.filter { it.url.isNotBlank() }
     }
 
     private fun synthesizedOverlay(back: String, example: String, hint: String): List<CardI18nOverlay> =

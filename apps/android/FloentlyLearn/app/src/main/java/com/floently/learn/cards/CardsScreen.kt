@@ -225,6 +225,12 @@ private fun CardsPracticeScreen(
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(text = card.front, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                     Text(text = "Coach hint: ${overlay?.hint ?: card.hint}", style = MaterialTheme.typography.bodyMedium)
+                    if (card.audioSegments.isNotEmpty()) {
+                        Text(
+                            text = "Audio available: ${card.audioSegments.size} segment${if (card.audioSegments.size == 1) "" else "s"}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                     if (showAnswer) {
                         Text(text = overlay?.meaning ?: card.back, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         Text(text = overlay?.example ?: card.example, style = MaterialTheme.typography.bodyMedium)
@@ -240,6 +246,33 @@ private fun CardsPracticeScreen(
                         title = if (showAnswer) "Hide answer" else "Show answer",
                         product = FloentlyProduct.Learn,
                         onClick = { showAnswer = !showAnswer }
+                    )
+                    FloentlyPrimaryButton(
+                        title = "Skip card",
+                        product = FloentlyProduct.Learn,
+                        onClick = {
+                            scope.launch {
+                                when (val result = repository.skipCard(session)) {
+                                    is CardsSessionResult.Ready -> {
+                                        statusMessage = null
+                                        showAnswer = false
+                                        onSessionChange(result.session)
+                                    }
+                                    is CardsSessionResult.Blocked -> statusMessage = result.reason
+                                    is CardsSessionResult.Error -> statusMessage = result.message
+                                }
+                            }
+                        }
+                    )
+                    FloentlyPrimaryButton(
+                        title = "Flag issue",
+                        product = FloentlyProduct.Learn,
+                        onClick = {
+                            scope.launch {
+                                val ok = repository.flagCard(session, card.id)
+                                statusMessage = if (ok) "Card issue flagged for review." else "Could not flag this card right now."
+                            }
+                        }
                     )
                 }
 

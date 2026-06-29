@@ -67,6 +67,13 @@ data class CardI18nOverlay(
     val source: String
 )
 
+data class CardAudioSegment(
+    val url: String,
+    val speakerLabel: String = "",
+    val durationSeconds: Double = 0.0,
+    val sequenceIndex: Int = 0
+)
+
 data class StudyCard(
     val id: String,
     val deckId: String,
@@ -80,7 +87,9 @@ data class StudyCard(
     val state: CardsCardState = CardsCardState.New,
     val seenCount: Int = 0,
     val correctRate: Double? = null,
-    val dueNow: Boolean = true
+    val dueNow: Boolean = true,
+    val audioSegments: List<CardAudioSegment> = emptyList(),
+    val audioTranscriptVisible: Boolean = false
 )
 
 data class CardsDeckProgress(
