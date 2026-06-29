@@ -10,12 +10,12 @@ M17 Learn 150% parity augmentation.
 
 ## Latest verified build
 
-M17-B6 Cards final polish was verified locally with debug and release builds.
+M17-C1 Settings legal and access surface was verified locally with debug and release builds.
 
 ```bash
 ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn
 ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn-release
-git commit -m "Polish native Cards practice parity"
+git commit -m "Add native Settings legal access surface"
 git push
 ```
 
@@ -66,6 +66,8 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M17-B5 local verification passed: debug and release builds completed after skip, flag, and audio segment parity patch.
 - M17-B6 polished Cards practice UI with web-style hint reveal/hide, clearer audio transcript fallback, and reset-safe skip/review transitions.
 - M17-B6 local verification passed: debug and release builds completed after Cards hint/audio/session polish.
+- M17-C1 added native Settings legal/access surface for billing and plan guidance, support, privacy, terms, and account deletion links from the completed web Settings source.
+- M17-C1 local verification passed: debug and release builds completed after native Settings legal/access surface patch.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
@@ -75,8 +77,8 @@ Build Learn to 150% of the completed web app before release. The completed web b
 
 ## Next step
 
-Continue M17-C Settings, support, privacy, billing/access parity.
+Continue M17-C2 native billing/access account parity.
 
 ## Pending verification
 
-- M17-C should align native Settings, support, privacy, terms, account deletion, billing, and access surfaces against the completed web source of truth.
+- M17-C2 should improve the native Account/Billing access surface against the completed web BillingRoute and existing native billing/access services.

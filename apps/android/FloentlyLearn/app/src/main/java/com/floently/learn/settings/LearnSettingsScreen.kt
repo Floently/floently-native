@@ -90,6 +90,54 @@ fun LearnSettingsScreen(
                 )
             }
 
+            FloentlyCard(product = FloentlyProduct.Learn) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Billing and plan",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Manage Learn access, trial status, subscription, checkout, and plan changes from the Account and billing surface. Learn access stays separate from Read and Create.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = "Mobile release note: Android digital access must use Google Play Billing when live purchases are enabled. Web checkout remains web-only.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
+            FloentlyCard(product = FloentlyProduct.Learn) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Support, privacy, terms, and account deletion",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Support: https://learn.floently.com/support",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "Privacy Policy: https://learn.floently.com/privacy-policy",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "Terms of Use: https://learn.floently.com/terms-of-use",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "Account deletion: https://learn.floently.com/account-deletion",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "Deletion requests are started from Settings and normally completed within 24 hours, subject to legal retention, fraud prevention, and accounting obligations.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
             FloentlyPrimaryButton(
                 title = copy.backToLearn,
                 product = FloentlyProduct.Learn,
