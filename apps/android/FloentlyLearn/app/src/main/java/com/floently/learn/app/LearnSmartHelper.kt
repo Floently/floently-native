@@ -143,7 +143,7 @@ fun learnProgressSmartHelperActions(): List<LearnSmartHelperAction> = listOf(
     ),
     LearnSmartHelperAction(
         title = "Sync boundary",
-        body = "Progress may start as a local preview, then move toward backend-synced history without blocking practice."
+        body = "Progress stays useful on this device while backend-synced history is confirmed, so practice is never blocked."
     )
 )
 

@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M17 Learn 150% parity augmentation.
+M17-E final Learn parity sweep - M17-E1 final Learn release polish.
 
 ## Branch
 
@@ -10,12 +10,12 @@ M17 Learn 150% parity augmentation.
 
 ## Latest verified build
 
-M17-D2 route-aware helper polish was verified locally with debug and release builds.
+M17-E1 final Learn release polish was verified locally with debug and release builds.
 
 ```bash
 ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn
 ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn-release
-git commit -m "Add route aware native helper polish"
+git commit -m "Polish native Learn final parity surface"
 git push
 ```
 
@@ -76,6 +76,8 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M17-D1 local verification passed: debug and release builds completed after native smart helper surface patch.
 - M17-D2 added route-aware native helper cards across YKI, Professional Finnish, Roleplay, Progress, Account, and Cards, matching the completed web route hints without blocking the main flow.
 - M17-D2 local verification passed: debug and release builds completed after route-aware native helper polish.
+- M17-E1 removed final unfinished-sounding helper wording from the native Learn progress helper and preserved the route-aware helper surface without changing Learn/Read/Create product boundaries.
+- M17-E1 local verification passed: debug and release builds completed after final Learn release polish.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
@@ -85,8 +87,10 @@ Build Learn to 150% of the completed web app before release. The completed web b
 
 ## Next step
 
-Continue M17-C2 native billing/access account parity.
+Run live backend QA with vitus.idi@floently.com, then real-device QA, then configure release signing and prepare the signed release candidate AAB.
 
 ## Pending verification
 
-- M17-C2 should improve the native Account/Billing access surface against the completed web BillingRoute and existing native billing/access services.
+- Live backend QA: login/session restore, Learn access, YKI, Professional Finnish, Roleplay, Cards, Progress, Account, Settings/legal/support, and billing provider action boundaries.
+- Real-device QA: app launch, auth, keyboard layouts, scroll behavior, roleplay input/audio behavior, cards review flow, YKI text inputs, Settings/Account visibility, native-only behavior, no broken navigation loops, and no Read/Create access leakage into Learn screens.
+- Release signing and Play release readiness remain pending.
