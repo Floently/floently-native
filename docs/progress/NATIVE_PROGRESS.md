@@ -10,12 +10,12 @@ M17 Learn 150% parity augmentation.
 
 ## Latest verified build
 
-M17-B5 Cards skip, flag, and audio segment parity were verified locally with debug and release builds.
+M17-B6 Cards final polish was verified locally with debug and release builds.
 
 ```bash
 ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn
 ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn-release
-git commit -m "Add native Cards skip flag and audio parity"
+git commit -m "Polish native Cards practice parity"
 git push
 ```
 
@@ -64,6 +64,8 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M17-B4 local verification passed: debug and release builds completed after runtime answer route and coach hint parity patch.
 - M17-B5 added Cards skip/next runtime route support, issue flag submission, runtime audio segment parsing, and visible native audio availability for card practice.
 - M17-B5 local verification passed: debug and release builds completed after skip, flag, and audio segment parity patch.
+- M17-B6 polished Cards practice UI with web-style hint reveal/hide, clearer audio transcript fallback, and reset-safe skip/review transitions.
+- M17-B6 local verification passed: debug and release builds completed after Cards hint/audio/session polish.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
@@ -73,8 +75,8 @@ Build Learn to 150% of the completed web app before release. The completed web b
 
 ## Next step
 
-Continue M17-B6 Cards final polish and Learn 150% parity sweep.
+Continue M17-C Settings, support, privacy, billing/access parity.
 
 ## Pending verification
 
-- M17-B6 should complete Cards final polish and then start the broader Learn 150% parity sweep against the completed web source of truth.
+- M17-C should align native Settings, support, privacy, terms, account deletion, billing, and access surfaces against the completed web source of truth.

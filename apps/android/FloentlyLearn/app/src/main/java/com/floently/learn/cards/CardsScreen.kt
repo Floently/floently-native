@@ -189,6 +189,7 @@ private fun CardsPracticeScreen(
     val scope = rememberCoroutineScope()
     val card = session.currentCard
     var showAnswer by remember(session.id, session.currentCardIndex) { mutableStateOf(false) }
+    var showCoachHint by remember(session.currentCardIndex) { mutableStateOf(false) }
     var statusMessage by remember(session.id, session.currentCardIndex) { mutableStateOf<String?>(null) }
 
     FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
@@ -224,10 +225,24 @@ private fun CardsPracticeScreen(
                 val overlay = card.overlayFor(selectedOverlayCode)
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(text = card.front, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    Text(text = "Coach hint: ${overlay?.hint ?: card.hint}", style = MaterialTheme.typography.bodyMedium)
+                    val coachHintText = overlay?.hint ?: card.hint
+                    if (showCoachHint && coachHintText.isNotBlank()) {
+                        Text(text = "Coach hint: $coachHintText", style = MaterialTheme.typography.bodyMedium)
+                    } else {
+                        Text(text = "Try first, then reveal the hint if you need help.", style = MaterialTheme.typography.bodySmall)
+                    }
+                    FloentlyPrimaryButton(
+                        title = if (showCoachHint) "Hide hint" else "Show hint",
+                        product = FloentlyProduct.Learn,
+                        onClick = { showCoachHint = !showCoachHint }
+                    )
                     if (card.audioSegments.isNotEmpty()) {
                         Text(
                             text = "Audio available: ${card.audioSegments.size} segment${if (card.audioSegments.size == 1) "" else "s"}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "Audio transcript: ${card.front}",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -235,7 +250,7 @@ private fun CardsPracticeScreen(
                         Text(text = overlay?.meaning ?: card.back, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         Text(text = overlay?.example ?: card.example, style = MaterialTheme.typography.bodyMedium)
                         Text(text = "Overlay: ${overlay?.languageCode ?: "default"}", style = MaterialTheme.typography.bodySmall)
-                        Text(text = "${card.state.displayLabel()} • ${card.schedulingLabel()}", style = MaterialTheme.typography.bodySmall)
+                        Text(text = "Session status: ${card.state.displayLabel()} • ${card.schedulingLabel()}", style = MaterialTheme.typography.bodySmall)
                         if (card.tags.isNotEmpty()) {
                             Text(text = "Tags: ${card.tags.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
                         }
@@ -256,6 +271,7 @@ private fun CardsPracticeScreen(
                                     is CardsSessionResult.Ready -> {
                                         statusMessage = null
                                         showAnswer = false
+                                        showCoachHint = false
                                         onSessionChange(result.session)
                                     }
                                     is CardsSessionResult.Blocked -> statusMessage = result.reason
@@ -289,6 +305,7 @@ private fun CardsPracticeScreen(
                                             is CardsSessionResult.Ready -> {
                                                 statusMessage = null
                                                 showAnswer = false
+                                                showCoachHint = false
                                                 onSessionChange(result.session)
                                             }
                                             is CardsSessionResult.Blocked -> statusMessage = result.reason
