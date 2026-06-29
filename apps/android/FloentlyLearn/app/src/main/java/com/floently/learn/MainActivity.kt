@@ -12,8 +12,8 @@ import com.floently.learn.app.LearnAppContainer
 import com.floently.learn.app.LearnAppController
 import com.floently.learn.app.LearnAppState
 import com.floently.learn.app.LearnLoadingScreen
+import com.floently.learn.app.LearnSignedInShell
 import com.floently.learn.auth.LearnAuthScreen
-import com.floently.suite.FloentlySuiteShell
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -72,12 +72,8 @@ class MainActivity : ComponentActivity() {
                         onRetry = { scope.launch { controller.retryAccess(state.session) } },
                         onSignOut = { scope.launch { controller.signOut() } }
                     )
-                    is LearnAppState.SignedIn -> FloentlySuiteShell(
+                    is LearnAppState.SignedIn -> LearnSignedInShell(
                         session = state.session,
-                        accessRepository = appContainer.accessRepository,
-                        billingRepository = appContainer.billingRepository,
-                        readRepository = appContainer.readRepository,
-                        createStudioRepository = appContainer.createStudioRepository,
                         roleplayRepository = appContainer.roleplayRepository,
                         cardsRepository = appContainer.cardsRepository,
                         progressRepository = appContainer.progressRepository,

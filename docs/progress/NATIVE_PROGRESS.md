@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M17-F live backend and real-device QA - M17-F1 access and user-surface repair.
+M17-F live backend and real-device QA - M17-F2 Learn-first launch shell repair.
 
 ## Branch
 
@@ -10,7 +10,7 @@ M17-F live backend and real-device QA - M17-F1 access and user-surface repair.
 
 ## Latest verified build
 
-M17-F1 live QA access and user-surface repair was verified locally with debug and release builds.
+M17-F2 Learn-first launch shell repair was verified locally with debug and release builds.
 
 ```bash
 ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn
@@ -77,7 +77,7 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M17-D2 added route-aware native helper cards across YKI, Professional Finnish, Roleplay, Progress, Account, and Cards, matching the completed web route hints without blocking the main flow.
 - M17-D2 local verification passed: debug and release builds completed after route-aware native helper polish.
 - M17-E1 removed final unfinished-sounding helper wording from the native Learn progress helper and preserved the route-aware helper surface without changing Learn/Read/Create product boundaries.
-- M17-E1 local verification passed: debug and release builds completed after final Learn release polish.\n- M17-F live QA started on a real Android device: debug APK installed, app launched, and vitus.idi@floently.com login worked.\n- M17-F1 repaired the native Learn access route to use the native access endpoint before legacy fallback and removed internal release/backend dashboard panels from the signed-in user surface.\n- M17-F1 replaced raw user-facing access/checkout enum labels and hid unavailable Android checkout actions for products whose checkout is not enabled.
+- M17-E1 local verification passed: debug and release builds completed after final Learn release polish.\n- M17-F live QA started on a real Android device: debug APK installed, app launched, and vitus.idi@floently.com login worked.\n- M17-F1 repaired the native Learn access route to use the native access endpoint before legacy fallback and removed internal release/backend dashboard panels from the signed-in user surface.\n- M17-F1 replaced raw user-facing access/checkout enum labels and hid unavailable Android checkout actions for products whose checkout is not enabled.\n- M17-F2 removed the temporary suite product selector from the Learn-first signed-in path and now opens the native Learn shell directly after auth/access verification.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
@@ -87,7 +87,7 @@ Build Learn to 150% of the completed web app before release. The completed web b
 
 ## Next step
 
-Reinstall the debug APK on the real Android device, verify Learn opens after login, then continue YKI, Professional Finnish, Roleplay, Cards, Progress, Account, Settings/legal/support, and billing boundary QA.
+Reinstall the debug APK on the real Android device and verify login/session restore opens Floently Learn directly, with no temporary suite/product-selector UI.
 
 ## Pending verification
 
