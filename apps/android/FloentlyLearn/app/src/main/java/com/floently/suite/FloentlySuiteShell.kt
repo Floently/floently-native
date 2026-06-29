@@ -26,11 +26,13 @@ import com.floently.learn.roleplay.RoleplayRepository
 import com.floently.read.ReadRepository
 import com.floently.read.ReadShell
 import com.floently.shared.access.FloentlyAccessRepository
+import com.floently.shared.access.FloentlyAccessStatus
 import com.floently.shared.access.FloentlyAccessResult
 import com.floently.shared.auth.FloentlyAuthSession
 import com.floently.shared.backend.FloentlyBackendDashboardState
 import com.floently.shared.backend.PreviewFloentlyBackendRepository
 import com.floently.shared.billing.FloentlyBillingDashboardState
+import com.floently.shared.billing.FloentlyCheckoutStatus
 import com.floently.shared.billing.FloentlyBillingRepository
 import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
@@ -142,27 +144,10 @@ private fun FloentlyProductSelector(
             Text("Signed in as ${session.user.email}", color = palette.muted, style = MaterialTheme.typography.titleMedium)
             Text("Choose a product. Learn, Read, and Create are checked separately.", color = palette.muted, style = MaterialTheme.typography.bodyLarge)
 
-            releaseState?.let { state ->
-                FloentlyCard(product = FloentlyProduct.Learn) {
-                    Text("Release readiness", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text("Verified: ${state.verifiedCount} | Wiring: ${state.wiringCount} | Blockers: ${state.blockerCount}", style = MaterialTheme.typography.bodySmall)
-                    Text("Store ready: ${state.storeReady}", style = MaterialTheme.typography.bodySmall)
-                    state.gates.take(5).forEach { gate ->
-                        Text("${gate.title}: ${gate.status.name}", style = MaterialTheme.typography.bodySmall)
-                        Text("Next: ${gate.nextAction}", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
-
-            backendState?.let { state ->
-                FloentlyCard(product = FloentlyProduct.Learn) {
-                    Text("Backend contracts", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text("Ready: ${state.readyCount} | Pending services: ${state.pendingCount}", style = MaterialTheme.typography.bodySmall)
-                    state.contracts.take(4).forEach { contract ->
-                        Text("${contract.title}: ${contract.status.name}", style = MaterialTheme.typography.bodySmall)
-                        Text("${contract.method.name} ${contract.pathTemplate}", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
+            FloentlyCard(product = FloentlyProduct.Learn) {
+                Text("Floently Learn", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text("Continue with Finnish learning, YKI practice, roleplay, cards, progress, and account settings.", style = MaterialTheme.typography.bodyMedium)
+                Text("Read and Create Studio stay separate from Learn unless a bundle is added later.", style = MaterialTheme.typography.bodySmall)
             }
 
             billingState?.errorMessage?.let { message ->
@@ -193,12 +178,14 @@ private fun FloentlyProductSelector(
                     Text(product.subtitle, style = MaterialTheme.typography.bodyMedium)
                     plan?.let {
                         Text("Plan: ${it.displayPrice}", style = MaterialTheme.typography.bodySmall)
-                        Text("Status: ${it.status.name}", style = MaterialTheme.typography.bodySmall)
-                        Text("Checkout: ${it.checkoutStatus.name}", style = MaterialTheme.typography.bodySmall)
+                        Text("Status: ${accessStatusLabel(it.status)}", style = MaterialTheme.typography.bodySmall)
+                        Text("Checkout: ${checkoutStatusLabel(it.checkoutStatus)}", style = MaterialTheme.typography.bodySmall)
                         Text(it.accessNote, style = MaterialTheme.typography.bodySmall)
                     } ?: Text("Plan boundary loading...", style = MaterialTheme.typography.bodySmall)
                     FloentlyPrimaryButton("Open ${product.title}", product.designProduct, onClick = { onSelect(product) })
-                    FloentlyPrimaryButton("Prepare checkout", product.designProduct, onClick = { onPrepareCheckout(product) })
+                    if (plan?.checkoutStatus == FloentlyCheckoutStatus.Ready) {
+                        FloentlyPrimaryButton("Prepare checkout", product.designProduct, onClick = { onPrepareCheckout(product) })
+                    }
                     if (product == FloentlySuiteProduct.Learn) {
                         FloentlyPrimaryButton("Start 3-day trial", product.designProduct, onClick = { onStartTrial(product) })
                         FloentlyPrimaryButton("Manage subscription", product.designProduct, onClick = onManagePortal)
@@ -235,4 +222,19 @@ private fun FloentlySuiteBlocked(product: FloentlySuiteProduct, message: String,
             FloentlyPrimaryButton("Back to Floently", product.designProduct, onClick = onBack)
         }
     }
+}
+
+
+private fun accessStatusLabel(status: FloentlyAccessStatus): String = when (status) {
+    FloentlyAccessStatus.Active -> "Active"
+    FloentlyAccessStatus.Trialing -> "Trial active"
+    FloentlyAccessStatus.PastDue -> "Payment needs attention"
+    FloentlyAccessStatus.Expired -> "Expired"
+    FloentlyAccessStatus.None -> "Separate access required"
+}
+
+private fun checkoutStatusLabel(status: FloentlyCheckoutStatus): String = when (status) {
+    FloentlyCheckoutStatus.NotStarted -> "Not started"
+    FloentlyCheckoutStatus.Ready -> "Ready"
+    FloentlyCheckoutStatus.ServicePending -> "Not enabled in Android yet"
 }
