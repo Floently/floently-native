@@ -1,5 +1,7 @@
 package com.floently.learn.progress
 
+import com.floently.learn.app.LearnSmartHelperCard
+import com.floently.learn.app.learnProgressSmartHelperActions
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +54,12 @@ fun LearnProgressScreen(
                 text = copy.progressSubtitle.replace("{count}", "0"),
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
+            )
+
+            LearnSmartHelperCard(
+                title = "Progress helper",
+                body = "Use progress to choose the next useful route instead of opening every feature at once.",
+                actions = learnProgressSmartHelperActions()
             )
 
             val dashboard = dashboardState

@@ -1,5 +1,7 @@
 package com.floently.learn.cards
 
+import com.floently.learn.app.LearnSmartHelperCard
+import com.floently.learn.app.learnCardsSmartHelperActions
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -73,6 +75,12 @@ fun CardsScreen(
                 text = copy.cardsSubtitle,
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
+            )
+
+            LearnSmartHelperCard(
+                title = "Cards helper",
+                body = "Card hints, overlay language, and review buckets now have the same lightweight route guidance style.",
+                actions = learnCardsSmartHelperActions()
             )
 
             val dashboard = dashboardState

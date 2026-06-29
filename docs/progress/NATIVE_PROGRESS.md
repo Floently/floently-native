@@ -10,12 +10,12 @@ M17 Learn 150% parity augmentation.
 
 ## Latest verified build
 
-M17-D1 native smart helper surface was verified locally with debug and release builds.
+M17-D2 route-aware helper polish was verified locally with debug and release builds.
 
 ```bash
 ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn
 ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn-release
-git commit -m "Add native smart helper surface"
+git commit -m "Add route aware native helper polish"
 git push
 ```
 
@@ -74,6 +74,8 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M17-C3 local verification passed: debug and release builds completed after billing provider action wiring.
 - M17-D1 added a reusable native smart helper surface with Home quick actions and Settings helper guidance as the first native replacement for the completed web UtilityDrawer/hints behavior.
 - M17-D1 local verification passed: debug and release builds completed after native smart helper surface patch.
+- M17-D2 added route-aware native helper cards across YKI, Professional Finnish, Roleplay, Progress, Account, and Cards, matching the completed web route hints without blocking the main flow.
+- M17-D2 local verification passed: debug and release builds completed after route-aware native helper polish.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 

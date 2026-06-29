@@ -1,5 +1,7 @@
 package com.floently.learn.roleplay
 
+import com.floently.learn.app.LearnSmartHelperCard
+import com.floently.learn.app.learnRoleplaySmartHelperActions
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
@@ -73,6 +75,12 @@ fun RoleplayScreen(
                     color = palette.muted,
                     style = MaterialTheme.typography.titleMedium
                 )
+
+            LearnSmartHelperCard(
+                title = "Roleplay route guidance",
+                body = "Why this route matters, track focus, and beginner-safe replies are now visible inside native roleplay.",
+                actions = learnRoleplaySmartHelperActions()
+            )
 
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(

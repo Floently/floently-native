@@ -1,5 +1,7 @@
 package com.floently.learn.yki
 
+import com.floently.learn.app.LearnSmartHelperCard
+import com.floently.learn.app.learnYkiSmartHelperActions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
@@ -66,6 +68,12 @@ fun YkiFeatureScreen(
                     color = palette.muted,
                     style = MaterialTheme.typography.titleMedium
                 )
+
+            LearnSmartHelperCard(
+                title = "YKI route guidance",
+                body = "Guided, step-by-step YKI preparation stays visible without blocking the task flow.",
+                actions = learnYkiSmartHelperActions()
+            )
 
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(

@@ -1,5 +1,7 @@
 package com.floently.learn.account
 
+import com.floently.learn.app.LearnSmartHelperCard
+import com.floently.learn.app.learnAccountSmartHelperActions
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -52,6 +54,12 @@ fun AccountScreen(
                 text = copy.signedIn(session.user.email),
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
+            )
+
+            LearnSmartHelperCard(
+                title = "Account helper",
+                body = "Account guidance keeps sign-in, access, plans, devices, and support boundaries understandable.",
+                actions = learnAccountSmartHelperActions()
             )
 
             val dashboard = dashboardState

@@ -1,5 +1,7 @@
 package com.floently.learn.professional
 
+import com.floently.learn.app.LearnSmartHelperCard
+import com.floently.learn.app.learnProfessionalSmartHelperActions
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
@@ -74,6 +76,12 @@ fun ProfessionalFinnishScreen(
                     color = palette.muted,
                     style = MaterialTheme.typography.titleMedium
                 )
+
+            LearnSmartHelperCard(
+                title = "Workplace Finnish guidance",
+                body = "Choose the right workplace branch first. Everyday Finnish stays shared; profession-specific practice stays isolated.",
+                actions = learnProfessionalSmartHelperActions()
+            )
 
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(
