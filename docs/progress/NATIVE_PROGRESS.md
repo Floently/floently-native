@@ -10,12 +10,12 @@ M17 Learn 150% parity augmentation.
 
 ## Latest verified build
 
-M17-C2 Account billing/access parity repair was verified locally with debug and release builds.
+M17-C3 billing provider action wiring was verified locally with debug and release builds.
 
 ```bash
 ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn
 ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn-release
-git commit -m "Repair native Account billing access parity"
+git commit -m "Wire native billing provider actions"
 git push
 ```
 
@@ -70,6 +70,8 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M17-C1 local verification passed: debug and release builds completed after native Settings legal/access surface patch.
 - M17-C2 repair applied the actual Account models, preview repository data, and Account UI billing/access sections after the previous tracker-only commit.
 - M17-C2 repair verification passed: debug and release builds completed after real Account billing/access code changes.
+- M17-C3 wired native billing provider actions for subscription checkout, trial, portal, cancel trial or renewal, and reactivate using existing backend routes without adding Learn environment variables.
+- M17-C3 local verification passed: debug and release builds completed after billing provider action wiring.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 

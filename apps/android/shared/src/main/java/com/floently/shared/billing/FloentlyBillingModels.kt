@@ -29,6 +29,15 @@ enum class FloentlyCheckoutStatus {
     ServicePending
 }
 
+enum class FloentlyBillingAction {
+    Dashboard,
+    Checkout,
+    Trial,
+    Portal,
+    CancelTrial,
+    Reactivate
+}
+
 data class FloentlyProductPlan(
     val product: FloentlyAccessProduct,
     val planId: String,
@@ -46,7 +55,9 @@ data class FloentlyCheckoutIntent(
     val planId: String,
     val status: FloentlyCheckoutStatus,
     val message: String,
-    val checkoutUrl: String? = null
+    val checkoutUrl: String? = null,
+    val action: FloentlyBillingAction = FloentlyBillingAction.Checkout,
+    val providerPath: String? = null
 )
 
 data class FloentlyBillingDashboardState(

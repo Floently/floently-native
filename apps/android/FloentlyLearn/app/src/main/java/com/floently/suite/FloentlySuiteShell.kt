@@ -87,6 +87,18 @@ fun FloentlySuiteShell(
             onPrepareCheckout = { product ->
                 scope.launch { billingState = billingRepository.prepareCheckout(product.accessProduct) }
             },
+            onStartTrial = { product ->
+                scope.launch { billingState = billingRepository.startTrial(product.accessProduct) }
+            },
+            onManagePortal = {
+                scope.launch { billingState = billingRepository.managePortal() }
+            },
+            onCancelTrial = {
+                scope.launch { billingState = billingRepository.cancelTrial() }
+            },
+            onReactivate = {
+                scope.launch { billingState = billingRepository.reactivateSubscription() }
+            },
             onSelect = { selectedProduct = it },
             onSignOut = onSignOut
         )
@@ -114,6 +126,10 @@ private fun FloentlyProductSelector(
     backendState: FloentlyBackendDashboardState?,
     releaseState: FloentlyReleaseReadinessState?,
     onPrepareCheckout: (FloentlySuiteProduct) -> Unit,
+    onStartTrial: (FloentlySuiteProduct) -> Unit,
+    onManagePortal: () -> Unit,
+    onCancelTrial: () -> Unit,
+    onReactivate: () -> Unit,
     onSelect: (FloentlySuiteProduct) -> Unit,
     onSignOut: () -> Unit
 ) {
@@ -162,8 +178,10 @@ private fun FloentlyProductSelector(
                     Text("Checkout boundary", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text("Product: ${intent.product.apiName}", style = MaterialTheme.typography.bodySmall)
                     Text("Plan: ${intent.planId}", style = MaterialTheme.typography.bodySmall)
+                    Text("Action: ${intent.action.name}", style = MaterialTheme.typography.bodySmall)
                     Text("Status: ${intent.status.name}", style = MaterialTheme.typography.bodySmall)
-                    intent.checkoutUrl?.let { Text("Checkout URL ready", style = MaterialTheme.typography.bodySmall) }
+                    intent.providerPath?.let { Text("Provider path: $it", style = MaterialTheme.typography.bodySmall) }
+                    intent.checkoutUrl?.let { Text("Provider URL ready", style = MaterialTheme.typography.bodySmall) }
                     Text(intent.message, style = MaterialTheme.typography.bodySmall)
                 }
             }
@@ -181,6 +199,12 @@ private fun FloentlyProductSelector(
                     } ?: Text("Plan boundary loading...", style = MaterialTheme.typography.bodySmall)
                     FloentlyPrimaryButton("Open ${product.title}", product.designProduct, onClick = { onSelect(product) })
                     FloentlyPrimaryButton("Prepare checkout", product.designProduct, onClick = { onPrepareCheckout(product) })
+                    if (product == FloentlySuiteProduct.Learn) {
+                        FloentlyPrimaryButton("Start 3-day trial", product.designProduct, onClick = { onStartTrial(product) })
+                        FloentlyPrimaryButton("Manage subscription", product.designProduct, onClick = onManagePortal)
+                        FloentlyPrimaryButton("Cancel trial or renewal", product.designProduct, onClick = onCancelTrial)
+                        FloentlyPrimaryButton("Reactivate subscription", product.designProduct, onClick = onReactivate)
+                    }
                 }
             }
             FloentlyPrimaryButton("Sign out", FloentlyProduct.Learn, onClick = onSignOut)
