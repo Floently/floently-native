@@ -110,3 +110,16 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
   - Cards hint popup now uses old-app overlay/bottom-sheet pattern instead of a plain centered platform dialog.
   - Progress colors now use palette tokens.
   - Review labels are localized: Uudestaan, Vaikea, Hyvä, Helppo.
+
+## M18-J1 old-source Roleplay shell polish
+
+- Source:
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/screens/SpeakingLabScreen.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/apps/client/features/speaking/screens/RoleplayConversationScreen.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/apps/client/features/speaking/components/RoleplayTranscriptList.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/apps/client/features/speaking/components/RoleplayMicButton.tsx`
+- Native file:
+  - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/roleplay/RoleplayScreen.kt`
+- Correction:
+  - Removed the earlier helper-card approximation from Roleplay.
+  - Added old-app-style speaking header, level chips, scenario cards, status cards, session metrics, transcript bubbles, and Finnish action labels.

@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M18 web UI parity rebuild - M18-I2 old-source Cards hint/rating polish.
+M18 web UI parity rebuild - M18-J1 old-source Roleplay shell polish.
 
 ## Branch
 
@@ -113,3 +113,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M18-I1 changed Cards review banks from an inline page panel to the old-app modal overlay pattern, and expanded bank rows toward the old source behavior.
 
 - M18-I2 changed Cards hint popup to old-app overlay/bottom-sheet pattern, synced progress colors to old palette tokens, and localized review rating labels.
+
+- M18-J1 ported the native Roleplay route toward the old source shell: speaking header, level chips, old-app scenario cards, transcript bubbles, and Finnish labels.
