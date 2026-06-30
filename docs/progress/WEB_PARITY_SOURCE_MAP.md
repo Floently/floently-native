@@ -123,3 +123,15 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
 - Correction:
   - Removed the earlier helper-card approximation from Roleplay.
   - Added old-app-style speaking header, level chips, scenario cards, status cards, session metrics, transcript bubbles, and Finnish action labels.
+
+## M18-K1 old-source YKI route polish
+
+- Source:
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/screens/YkiPracticeScreen.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/apps/client/features/yki-practice/screens/YkiPracticeHomeScreen.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/theme/floentlyPalette.ts`
+- Native file:
+  - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/yki/YkiFeatureScreen.kt`
+- Correction:
+  - Removed earlier helper-card approximation.
+  - Added old-app-style YKI header, level chips, module cards, metrics, Finnish status text, and localized skill labels.
