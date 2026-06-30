@@ -95,9 +95,9 @@ fun LearnHomeScreen(
             }
             OldAppHomeHintPopup(
                 visible = showOldAppHomeHint,
-                badgeLabel = "HYÖDYLLINEN VIHJE",
+                badgeLabel = "Hyödyllinen vihje",
                 title = "Etsitkö YKI-valmistautumista?",
-                body = "YKI-polku on valmiina harjoitteluun. Siirry kokeeseen, kirjoittamiseen ja puhumiseen yhdestä paikasta.",
+                body = "Avaa sivupalkki ja valitse YKI-valmistautuminen, kun haluat virallista koetyötä, tai käytä Työpaikan tilanteita, kun haluat puheviestintää työtilanteissa.",
                 primaryLabel = "Vie minut sinne",
                 secondaryLabel = "Sulje",
                 onPrimary = {
@@ -162,7 +162,7 @@ private fun OldAppHomeHintPopup(
                         shape = RoundedCornerShape(999.dp)
                     ) {
                         Text(
-                            text = badgeLabel,
+                            text = badgeLabel.uppercase(),
                             color = primary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.ExtraBold,

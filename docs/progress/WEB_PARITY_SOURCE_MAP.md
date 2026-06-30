@@ -44,3 +44,17 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
 - Correction:
   - Removed fixed inline home helper card.
   - Added old-app bottom overlay hint popup with scrim, bottom-aligned card, badge, title/body, secondary and primary pill buttons.
+
+## M18-G2 old-source palette and popup text sync
+
+- Source:
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/theme/floentlyPalette.ts`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/apps/client/features/i18n/index.ts`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/screens/HomeScreen.tsx`
+- Native files:
+  - `apps/android/shared/src/main/java/com/floently/shared/design/FloentlyDesign.kt`
+  - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/app/LearnHomeScreen.kt`
+- Correction:
+  - Learn palette now uses the old app dark tokens.
+  - Home helper popup body now uses the old Finnish translation.
+  - Hint badge is rendered uppercase to match old `textTransform: 'uppercase'`.

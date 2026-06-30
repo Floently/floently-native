@@ -50,19 +50,20 @@ data class FloentlyPalette(
 fun floentlyPalette(product: FloentlyProduct): FloentlyPalette {
     return when (product) {
         FloentlyProduct.Learn -> FloentlyPalette(
-            backgroundTop = Color(0xFF071124),
-            backgroundBottom = Color(0xFF08183A),
-            backgroundGlow = Color(0xFF10285A),
-            card = Color(0xFF111B30),
-            cardMuted = Color(0xFF16233E),
-            cardText = Color(0xFFF7FAFF),
-            text = Color(0xFFF7FAFF),
-            muted = Color(0xFFB8C6E6),
-            soft = Color(0xFF8EA3C3),
-            border = Color(0xFF243652),
-            primary = Color(0xFF6387FF),
-            accent = Color(0xFF2DD4BF),
-            warning = Color(0xFFF0C86D)
+            // Old app source: packages/ui/theme/floentlyPalette.ts darkPalette
+            backgroundTop = Color(0xFF0A1838),
+            backgroundBottom = Color(0xFF0A1838),
+            backgroundGlow = Color(0xFF17306A),
+            card = Color(0xFF112346),
+            cardMuted = Color(0xFF0D1D42),
+            cardText = Color(0xFFF5F9FF),
+            text = Color(0xFFF5F9FF),
+            muted = Color(0xFFA8BAD6),
+            soft = Color(0xFF7A8CAE),
+            border = Color(0xFF263B6B),
+            primary = Color(0xFF5A85FF),
+            accent = Color(0xFF3EC5A8),
+            warning = Color(0xFFE8B65E)
         )
 
         FloentlyProduct.Read -> FloentlyPalette(
