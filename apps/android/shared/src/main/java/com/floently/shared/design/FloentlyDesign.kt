@@ -20,6 +20,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 enum class FloentlyProduct {
@@ -63,6 +64,7 @@ fun floentlyPalette(product: FloentlyProduct): FloentlyPalette {
             accent = Color(0xFF2DD4BF),
             warning = Color(0xFFF0C86D)
         )
+
         FloentlyProduct.Read -> FloentlyPalette(
             backgroundTop = Color(0xFF071124),
             backgroundBottom = Color(0xFF101827),
@@ -78,6 +80,7 @@ fun floentlyPalette(product: FloentlyProduct): FloentlyPalette {
             accent = Color(0xFF6387FF),
             warning = Color(0xFFF0C86D)
         )
+
         FloentlyProduct.Create -> FloentlyPalette(
             backgroundTop = Color(0xFF071124),
             backgroundBottom = Color(0xFF160D2F),
@@ -110,11 +113,11 @@ fun FloentlyScreen(
                     listOf(
                         palette.backgroundTop,
                         palette.backgroundBottom,
-                        palette.backgroundTop
+                        Color(0xFF071124)
                     )
                 )
             )
-            .padding(18.dp)
+            .padding(horizontal = 18.dp, vertical = 18.dp)
     ) {
         content(palette)
     }
@@ -129,7 +132,7 @@ fun FloentlyCard(
     Surface(
         color = palette.card,
         contentColor = palette.cardText,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(26.dp),
         border = BorderStroke(1.dp, palette.border),
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
@@ -160,6 +163,28 @@ fun FloentlyPrimaryButton(
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 15.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Text(title)
+        Text(title, fontWeight = FontWeight.Black)
+    }
+}
+
+@Composable
+fun FloentlySecondaryButton(
+    title: String,
+    product: FloentlyProduct,
+    onClick: () -> Unit
+) {
+    val palette = floentlyPalette(product)
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = palette.cardMuted,
+            contentColor = palette.text
+        ),
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, palette.border),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 15.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(title, fontWeight = FontWeight.Black)
     }
 }
