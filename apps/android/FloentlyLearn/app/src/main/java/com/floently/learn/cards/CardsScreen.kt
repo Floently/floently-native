@@ -1,13 +1,31 @@
 package com.floently.learn.cards
 
-import com.floently.learn.app.LearnSmartHelperCard
-import com.floently.learn.app.learnCardsSmartHelperActions
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -16,17 +34,41 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.floently.learn.audio.NativeTtsButton
+import androidx.compose.ui.unit.sp
+import com.floently.learn.audio.NativeTtsIconButton
 import com.floently.learn.i18n.LearnCopy
 import com.floently.learn.i18n.LearnLanguage
-import com.floently.shared.design.FloentlyCard
-import com.floently.shared.design.FloentlyPrimaryButton
+import com.floently.shared.design.FloentlyPalette
 import com.floently.shared.design.FloentlyProduct
 import com.floently.shared.design.FloentlyScreen
 import kotlinx.coroutines.launch
+import kotlin.math.max
+import kotlin.math.min
+
+private object WebCardColors {
+    val backgroundTop = Color(0xFFF4F7FB)
+    val backgroundCard = Color.White
+    val paleBorder = Color(0x1F5572B0)
+    val text = Color(0xFF243552)
+    val muted = Color(0xFF6E82A4)
+    val primary = Color(0xFF345EC3)
+    val primaryDeep = Color(0xFF2D4FA5)
+    val mastered = Color(0xFF4E8F6A)
+    val difficult = Color(0xFFD64545)
+    val learning = Color(0xFFB88A1A)
+    val softBlue = Color(0xFFEDF3FF)
+    val softBlueStrong = Color(0xFFDFEAFF)
+    val barTrack = Color(0xFFD8E0EE)
+}
 
 @Composable
 fun CardsScreen(
@@ -41,313 +83,959 @@ fun CardsScreen(
     var dashboardState by remember { mutableStateOf<CardsDashboardState?>(null) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var activeSession by remember { mutableStateOf<CardsPracticeSession?>(null) }
-
-    val session = activeSession
-    if (session != null) {
-        CardsPracticeScreen(
-            session = session,
-            repository = repository,
-            copy = copy,
-            selectedOverlayCode = selectedOverlayCode,
-            onSessionChange = { activeSession = it },
-            onExit = { activeSession = null }
-        )
-        return
-    }
+    var banksVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(repository, selectedDeckType) {
+        dashboardState = null
+        statusMessage = null
+        activeSession = null
+
         val dashboard = repository.dashboard(selectedDeckType)
         dashboardState = dashboard
         statusMessage = dashboard.errorMessage
+
+        val firstDeck = dashboard.decks.firstOrNull { !it.locked }
+        if (firstDeck != null) {
+            when (val result = repository.startSession(firstDeck.id, CardsPracticeMode.Flip)) {
+                is CardsSessionResult.Ready -> activeSession = result.session
+                is CardsSessionResult.Blocked -> statusMessage = result.reason
+                is CardsSessionResult.Error -> statusMessage = result.message
+            }
+        }
     }
 
     FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
-        Column(
-            modifier = Modifier.verticalScroll(rememberScrollState()).animateContentSize(),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
-        ) {
-            Text(
-                text = copy.cardsTitle,
-                color = palette.text,
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = copy.cardsSubtitle,
-                color = palette.muted,
-                style = MaterialTheme.typography.titleMedium
-            )
+        Box(modifier = Modifier.fillMaxSize()) {
+            StrictCardsBackground(isDark = true, palette = palette)
 
-            LearnSmartHelperCard(
-                title = "Cards helper",
-                body = "Card hints, overlay language, and review buckets now have the same lightweight route guidance style.",
-                actions = learnCardsSmartHelperActions()
-            )
-
-            val dashboard = dashboardState
-
-            FloentlyCard(product = FloentlyProduct.Learn) {
-                Text(text = "Card banks", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(text = "Choose a bank and review due cards, matching the completed web card-bank flow.", style = MaterialTheme.typography.bodyMedium)
-                val buckets = dashboard?.buckets ?: CardBankBuckets()
-                Text(
-                    text = "Buckets: ${buckets.difficult.size} difficult • ${buckets.learning.size} learning • ${buckets.learned.size} mastered",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                if (dashboard == null || dashboard.banks.isEmpty()) {
-                    Text(text = "Card banks are loading.", style = MaterialTheme.typography.bodySmall)
-                } else {
-                    dashboard.banks.forEach { bank ->
-                        Text(text = bank.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(text = bank.description, style = MaterialTheme.typography.bodySmall)
-                        Text(text = "${bank.deckCount} deck(s) • ${bank.dueCards} due", style = MaterialTheme.typography.bodySmall)
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .animateContentSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                StrictCardsBackBar(onBack = onBack, palette = palette)
+                StrictCardModeTabs(
+                    selected = selectedDeckType,
+                    palette = palette,
+                    onChange = { next ->
+                        selectedDeckType = next
                     }
-                }
-            }
-
-            FloentlyCard(product = FloentlyProduct.Learn) {
-                Text(text = "Overlay language", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(text = "Card meanings and helper text follow the selected overlay where available.", style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    text = LearnLanguage.entries.firstOrNull { it.code == selectedOverlayCode }?.displayLabel ?: selectedLanguage.displayLabel,
-                    style = MaterialTheme.typography.bodySmall
                 )
-                LearnLanguage.entries.forEach { language ->
-                    FloentlyPrimaryButton(
-                        title = if (language.code == selectedOverlayCode) "${language.displayLabel} ✓" else language.displayLabel,
-                        product = FloentlyProduct.Learn,
-                        onClick = { selectedOverlayCode = language.code }
+
+                AnimatedVisibility(visible = banksVisible) {
+                    StrictCardBanksPanel(
+                        dashboard = dashboardState,
+                        palette = palette,
+                        onClose = { banksVisible = false }
                     )
                 }
-            }
 
-            FloentlyCard(product = FloentlyProduct.Learn) {
-                Text(text = copy.cardsMessage, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(text = copy.cardsSubtitle, style = MaterialTheme.typography.bodyMedium)
-                CardsDeckType.entries.forEach { type ->
-                    FloentlyPrimaryButton(
-                        title = if (type == selectedDeckType) "${type.displayName()} selected" else type.displayName(),
-                        product = FloentlyProduct.Learn,
-                        onClick = { selectedDeckType = type }
+                val session = activeSession
+                when {
+                    dashboardState == null -> StrictCardsLoading(palette = palette)
+                    session != null -> StrictPracticeSession(
+                        session = session,
+                        repository = repository,
+                        selectedOverlayCode = selectedOverlayCode,
+                        selectedDeckType = selectedDeckType,
+                        statusMessage = statusMessage,
+                        palette = palette,
+                        onSessionChange = { activeSession = it },
+                        onStatusMessage = { statusMessage = it },
+                        onToggleBanks = { banksVisible = !banksVisible },
+                        onExit = onBack,
+                        onOverlayLanguageSelected = { selectedOverlayCode = it },
+                        selectedLanguage = selectedLanguage
+                    )
+                    else -> StrictCardsEmpty(
+                        message = statusMessage ?: "Tässä tilassa ei vielä ole kortteja.",
+                        palette = palette,
+                        onReviewBanks = { banksVisible = true },
+                        onBack = onBack
                     )
                 }
-            }
 
-            statusMessage?.let { message ->
-                FloentlyCard(product = FloentlyProduct.Learn) {
-                    Text(text = "Note", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(text = message, style = MaterialTheme.typography.bodyMedium)
-                }
+                Spacer(modifier = Modifier.height(10.dp))
             }
-
-            if (dashboard == null || dashboard.isLoading) {
-                Text(text = "Loading cards...", color = palette.muted, style = MaterialTheme.typography.bodyMedium)
-            } else if (dashboard.decks.isEmpty()) {
-                FloentlyCard(product = FloentlyProduct.Learn) {
-                    Text(text = "No decks yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(text = "Try another review type or come back when new cards are available.", style = MaterialTheme.typography.bodyMedium)
-                }
-            } else {
-                dashboard.decks.forEach { deck ->
-                    val progress = dashboard.progress.firstOrNull { it.deckId == deck.id }
-                    FloentlyCard(product = FloentlyProduct.Learn) {
-                        Text(text = deck.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        Text(text = deck.description, style = MaterialTheme.typography.bodyMedium)
-                        Text(text = "Bank: ${deck.bankTitle}", style = MaterialTheme.typography.bodySmall)
-                        deck.cefrLevel?.let { level -> Text(text = "Level: $level", style = MaterialTheme.typography.bodySmall) }
-                        Text(text = "Overlay languages: ${deck.overlayLanguageCodes.size}", style = MaterialTheme.typography.bodySmall)
-                        Text(text = "Due now: ${deck.dueCards} of ${deck.totalCards}", style = MaterialTheme.typography.bodySmall)
-                        Text(text = "Reviewed: ${progress?.reviewedCards ?: 0} of ${progress?.totalCards ?: 0}", style = MaterialTheme.typography.bodySmall)
-                        progress?.lastAccuracyPercent?.let { accuracy ->
-                            Text(text = "Last accuracy: $accuracy%", style = MaterialTheme.typography.bodySmall)
-                        }
-                        FloentlyPrimaryButton(
-                            title = if (deck.locked) "See why locked" else copy.cardsAction,
-                            product = FloentlyProduct.Learn,
-                            onClick = {
-                                scope.launch {
-                                    when (val result = repository.startSession(deck.id, CardsPracticeMode.Flip)) {
-                                        is CardsSessionResult.Ready -> {
-                                            statusMessage = null
-                                            activeSession = result.session
-                                        }
-                                        is CardsSessionResult.Blocked -> statusMessage = result.reason
-                                        is CardsSessionResult.Error -> statusMessage = result.message
-                                    }
-                                }
-                            }
-                        )
-                    }
-                }
-            }
-
-            FloentlyPrimaryButton(title = copy.backToLearn, product = FloentlyProduct.Learn, onClick = onBack)
         }
     }
 }
 
 @Composable
-private fun CardsPracticeScreen(
+private fun StrictCardsBackBar(
+    onBack: () -> Unit,
+    palette: FloentlyPalette
+) {
+    Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp)) {
+        Surface(
+            color = palette.cardMuted,
+            shape = RoundedCornerShape(999.dp),
+            border = BorderStroke(1.dp, palette.border),
+            modifier = Modifier.clickable(onClick = onBack)
+        ) {
+            Text(
+                text = "Takaisin",
+                color = palette.primary,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun StrictCardModeTabs(
+    selected: CardsDeckType,
+    palette: FloentlyPalette,
+    onChange: (CardsDeckType) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        StrictModePill("Sanasto", CardsDeckType.Vocabulary, selected, palette, onChange)
+        Spacer(modifier = Modifier.width(8.dp))
+        StrictModePill("Lauseet", CardsDeckType.Phrases, selected, palette, onChange)
+        Spacer(modifier = Modifier.width(8.dp))
+        StrictModePill("Kielioppi", CardsDeckType.Grammar, selected, palette, onChange)
+    }
+}
+
+@Composable
+private fun StrictModePill(
+    label: String,
+    value: CardsDeckType,
+    selected: CardsDeckType,
+    palette: FloentlyPalette,
+    onChange: (CardsDeckType) -> Unit
+) {
+    val active = value == selected
+    Surface(
+        color = if (active) palette.primary.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.10f),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, if (active) palette.primary else palette.border),
+        modifier = Modifier.clickable { onChange(value) }
+    ) {
+        Text(
+            text = label,
+            color = if (active) palette.primary else palette.muted,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
+        )
+    }
+}
+
+@Composable
+private fun StrictCardsBackground(
+    isDark: Boolean,
+    palette: FloentlyPalette
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .size(320.dp)
+                .offset(x = (-80).dp, y = (-120).dp)
+                .clip(CircleShape)
+                .background(if (isDark) Color(0x591E325A) else Color(0xC7FFFFFF))
+        )
+        Box(
+            modifier = Modifier
+                .size(260.dp)
+                .align(Alignment.BottomEnd)
+                .offset(x = 90.dp, y = 40.dp)
+                .clip(CircleShape)
+                .background(if (isDark) Color(0x4D142850) else Color(0xE0EAF2FF))
+        )
+        Box(
+            modifier = Modifier
+                .width(360.dp)
+                .height(180.dp)
+                .align(Alignment.BottomEnd)
+                .offset(x = 100.dp, y = (-70).dp)
+                .graphicsLayer(rotationZ = -18f)
+                .clip(RoundedCornerShape(120.dp))
+                .border(18.dp, palette.primary.copy(alpha = 0.18f), RoundedCornerShape(120.dp))
+        )
+        Box(
+            modifier = Modifier
+                .width(360.dp)
+                .height(180.dp)
+                .align(Alignment.BottomStart)
+                .offset(x = (-120).dp, y = (-40).dp)
+                .graphicsLayer(rotationZ = 12f)
+                .clip(RoundedCornerShape(120.dp))
+                .border(14.dp, palette.primary.copy(alpha = 0.12f), RoundedCornerShape(120.dp))
+        )
+    }
+}
+
+@Composable
+private fun StrictCardsLoading(palette: FloentlyPalette) {
+    Box(modifier = Modifier.fillMaxWidth().height(420.dp), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            CircularProgressIndicator(color = palette.primary)
+            Text(text = "Ladataan kortteja…", color = palette.muted)
+        }
+    }
+}
+
+@Composable
+private fun StrictCardsEmpty(
+    message: String,
+    palette: FloentlyPalette,
+    onReviewBanks: () -> Unit,
+    onBack: () -> Unit
+) {
+    Surface(
+        color = palette.card,
+        shape = RoundedCornerShape(30.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 430.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(80.dp))
+            Text(
+                text = message,
+                color = palette.text,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            StrictSmallChip("Tarkastele pinoja", palette, onReviewBanks)
+            StrictSmallChip("Lopeta istunto", palette, onBack)
+        }
+    }
+}
+
+@Composable
+private fun StrictPracticeSession(
     session: CardsPracticeSession,
     repository: CardsRepository,
-    copy: LearnCopy,
     selectedOverlayCode: String,
+    selectedDeckType: CardsDeckType,
+    selectedLanguage: LearnLanguage,
+    statusMessage: String?,
+    palette: FloentlyPalette,
     onSessionChange: (CardsPracticeSession) -> Unit,
-    onExit: () -> Unit
+    onStatusMessage: (String?) -> Unit,
+    onToggleBanks: () -> Unit,
+    onExit: () -> Unit,
+    onOverlayLanguageSelected: (String) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val card = session.currentCard
-    var showAnswer by remember(session.id, session.currentCardIndex) { mutableStateOf(false) }
-    var showCoachHint by remember(session.currentCardIndex) { mutableStateOf(false) }
-    var statusMessage by remember(session.id, session.currentCardIndex) { mutableStateOf<String?>(null) }
+    var showBack by remember(session.id, session.currentCardIndex) { mutableStateOf(false) }
+    var showHint by remember(session.id, session.currentCardIndex) { mutableStateOf(false) }
+    val overlay = card?.overlayFor(selectedOverlayCode)
+    val cardTone = toneColor(card)
+    val progressRatio = if (session.cards.isEmpty()) 0f else min(1f, max(0.08f, (session.currentCardIndex + 1).toFloat() / session.cards.size.toFloat()))
+    val activeIndicator = min(3, (progressRatio * 4f).toInt())
+    val header = when (selectedDeckType) {
+        CardsDeckType.Phrases -> "Lauseet"
+        CardsDeckType.Grammar -> "Kielioppi"
+        else -> "Sanasto"
+    }
 
-    FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
-        Column(
-            modifier = Modifier.verticalScroll(rememberScrollState()).animateContentSize(),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+    if (session.completed || card == null) {
+        StrictReviewComplete(
+            repository = repository,
+            session = session,
+            palette = palette,
+            onExit = onExit
+        )
+        return
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            StrictRecallButton("↺ Kertaus", palette, onClick = {})
+            Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = session.deck.title,
-                color = palette.text,
-                style = MaterialTheme.typography.displaySmall,
+                text = header,
+                color = palette.soft,
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
-            Text(
-                text = "Card ${session.reviewedCount + 1} of ${session.cards.size}",
-                color = palette.muted,
-                style = MaterialTheme.typography.titleMedium
+            Spacer(modifier = Modifier.weight(1f))
+            StrictRecallButton("Kertaus ↻", palette, onClick = {})
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 46.dp)
+                .height(4.dp)
+                .clip(RoundedCornerShape(999.dp))
+                .background(WebCardColors.barTrack.copy(alpha = 0.40f))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(progressRatio)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(Color(0xFFBFD3F8))
             )
+        }
 
-            if (session.completed || card == null) {
-                val summary = repository.summarize(session)
-                FloentlyCard(product = FloentlyProduct.Learn) {
-                    Text(text = "Review complete", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text(text = "You reviewed ${summary.reviewedCards} of ${summary.totalCards} cards.", style = MaterialTheme.typography.bodyMedium)
-                    summary.accuracyPreviewPercent?.let { accuracy ->
-                        Text(text = "Strong ratings: $accuracy%", style = MaterialTheme.typography.bodyMedium)
-                    }
-                    Text(text = "Again: ${summary.againCount} | Hard: ${summary.hardCount} | Good: ${summary.goodCount} | Easy: ${summary.easyCount}", style = MaterialTheme.typography.bodySmall)
-                    Text(text = summary.nextReviewText, style = MaterialTheme.typography.bodySmall)
-                }
-                FloentlyPrimaryButton(title = copy.cardsTitle, product = FloentlyProduct.Learn, onClick = onExit)
-            } else {
-                val overlay = card.overlayFor(selectedOverlayCode)
-                FloentlyCard(product = FloentlyProduct.Learn) {
-                    Text(text = card.front, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    NativeTtsButton(text = card.front, label = "Listen to Finnish")
-                    val coachHintText = overlay?.hint ?: card.hint
-                    if (showCoachHint && coachHintText.isNotBlank()) {
-                        Text(text = "Coach hint: $coachHintText", style = MaterialTheme.typography.bodyMedium)
-                    } else {
-                        Text(text = "Try first, then reveal the hint if you need help.", style = MaterialTheme.typography.bodySmall)
-                    }
-                    FloentlyPrimaryButton(
-                        title = if (showCoachHint) "Hide hint" else "Show hint",
-                        product = FloentlyProduct.Learn,
-                        onClick = { showCoachHint = !showCoachHint }
-                    )
-                    if (card.audioSegments.isNotEmpty()) {
-                        Text(
-                            text = "Audio available: ${card.audioSegments.size} segment${if (card.audioSegments.size == 1) "" else "s"}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            text = "Audio transcript: ${card.front}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    if (showAnswer) {
-                        Text(text = overlay?.meaning ?: card.back, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        Text(text = overlay?.example ?: card.example, style = MaterialTheme.typography.bodyMedium)
-                        NativeTtsButton(text = overlay?.example ?: card.example, label = "Listen to example")
-                        Text(text = "Overlay: ${overlay?.languageCode ?: "default"}", style = MaterialTheme.typography.bodySmall)
-                        Text(text = "Session status: ${card.state.displayLabel()} • ${card.schedulingLabel()}", style = MaterialTheme.typography.bodySmall)
-                        if (card.tags.isNotEmpty()) {
-                            Text(text = "Tags: ${card.tags.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 430.dp)
+                .padding(top = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Surface(
+                color = palette.cardMuted,
+                shape = RoundedCornerShape(30.dp),
+                shadowElevation = 12.dp,
+                modifier = Modifier.fillMaxWidth(0.86f)
+            ) {
+                Surface(
+                    color = palette.card,
+                    shape = RoundedCornerShape(24.dp),
+                    border = BorderStroke(1.dp, palette.border),
+                    modifier = Modifier.padding(8.dp).heightIn(min = 414.dp)
+                ) {
+                    Box(modifier = Modifier.fillMaxWidth().heightIn(min = 414.dp).padding(horizontal = 18.dp, vertical = 16.dp)) {
+                        if (selectedDeckType != CardsDeckType.Grammar) {
+                            NativeTtsIconButton(
+                                text = card.front,
+                                label = "🔊",
+                                modifier = Modifier.align(Alignment.TopStart)
+                            )
                         }
-                    } else {
-                        Text(text = "Think of the meaning, then reveal the answer.", style = MaterialTheme.typography.bodySmall)
-                    }
-                    FloentlyPrimaryButton(
-                        title = if (showAnswer) "Hide answer" else "Show answer",
-                        product = FloentlyProduct.Learn,
-                        onClick = { showAnswer = !showAnswer }
-                    )
-                    FloentlyPrimaryButton(
-                        title = "Skip card",
-                        product = FloentlyProduct.Learn,
-                        onClick = {
-                            scope.launch {
-                                when (val result = repository.skipCard(session)) {
-                                    is CardsSessionResult.Ready -> {
-                                        statusMessage = null
-                                        showAnswer = false
-                                        showCoachHint = false
-                                        onSessionChange(result.session)
-                                    }
-                                    is CardsSessionResult.Blocked -> statusMessage = result.reason
-                                    is CardsSessionResult.Error -> statusMessage = result.message
-                                }
-                            }
-                        }
-                    )
-                    FloentlyPrimaryButton(
-                        title = "Flag issue",
-                        product = FloentlyProduct.Learn,
-                        onClick = {
-                            scope.launch {
-                                val ok = repository.flagCard(session, card.id)
-                                statusMessage = if (ok) "Card issue flagged for review." else "Could not flag this card right now."
-                            }
-                        }
-                    )
-                }
 
-                if (showAnswer) {
-                    FloentlyCard(product = FloentlyProduct.Learn) {
-                        Text(text = "How well did you know it?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        CardsReviewRating.entries.forEach { rating ->
-                            FloentlyPrimaryButton(
-                                title = rating.displayName(),
-                                product = FloentlyProduct.Learn,
+                        if (!showBack) {
+                            StrictIconActionButton(
+                                text = "Ohita",
+                                palette = palette,
+                                modifier = Modifier.align(Alignment.TopEnd),
                                 onClick = {
                                     scope.launch {
-                                        when (val result = repository.reviewCard(session, card.id, rating)) {
+                                        when (val result = repository.skipCard(session)) {
                                             is CardsSessionResult.Ready -> {
-                                                statusMessage = null
-                                                showAnswer = false
-                                                showCoachHint = false
+                                                showBack = false
+                                                showHint = false
+                                                onStatusMessage(null)
                                                 onSessionChange(result.session)
                                             }
-                                            is CardsSessionResult.Blocked -> statusMessage = result.reason
-                                            is CardsSessionResult.Error -> statusMessage = result.message
+                                            is CardsSessionResult.Blocked -> onStatusMessage(result.reason)
+                                            is CardsSessionResult.Error -> onStatusMessage(result.message)
                                         }
                                     }
                                 }
                             )
                         }
+
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .fillMaxWidth()
+                                .padding(top = 48.dp, bottom = 78.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            if (!showBack) {
+                                AdaptiveCardCopy(
+                                    text = card.front,
+                                    variant = AdaptiveVariant.Front,
+                                    color = cardTone,
+                                    mode = selectedDeckType
+                                )
+                                Text(
+                                    text = card.state.displayLabel(),
+                                    color = palette.soft,
+                                    textAlign = TextAlign.Center,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                if (showHint && card.hint.isNotBlank()) {
+                                    StrictHintBubble(text = overlay?.hint ?: card.hint, palette = palette)
+                                }
+                            } else {
+                                StrictPromptBlock(
+                                    card = card,
+                                    overlay = overlay,
+                                    palette = palette,
+                                    selectedDeckType = selectedDeckType
+                                )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .border(1.dp, palette.border.copy(alpha = 0.65f), RoundedCornerShape(0.dp))
+                                .padding(top = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            StrictFooterGhostButton(
+                                text = if (showHint) "Piilota vihje" else "Näytä vihje",
+                                palette = palette,
+                                onClick = { showHint = !showHint }
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                            StrictPrimaryCardAction(
+                                text = if (showBack) "↻" else "⟳",
+                                palette = palette,
+                                active = true,
+                                onClick = { showBack = !showBack }
+                            )
+                        }
                     }
                 }
+            }
+        }
 
-                statusMessage?.let { message ->
-                    FloentlyCard(product = FloentlyProduct.Learn) {
-                        Text(text = message, style = MaterialTheme.typography.bodyMedium)
+        if (showBack) {
+            StrictRatingPanel(
+                palette = palette,
+                onRate = { rating ->
+                    scope.launch {
+                        when (val result = repository.reviewCard(session, card.id, rating)) {
+                            is CardsSessionResult.Ready -> {
+                                showBack = false
+                                showHint = false
+                                onStatusMessage(null)
+                                onSessionChange(result.session)
+                            }
+                            is CardsSessionResult.Blocked -> onStatusMessage(result.reason)
+                            is CardsSessionResult.Error -> onStatusMessage(result.message)
+                        }
                     }
                 }
+            )
+        }
 
-                FloentlyPrimaryButton(title = copy.backToLearn, product = FloentlyProduct.Learn, onClick = onExit)
+        if (!statusMessage.isNullOrBlank()) {
+            Surface(
+                color = palette.cardMuted,
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, palette.border),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = statusMessage,
+                    color = palette.text,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(14.dp)
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            repeat(4) { index ->
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 4.dp)
+                        .size(9.dp)
+                        .clip(CircleShape)
+                        .background(if (index == activeIndicator) palette.primary else palette.border)
+                )
+            }
+        }
+
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            StrictSmallChip("Tarkastele pinoja", palette, onToggleBanks)
+            StrictOverlayLanguageStrip(
+                selectedOverlayCode = selectedOverlayCode,
+                selectedLanguage = selectedLanguage,
+                palette = palette,
+                onSelect = onOverlayLanguageSelected
+            )
+            StrictEndSessionButton("Lopeta istunto", palette, onExit)
+        }
+    }
+}
+
+@Composable
+private fun StrictOverlayLanguageStrip(
+    selectedOverlayCode: String,
+    selectedLanguage: LearnLanguage,
+    palette: FloentlyPalette,
+    onSelect: (String) -> Unit
+) {
+    val languages = listOf(selectedLanguage) + LearnLanguage.entries.filter { it.code != selectedLanguage.code }.take(3)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        languages.forEach { language ->
+            val active = language.code == selectedOverlayCode
+            Surface(
+                color = if (active) palette.primary.copy(alpha = 0.18f) else palette.cardMuted,
+                shape = RoundedCornerShape(999.dp),
+                border = BorderStroke(1.dp, if (active) palette.primary else palette.border),
+                modifier = Modifier.weight(1f).clickable { onSelect(language.code) }
+            ) {
+                Text(
+                    text = language.displayLabel.take(10),
+                    color = if (active) palette.primary else palette.muted,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
 }
 
-private fun CardsDeckType.displayName(): String = when (this) {
-    CardsDeckType.Vocabulary -> "Vocabulary"
-    CardsDeckType.Phrases -> "Phrases"
-    CardsDeckType.Grammar -> "Grammar"
-    CardsDeckType.Work -> "Work Finnish"
-    CardsDeckType.Yki -> "YKI review"
-    CardsDeckType.Review -> "Review"
+@Composable
+private fun StrictPromptBlock(
+    card: StudyCard,
+    overlay: CardI18nOverlay?,
+    palette: FloentlyPalette,
+    selectedDeckType: CardsDeckType
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AdaptiveCardCopy(
+            text = overlay?.meaning ?: card.back,
+            variant = AdaptiveVariant.Prompt,
+            color = palette.text,
+            mode = selectedDeckType
+        )
+        val example = overlay?.example ?: card.example
+        if (example.isNotBlank()) {
+            AdaptiveCardCopy(
+                text = example,
+                variant = AdaptiveVariant.Context,
+                color = palette.muted,
+                mode = selectedDeckType
+            )
+            NativeTtsIconButton(text = example, label = "🔊")
+        }
+        if (card.tags.isNotEmpty()) {
+            Text(
+                text = card.tags.joinToString(" · "),
+                color = palette.soft,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+private enum class AdaptiveVariant {
+    Front,
+    Prompt,
+    Context,
+    Option,
+    Hint
+}
+
+@Composable
+private fun AdaptiveCardCopy(
+    text: String,
+    variant: AdaptiveVariant,
+    color: Color,
+    mode: CardsDeckType
+) {
+    val sentence = mode == CardsDeckType.Phrases
+    val length = text.trim().length
+    val size = when (variant) {
+        AdaptiveVariant.Front -> when {
+            sentence && length > 160 -> 24
+            sentence && length > 100 -> 26
+            sentence && length > 60 -> 30
+            sentence -> 34
+            length > 160 -> 22
+            length > 100 -> 26
+            length > 60 -> 32
+            else -> 40
+        }
+        AdaptiveVariant.Prompt -> if (sentence) 18 else 18
+        AdaptiveVariant.Context -> 14
+        AdaptiveVariant.Option -> 15
+        AdaptiveVariant.Hint -> 13
+    }
+    val lineHeight = when (variant) {
+        AdaptiveVariant.Front -> size + 8
+        AdaptiveVariant.Prompt -> 24
+        AdaptiveVariant.Context -> 20
+        AdaptiveVariant.Option -> 20
+        AdaptiveVariant.Hint -> 18
+    }
+
+    Text(
+        text = text,
+        color = color,
+        textAlign = TextAlign.Center,
+        fontWeight = if (variant == AdaptiveVariant.Context || variant == AdaptiveVariant.Hint) FontWeight.Normal else FontWeight.Bold,
+        fontSize = size.sp,
+        lineHeight = lineHeight.sp,
+        maxLines = when (variant) {
+            AdaptiveVariant.Front -> if (sentence) 6 else 4
+            AdaptiveVariant.Prompt -> if (sentence) 7 else 5
+            AdaptiveVariant.Context -> 5
+            AdaptiveVariant.Option -> 3
+            AdaptiveVariant.Hint -> 4
+        },
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+@Composable
+private fun StrictHintBubble(
+    text: String,
+    palette: FloentlyPalette
+) {
+    Surface(
+        color = palette.cardMuted,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = text,
+            color = palette.muted,
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+        )
+    }
+}
+
+@Composable
+private fun StrictRecallButton(
+    text: String,
+    palette: FloentlyPalette,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = palette.cardMuted,
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.clickable(onClick = onClick)
+    ) {
+        Text(
+            text = text,
+            color = palette.muted,
+            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp)
+        )
+    }
+}
+
+@Composable
+private fun StrictIconActionButton(
+    text: String,
+    palette: FloentlyPalette,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = palette.cardMuted,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, palette.border),
+        shadowElevation = 6.dp,
+        modifier = modifier.width(58.dp).height(42.dp).clickable(onClick = onClick)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = text,
+                color = palette.muted,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun StrictFooterGhostButton(
+    text: String,
+    palette: FloentlyPalette,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = palette.cardMuted,
+        shape = RoundedCornerShape(17.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.clickable(onClick = onClick)
+    ) {
+        Text(
+            text = text,
+            color = palette.muted,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
+        )
+    }
+}
+
+@Composable
+private fun StrictPrimaryCardAction(
+    text: String,
+    palette: FloentlyPalette,
+    active: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = if (active) palette.cardMuted else palette.primary,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.width(118.dp).height(54.dp).clickable(onClick = onClick)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = text,
+                color = if (active) palette.muted else Color.White,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun StrictSmallChip(
+    text: String,
+    palette: FloentlyPalette,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = palette.cardMuted,
+        shape = RoundedCornerShape(17.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.clickable(onClick = onClick)
+    ) {
+        Text(
+            text = text,
+            color = palette.muted,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
+        )
+    }
+}
+
+@Composable
+private fun StrictEndSessionButton(
+    text: String,
+    palette: FloentlyPalette,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = palette.cardMuted,
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, palette.border),
+        shadowElevation = 4.dp,
+        modifier = Modifier.fillMaxWidth(0.54f).height(54.dp).clickable(onClick = onClick)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = text,
+                color = palette.muted,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+private fun StrictRatingPanel(
+    palette: FloentlyPalette,
+    onRate: (CardsReviewRating) -> Unit
+) {
+    Surface(
+        color = palette.cardMuted,
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                text = "Tarkistettu",
+                color = palette.accent,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Text(
+                text = "Valitse, kuinka hyvin muistit tämän kortin.",
+                color = palette.text,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                CardsReviewRating.entries.forEach { rating ->
+                    Surface(
+                        color = when (rating) {
+                            CardsReviewRating.Again -> WebCardColors.difficult.copy(alpha = 0.18f)
+                            CardsReviewRating.Hard -> WebCardColors.learning.copy(alpha = 0.18f)
+                            CardsReviewRating.Good -> palette.primary.copy(alpha = 0.18f)
+                            CardsReviewRating.Easy -> WebCardColors.mastered.copy(alpha = 0.18f)
+                        },
+                        shape = RoundedCornerShape(18.dp),
+                        border = BorderStroke(1.dp, palette.border),
+                        modifier = Modifier.weight(1f).clickable { onRate(rating) }
+                    ) {
+                        Text(
+                            text = rating.displayName(),
+                            color = palette.text,
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(vertical = 10.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StrictReviewComplete(
+    repository: CardsRepository,
+    session: CardsPracticeSession,
+    palette: FloentlyPalette,
+    onExit: () -> Unit
+) {
+    val summary = repository.summarize(session)
+    Surface(
+        color = palette.card,
+        shape = RoundedCornerShape(30.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 430.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(60.dp))
+            Text(
+                text = "Lopeta istunto",
+                color = palette.text,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "Kertasit ${summary.reviewedCards}/${summary.totalCards} korttia.",
+                color = palette.muted,
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center
+            )
+            summary.accuracyPreviewPercent?.let {
+                Text(
+                    text = "Tarkkuus $it%",
+                    color = palette.accent,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Text(
+                text = summary.nextReviewText,
+                color = palette.muted,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            StrictEndSessionButton("Sulje", palette, onExit)
+        }
+    }
+}
+
+@Composable
+private fun StrictCardBanksPanel(
+    dashboard: CardsDashboardState?,
+    palette: FloentlyPalette,
+    onClose: () -> Unit
+) {
+    Surface(
+        color = palette.cardMuted,
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, palette.border),
+        shadowElevation = 10.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Tarkastele pinoja",
+                        color = palette.text,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        text = "Käytä värikoodattua kertautusta vaikeiden ja helppojen korttien läpikäyntiin.",
+                        color = palette.muted,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                StrictSmallChip("Sulje", palette, onClose)
+            }
+
+            val buckets = dashboard?.buckets ?: CardBankBuckets()
+            BankSection("Vaikeat", "Toistuvasti väärin tai vielä epävakaa.", buckets.difficult, WebCardColors.difficult, palette)
+            BankSection("Opitut", "Toistuvasti oikein ja valmis kevyempään kertaukseen.", buckets.learned, WebCardColors.mastered, palette)
+            BankSection("Opittavat", "Nähty ja kehittyy, mutta ei vielä vakaa.", buckets.learning, WebCardColors.learning, palette)
+        }
+    }
+}
+
+@Composable
+private fun BankSection(
+    title: String,
+    subtitle: String,
+    items: List<StudyCard>,
+    dot: Color,
+    palette: FloentlyPalette
+) {
+    Surface(
+        color = palette.card,
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(text = title, color = palette.text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+            Text(text = subtitle, color = palette.muted, style = MaterialTheme.typography.bodySmall)
+            if (items.isEmpty()) {
+                Text(text = "Tässä pinossa ei ole vielä kohteita.", color = palette.muted, style = MaterialTheme.typography.bodySmall)
+            } else {
+                items.take(5).forEach { card ->
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(dot))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = card.front, color = palette.text, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                            Text(text = "Nähty ${card.seenCount} · ${card.correctRate?.let { "${(it * 100).toInt()}% tarkkuus" } ?: "tarkkuus –"}", color = palette.muted, style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text(text = card.state.displayLabel(), color = dot, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun toneColor(card: StudyCard?): Color {
+    return when (card?.state) {
+        CardsCardState.Mastered -> WebCardColors.mastered
+        CardsCardState.Difficult -> WebCardColors.difficult
+        CardsCardState.Learning -> WebCardColors.learning
+        else -> WebCardColors.primary
+    }
 }
 
 private fun CardsReviewRating.displayName(): String = when (this) {

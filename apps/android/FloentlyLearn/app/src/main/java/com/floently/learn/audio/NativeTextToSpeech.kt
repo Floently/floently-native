@@ -1,9 +1,15 @@
 package com.floently.learn.audio
 
 import android.speech.tts.TextToSpeech
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -11,11 +17,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
+import com.floently.shared.design.floentlyPalette
 import java.util.Locale
 
 @Composable
@@ -28,6 +37,67 @@ fun NativeTtsButton(
     val speechText = text.trim()
     if (speechText.isBlank()) return
 
+    val controller = rememberNativeTtsController(languageTag)
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        FloentlyPrimaryButton(
+            title = if (controller.isReady) label else "$label loading",
+            product = FloentlyProduct.Learn,
+            onClick = { controller.speak(speechText) }
+        )
+
+        controller.statusMessage?.let { message ->
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+@Composable
+fun NativeTtsIconButton(
+    text: String,
+    label: String = "🔊",
+    languageTag: String = "fi-FI",
+    modifier: Modifier = Modifier
+) {
+    val speechText = text.trim()
+    if (speechText.isBlank()) return
+
+    val palette = floentlyPalette(FloentlyProduct.Learn)
+    val controller = rememberNativeTtsController(languageTag)
+
+    Surface(
+        color = Color.White,
+        shape = CircleShape,
+        border = BorderStroke(1.dp, palette.border.copy(alpha = 0.35f)),
+        shadowElevation = 6.dp,
+        modifier = modifier
+            .size(42.dp)
+            .clickable { controller.speak(speechText) }
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = label,
+                color = palette.primary,
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+    }
+}
+
+private class NativeTtsController(
+    val isReady: Boolean,
+    val statusMessage: String?,
+    val speak: (String) -> Unit
+)
+
+@Composable
+private fun rememberNativeTtsController(languageTag: String): NativeTtsController {
     val context = LocalContext.current.applicationContext
     var engine by remember(languageTag) { mutableStateOf<TextToSpeech?>(null) }
     var isReady by remember(languageTag) { mutableStateOf(false) }
@@ -65,38 +135,26 @@ fun NativeTtsButton(
         }
     }
 
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        FloentlyPrimaryButton(
-            title = if (isReady) label else "$label loading",
-            product = FloentlyProduct.Learn,
-            onClick = {
-                val activeEngine = engine
-                if (!isReady || activeEngine == null) {
-                    statusMessage = "Speech engine is still loading."
+    return NativeTtsController(
+        isReady = isReady,
+        statusMessage = statusMessage,
+        speak = { speechText ->
+            val activeEngine = engine
+            if (!isReady || activeEngine == null) {
+                statusMessage = "Speech engine is still loading."
+            } else {
+                val result = activeEngine.speak(
+                    speechText,
+                    TextToSpeech.QUEUE_FLUSH,
+                    null,
+                    "floently-tts-${System.nanoTime()}"
+                )
+                statusMessage = if (result == TextToSpeech.ERROR) {
+                    "Speech could not start on this device."
                 } else {
-                    val result = activeEngine.speak(
-                        speechText,
-                        TextToSpeech.QUEUE_FLUSH,
-                        null,
-                        "floently-tts-${System.nanoTime()}"
-                    )
-                    statusMessage = if (result == TextToSpeech.ERROR) {
-                        "Speech could not start on this device."
-                    } else {
-                        null
-                    }
+                    null
                 }
             }
-        )
-
-        statusMessage?.let { message ->
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodySmall
-            )
         }
-    }
+    )
 }
