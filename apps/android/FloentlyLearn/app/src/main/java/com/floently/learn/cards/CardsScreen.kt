@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.floently.learn.audio.NativeTtsIconButton
 import com.floently.learn.i18n.LearnCopy
 import com.floently.learn.i18n.LearnLanguage
@@ -332,7 +333,7 @@ private fun StrictPracticeSession(
     val scope = rememberCoroutineScope()
     val card = session.currentCard
     var showBack by remember(session.id, session.currentCardIndex) { mutableStateOf(false) }
-    var showHint by remember(session.id, session.currentCardIndex) { mutableStateOf(false) }
+    var showHintPopup by remember(session.id, session.currentCardIndex) { mutableStateOf(false) }
     val overlay = card?.overlayFor(selectedOverlayCode)
     val cardTone = toneColor(card)
     val progressRatio = if (session.cards.isEmpty()) 0f else min(1f, max(0.08f, (session.currentCardIndex + 1).toFloat() / session.cards.size.toFloat()))
@@ -425,7 +426,7 @@ private fun StrictPracticeSession(
                                         when (val result = repository.skipCard(session)) {
                                             is CardsSessionResult.Ready -> {
                                                 showBack = false
-                                                showHint = false
+                                                showHintPopup = false
                                                 onStatusMessage(null)
                                                 onSessionChange(result.session)
                                             }
@@ -458,9 +459,6 @@ private fun StrictPracticeSession(
                                     textAlign = TextAlign.Center,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
-                                if (showHint && card.hint.isNotBlank()) {
-                                    StrictHintBubble(text = overlay?.hint ?: card.hint, palette = palette)
-                                }
                             } else {
                                 StrictPromptBlock(
                                     card = card,
@@ -480,9 +478,9 @@ private fun StrictPracticeSession(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             StrictFooterGhostButton(
-                                text = if (showHint) "Piilota vihje" else "Näytä vihje",
+                                text = "Näytä vihje",
                                 palette = palette,
-                                onClick = { showHint = !showHint }
+                                onClick = { showHintPopup = true }
                             )
                             Spacer(modifier = Modifier.weight(1f))
                             StrictPrimaryCardAction(
@@ -497,6 +495,15 @@ private fun StrictPracticeSession(
             }
         }
 
+        val hintText = overlay?.hint ?: card.hint
+        if (showHintPopup && hintText.isNotBlank()) {
+            StrictHintPopup(
+                text = hintText,
+                palette = palette,
+                onDismiss = { showHintPopup = false }
+            )
+        }
+
         if (showBack) {
             StrictRatingPanel(
                 palette = palette,
@@ -505,7 +512,7 @@ private fun StrictPracticeSession(
                         when (val result = repository.reviewCard(session, card.id, rating)) {
                             is CardsSessionResult.Ready -> {
                                 showBack = false
-                                showHint = false
+                                showHintPopup = false
                                 onStatusMessage(null)
                                 onSessionChange(result.session)
                             }
@@ -557,6 +564,46 @@ private fun StrictPracticeSession(
                 onSelect = onOverlayLanguageSelected
             )
             StrictEndSessionButton("Lopeta istunto", palette, onExit)
+        }
+    }
+}
+
+@Composable
+private fun StrictHintPopup(
+    text: String,
+    palette: FloentlyPalette,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            color = palette.card,
+            shape = RoundedCornerShape(28.dp),
+            border = BorderStroke(1.dp, palette.primary.copy(alpha = 0.45f)),
+            shadowElevation = 18.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    text = "Vihje",
+                    color = palette.primary,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Black
+                )
+                Text(
+                    text = text,
+                    color = palette.text,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                StrictPrimaryCardAction(
+                    text = "Sulje",
+                    palette = palette,
+                    active = true,
+                    onClick = onDismiss
+                )
+            }
         }
     }
 }

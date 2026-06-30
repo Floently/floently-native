@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M18 web UI parity rebuild - M18-F1 strict Cards web parity trunk.
+M18 web UI parity rebuild - M18-F2 old-app hint popup correction.
 
 ## Branch
 
@@ -101,3 +101,4 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M18-E1/M18-E1R installed Big Trunk 01: full Learn dashboard replacement, reusable web-parity components, and the missing shared design trunk with secondary pill button support. Debug and release builds must pass before commit.
 
 - M18-F1/M18-F1R installed strict Cards web parity trunk from the original web card practice sources, keeping native Android TTS and source-map tracking. Debug and release builds passed after the sp import repair.
+\n- M18-F2 corrected Cards hint behavior to match the original app pattern: hint opens as a popup/modal instead of being fixed inline inside the card.\n

@@ -24,3 +24,10 @@ This trunk is not a redesign. It is a source-mapped native port of the original 
 The original web implementation uses `useCardPractice()` with follow-up typed answers and multiple-choice runtime cards. The native repository currently exposes `CardsPracticeSession`, `StudyCard`, skip, review ratings, and flag actions. This trunk keeps the native repository contract but ports the visible card practice shell and behavior as closely as possible without breaking the existing native backend/API flow.
 
 A stricter follow-up answer port requires expanding native `StudyCard` models to match web `RuntimeCard.served_follow_up`.
+
+## M18-F2 Original app behavior correction
+
+- Screen: Cards practice
+- Correction: Hint must open as a popup/modal, not render as a fixed inline card element.
+- Native file: `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/cards/CardsScreen.kt`
+- Source priority: old Floently app behavior / uploaded IPA reference.
