@@ -40,18 +40,18 @@ fun WebChromeHeader(palette: FloentlyPalette, onHome: () -> Unit, onMenu: () -> 
             Text("FLOENTLY", color = palette.primary, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Black, letterSpacing = 5.sp)
         }
         Spacer(modifier = Modifier.weight(1f))
-        WebTopPill("Home", palette, selected = false, onClick = onHome)
+        WebTopPill("Home", palette, selected = true, onClick = onHome)
         Spacer(modifier = Modifier.width(10.dp))
-        WebTopPill("Menu", palette, selected = true, onClick = onMenu)
+        WebTopPill("Menu", palette, selected = false, onClick = onMenu)
     }
 }
 
 @Composable
 fun WebTopPill(text: String, palette: FloentlyPalette, selected: Boolean, onClick: () -> Unit) {
     Surface(
-        color = if (selected) Color(0xFF183168) else Color(0xFF111B30),
+        color = if (selected) palette.primary.copy(alpha = 0.20f) else palette.cardMuted,
         shape = RoundedCornerShape(999.dp),
-        border = BorderStroke(1.dp, if (selected) Color(0xFF355AA0) else palette.border),
+        border = BorderStroke(1.dp, if (selected) palette.primary else palette.border),
         modifier = Modifier.clickable(onClick = onClick)
     ) {
         Text(text, color = if (selected) palette.primary else palette.text, modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp), fontWeight = FontWeight.Black)
@@ -65,14 +65,14 @@ fun WebSectionLabel(text: String, palette: FloentlyPalette) {
 
 @Composable
 fun WebStatusPill(text: String, palette: FloentlyPalette) {
-    Surface(color = Color(0xFF103B3C), shape = RoundedCornerShape(999.dp), border = BorderStroke(1.dp, Color(0xFF1D7671))) {
+    Surface(color = palette.accent.copy(alpha = 0.14f), shape = RoundedCornerShape(999.dp), border = BorderStroke(1.dp, palette.accent.copy(alpha = 0.42f))) {
         Text(text, color = palette.accent, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), fontWeight = FontWeight.Black, style = MaterialTheme.typography.labelMedium)
     }
 }
 
 @Composable
 fun WebHeroCard(label: String, title: String, body: String, action: String, palette: FloentlyPalette, progressText: String = "–", onAction: () -> Unit) {
-    Surface(color = Color(0xFF13264A), shape = RoundedCornerShape(28.dp), border = BorderStroke(1.dp, Color(0xFF264170)), modifier = Modifier.fillMaxWidth()) {
+    Surface(color = palette.card, shape = RoundedCornerShape(28.dp), border = BorderStroke(1.dp, palette.border), modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -96,7 +96,7 @@ fun WebHeroCard(label: String, title: String, body: String, action: String, pale
 
 @Composable
 fun WebPathTile(title: String, body: String, tag: String, dot: Color, palette: FloentlyPalette, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Surface(color = Color(0xFF101B2F), shape = RoundedCornerShape(22.dp), border = BorderStroke(1.dp, Color(0xFF223653)), modifier = modifier.height(196.dp).clickable(onClick = onClick)) {
+    Surface(color = palette.cardMuted, shape = RoundedCornerShape(22.dp), border = BorderStroke(1.dp, palette.border), modifier = modifier.height(174.dp).clickable(onClick = onClick)) {
         Column(modifier = Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Box(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).background(dot.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
                 Box(modifier = Modifier.size(13.dp).clip(CircleShape).background(dot))
@@ -122,7 +122,7 @@ fun WebStatRow(palette: FloentlyPalette) {
 
 @Composable
 private fun WebStatBox(value: String, label: String, palette: FloentlyPalette, modifier: Modifier) {
-    Surface(color = Color(0xFF101B2F), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, Color(0xFF223653)), modifier = modifier) {
+    Surface(color = palette.cardMuted, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, palette.border), modifier = modifier) {
         Column(modifier = Modifier.padding(vertical = 16.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, color = palette.text, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
             Text(label, color = palette.muted, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -132,7 +132,7 @@ private fun WebStatBox(value: String, label: String, palette: FloentlyPalette, m
 
 @Composable
 fun WebInfoCard(label: String, title: String, body: String, primary: String, secondary: String? = null, palette: FloentlyPalette, onPrimary: () -> Unit, onSecondary: (() -> Unit)? = null) {
-    Surface(color = Color(0xFF13264A), shape = RoundedCornerShape(28.dp), border = BorderStroke(1.dp, Color(0xFF2A4372)), modifier = Modifier.fillMaxWidth()) {
+    Surface(color = palette.card, shape = RoundedCornerShape(28.dp), border = BorderStroke(1.dp, palette.border), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             WebSectionLabel(label, palette)
             Text(title, color = palette.text, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
@@ -143,7 +143,7 @@ fun WebInfoCard(label: String, title: String, body: String, primary: String, sec
                 }
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    Surface(color = Color.Transparent, shape = RoundedCornerShape(999.dp), border = BorderStroke(1.dp, Color(0xFF355AA0)), modifier = Modifier.weight(1f).clickable { onSecondary?.invoke() }) {
+                    Surface(color = Color.Transparent, shape = RoundedCornerShape(999.dp), border = BorderStroke(1.dp, palette.primary.copy(alpha = 0.62f)), modifier = Modifier.weight(1f).clickable { onSecondary?.invoke() }) {
                         Text(secondary, color = palette.text, modifier = Modifier.padding(vertical = 13.dp), fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
                     }
                     Surface(color = palette.primary, shape = RoundedCornerShape(999.dp), modifier = Modifier.weight(1f).clickable(onClick = onPrimary)) {

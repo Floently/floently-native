@@ -69,12 +69,12 @@ fun LearnHomeScreen(
                 WebChromeHeader(palette = palette, onHome = {}, onMenu = { showOldAppDrawer = true })
                 Spacer(modifier = Modifier.height(28.dp))
                 Text(greeting(session), color = palette.text, style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Black)
-                Text("Kaikki tehty! Valitse seuraavaksi huomiota kaipaava polku.", color = palette.muted, style = MaterialTheme.typography.titleMedium)
+                Text("Valitse seuraava harjoitus tai avaa Menu nähdäksesi kaikki polut.", color = palette.muted, style = MaterialTheme.typography.titleMedium)
                 OldAppReadinessPillars(palette = palette)
                 WebHeroCard(
                     label = "TYÖELÄMÄN SUOMI",
                     title = "Seuraava paras askel",
-                    body = "Bundle-polku käytössä — jatka tänään YKI-valmistautumista, sanastoa tai ammatillista suomea yhdestä näkymästä.",
+                    body = "Jatka tänään YKI-valmistautumista, sanastoa tai ammatillista suomea yhdestä näkymästä.",
                     action = "Jatka polkua →",
                     progressText = "–",
                     palette = palette,

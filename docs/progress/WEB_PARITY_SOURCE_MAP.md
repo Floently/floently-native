@@ -72,3 +72,16 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
   - Menu now opens an overlay utility drawer instead of navigating straight to Settings.
   - Home gets old-app-style ember glow background and readiness pillars.
   - Fixed account card is replaced with guide card that reopens hint popup or drawer.
+
+## M18-H2 old-source Home component polish
+
+- Source:
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/screens/HomeScreen.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/theme/floentlyPalette.ts`
+- Native files:
+  - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/app/WebParityComponents.kt`
+  - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/app/LearnHomeScreen.kt`
+- Correction:
+  - Home reusable cards now use old-app palette tokens instead of earlier hardcoded web-parity colors.
+  - Home/Menu header no longer marks Menu as selected by default.
+  - Remaining web-style wording was removed from the Learn home copy.
