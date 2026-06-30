@@ -47,9 +47,7 @@ enum class LearnFeatureDestination(
             ProfessionalFinnish,
             Roleplay,
             Cards,
-            Progress,
-            Settings,
-            Account
+            Progress
         )
     }
 }

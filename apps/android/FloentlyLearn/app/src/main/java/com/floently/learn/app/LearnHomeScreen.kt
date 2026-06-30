@@ -69,13 +69,6 @@ fun LearnHomeScreen(
                 )
             }
 
-            LearnSmartHelperCard(
-                title = "Helpful hint",
-                body = "Choose one focused action. The native helper keeps quick guidance visible without opening a separate web-style drawer.",
-                actions = learnHomeSmartHelperActions(),
-                onOpenDestination = onDestinationSelected
-            )
-
             Text(
                 text = copy.learnAreas,
                 color = palette.text,
@@ -108,13 +101,18 @@ fun LearnHomeScreen(
 
             FloentlyCard(product = FloentlyProduct.Learn) {
                 Text(
-                    text = copy.accountTitle,
+                    text = "${copy.settingsTitle} & ${copy.accountTitle}",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = copy.signedIn(session.user.email),
                     style = MaterialTheme.typography.bodyMedium
+                )
+                FloentlyPrimaryButton(
+                    title = copy.settingsAction,
+                    product = FloentlyProduct.Learn,
+                    onClick = { onDestinationSelected(LearnFeatureDestination.Settings) }
                 )
                 FloentlyPrimaryButton(
                     title = copy.openAccount,
@@ -154,7 +152,7 @@ private fun LearnFeatureDestination.subtitle(copy: LearnCopy): String = when (th
     LearnFeatureDestination.ProfessionalFinnish -> copy.professionalSubtitle
     LearnFeatureDestination.Roleplay -> copy.roleplaySubtitle
     LearnFeatureDestination.Cards -> copy.cardsSubtitle
-    LearnFeatureDestination.Progress -> copy.progressSubtitle
+    LearnFeatureDestination.Progress -> copy.progressSubtitle.replace("{count}", "3")
     LearnFeatureDestination.Settings -> copy.settingsSubtitle
     LearnFeatureDestination.Account -> copy.signedInTemplate.replace("{email}", "")
 }
@@ -174,7 +172,7 @@ private fun LearnFeatureDestination.releaseMessage(copy: LearnCopy): String = wh
     LearnFeatureDestination.ProfessionalFinnish -> copy.professionalMessage
     LearnFeatureDestination.Roleplay -> copy.roleplayMessage
     LearnFeatureDestination.Cards -> copy.cardsMessage
-    LearnFeatureDestination.Progress -> copy.progressMessage
+    LearnFeatureDestination.Progress -> copy.progressMessage.replace("{count}", "3")
     LearnFeatureDestination.Settings -> copy.settingsMessage
     LearnFeatureDestination.Account -> copy.accountTitle
 }
