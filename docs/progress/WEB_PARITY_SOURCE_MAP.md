@@ -158,3 +158,14 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
 - Correction:
   - Removed earlier helper-card approximation from Professional Finnish route.
   - Added old-app-style workplace header, domain chips, module cards, progress metrics, status cards, and Finnish domain labels.
+
+## M18-L2 old-source Professional Finnish session polish
+
+- Source:
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/screens/ProfessionalFinnishScreen.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/theme/floentlyPalette.ts`
+- Native file:
+  - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/professional/ProfessionalFinnishScreen.kt`
+- Correction:
+  - Replaced generic Professional Finnish session cards with old-app-style progress, scenario, phrase, response, and completion cards.
+  - Localized scenario type labels and input/status text.

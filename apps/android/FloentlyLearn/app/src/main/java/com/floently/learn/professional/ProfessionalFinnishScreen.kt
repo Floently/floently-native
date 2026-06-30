@@ -1,5 +1,6 @@
 package com.floently.learn.professional
 
+import androidx.compose.foundation.layout.height
 import com.floently.shared.design.FloentlyPalette
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
@@ -19,7 +20,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -193,108 +193,39 @@ private fun ProfessionalFinnishSessionScreen(
                 style = MaterialTheme.typography.titleMedium
             )
 
-            FloentlyCard(product = FloentlyProduct.Learn) {
-                LinearProgressIndicator(
-                    progress = { animatedProgress },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Text(
-                    text = "Scenario ${session.currentScenarioIndex + 1} of ${session.scenarios.size}",
-                    style = MaterialTheme.typography.labelMedium
-                )
-                Text(
-                    text = "Responses: ${session.responses.size}",
-                    style = MaterialTheme.typography.labelMedium
-                )
-            }
+            ProfessionalSessionProgressCard(
+                progress = animatedProgress,
+                current = session.currentScenarioIndex + 1,
+                total = session.scenarios.size,
+                responses = session.responses.size,
+                palette = palette
+            )
 
             if (session.completed) {
-                FloentlyCard(product = FloentlyProduct.Learn) {
-                    Text(
-                        text = "Practice complete",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "You completed ${session.responses.size} professional Finnish response(s). Repeat this practice when you want more confidence.",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text = "Next step: try another work situation or practise roleplay.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+                ProfessionalCompletionCard(
+                    responseCount = session.responses.size,
+                    palette = palette
+                )
             } else if (scenario != null) {
-                AnimatedVisibility(visible = true) {
-                    FloentlyCard(product = FloentlyProduct.Learn) {
-                        Text(
-                            text = scenario.title,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = scenario.type.displayName(),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            text = scenario.context,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = scenario.prompt,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        scenario.modelPhrases.forEach { phrase ->
-                            FloentlyCard(product = FloentlyProduct.Learn) {
-                                Text(
-                                    text = phrase.finnish,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = phrase.english,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                                Text(
-                                    text = phrase.usageNote,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
+                ProfessionalScenarioPracticeCard(
+                    scenario = scenario,
+                    response = response,
+                    statusMessage = statusMessage,
+                    palette = palette,
+                    onResponseChange = { response = it },
+                    onContinue = {
+                        val cleanResponse = response.trim()
+                        if (cleanResponse.isBlank()) {
+                            statusMessage = "Kirjoita vastaus ennen jatkamista."
+                        } else {
+                            scope.launch {
+                                session = repository.saveResponse(session, scenario.id, cleanResponse)
+                                response = ""
+                                statusMessage = null
                             }
                         }
-                        OutlinedTextField(
-                            value = response,
-                            onValueChange = { response = it },
-                            label = { Text("Your Finnish response") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Text(
-                            text = "Tip: use one model phrase and adapt it to the situation.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        statusMessage?.let { message ->
-                            Text(
-                                text = message,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                        FloentlyPrimaryButton(
-                            title = "Save and continue",
-                            product = FloentlyProduct.Learn,
-                            onClick = {
-                                val cleanResponse = response.trim()
-                                if (cleanResponse.isBlank()) {
-                                    statusMessage = "Write a response before continuing."
-                                } else {
-                                    scope.launch {
-                                        session = repository.saveResponse(session, scenario.id, cleanResponse)
-                                        response = ""
-                                        statusMessage = null
-                                    }
-                                }
-                            }
-                        )
                     }
-                }
+                )
             }
 
             FloentlyPrimaryButton(
@@ -305,6 +236,282 @@ private fun ProfessionalFinnishSessionScreen(
         }
     }
 }
+
+@Composable
+private fun ProfessionalSessionProgressCard(
+    progress: Float,
+    current: Int,
+    total: Int,
+    responses: Int,
+    palette: FloentlyPalette
+) {
+    Surface(
+        color = palette.card,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth(),
+                color = palette.warning,
+                trackColor = palette.border.copy(alpha = 0.45f)
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                ProfessionalSessionMetricBox("Tilanne", "$current/$total", palette.warning, palette, Modifier.weight(1f))
+                ProfessionalSessionMetricBox("Vastaukset", responses.toString(), palette.accent, palette, Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfessionalSessionMetricBox(
+    label: String,
+    value: String,
+    color: Color,
+    palette: FloentlyPalette,
+    modifier: Modifier
+) {
+    Surface(
+        color = palette.cardMuted,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(value, color = palette.text, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+            Text(label.uppercase(), color = color, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+        }
+    }
+}
+
+@Composable
+private fun ProfessionalScenarioPracticeCard(
+    scenario: ProfessionalFinnishScenario,
+    response: String,
+    statusMessage: String?,
+    palette: FloentlyPalette,
+    onResponseChange: (String) -> Unit,
+    onContinue: () -> Unit
+) {
+    Surface(
+        color = palette.card,
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .clip(CircleShape)
+                        .background(palette.warning)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = scenario.type.displayName().uppercase(),
+                    color = palette.warning,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.1.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Text(
+                text = scenario.title,
+                color = palette.text,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold
+            )
+
+            ProfessionalPromptBlock(
+                label = "Tilanne",
+                body = scenario.context,
+                palette = palette
+            )
+
+            ProfessionalPromptBlock(
+                label = "Tehtävä",
+                body = scenario.prompt,
+                palette = palette
+            )
+
+            if (scenario.modelPhrases.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "MALLILauseet",
+                        color = palette.accent,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.4.sp
+                    )
+                    scenario.modelPhrases.forEach { phrase ->
+                        ProfessionalPhraseCard(
+                            phrase = phrase,
+                            palette = palette
+                        )
+                    }
+                }
+            }
+
+            OutlinedTextField(
+                value = response,
+                onValueChange = onResponseChange,
+                label = { Text("Suomenkielinen vastauksesi") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Text(
+                text = "Vinkki: käytä yhtä mallilausetta ja muokkaa se tilanteeseen sopivaksi.",
+                color = palette.soft,
+                style = MaterialTheme.typography.bodySmall
+            )
+
+            statusMessage?.let { message ->
+                Text(
+                    text = message,
+                    color = palette.warning,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Surface(
+                color = palette.primary,
+                shape = RoundedCornerShape(999.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onContinue)
+            ) {
+                Text(
+                    text = "Tallenna ja jatka",
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier.padding(vertical = 13.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfessionalPromptBlock(
+    label: String,
+    body: String,
+    palette: FloentlyPalette
+) {
+    Surface(
+        color = palette.cardMuted,
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = label.uppercase(),
+                color = palette.accent,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.2.sp
+            )
+            Text(
+                text = body,
+                color = palette.text,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProfessionalPhraseCard(
+    phrase: ProfessionalFinnishPhrase,
+    palette: FloentlyPalette
+) {
+    Surface(
+        color = palette.cardMuted,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = phrase.finnish,
+                color = palette.text,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Text(
+                text = phrase.english,
+                color = palette.muted,
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = phrase.usageNote,
+                color = palette.soft,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProfessionalCompletionCard(
+    responseCount: Int,
+    palette: FloentlyPalette
+) {
+    Surface(
+        color = palette.card,
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "Harjoitus valmis",
+                color = palette.text,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black
+            )
+            Text(
+                text = "Teit $responseCount työpaikan suomen vastausta. Toista harjoitus, kun haluat lisää varmuutta.",
+                color = palette.muted,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = "Seuraava askel: kokeile toista työtilannetta tai harjoittele roolipelissä.",
+                color = palette.soft,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
 
 @Composable
 private fun ProfessionalRouteHeader(
@@ -590,9 +797,9 @@ private fun ProfessionalFinnishDomain.displayName(): String = when (this) {
 }
 
 private fun ProfessionalFinnishScenarioType.displayName(): String = when (this) {
-    ProfessionalFinnishScenarioType.PhrasePractice -> "Phrase practice"
-    ProfessionalFinnishScenarioType.DialoguePractice -> "Dialogue practice"
-    ProfessionalFinnishScenarioType.EmailWriting -> "Email writing"
-    ProfessionalFinnishScenarioType.MeetingResponse -> "Meeting response"
-    ProfessionalFinnishScenarioType.PhoneCall -> "Phone call"
+    ProfessionalFinnishScenarioType.PhrasePractice -> "Fraasiharjoitus"
+    ProfessionalFinnishScenarioType.DialoguePractice -> "Dialogiharjoitus"
+    ProfessionalFinnishScenarioType.EmailWriting -> "Sähköpostin kirjoitus"
+    ProfessionalFinnishScenarioType.MeetingResponse -> "Kokousvastaus"
+    ProfessionalFinnishScenarioType.PhoneCall -> "Puhelu"
 }
