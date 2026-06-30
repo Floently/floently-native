@@ -180,3 +180,17 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
 - Correction:
   - Removed earlier helper-card approximation from Progress.
   - Added old-app-style progress header, snapshot card, summary cards, sync boundary card, timeline card, and Finnish progress labels.
+
+## M18-N1 old-source Settings + Account polish
+
+- Source:
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/apps/client/state/SettingsRoute.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/components/UtilityDrawer.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/theme/floentlyPalette.ts`
+- Native files:
+  - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/settings/LearnSettingsScreen.kt`
+  - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/account/AccountScreen.kt`
+- Correction:
+  - Removed earlier helper-card approximations from Settings and Account.
+  - Added old-app-style settings/account headers, language chips, support/privacy cards, Learn access boundary, billing boundary, product-access boundary, and device cards.
+  - Finnish copy added while preserving Learn/Read/Create access separation.
