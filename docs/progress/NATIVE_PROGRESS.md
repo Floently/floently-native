@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M18 web UI parity rebuild - M18-K2 old-source YKI session polish.
+M18 web UI parity rebuild - M18-L1 old-source Professional Finnish route polish.
 
 ## Branch
 
@@ -119,3 +119,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M18-K1 ported the native YKI route toward the old source shell: exam header, level chips, old-app module cards, Finnish metadata labels, and status cards.
 
 - M18-K2 ported the YKI session/task screen toward old source exam flow: progress card, task prompt card, Finnish labels, completion, save-result, and feedback cards.
+
+- M18-L1 ported Professional Finnish route toward the old source shell: workplace header, domain chips, old-app module cards, progress metrics, status cards, and Finnish domain labels.

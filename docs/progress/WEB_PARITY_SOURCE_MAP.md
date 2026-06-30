@@ -147,3 +147,14 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
 - Correction:
   - Replaced generic task/session cards with old-app-style exam progress, prompt, answer, completion, save-result, and feedback cards.
   - Localized YKI task and skill labels.
+
+## M18-L1 old-source Professional Finnish route polish
+
+- Source:
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/screens/ProfessionalFinnishScreen.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/theme/floentlyPalette.ts`
+- Native file:
+  - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/professional/ProfessionalFinnishScreen.kt`
+- Correction:
+  - Removed earlier helper-card approximation from Professional Finnish route.
+  - Added old-app-style workplace header, domain chips, module cards, progress metrics, status cards, and Finnish domain labels.
