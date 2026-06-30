@@ -1,6 +1,8 @@
 package com.floently.shared.design
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -8,7 +10,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -31,38 +32,66 @@ enum class FloentlyProduct {
 data class FloentlyPalette(
     val backgroundTop: Color,
     val backgroundBottom: Color,
+    val backgroundGlow: Color,
     val card: Color,
+    val cardMuted: Color,
+    val cardText: Color,
     val text: Color,
     val muted: Color,
-    val accent: Color
+    val soft: Color,
+    val border: Color,
+    val primary: Color,
+    val accent: Color,
+    val warning: Color
 )
 
 @Composable
 fun floentlyPalette(product: FloentlyProduct): FloentlyPalette {
     return when (product) {
         FloentlyProduct.Learn -> FloentlyPalette(
-            backgroundTop = Color(0xFF07111F),
-            backgroundBottom = Color(0xFF102A43),
-            card = Color(0xFFFFFFFF),
-            text = Color(0xFFFFFFFF),
-            muted = Color(0xCCFFFFFF),
-            accent = Color(0xFF30D5C8)
+            backgroundTop = Color(0xFF071124),
+            backgroundBottom = Color(0xFF08183A),
+            backgroundGlow = Color(0xFF10285A),
+            card = Color(0xFF111B30),
+            cardMuted = Color(0xFF16233E),
+            cardText = Color(0xFFF7FAFF),
+            text = Color(0xFFF7FAFF),
+            muted = Color(0xFFB8C6E6),
+            soft = Color(0xFF8EA3C3),
+            border = Color(0xFF243652),
+            primary = Color(0xFF6387FF),
+            accent = Color(0xFF2DD4BF),
+            warning = Color(0xFFF0C86D)
         )
         FloentlyProduct.Read -> FloentlyPalette(
-            backgroundTop = Color(0xFF101827),
-            backgroundBottom = Color(0xFF26364F),
-            card = Color(0xFFFFFFFF),
-            text = Color(0xFFFFFFFF),
-            muted = Color(0xCCFFFFFF),
-            accent = Color(0xFFFFC857)
+            backgroundTop = Color(0xFF071124),
+            backgroundBottom = Color(0xFF101827),
+            backgroundGlow = Color(0xFF26364F),
+            card = Color(0xFF111B30),
+            cardMuted = Color(0xFF16233E),
+            cardText = Color(0xFFF7FAFF),
+            text = Color(0xFFF7FAFF),
+            muted = Color(0xFFB8C6E6),
+            soft = Color(0xFF8EA3C3),
+            border = Color(0xFF243652),
+            primary = Color(0xFFF0C86D),
+            accent = Color(0xFF6387FF),
+            warning = Color(0xFFF0C86D)
         )
         FloentlyProduct.Create -> FloentlyPalette(
-            backgroundTop = Color(0xFF120A23),
-            backgroundBottom = Color(0xFF33205F),
-            card = Color(0xFFFFFFFF),
-            text = Color(0xFFFFFFFF),
-            muted = Color(0xCCFFFFFF),
-            accent = Color(0xFFFF4FD8)
+            backgroundTop = Color(0xFF071124),
+            backgroundBottom = Color(0xFF160D2F),
+            backgroundGlow = Color(0xFF33205F),
+            card = Color(0xFF111B30),
+            cardMuted = Color(0xFF1E2441),
+            cardText = Color(0xFFF7FAFF),
+            text = Color(0xFFF7FAFF),
+            muted = Color(0xFFB8C6E6),
+            soft = Color(0xFF8EA3C3),
+            border = Color(0xFF2E315B),
+            primary = Color(0xFF7A9FFF),
+            accent = Color(0xFFFF4FD8),
+            warning = Color(0xFFF0C86D)
         )
     }
 }
@@ -78,10 +107,14 @@ fun FloentlyScreen(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    listOf(palette.backgroundTop, palette.backgroundBottom)
+                    listOf(
+                        palette.backgroundTop,
+                        palette.backgroundBottom,
+                        palette.backgroundTop
+                    )
                 )
             )
-            .padding(24.dp)
+            .padding(18.dp)
     ) {
         content(palette)
     }
@@ -95,13 +128,16 @@ fun FloentlyCard(
     val palette = floentlyPalette(product)
     Surface(
         color = palette.card,
-        shape = RoundedCornerShape(28.dp),
-        tonalElevation = 8.dp,
+        contentColor = palette.cardText,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, palette.border),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(14.dp),
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(18.dp),
             content = content
         )
     }
@@ -116,9 +152,12 @@ fun FloentlyPrimaryButton(
     val palette = floentlyPalette(product)
     Button(
         onClick = onClick,
-        colors = ButtonDefaults.buttonColors(containerColor = palette.accent),
-        shape = RoundedCornerShape(18.dp),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = palette.primary,
+            contentColor = Color.White
+        ),
+        shape = RoundedCornerShape(999.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 15.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Text(title)

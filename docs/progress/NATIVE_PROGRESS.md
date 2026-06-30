@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M17-F live backend and real-device QA - M17-F4 Learn home UI cleanup.
+M18 web UI parity rebuild - M18-B1 native design tokens.
 
 ## Branch
 
@@ -10,7 +10,7 @@ M17-F live backend and real-device QA - M17-F4 Learn home UI cleanup.
 
 ## Latest verified build
 
-M17-F4 Learn home UI cleanup was verified locally with debug and release builds.
+M18-B1 native design tokens were verified locally with debug and release builds.
 
 ```bash
 ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn
@@ -77,7 +77,7 @@ Latest QA artifact: `/home/vitus/floently-learn-rc-debug-0d2958b.apk`.
 - M17-D2 added route-aware native helper cards across YKI, Professional Finnish, Roleplay, Progress, Account, and Cards, matching the completed web route hints without blocking the main flow.
 - M17-D2 local verification passed: debug and release builds completed after route-aware native helper polish.
 - M17-E1 removed final unfinished-sounding helper wording from the native Learn progress helper and preserved the route-aware helper surface without changing Learn/Read/Create product boundaries.
-- M17-E1 local verification passed: debug and release builds completed after final Learn release polish.\n- M17-F live QA started on a real Android device: debug APK installed, app launched, and vitus.idi@floently.com login worked.\n- M17-F1 repaired the native Learn access route to use the native access endpoint before legacy fallback and removed internal release/backend dashboard panels from the signed-in user surface.\n- M17-F1 replaced raw user-facing access/checkout enum labels and hid unavailable Android checkout actions for products whose checkout is not enabled.\n- M17-F2 removed the temporary suite product selector from the Learn-first signed-in path and now opens the native Learn shell directly after auth/access verification.\n- M17-F3 added a Learn-only subscription-status fallback when native and legacy access endpoints are unavailable, preserving Read/Create separation while unblocking real Learn users.\n- M17-F4 cleaned the Learn home surface by removing temporary helper wording, removing duplicate Account from pathways, grouping Settings/Account at the bottom, and replacing visible review-count placeholders.
+- M17-E1 local verification passed: debug and release builds completed after final Learn release polish.\n- M17-F live QA started on a real Android device: debug APK installed, app launched, and vitus.idi@floently.com login worked.\n- M17-F1 repaired the native Learn access route to use the native access endpoint before legacy fallback and removed internal release/backend dashboard panels from the signed-in user surface.\n- M17-F1 replaced raw user-facing access/checkout enum labels and hid unavailable Android checkout actions for products whose checkout is not enabled.\n- M17-F2 removed the temporary suite product selector from the Learn-first signed-in path and now opens the native Learn shell directly after auth/access verification.\n- M17-F3 added a Learn-only subscription-status fallback when native and legacy access endpoints are unavailable, preserving Read/Create separation while unblocking real Learn users.\n- M17-F4 cleaned the Learn home surface by removing temporary helper wording, removing duplicate Account from pathways, grouping Settings/Account at the bottom, and replacing visible review-count placeholders.\n- M18-B1 rebuilt shared native design tokens from the web-app visual baseline: navy shell, dark cards, thin borders, blue primary pills, teal accent, and web-style spacing. Existing native functionality and helper improvements were preserved.
 - Release build preparation is verified with production application ID, Floently app label, version bump, debug suffix, release build type, release build command, and release checklist.
 - Learn UI and environment guardrails are verified: Learn is improvement-only, not a rebuild; functions are preserved; no new Learn environment variables unless explicitly approved.
 
@@ -87,7 +87,7 @@ Build Learn to 150% of the completed web app before release. The completed web b
 
 ## Next step
 
-Reinstall the debug APK on the real Android device and verify the Learn home no longer shows helper wording, duplicate Account, Settings in Pathways, or raw {count} placeholders.
+Reinstall the debug APK on the real Android device and verify the shared native shell now uses the web-app navy/dark-card visual baseline before rebuilding the Learn home dashboard.
 
 ## Pending verification
 
