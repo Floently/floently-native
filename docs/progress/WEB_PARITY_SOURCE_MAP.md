@@ -135,3 +135,15 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
 - Correction:
   - Removed earlier helper-card approximation.
   - Added old-app-style YKI header, level chips, module cards, metrics, Finnish status text, and localized skill labels.
+
+## M18-K2 old-source YKI session polish
+
+- Source:
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/apps/client/features/yki-practice/screens/YkiPracticeSessionScreen.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/apps/client/features/yki-exam`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/theme/floentlyPalette.ts`
+- Native file:
+  - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/yki/YkiSessionScreen.kt`
+- Correction:
+  - Replaced generic task/session cards with old-app-style exam progress, prompt, answer, completion, save-result, and feedback cards.
+  - Localized YKI task and skill labels.

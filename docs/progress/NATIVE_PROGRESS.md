@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M18 web UI parity rebuild - M18-K1 old-source YKI route polish.
+M18 web UI parity rebuild - M18-K2 old-source YKI session polish.
 
 ## Branch
 
@@ -117,3 +117,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M18-J1 ported the native Roleplay route toward the old source shell: speaking header, level chips, old-app scenario cards, transcript bubbles, and Finnish labels.
 
 - M18-K1 ported the native YKI route toward the old source shell: exam header, level chips, old-app module cards, Finnish metadata labels, and status cards.
+
+- M18-K2 ported the YKI session/task screen toward old source exam flow: progress card, task prompt card, Finnish labels, completion, save-result, and feedback cards.

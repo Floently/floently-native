@@ -1,6 +1,25 @@
 package com.floently.learn.yki
 
-import androidx.compose.animation.AnimatedVisibility
+import com.floently.shared.design.FloentlyPalette
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -69,20 +88,13 @@ fun YkiSessionScreen(
                 style = MaterialTheme.typography.titleMedium
             )
 
-            FloentlyCard(product = FloentlyProduct.Learn) {
-                LinearProgressIndicator(
-                    progress = { animatedProgress },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Text(
-                    text = "Task ${session.currentTaskIndex + 1} of ${session.tasks.size}",
-                    style = MaterialTheme.typography.labelMedium
-                )
-                Text(
-                    text = "Answered: ${session.answers.size}",
-                    style = MaterialTheme.typography.labelMedium
-                )
-            }
+            YkiSessionProgressCard(
+                progress = animatedProgress,
+                current = session.currentTaskIndex + 1,
+                total = session.tasks.size,
+                answered = session.answers.size,
+                palette = palette
+            )
 
             if (session.completed) {
                 val summary = remember(session) { evaluator.evaluate(session) }
@@ -91,87 +103,25 @@ fun YkiSessionScreen(
                     progressSaveResult = progressStore.save(session, summary)
                 }
 
-                FloentlyCard(product = FloentlyProduct.Learn) {
-                    Text(
-                        text = "Practice complete",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "You completed ${summary.evaluatedAnswers.size} answer(s). Review the feedback below and repeat this module when you want more practice.",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text = if (summary.readyForDurableProgress) "Progress is ready to sync." else "Progress is captured for this practice session.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+                YkiCompletionCard(
+                    answerCount = summary.evaluatedAnswers.size,
+                    durable = summary.readyForDurableProgress,
+                    palette = palette
+                )
 
-                AnimatedVisibility(visible = progressSaveResult != null) {
-                    FloentlyCard(product = FloentlyProduct.Learn) {
-                        when (val result = progressSaveResult) {
-                            is YkiProgressSaveResult.Saved -> {
-                                Text(
-                                    text = "Progress saved",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "Score: ${result.record.scorePercent?.toString() ?: "Not final yet"}",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                            is YkiProgressSaveResult.Deferred -> {
-                                Text(
-                                    text = "Progress captured",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = result.reason,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(
-                                    text = "Score: ${result.record.scorePercent?.toString() ?: "Not final yet"}",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                            is YkiProgressSaveResult.Failed -> {
-                                Text(
-                                    text = "Progress was not saved",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = result.message,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                            null -> Unit
-                        }
-                    }
+                progressSaveResult?.let { result ->
+                    YkiProgressResultCard(
+                        result = result,
+                        palette = palette
+                    )
                 }
 
                 summary.evaluatedAnswers.forEachIndexed { index, evaluation ->
-                    FloentlyCard(product = FloentlyProduct.Learn) {
-                        Text(
-                            text = "Feedback ${index + 1}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Status: ${evaluation.status}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            text = "Score: ${evaluation.scorePercent?.toString() ?: "Not final yet"}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            text = evaluation.feedback,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
+                    YkiFeedbackCard(
+                        index = index + 1,
+                        evaluation = evaluation,
+                        palette = palette
+                    )
                 }
 
                 FloentlyPrimaryButton(
@@ -180,61 +130,25 @@ fun YkiSessionScreen(
                     onClick = onExit
                 )
             } else if (task != null) {
-                AnimatedVisibility(visible = true) {
-                    FloentlyCard(product = FloentlyProduct.Learn) {
-                        Text(
-                            text = task.title,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "${task.skill.displayName()} • ${task.type.displayName()}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            text = task.prompt,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        if (task.choices.isNotEmpty()) {
-                            Text(
-                                text = "Choices: ${task.choices.joinToString()}",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                        OutlinedTextField(
-                            value = answer,
-                            onValueChange = { answer = it },
-                            label = { Text("Your answer") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Text(
-                            text = "Tip: write the best answer you can. Short answers are okay when the task asks for them.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        statusMessage?.let { message ->
-                            Text(
-                                text = message,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                        FloentlyPrimaryButton(
-                            title = "Save and continue",
-                            product = FloentlyProduct.Learn,
-                            onClick = {
-                                val cleanAnswer = answer.trim()
-                                if (cleanAnswer.isBlank()) {
-                                    statusMessage = "Write an answer before continuing."
-                                } else {
-                                    scope.launch {
-                                        session = repository.saveAnswer(session, task.id, cleanAnswer)
-                                        answer = ""
-                                        statusMessage = null
-                                    }
-                                }
+                YkiTaskCard(
+                    task = task,
+                    answer = answer,
+                    statusMessage = statusMessage,
+                    palette = palette,
+                    onAnswerChange = { answer = it },
+                    onContinue = {
+                        val cleanAnswer = answer.trim()
+                        if (cleanAnswer.isBlank()) {
+                            statusMessage = "Kirjoita vastaus ennen jatkamista."
+                        } else {
+                            scope.launch {
+                                session = repository.saveAnswer(session, task.id, cleanAnswer)
+                                answer = ""
+                                statusMessage = null
                             }
-                        )
+                        }
                     }
-                }
+                )
             }
 
             FloentlyPrimaryButton(
@@ -246,20 +160,326 @@ fun YkiSessionScreen(
     }
 }
 
+@Composable
+private fun YkiSessionProgressCard(
+    progress: Float,
+    current: Int,
+    total: Int,
+    answered: Int,
+    palette: FloentlyPalette
+) {
+    Surface(
+        color = palette.card,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth(),
+                color = palette.primary,
+                trackColor = palette.border.copy(alpha = 0.45f)
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                YkiSessionMetricBox("Tehtävä", "$current/$total", palette.primary, palette, Modifier.weight(1f))
+                YkiSessionMetricBox("Vastattu", answered.toString(), palette.accent, palette, Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun YkiSessionMetricBox(
+    label: String,
+    value: String,
+    color: Color,
+    palette: FloentlyPalette,
+    modifier: Modifier
+) {
+    Surface(
+        color = palette.cardMuted,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(value, color = palette.text, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+            Text(label.uppercase(), color = color, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+        }
+    }
+}
+
+@Composable
+private fun YkiTaskCard(
+    task: YkiTask,
+    answer: String,
+    statusMessage: String?,
+    palette: FloentlyPalette,
+    onAnswerChange: (String) -> Unit,
+    onContinue: () -> Unit
+) {
+    Surface(
+        color = palette.card,
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .clip(CircleShape)
+                        .background(task.skill.skillColor(palette))
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "${task.skill.displayName()} • ${task.type.displayName()}",
+                    color = task.skill.skillColor(palette),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.1.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Text(
+                text = task.title,
+                color = palette.text,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold
+            )
+
+            Surface(
+                color = palette.cardMuted,
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, palette.border),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = task.prompt,
+                    color = palette.text,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(14.dp)
+                )
+            }
+
+            if (task.choices.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Vaihtoehdot", color = palette.accent, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.4.sp)
+                    task.choices.forEach { choice ->
+                        Surface(
+                            color = palette.cardMuted,
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, palette.border),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = choice,
+                                color = palette.text,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            OutlinedTextField(
+                value = answer,
+                onValueChange = onAnswerChange,
+                label = { Text("Vastauksesi") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Text(
+                text = "Vinkki: kirjoita paras vastaus, jonka osaat. Lyhyt vastaus riittää, jos tehtävä pyytää sitä.",
+                color = palette.soft,
+                style = MaterialTheme.typography.bodySmall
+            )
+
+            statusMessage?.let { message ->
+                Text(
+                    text = message,
+                    color = palette.warning,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Surface(
+                color = palette.primary,
+                shape = RoundedCornerShape(999.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onContinue)
+            ) {
+                Text(
+                    text = "Tallenna ja jatka",
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier.padding(vertical = 13.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun YkiCompletionCard(
+    answerCount: Int,
+    durable: Boolean,
+    palette: FloentlyPalette
+) {
+    Surface(
+        color = palette.card,
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "Harjoitus valmis",
+                color = palette.text,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black
+            )
+            Text(
+                text = "Teit $answerCount vastausta. Katso palaute alta ja toista moduuli, kun haluat lisää harjoitusta.",
+                color = palette.muted,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = if (durable) "Edistyminen on valmis synkronoitavaksi." else "Edistyminen tallennettiin tähän harjoituskertaan.",
+                color = palette.soft,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+@Composable
+private fun YkiProgressResultCard(
+    result: YkiProgressSaveResult,
+    palette: FloentlyPalette
+) {
+    val title = when (result) {
+        is YkiProgressSaveResult.Saved -> "Edistyminen tallennettu"
+        is YkiProgressSaveResult.Deferred -> "Edistyminen kirjattu"
+        is YkiProgressSaveResult.Failed -> "Edistymistä ei tallennettu"
+    }
+    val body = when (result) {
+        is YkiProgressSaveResult.Saved -> "Tulos: ${result.record.scorePercent?.toString() ?: "ei vielä lopullinen"}"
+        is YkiProgressSaveResult.Deferred -> result.reason
+        is YkiProgressSaveResult.Failed -> result.message
+    }
+    val score = when (result) {
+        is YkiProgressSaveResult.Saved -> result.record.scorePercent
+        is YkiProgressSaveResult.Deferred -> result.record.scorePercent
+        is YkiProgressSaveResult.Failed -> null
+    }
+
+    Surface(
+        color = palette.cardMuted,
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(title, color = palette.text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+            Text(body, color = palette.muted, style = MaterialTheme.typography.bodyMedium)
+            if (score != null) {
+                Text("Tulos: $score%", color = palette.accent, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun YkiFeedbackCard(
+    index: Int,
+    evaluation: YkiAnswerEvaluation,
+    palette: FloentlyPalette
+) {
+    Surface(
+        color = palette.card,
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Palaute $index",
+                color = palette.text,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Text(
+                text = "Tila: ${evaluation.status}",
+                color = palette.soft,
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Tulos: ${evaluation.scorePercent?.toString() ?: "ei vielä lopullinen"}",
+                color = palette.accent,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = evaluation.feedback,
+                color = palette.muted,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
+}
+
+private fun YkiSkill.skillColor(palette: FloentlyPalette): Color = when (this) {
+    YkiSkill.Reading -> palette.primary
+    YkiSkill.Writing -> palette.accent
+    YkiSkill.Listening -> palette.warning
+    YkiSkill.Speaking -> Color(0xFF9D7CFF)
+    YkiSkill.Vocabulary -> Color(0xFF3EC5A8)
+    YkiSkill.Grammar -> Color(0xFFE8B65E)
+}
+
+
 private fun YkiSkill.displayName(): String = when (this) {
-    YkiSkill.Reading -> "Reading"
-    YkiSkill.Writing -> "Writing"
-    YkiSkill.Listening -> "Listening"
-    YkiSkill.Speaking -> "Speaking"
-    YkiSkill.Vocabulary -> "Vocabulary"
-    YkiSkill.Grammar -> "Grammar"
+    YkiSkill.Reading -> "Lukeminen"
+    YkiSkill.Writing -> "Kirjoittaminen"
+    YkiSkill.Listening -> "Kuuntelu"
+    YkiSkill.Speaking -> "Puhuminen"
+    YkiSkill.Vocabulary -> "Sanasto"
+    YkiSkill.Grammar -> "Kielioppi"
 }
 
 private fun YkiTaskType.displayName(): String = when (this) {
-    YkiTaskType.MultipleChoice -> "Multiple choice"
-    YkiTaskType.ShortAnswer -> "Short answer"
-    YkiTaskType.WritingPrompt -> "Writing"
-    YkiTaskType.ListeningPrompt -> "Listening"
-    YkiTaskType.SpeakingPrompt -> "Speaking"
-    YkiTaskType.Cloze -> "Fill the gap"
+    YkiTaskType.MultipleChoice -> "Monivalinta"
+    YkiTaskType.ShortAnswer -> "Lyhyt vastaus"
+    YkiTaskType.WritingPrompt -> "Kirjoittaminen"
+    YkiTaskType.ListeningPrompt -> "Kuuntelu"
+    YkiTaskType.SpeakingPrompt -> "Puhuminen"
+    YkiTaskType.Cloze -> "Täydennä aukko"
 }
