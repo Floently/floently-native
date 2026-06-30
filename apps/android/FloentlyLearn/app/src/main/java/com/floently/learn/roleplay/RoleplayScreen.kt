@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.floently.learn.audio.NativeTtsButton
 import com.floently.learn.i18n.LearnCopy
 import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
@@ -239,6 +240,7 @@ private fun RoleplaySessionScreen(
                             text = message.text,
                             style = MaterialTheme.typography.bodyMedium
                         )
+                        NativeTtsButton(text = message.text, label = "Listen")
                         message.coachingNote?.let { note ->
                             Text(
                                 text = "Coach note: $note",

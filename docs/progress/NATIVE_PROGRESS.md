@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M18 web UI parity rebuild - M18-C1 Learn dashboard web parity.
+M18 web UI parity rebuild - M18-D1 native Android TTS wiring.
 
 ## Branch
 
@@ -94,3 +94,6 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - Live backend QA: login/session restore, Learn access, YKI, Professional Finnish, Roleplay, Cards, Progress, Account, Settings/legal/support, and billing provider action boundaries.
 - Real-device QA: app launch, auth, keyboard layouts, scroll behavior, roleplay input/audio behavior, cards review flow, YKI text inputs, Settings/Account visibility, native-only behavior, no broken navigation loops, and no Read/Create access leakage into Learn screens.
 - Release signing and Play release readiness remain pending.
+
+- M18-D1 wired real Android TextToSpeech into native Cards and Roleplay, replacing transcript-only audio placeholders with device speech actions while preserving the improved hint/helper system.
+- Next workflow change: use big trunk-file bundles for web UI parity rebuilds instead of small patch edits, while still building debug/release before every commit.

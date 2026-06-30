@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.floently.learn.audio.NativeTtsButton
 import com.floently.learn.i18n.LearnCopy
 import com.floently.learn.i18n.LearnLanguage
 import com.floently.shared.design.FloentlyCard
@@ -233,6 +234,7 @@ private fun CardsPracticeScreen(
                 val overlay = card.overlayFor(selectedOverlayCode)
                 FloentlyCard(product = FloentlyProduct.Learn) {
                     Text(text = card.front, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    NativeTtsButton(text = card.front, label = "Listen to Finnish")
                     val coachHintText = overlay?.hint ?: card.hint
                     if (showCoachHint && coachHintText.isNotBlank()) {
                         Text(text = "Coach hint: $coachHintText", style = MaterialTheme.typography.bodyMedium)
@@ -257,6 +259,7 @@ private fun CardsPracticeScreen(
                     if (showAnswer) {
                         Text(text = overlay?.meaning ?: card.back, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         Text(text = overlay?.example ?: card.example, style = MaterialTheme.typography.bodyMedium)
+                        NativeTtsButton(text = overlay?.example ?: card.example, label = "Listen to example")
                         Text(text = "Overlay: ${overlay?.languageCode ?: "default"}", style = MaterialTheme.typography.bodySmall)
                         Text(text = "Session status: ${card.state.displayLabel()} • ${card.schedulingLabel()}", style = MaterialTheme.typography.bodySmall)
                         if (card.tags.isNotEmpty()) {
