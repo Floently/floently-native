@@ -194,3 +194,13 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
   - Removed earlier helper-card approximations from Settings and Account.
   - Added old-app-style settings/account headers, language chips, support/privacy cards, Learn access boundary, billing boundary, product-access boundary, and device cards.
   - Finnish copy added while preserving Learn/Read/Create access separation.
+
+## M18-O1 big source parity audit
+
+- Source:
+  - Large old source zip/tar extraction under `/home/vitus/floently-old-latest-source-truth-m18x6/files` or fallback old-source candidates.
+- Native repo:
+  - `docs/progress/BIG_SOURCE_PARITY_AUDIT.md`
+- Correction:
+  - Added a tracked audit that maps old source files to native Kotlin screens and records what is already ported, what is still missing, and what must be checked before visual/device testing.
+  - No Kotlin app code changed in this milestone.
