@@ -58,3 +58,17 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
   - Learn palette now uses the old app dark tokens.
   - Home helper popup body now uses the old Finnish translation.
   - Hint badge is rendered uppercase to match old `textTransform: 'uppercase'`.
+
+## M18-H1 old-source Home/Menu trunk
+
+- Source:
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/screens/HomeScreen.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/components/UtilityDrawer.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/components/SmartHintPopup.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/theme/floentlyPalette.ts`
+- Native file:
+  - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/app/LearnHomeScreen.kt`
+- Correction:
+  - Menu now opens an overlay utility drawer instead of navigating straight to Settings.
+  - Home gets old-app-style ember glow background and readiness pillars.
+  - Fixed account card is replaced with guide card that reopens hint popup or drawer.

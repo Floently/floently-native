@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M18 web UI parity rebuild - M18-G2 old-source palette and popup text sync.
+M18 web UI parity rebuild - M18-H1 old-source Home/Menu trunk.
 
 ## Branch
 
@@ -105,3 +105,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M18-G1 selected `/home/vitus/backups/floently-finnish_2026-06-25_20-13-04.tar.gz` as the latest old-app UI source truth and corrected the Learn home helper from a fixed inline card into the old app bottom popup pattern.
 
 - M18-G2 synced Learn native palette and Home hint popup text to the June 25 old app source tokens/translations.
+
+- M18-H1 ported more of the old app Home/Menu behavior: ember background, readiness pillars, guide card, and a real utility drawer instead of routing Menu directly to Settings.
