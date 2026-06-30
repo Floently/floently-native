@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M18 web UI parity rebuild - M18-H2 old-source Home component polish.
+M18 web UI parity rebuild - M18-I1 old-source Cards banks modal.
 
 ## Branch
 
@@ -109,3 +109,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M18-H1 ported more of the old app Home/Menu behavior: ember background, readiness pillars, guide card, and a real utility drawer instead of routing Menu directly to Settings.
 
 - M18-H2 polished Home shared components to use old-app palette tokens consistently and removed remaining web-style wording from the native Learn home.
+
+- M18-I1 changed Cards review banks from an inline page panel to the old-app modal overlay pattern, and expanded bank rows toward the old source behavior.

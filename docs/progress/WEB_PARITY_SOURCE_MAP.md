@@ -85,3 +85,15 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
   - Home reusable cards now use old-app palette tokens instead of earlier hardcoded web-parity colors.
   - Home/Menu header no longer marks Menu as selected by default.
   - Remaining web-style wording was removed from the Learn home copy.
+
+## M18-I1 old-source Cards banks modal
+
+- Source:
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/apps/client/features/cards/components/CardBanksPanel.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/apps/client/features/cards/components/CardModeTabs.tsx`
+- Native file:
+  - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/cards/CardsScreen.kt`
+- Correction:
+  - Review banks now opens as a modal overlay with scrim, matching the old app source pattern.
+  - Bank sections now show up to 20 cards instead of only 5.
+  - Mode pills now use old-app palette token behavior instead of hardcoded white transparency.

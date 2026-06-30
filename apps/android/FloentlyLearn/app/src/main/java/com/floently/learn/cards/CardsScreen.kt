@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.floently.learn.audio.NativeTtsIconButton
 import com.floently.learn.i18n.LearnCopy
 import com.floently.learn.i18n.LearnLanguage
@@ -124,7 +125,7 @@ fun CardsScreen(
                     }
                 )
 
-                AnimatedVisibility(visible = banksVisible) {
+                if (banksVisible) {
                     StrictCardBanksPanel(
                         dashboard = dashboardState,
                         palette = palette,
@@ -214,7 +215,7 @@ private fun StrictModePill(
 ) {
     val active = value == selected
     Surface(
-        color = if (active) palette.primary.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.10f),
+        color = if (active) palette.primary.copy(alpha = 0.18f) else palette.cardMuted,
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, if (active) palette.primary else palette.border),
         modifier = Modifier.clickable { onChange(value) }
@@ -1007,35 +1008,58 @@ private fun StrictCardBanksPanel(
     palette: FloentlyPalette,
     onClose: () -> Unit
 ) {
-    Surface(
-        color = palette.cardMuted,
-        shape = RoundedCornerShape(28.dp),
-        border = BorderStroke(1.dp, palette.border),
-        shadowElevation = 10.dp,
-        modifier = Modifier.fillMaxWidth()
+    Dialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Row(verticalAlignment = Alignment.Top) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Tarkastele pinoja",
-                        color = palette.text,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                    Text(
-                        text = "Käytä värikoodattua kertautusta vaikeiden ja helppojen korttien läpikäyntiin.",
-                        color = palette.muted,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-                StrictSmallChip("Sulje", palette, onClose)
-            }
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0x9E040A18))
+                    .clickable(onClick = onClose)
+            )
 
-            val buckets = dashboard?.buckets ?: CardBankBuckets()
-            BankSection("Vaikeat", "Toistuvasti väärin tai vielä epävakaa.", buckets.difficult, WebCardColors.difficult, palette)
-            BankSection("Opitut", "Toistuvasti oikein ja valmis kevyempään kertaukseen.", buckets.learned, WebCardColors.mastered, palette)
-            BankSection("Opittavat", "Nähty ja kehittyy, mutta ei vielä vakaa.", buckets.learning, WebCardColors.learning, palette)
+            Surface(
+                color = palette.cardMuted,
+                shape = RoundedCornerShape(28.dp),
+                border = BorderStroke(1.dp, palette.border),
+                shadowElevation = 18.dp,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth()
+                    .padding(18.dp)
+                    .heightIn(max = 640.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(18.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.Top) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Tarkastele pinoja",
+                                color = palette.text,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            Text(
+                                text = "Käytä värikoodattua kertautusta vaikeiden ja helppojen korttien läpikäyntiin.",
+                                color = palette.muted,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        StrictSmallChip("Sulje", palette, onClose)
+                    }
+
+                    val buckets = dashboard?.buckets ?: CardBankBuckets()
+                    BankSection("Vaikeat", "Toistuvasti väärin tai vielä epävakaa.", buckets.difficult, WebCardColors.difficult, palette)
+                    BankSection("Opitut", "Toistuvasti oikein ja valmis kevyempään kertaukseen.", buckets.learned, WebCardColors.mastered, palette)
+                    BankSection("Opittavat", "Nähty ja kehittyy, mutta ei vielä vakaa.", buckets.learning, WebCardColors.learning, palette)
+                }
+            }
         }
     }
 }
@@ -1060,7 +1084,7 @@ private fun BankSection(
             if (items.isEmpty()) {
                 Text(text = "Tässä pinossa ei ole vielä kohteita.", color = palette.muted, style = MaterialTheme.typography.bodySmall)
             } else {
-                items.take(5).forEach { card ->
+                items.take(20).forEach { card ->
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(dot))
                         Spacer(modifier = Modifier.width(10.dp))
