@@ -97,3 +97,16 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
   - Review banks now opens as a modal overlay with scrim, matching the old app source pattern.
   - Bank sections now show up to 20 cards instead of only 5.
   - Mode pills now use old-app palette token behavior instead of hardcoded white transparency.
+
+## M18-I2 old-source Cards hint/rating polish
+
+- Source:
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/components/SmartHintPopup.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/apps/client/features/cards/components/CardPracticeSession.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/theme/floentlyPalette.ts`
+- Native file:
+  - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/cards/CardsScreen.kt`
+- Correction:
+  - Cards hint popup now uses old-app overlay/bottom-sheet pattern instead of a plain centered platform dialog.
+  - Progress colors now use palette tokens.
+  - Review labels are localized: Uudestaan, Vaikea, Hyvä, Helppo.

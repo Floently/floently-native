@@ -1,6 +1,5 @@
 package com.floently.learn.cards
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -378,14 +377,14 @@ private fun StrictPracticeSession(
                 .padding(horizontal = 46.dp)
                 .height(4.dp)
                 .clip(RoundedCornerShape(999.dp))
-                .background(WebCardColors.barTrack.copy(alpha = 0.40f))
+                .background(palette.border.copy(alpha = 0.55f))
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth(progressRatio)
                     .height(4.dp)
                     .clip(RoundedCornerShape(999.dp))
-                    .background(Color(0xFFBFD3F8))
+                    .background(palette.primary)
             )
         }
 
@@ -575,35 +574,60 @@ private fun StrictHintPopup(
     palette: FloentlyPalette,
     onDismiss: () -> Unit
 ) {
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            color = palette.card,
-            shape = RoundedCornerShape(28.dp),
-            border = BorderStroke(1.dp, palette.primary.copy(alpha = 0.45f)),
-            shadowElevation = 18.dp,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0x9E040A18))
+                    .clickable(onClick = onDismiss)
+            )
+
+            Surface(
+                color = palette.card,
+                shape = RoundedCornerShape(26.dp),
+                border = BorderStroke(1.dp, palette.border),
+                shadowElevation = 18.dp,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(16.dp)
             ) {
-                Text(
-                    text = "Vihje",
-                    color = palette.primary,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Black
-                )
-                Text(
-                    text = text,
-                    color = palette.text,
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                StrictPrimaryCardAction(
-                    text = "Sulje",
-                    palette = palette,
-                    active = true,
-                    onClick = onDismiss
-                )
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(13.dp)
+                ) {
+                    Surface(
+                        color = palette.primary.copy(alpha = 0.16f),
+                        shape = RoundedCornerShape(999.dp)
+                    ) {
+                        Text(
+                            text = "VIHJE",
+                            color = palette.primary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.2.sp,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        )
+                    }
+
+                    Text(
+                        text = text,
+                        color = palette.text,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    StrictPrimaryCardAction(
+                        text = "Sulje",
+                        palette = palette,
+                        active = true,
+                        onClick = onDismiss
+                    )
+                }
             }
         }
     }
@@ -1110,8 +1134,8 @@ private fun toneColor(card: StudyCard?): Color {
 }
 
 private fun CardsReviewRating.displayName(): String = when (this) {
-    CardsReviewRating.Again -> "Again"
-    CardsReviewRating.Hard -> "Hard"
-    CardsReviewRating.Good -> "Good"
-    CardsReviewRating.Easy -> "Easy"
+    CardsReviewRating.Again -> "Uudestaan"
+    CardsReviewRating.Hard -> "Vaikea"
+    CardsReviewRating.Good -> "Hyvä"
+    CardsReviewRating.Easy -> "Helppo"
 }

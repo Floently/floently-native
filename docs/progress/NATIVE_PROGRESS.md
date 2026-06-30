@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M18 web UI parity rebuild - M18-I1 old-source Cards banks modal.
+M18 web UI parity rebuild - M18-I2 old-source Cards hint/rating polish.
 
 ## Branch
 
@@ -111,3 +111,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M18-H2 polished Home shared components to use old-app palette tokens consistently and removed remaining web-style wording from the native Learn home.
 
 - M18-I1 changed Cards review banks from an inline page panel to the old-app modal overlay pattern, and expanded bank rows toward the old source behavior.
+
+- M18-I2 changed Cards hint popup to old-app overlay/bottom-sheet pattern, synced progress colors to old palette tokens, and localized review rating labels.
