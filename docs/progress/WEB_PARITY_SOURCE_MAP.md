@@ -169,3 +169,14 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
 - Correction:
   - Replaced generic Professional Finnish session cards with old-app-style progress, scenario, phrase, response, and completion cards.
   - Localized scenario type labels and input/status text.
+
+## M18-M1 old-source Progress route polish
+
+- Source:
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/screens/ProgressScreen.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/theme/floentlyPalette.ts`
+- Native file:
+  - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/progress/LearnProgressScreen.kt`
+- Correction:
+  - Removed earlier helper-card approximation from Progress.
+  - Added old-app-style progress header, snapshot card, summary cards, sync boundary card, timeline card, and Finnish progress labels.

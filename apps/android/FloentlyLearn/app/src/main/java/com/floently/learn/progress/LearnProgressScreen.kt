@@ -1,16 +1,25 @@
 package com.floently.learn.progress
 
-import com.floently.learn.app.LearnSmartHelperCard
-import com.floently.learn.app.learnProgressSmartHelperActions
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -18,11 +27,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.floently.learn.i18n.LearnCopy
-import com.floently.shared.design.FloentlyCard
+import com.floently.shared.design.FloentlyPalette
 import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
 import com.floently.shared.design.FloentlyScreen
@@ -41,7 +55,9 @@ fun LearnProgressScreen(
 
     FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
         Column(
-            modifier = Modifier.verticalScroll(rememberScrollState()).animateContentSize(),
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .animateContentSize(),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Text(
@@ -51,92 +67,529 @@ fun LearnProgressScreen(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = copy.progressSubtitle.replace("{count}", "0"),
+                text = "Katso eteneminen, päiväputki, synkronoinnin tila ja viimeisimmät harjoitukset yhdestä näkymästä.",
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
 
-            LearnSmartHelperCard(
-                title = "Progress helper",
-                body = "Use progress to choose the next useful route instead of opening every feature at once.",
-                actions = learnProgressSmartHelperActions()
-            )
+            ProgressRouteHeader(palette = palette)
 
             val dashboard = dashboardState
             if (dashboard == null || dashboard.isLoading) {
-                Text(text = "Loading progress...", color = palette.muted, style = MaterialTheme.typography.bodyMedium)
+                ProgressStatusCard(
+                    title = "Ladataan edistymistä…",
+                    body = "Haetaan Learn-harjoitusten yhteenvetoa.",
+                    palette = palette
+                )
             } else {
                 dashboard.errorMessage?.let { message ->
-                    FloentlyCard(product = FloentlyProduct.Learn) {
-                        Text(text = "Progress note", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(text = message, style = MaterialTheme.typography.bodyMedium)
-                    }
+                    ProgressStatusCard(
+                        title = "Huomio",
+                        body = message,
+                        palette = palette
+                    )
                 }
 
-                FloentlyCard(product = FloentlyProduct.Learn) {
-                    Text(text = "Your learning snapshot", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text(text = "Completed practice units: ${dashboard.totalCompletedUnits}", style = MaterialTheme.typography.bodyMedium)
-                    Text(text = "Current streak: ${dashboard.activeStreakDays} day(s)", style = MaterialTheme.typography.bodyMedium)
-                    Text(text = dashboard.syncBoundary.friendlyStatus(), style = MaterialTheme.typography.bodySmall)
-                    if (dashboard.syncBoundary.pendingEvents > 0) {
-                        Text(text = "Waiting to sync: ${dashboard.syncBoundary.pendingEvents} item(s)", style = MaterialTheme.typography.bodySmall)
-                    }
-                    Text(text = dashboard.syncBoundary.lastSyncText, style = MaterialTheme.typography.bodySmall)
-                }
+                ProgressSnapshotCard(
+                    completedUnits = dashboard.totalCompletedUnits,
+                    streakDays = dashboard.activeStreakDays,
+                    syncBoundary = dashboard.syncBoundary,
+                    palette = palette
+                )
 
                 if (dashboard.summaries.isEmpty()) {
-                    FloentlyCard(product = FloentlyProduct.Learn) {
-                        Text(text = "No progress yet", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        Text(text = "Start a YKI task, roleplay, professional Finnish session, or card review to see progress here.", style = MaterialTheme.typography.bodyMedium)
-                    }
+                    ProgressStatusCard(
+                        title = "Ei edistymistä vielä",
+                        body = "Aloita YKI-tehtävä, roolipeli, työpaikan suomi tai korttikertaus, niin edistyminen näkyy täällä.",
+                        palette = palette
+                    )
                 } else {
                     dashboard.summaries.forEach { summary ->
                         val animatedProgress by animateFloatAsState(
                             targetValue = (summary.completionPercent.toFloat() / 100f).coerceIn(0f, 1f),
                             label = "${summary.area} progress"
                         )
-                        FloentlyCard(product = FloentlyProduct.Learn) {
-                            Text(text = summary.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            LinearProgressIndicator(progress = { animatedProgress }, modifier = Modifier.fillMaxWidth())
-                            Text(text = "${summary.completionPercent}% complete", style = MaterialTheme.typography.bodySmall)
-                            Text(text = "${summary.completedUnits} of ${summary.totalUnits} units done", style = MaterialTheme.typography.bodySmall)
-                            Text(text = "Streak: ${summary.streakDays} day(s)", style = MaterialTheme.typography.bodySmall)
-                            Text(text = "Last activity: ${summary.lastActivity}", style = MaterialTheme.typography.bodySmall)
-                            Text(text = summary.syncStatus.friendlyText(), style = MaterialTheme.typography.bodySmall)
-                        }
+                        ProgressSummaryCard(
+                            summary = summary,
+                            progress = animatedProgress,
+                            palette = palette
+                        )
                     }
                 }
 
-                FloentlyCard(product = FloentlyProduct.Learn) {
-                    Text(text = "Recent activity", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    if (dashboard.timeline.isEmpty()) {
-                        Text(text = "Your recent practice will appear here after you complete Learn activities.", style = MaterialTheme.typography.bodyMedium)
-                    } else {
-                        dashboard.timeline.forEach { item ->
-                            Text(text = item.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                            Text(text = item.detail, style = MaterialTheme.typography.bodySmall)
-                            Text(text = item.whenText, style = MaterialTheme.typography.bodySmall)
-                            Text(text = if (item.durable) "Saved to your progress" else "Captured for this session", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                }
+                ProgressSyncBoundaryCard(
+                    boundary = dashboard.syncBoundary,
+                    palette = palette
+                )
+
+                ProgressTimelineCard(
+                    items = dashboard.timeline,
+                    palette = palette
+                )
             }
 
-            FloentlyPrimaryButton(title = copy.backToLearn, product = FloentlyProduct.Learn, onClick = onBack)
+            FloentlyPrimaryButton(
+                title = copy.backToLearn,
+                product = FloentlyProduct.Learn,
+                onClick = onBack
+            )
         }
     }
 }
 
+@Composable
+private fun ProgressRouteHeader(
+    palette: FloentlyPalette
+) {
+    Surface(
+        color = palette.card,
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "EDISTYMINEN",
+                color = palette.accent,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 3.sp
+            )
+            Text(
+                text = "Oppimisen tilanne",
+                color = palette.text,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Black
+            )
+            Text(
+                text = "Käytä tätä näkymää valitaksesi seuraavan hyödyllisen harjoituspolun ilman, että avaat kaikki ominaisuudet erikseen.",
+                color = palette.muted,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ProgressTinyPill("Näkymä", "Yhteenveto", palette.primary)
+                ProgressTinyPill("Tila", "Synkronointi", palette.accent)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProgressTinyPill(
+    label: String,
+    value: String,
+    color: Color
+) {
+    Surface(
+        color = color.copy(alpha = 0.14f),
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, color.copy(alpha = 0.42f))
+    ) {
+        Text(
+            text = "$label · $value",
+            color = color,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun ProgressSnapshotCard(
+    completedUnits: Int,
+    streakDays: Int,
+    syncBoundary: LearnProgressSyncBoundary,
+    palette: FloentlyPalette
+) {
+    Surface(
+        color = palette.card,
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(
+                text = "Oppimisen tilanne",
+                color = palette.text,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                ProgressMetricBox(
+                    label = "Tehty",
+                    value = completedUnits.toString(),
+                    color = palette.primary,
+                    palette = palette,
+                    modifier = Modifier.weight(1f)
+                )
+                ProgressMetricBox(
+                    label = "Päiväputki",
+                    value = streakDays.toString(),
+                    color = palette.accent,
+                    palette = palette,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Text(
+                text = syncBoundary.friendlyStatus(),
+                color = palette.muted,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            if (syncBoundary.pendingEvents > 0) {
+                Text(
+                    text = "Odottaa synkronointia: ${syncBoundary.pendingEvents}",
+                    color = palette.warning,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProgressMetricBox(
+    label: String,
+    value: String,
+    color: Color,
+    palette: FloentlyPalette,
+    modifier: Modifier
+) {
+    Surface(
+        color = palette.cardMuted,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = value,
+                color = palette.text,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Black
+            )
+            Text(
+                text = label.uppercase(),
+                color = color,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProgressSummaryCard(
+    summary: LearnProgressSummary,
+    progress: Float,
+    palette: FloentlyPalette
+) {
+    val accent = summary.area.areaColor(palette)
+
+    Surface(
+        color = palette.cardMuted,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(11.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .clip(CircleShape)
+                        .background(accent)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = summary.area.displayName().uppercase(),
+                    color = accent,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.1.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Text(
+                text = summary.title.localizedProgressTitle(),
+                color = palette.text,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold
+            )
+
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth(),
+                color = accent,
+                trackColor = palette.border.copy(alpha = 0.45f)
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                ProgressMetricBox(
+                    label = "Valmis",
+                    value = "${summary.completionPercent}%",
+                    color = accent,
+                    palette = palette,
+                    modifier = Modifier.weight(1f)
+                )
+                ProgressMetricBox(
+                    label = "Yksiköt",
+                    value = "${summary.completedUnits}/${summary.totalUnits}",
+                    color = palette.warning,
+                    palette = palette,
+                    modifier = Modifier.weight(1f)
+                )
+                ProgressMetricBox(
+                    label = "Putki",
+                    value = summary.streakDays.toString(),
+                    color = palette.accent,
+                    palette = palette,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Text(
+                text = "Viimeisin: ${summary.lastActivity.localizedProgressText()}",
+                color = palette.muted,
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = summary.syncStatus.friendlyText(),
+                color = accent,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = summary.releaseGate.localizedProgressText(),
+                color = palette.soft,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProgressSyncBoundaryCard(
+    boundary: LearnProgressSyncBoundary,
+    palette: FloentlyPalette
+) {
+    Surface(
+        color = palette.card,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp)
+        ) {
+            Text(
+                text = "Synkronoinnin raja",
+                color = palette.text,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black
+            )
+            Text(
+                text = boundary.lastSyncText.localizedProgressText(),
+                color = palette.muted,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = boundary.releaseGate.localizedProgressText(),
+                color = palette.soft,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProgressTimelineCard(
+    items: List<LearnProgressTimelineItem>,
+    palette: FloentlyPalette
+) {
+    Surface(
+        color = palette.card,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Viimeaikainen harjoittelu",
+                color = palette.text,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black
+            )
+
+            if (items.isEmpty()) {
+                Text(
+                    text = "Viimeisimmät harjoitukset näkyvät täällä, kun teet Learn-tehtäviä.",
+                    color = palette.muted,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            } else {
+                items.forEach { item ->
+                    ProgressTimelineRow(item = item, palette = palette)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProgressTimelineRow(
+    item: LearnProgressTimelineItem,
+    palette: FloentlyPalette
+) {
+    val accent = item.area.areaColor(palette)
+
+    Surface(
+        color = palette.cardMuted,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 4.dp)
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(accent)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.title.localizedProgressText(),
+                    color = palette.text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = item.detail.localizedProgressText(),
+                    color = palette.muted,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = item.whenText.localizedProgressText(),
+                    color = palette.soft,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = if (item.durable) "Tallennettu edistymiseen" else "Kirjattu tähän harjoituskertaan",
+                    color = accent,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProgressStatusCard(
+    title: String,
+    body: String,
+    palette: FloentlyPalette
+) {
+    Surface(
+        color = palette.card,
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(title, color = palette.text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+            Text(body, color = palette.muted, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+private fun LearnProgressArea.areaColor(palette: FloentlyPalette): Color = when (this) {
+    LearnProgressArea.Yki -> Color(0xFF9D7CFF)
+    LearnProgressArea.ProfessionalFinnish -> palette.warning
+    LearnProgressArea.Roleplay -> palette.accent
+    LearnProgressArea.Cards -> palette.primary
+}
+
+private fun LearnProgressArea.displayName(): String = when (this) {
+    LearnProgressArea.Yki -> "YKI"
+    LearnProgressArea.ProfessionalFinnish -> "Työpaikan suomi"
+    LearnProgressArea.Roleplay -> "Roolipeli"
+    LearnProgressArea.Cards -> "Kortit"
+}
+
 private fun LearnProgressSyncBoundary.friendlyStatus(): String = when (status) {
-    LearnProgressSyncStatus.LocalPreview -> "Progress is shown for this device."
-    LearnProgressSyncStatus.ReadyToSync -> "Progress is ready to sync."
-    LearnProgressSyncStatus.Synced -> "Progress is up to date."
-    LearnProgressSyncStatus.ServicePending -> "Progress sync is being prepared."
+    LearnProgressSyncStatus.LocalPreview -> "Edistyminen näkyy tällä laitteella."
+    LearnProgressSyncStatus.ReadyToSync -> "Edistyminen on valmis synkronoitavaksi."
+    LearnProgressSyncStatus.Synced -> "Edistyminen on ajan tasalla."
+    LearnProgressSyncStatus.ServicePending -> "Edistymisen synkronointia valmistellaan."
 }
 
 private fun LearnProgressSyncStatus.friendlyText(): String = when (this) {
-    LearnProgressSyncStatus.LocalPreview -> "Saved for this practice view"
-    LearnProgressSyncStatus.ReadyToSync -> "Ready to sync"
-    LearnProgressSyncStatus.Synced -> "Synced"
-    LearnProgressSyncStatus.ServicePending -> "Sync pending"
+    LearnProgressSyncStatus.LocalPreview -> "Tallennettu tähän harjoitusnäkymään"
+    LearnProgressSyncStatus.ReadyToSync -> "Valmis synkronoitavaksi"
+    LearnProgressSyncStatus.Synced -> "Synkronoitu"
+    LearnProgressSyncStatus.ServicePending -> "Synkronointi odottaa"
+}
+
+private fun String.localizedProgressTitle(): String = when (this) {
+    "YKI practice" -> "YKI-harjoittelu"
+    "Professional Finnish" -> "Työpaikan suomi"
+    "Roleplay" -> "Roolipeli"
+    "Cards" -> "Kortit"
+    else -> this
+}
+
+private fun String.localizedProgressText(): String = when (this) {
+    "Native task flow verified" -> "Natiivi tehtäväpolku varmistettu"
+    "Scenario flow verified" -> "Tilanneharjoituksen polku varmistettu"
+    "Conversation flow verified" -> "Keskustelupolku varmistettu"
+    "Deck flow verified" -> "Korttipakan polku varmistettu"
+    "Real scoring and durable progress remain service-gated." -> "Todellinen arviointi ja pysyvä edistyminen odottavat palvelinrajapintaa."
+    "Feedback and saved progress remain service-gated." -> "Palaute ja tallennettu edistyminen odottavat palvelinrajapintaa."
+    "Dynamic generation and saved progress remain service-gated." -> "Dynaaminen generointi ja tallennettu edistyminen odottavat palvelinrajapintaa."
+    "Review scheduling and saved progress remain service-gated." -> "Kertausaikataulu ja tallennettu edistyminen odottavat palvelinrajapintaa."
+    "Server progress sync is not connected yet." -> "Palvelimen edistymissynkronointia ei ole vielä kytketty."
+    "Durable progress needs authenticated server write/read, offline queue, and merge handling before release." -> "Pysyvä edistyminen vaatii kirjautuneen palvelintallennuksen, offline-jonon ja yhdistämisen ennen julkaisua."
+    "YKI native session completed" -> "YKI:n natiivi harjoitus tehty"
+    "Answer capture, evaluation summary, and progress boundary are available." -> "Vastausten tallennus, arviointiyhteenveto ja edistymisen raja ovat käytössä."
+    "Roleplay native session started" -> "Roolipelin natiivi harjoitus aloitettu"
+    "Conversation, coaching, and anti-repetition state are available." -> "Keskustelu, valmennus ja toistonesto ovat käytössä."
+    "Cards native deck opened" -> "Natiivi korttipakka avattu"
+    "Deck data and start-session boundary are available." -> "Pakkatiedot ja harjoituksen aloitusraja ovat käytössä."
+    "Preview milestone" -> "Esikatselun välietappi"
+    else -> this
 }

@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M18 web UI parity rebuild - M18-L2 old-source Professional Finnish session polish.
+M18 web UI parity rebuild - M18-M1 old-source Progress route polish.
 
 ## Branch
 
@@ -123,3 +123,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M18-L1 ported Professional Finnish route toward the old source shell: workplace header, domain chips, old-app module cards, progress metrics, status cards, and Finnish domain labels.
 
 - M18-L2 ported the Professional Finnish session toward old source task flow: progress card, scenario prompt card, model phrase cards, Finnish response labels, and completion card.
+
+- M18-M1 ported Progress toward old source shell: removed helper-card approximation, added snapshot, route progress, sync boundary, timeline cards, and Finnish progress labels.
