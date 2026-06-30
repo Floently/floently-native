@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M18 web UI parity rebuild - M18-F2 old-app hint popup correction.
+M18 web UI parity rebuild - M18-G1 latest old-source Home hint popup correction.
 
 ## Branch
 
@@ -102,3 +102,4 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 
 - M18-F1/M18-F1R installed strict Cards web parity trunk from the original web card practice sources, keeping native Android TTS and source-map tracking. Debug and release builds passed after the sp import repair.
 \n- M18-F2 corrected Cards hint behavior to match the original app pattern: hint opens as a popup/modal instead of being fixed inline inside the card.\n
+- M18-G1 selected `/home/vitus/backups/floently-finnish_2026-06-25_20-13-04.tar.gz` as the latest old-app UI source truth and corrected the Learn home helper from a fixed inline card into the old app bottom popup pattern.

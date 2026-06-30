@@ -1,5 +1,20 @@
 package com.floently.learn.app
 
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.Alignment
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,6 +50,8 @@ fun LearnHomeScreen(
     onBackToSuite: (() -> Unit)? = null,
     onDestinationSelected: (LearnFeatureDestination) -> Unit = {}
 ) {
+    var showOldAppHomeHint by remember(session.user.email) { mutableStateOf(true) }
+
     FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
         Box {
             WebBackgroundGlow(palette = palette)
@@ -63,16 +80,6 @@ fun LearnHomeScreen(
                 }
                 WebStatRow(palette = palette)
                 WebInfoCard(
-                    label = "HYÖDYLLINEN VIHJE",
-                    title = "Etsitkö nopeinta etenemistä?",
-                    body = "Aloita kortista, kuuntele ääni, avaa vihje vain tarvittaessa ja siirry sitten roolipeliin. Näin vanhan web-kokemuksen ulkoasu säilyy, mutta uusi natiivisovellus lisää paremman ohjauksen.",
-                    primary = "Avaa kortit",
-                    secondary = "Avaa roolipeli",
-                    palette = palette,
-                    onPrimary = { onDestinationSelected(LearnFeatureDestination.Cards) },
-                    onSecondary = { onDestinationSelected(LearnFeatureDestination.Roleplay) }
-                )
-                WebInfoCard(
                     label = "TILI JA KÄYTTÖOIKEUDET",
                     title = "Floently Learn",
                     body = "Kirjautuneena: ${session.user.email}. Learn, Read ja Create pidetään erillään, mutta Learn-polut pysyvät yhdessä web-tyylisessä näkymässä.",
@@ -86,9 +93,147 @@ fun LearnHomeScreen(
                 onBackToSuite?.let { back -> FloentlySecondaryButton(title = copy.backToProducts, product = FloentlyProduct.Learn, onClick = back) }
                 Spacer(modifier = Modifier.height(24.dp))
             }
+            OldAppHomeHintPopup(
+                visible = showOldAppHomeHint,
+                badgeLabel = "HYÖDYLLINEN VIHJE",
+                title = "Etsitkö YKI-valmistautumista?",
+                body = "YKI-polku on valmiina harjoitteluun. Siirry kokeeseen, kirjoittamiseen ja puhumiseen yhdestä paikasta.",
+                primaryLabel = "Vie minut sinne",
+                secondaryLabel = "Sulje",
+                onPrimary = {
+                    showOldAppHomeHint = false
+                    onDestinationSelected(LearnFeatureDestination.YkiPractice)
+                },
+                onSecondary = { showOldAppHomeHint = false }
+            )
         }
     }
 }
+
+@Composable
+private fun OldAppHomeHintPopup(
+    visible: Boolean,
+    badgeLabel: String,
+    title: String,
+    body: String,
+    primaryLabel: String,
+    secondaryLabel: String,
+    onPrimary: () -> Unit,
+    onSecondary: () -> Unit
+) {
+    if (!visible) return
+
+    val overlay = Color(0x9E040A18)
+    val surface = Color(0xFF112346)
+    val border = Color(0xFF263B6B)
+    val borderStrong = Color(0xFF36508A)
+    val text = Color(0xFFF5F9FF)
+    val textMuted = Color(0xFFA8BAD6)
+    val primary = Color(0xFF5A85FF)
+    val primarySurface = Color(0xFF1B2C5D)
+
+    Dialog(
+        onDismissRequest = onSecondary,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(overlay)
+                    .clickable(onClick = onSecondary)
+            )
+
+            Surface(
+                color = surface,
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.dp, border),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Surface(
+                        color = primarySurface,
+                        shape = RoundedCornerShape(999.dp)
+                    ) {
+                        Text(
+                            text = badgeLabel,
+                            color = primary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 0.6.sp,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        )
+                    }
+
+                    Text(
+                        text = title,
+                        color = text,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+
+                    Text(
+                        text = body,
+                        color = textMuted,
+                        fontSize = 14.sp,
+                        lineHeight = 21.sp
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Surface(
+                            color = surface,
+                            shape = RoundedCornerShape(999.dp),
+                            border = BorderStroke(1.dp, borderStrong),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(42.dp)
+                                .clickable(onClick = onSecondary)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = secondaryLabel,
+                                    color = text,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Surface(
+                            color = primary,
+                            shape = RoundedCornerShape(999.dp),
+                            modifier = Modifier
+                                .weight(1.1f)
+                                .height(42.dp)
+                                .clickable(onClick = onPrimary)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = primaryLabel,
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 private fun greeting(session: FloentlyAuthSession): String {
     val name = session.user.email.substringBefore("@").split(".", "-", "_").filter { it.isNotBlank() }.joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }.ifBlank { "Vitus Idi" }

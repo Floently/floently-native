@@ -31,3 +31,16 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
 - Correction: Hint must open as a popup/modal, not render as a fixed inline card element.
 - Native file: `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/cards/CardsScreen.kt`
 - Source priority: old Floently app behavior / uploaded IPA reference.
+
+## M18-G1 latest old-source Home hint popup correction
+
+- Source: `/home/vitus/backups/floently-finnish_2026-06-25_20-13-04.tar.gz`
+- Old source files:
+  - `packages/ui/screens/HomeScreen.tsx`
+  - `packages/ui/components/SmartHintPopup.tsx`
+  - `packages/ui/theme/floentlyPalette.ts`
+- Native file:
+  - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/app/LearnHomeScreen.kt`
+- Correction:
+  - Removed fixed inline home helper card.
+  - Added old-app bottom overlay hint popup with scrim, bottom-aligned card, badge, title/body, secondary and primary pill buttons.
