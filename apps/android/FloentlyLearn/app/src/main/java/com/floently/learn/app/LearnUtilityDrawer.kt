@@ -166,7 +166,7 @@ fun LearnUtilityDrawer(
                             title = "YKI Mock Exam",
                             subtitle = "Full simulation route for exam readiness.",
                             iconColor = Color(0xFF2D2D58),
-                            onClick = { onDestinationSelected(LearnFeatureDestination.YkiPractice) }
+                            onClick = { onDestinationSelected(LearnFeatureDestination.YkiMockExam) }
                         )
 
                         DrawerSectionLabel("ACCOUNT AND ACCESS")

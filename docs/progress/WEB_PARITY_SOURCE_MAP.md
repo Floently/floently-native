@@ -317,3 +317,20 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
   - `CardsScreen.kt`
 - Correction:
   - Cards practice visuals now follow the original screenshot flow more closely while preserving native data/session behavior.
+
+## M19-D/E YKI practice and mock rebuild
+
+- Screenshot source:
+  - `IMG_0409-IMG_0431`: YKI Practice
+  - `IMG_0432-IMG_0479`: YKI Mock Exam
+- Correction:
+  - Added a dedicated YKI Mock Exam native destination.
+  - Split YKI visual mode into Practice and Mock Exam.
+  - Preserved existing YKI repository/session behavior.
+
+## M19-DER YKI contract repair
+
+- Native file:
+  - `LearnFeatureContract.kt`
+- Correction:
+  - Added exhaustive release/access/parity contract mapping for the new `YkiMockExam` destination.

@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Row
@@ -43,10 +44,16 @@ import com.floently.shared.design.FloentlyProduct
 import com.floently.shared.design.FloentlyScreen
 import kotlinx.coroutines.launch
 
+enum class YkiScreenMode {
+    Practice,
+    MockExam
+}
+
 @Composable
 fun YkiFeatureScreen(
     repository: YkiRepository,
     copy: LearnCopy,
+    mode: YkiScreenMode = YkiScreenMode.Practice,
     onBack: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -61,6 +68,7 @@ fun YkiFeatureScreen(
             initialSession = session,
             repository = repository,
             copy = copy,
+            mode = mode,
             onExit = { activeSession = null }
         )
     } else {
@@ -75,19 +83,9 @@ fun YkiFeatureScreen(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
-                Text(
-                    text = copy.ykiTitle,
-                    color = palette.text,
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = copy.ykiSubtitle,
-                    color = palette.muted,
-                    style = MaterialTheme.typography.titleMedium
-                )
-
-                YkiExamHeader(palette = palette)
+                YkiTopBar(mode = mode, onBack = onBack, palette = palette)
+                YkiExamHeader(mode = mode, palette = palette)
+                YkiModeSummary(mode = mode, palette = palette)
                 YkiLevelStrip(
                     selectedLevel = selectedLevel,
                     palette = palette,
@@ -96,7 +94,7 @@ fun YkiFeatureScreen(
 
                 statusMessage?.let { message ->
                     YkiStatusCard(
-                        title = "Huomio",
+                        title = "Notice",
                         body = message,
                         palette = palette
                     )
@@ -105,14 +103,14 @@ fun YkiFeatureScreen(
                 val dashboard = dashboardState
                 if (dashboard == null || dashboard.isLoading) {
                     YkiStatusCard(
-                        title = "Ladataan YKI-harjoituksia…",
+                        title = if (mode == YkiScreenMode.MockExam) "Loading mock exam…" else "Loading YKI practice…",
                         body = "Haetaan ${selectedLevel.displayName()} -tason moduuleja.",
                         palette = palette
                     )
                 } else if (dashboard.modules.isEmpty()) {
                     YkiStatusCard(
-                        title = "Ei vielä YKI-moduuleja",
-                        body = "Valitse toinen taso tai palaa myöhemmin, kun uusia harjoituksia on lisätty.",
+                        title = "No YKI modules yet",
+                        body = "Choose another level or come back later when new modules have been added.",
                         palette = palette
                     )
                 } else {
@@ -122,7 +120,7 @@ fun YkiFeatureScreen(
                             module = module,
                             progress = progress,
                             palette = palette,
-                            actionLabel = if (module.locked) "Katso lukituksen syy" else copy.ykiAction,
+                            actionLabel = if (module.locked) "Locked" else if (mode == YkiScreenMode.MockExam) "Start mock section" else "Start practice",
                             onClick = {
                                 scope.launch {
                                     when (val result = repository.startSession(module.id)) {
@@ -140,7 +138,7 @@ fun YkiFeatureScreen(
                 }
 
                 FloentlyPrimaryButton(
-                    title = copy.backToLearn,
+                    title = "Back to Learn",
                     product = FloentlyProduct.Learn,
                     onClick = onBack
                 )
@@ -149,43 +147,127 @@ fun YkiFeatureScreen(
     }
 }
 
+
 @Composable
-private fun YkiExamHeader(
+private fun YkiTopBar(
+    mode: YkiScreenMode,
+    onBack: () -> Unit,
     palette: FloentlyPalette
 ) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            color = Color.Transparent,
+            shape = RoundedCornerShape(999.dp),
+            border = BorderStroke(2.dp, Color(0xFF30456F)),
+            modifier = Modifier
+                .height(48.dp)
+                .clickable(onClick = onBack)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = "Back",
+                    color = Color(0xFF9EB3EF),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier.padding(horizontal = 23.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        Text(
+            text = if (mode == YkiScreenMode.MockExam) "YKI Mock Exam" else "YKI Practice",
+            color = palette.text,
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Black,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun YkiExamHeader(
+    mode: YkiScreenMode,
+    palette: FloentlyPalette
+) {
+    val isMock = mode == YkiScreenMode.MockExam
     Surface(
-        color = palette.card,
-        shape = RoundedCornerShape(28.dp),
-        border = BorderStroke(1.dp, palette.border),
+        color = Color(0xFF101D38),
+        shape = RoundedCornerShape(34.dp),
+        border = BorderStroke(1.dp, Color(0xFF263A68)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier.padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(13.dp)
         ) {
             Text(
-                text = "YKI",
+                text = if (isMock) "FULL YKI EXAM" else "YKI PRACTICE",
                 color = Color(0xFF9D7CFF),
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Black,
-                letterSpacing = 4.sp
+                letterSpacing = 3.5.sp
             )
             Text(
-                text = "YKI-valmistautuminen",
+                text = if (isMock) "YKI Mock Exam" else "YKI Practice",
                 color = palette.text,
-                style = MaterialTheme.typography.headlineMedium,
+                fontSize = 34.sp,
+                lineHeight = 39.sp,
                 fontWeight = FontWeight.Black
             )
             Text(
-                text = "Harjoittele virallisen kokeen osia: lukeminen, kirjoittaminen, kuuntelu, puhuminen ja sanasto.",
+                text = if (isMock)
+                    "Full exam-style simulation with separate sections and final readiness review."
+                else
+                    "Guided practice for reading, writing, listening and speaking before the official exam.",
                 color = palette.muted,
-                style = MaterialTheme.typography.bodyMedium
+                fontSize = 16.sp,
+                lineHeight = 23.sp
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                YkiTinyPill("Taso", "Keskitaso", palette.primary)
-                YkiTinyPill("Muoto", "Koeharjoitus", Color(0xFF9D7CFF))
+                YkiTinyPill("Level", "Intermediate", palette.primary)
+                YkiTinyPill("Mode", if (isMock) "Mock exam" else "Practice", Color(0xFF9D7CFF))
             }
         }
+    }
+}
+
+@Composable
+private fun YkiModeSummary(
+    mode: YkiScreenMode,
+    palette: FloentlyPalette
+) {
+    val isMock = mode == YkiScreenMode.MockExam
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        YkiMetricBox(
+            label = if (isMock) "Sections" else "Skills",
+            value = if (isMock) "4" else "5",
+            color = Color(0xFF9D7CFF),
+            palette = palette,
+            modifier = Modifier.weight(1f)
+        )
+        YkiMetricBox(
+            label = if (isMock) "Flow" else "Practice",
+            value = if (isMock) "Exam" else "Guided",
+            color = palette.accent,
+            palette = palette,
+            modifier = Modifier.weight(1f)
+        )
+        YkiMetricBox(
+            label = "Goal",
+            value = "B1",
+            color = palette.warning,
+            palette = palette,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -258,9 +340,9 @@ private fun YkiModuleCard(
     val skillAccent = module.skills.firstOrNull()?.skillColor(palette) ?: palette.primary
 
     Surface(
-        color = palette.cardMuted,
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, palette.border),
+        color = Color(0xFF13213F),
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, Color(0xFF2A3E6E)),
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
@@ -278,7 +360,7 @@ private fun YkiModuleCard(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = if (module.locked) "LUKITTU" else module.level.displayName().uppercase(),
+                    text = if (module.locked) "LOCKED" else module.level.displayName().uppercase(),
                     color = if (module.locked) palette.soft else skillAccent,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Black,
@@ -302,19 +384,19 @@ private fun YkiModuleCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                YkiMetricBox("Tehtävät", "${progress?.completedTasks ?: 0}/${progress?.totalTasks ?: 0}", skillAccent, palette, Modifier.weight(1f))
-                YkiMetricBox("Aika", "${module.estimatedMinutes} min", palette.warning, palette, Modifier.weight(1f))
+                YkiMetricBox("Tasks", "${progress?.completedTasks ?: 0}/${progress?.totalTasks ?: 0}", skillAccent, palette, Modifier.weight(1f))
+                YkiMetricBox("Time", "${module.estimatedMinutes} min", palette.warning, palette, Modifier.weight(1f))
             }
 
             Text(
-                text = "Taidot: ${module.skills.joinToString { it.displayName() }}",
+                text = "Skills: ${module.skills.joinToString { it.displayName() }}",
                 color = palette.soft,
                 style = MaterialTheme.typography.bodySmall
             )
 
             progress?.lastScorePercent?.let { score ->
                 Text(
-                    text = "Viimeisin tulos: $score%",
+                    text = "Latest score: $score%",
                     color = palette.accent,
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold
@@ -409,16 +491,16 @@ private fun YkiSkill.skillColor(palette: FloentlyPalette): Color = when (this) {
 
 
 private fun YkiLevel.displayName(): String = when (this) {
-    YkiLevel.Perustaso -> "Perustaso"
-    YkiLevel.Keskitaso -> "Keskitaso"
-    YkiLevel.YlinTaso -> "Ylin taso"
+    YkiLevel.Perustaso -> "Basic"
+    YkiLevel.Keskitaso -> "Intermediate"
+    YkiLevel.YlinTaso -> "Advanced"
 }
 
 private fun YkiSkill.displayName(): String = when (this) {
-    YkiSkill.Reading -> "Lukeminen"
-    YkiSkill.Writing -> "Kirjoittaminen"
-    YkiSkill.Listening -> "Kuuntelu"
-    YkiSkill.Speaking -> "Puhuminen"
-    YkiSkill.Vocabulary -> "Sanasto"
-    YkiSkill.Grammar -> "Kielioppi"
+    YkiSkill.Reading -> "Reading"
+    YkiSkill.Writing -> "Writing"
+    YkiSkill.Listening -> "Listening"
+    YkiSkill.Speaking -> "Speaking"
+    YkiSkill.Vocabulary -> "Vocabulary"
+    YkiSkill.Grammar -> "Grammar"
 }

@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M19 visual parity rebuild - M19-C cards screenshot rebuild.
+M19 visual parity rebuild - M19-D/E YKI practice and mock rebuild.
 
 ## Branch
 
@@ -149,3 +149,7 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M19-B5 made the drawer language picker scrollable/selectable, wired it to persisted Learn language state, and made Theme/Session panels visible above Android gesture navigation.
 
 - M19-C rebuilt high-impact Cards practice visuals from IMG_0397-IMG_0399: two-tab Vocabulary/Sentences layout, English screenshot labels, larger card, bigger word, and screenshot-style controls.
+
+- M19-D/E separated YKI Practice from YKI Mock Exam in navigation and rebuilt high-impact YKI visuals/naming from IMG_0409-IMG_0479 while preserving existing YKI session behavior.
+
+- M19-DER repaired the YKI Mock Exam feature contract so the new destination is included in release/access/parity guard mapping.

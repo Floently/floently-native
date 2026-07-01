@@ -72,6 +72,23 @@ object LearnFeatureContracts {
                 ),
                 releaseRequirements = defaultReleaseRequirements()
             )
+            LearnFeatureDestination.YkiMockExam -> LearnFeatureContract(
+                destination = destination,
+                parityRequirements = listOf(
+                    LearnParityRequirement.ExistingContentParity,
+                    LearnParityRequirement.ExistingProgressParity,
+                    LearnParityRequirement.ExistingAnimationParity,
+                    LearnParityRequirement.ExistingAudioParity
+                ),
+                accessRequirements = defaultAccessRequirements(),
+                interactionRequirements = listOf(
+                    LearnInteractionRequirement.NativeNavigation,
+                    LearnInteractionRequirement.NativeAnimations,
+                    LearnInteractionRequirement.OfflineSafeState,
+                    LearnInteractionRequirement.ErrorRecovery
+                ),
+                releaseRequirements = defaultReleaseRequirements()
+            )
             LearnFeatureDestination.ProfessionalFinnish -> LearnFeatureContract(
                 destination = destination,
                 parityRequirements = listOf(

@@ -53,6 +53,7 @@ fun YkiSessionScreen(
     initialSession: YkiSession,
     repository: YkiRepository,
     copy: LearnCopy,
+    mode: YkiScreenMode = YkiScreenMode.Practice,
     onExit: () -> Unit,
     evaluator: YkiEvaluator = PreviewYkiEvaluator(),
     progressStore: YkiProgressStore = PreviewYkiProgressStore()
@@ -77,15 +78,16 @@ fun YkiSessionScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Text(
-                text = session.module.title,
+                text = if (mode == YkiScreenMode.MockExam) "YKI Mock Exam" else "YKI Practice",
                 color = palette.text,
                 style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Black
             )
             Text(
-                text = copy.ykiSubtitle,
+                text = session.module.title,
                 color = palette.muted,
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
             )
 
             YkiSessionProgressCard(
@@ -139,7 +141,7 @@ fun YkiSessionScreen(
                     onContinue = {
                         val cleanAnswer = answer.trim()
                         if (cleanAnswer.isBlank()) {
-                            statusMessage = "Kirjoita vastaus ennen jatkamista."
+                            statusMessage = "Write an answer before continuing."
                         } else {
                             scope.launch {
                                 session = repository.saveAnswer(session, task.id, cleanAnswer)
@@ -185,8 +187,8 @@ private fun YkiSessionProgressCard(
                 trackColor = palette.border.copy(alpha = 0.45f)
             )
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                YkiSessionMetricBox("Tehtävä", "$current/$total", palette.primary, palette, Modifier.weight(1f))
-                YkiSessionMetricBox("Vastattu", answered.toString(), palette.accent, palette, Modifier.weight(1f))
+                YkiSessionMetricBox("Task", "$current/$total", palette.primary, palette, Modifier.weight(1f))
+                YkiSessionMetricBox("Answered", answered.toString(), palette.accent, palette, Modifier.weight(1f))
             }
         }
     }
@@ -227,13 +229,13 @@ private fun YkiTaskCard(
     onContinue: () -> Unit
 ) {
     Surface(
-        color = palette.card,
-        shape = RoundedCornerShape(28.dp),
-        border = BorderStroke(1.dp, palette.border),
+        color = Color(0xFF13213F),
+        shape = RoundedCornerShape(30.dp),
+        border = BorderStroke(1.dp, Color(0xFF2A3E6E)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
+            modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -278,7 +280,7 @@ private fun YkiTaskCard(
 
             if (task.choices.isNotEmpty()) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Vaihtoehdot", color = palette.accent, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.4.sp)
+                    Text("Options", color = palette.accent, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.4.sp)
                     task.choices.forEach { choice ->
                         Surface(
                             color = palette.cardMuted,
@@ -300,12 +302,12 @@ private fun YkiTaskCard(
             OutlinedTextField(
                 value = answer,
                 onValueChange = onAnswerChange,
-                label = { Text("Vastauksesi") },
+                label = { Text("Your answer") },
                 modifier = Modifier.fillMaxWidth()
             )
 
             Text(
-                text = "Vinkki: kirjoita paras vastaus, jonka osaat. Lyhyt vastaus riittää, jos tehtävä pyytää sitä.",
+                text = "Tip: write the best answer you can. A short answer is enough when the task asks for one.",
                 color = palette.soft,
                 style = MaterialTheme.typography.bodySmall
             )
@@ -327,7 +329,7 @@ private fun YkiTaskCard(
                     .clickable(onClick = onContinue)
             ) {
                 Text(
-                    text = "Tallenna ja jatka",
+                    text = "Save and continue",
                     color = Color.White,
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Black,
@@ -355,18 +357,18 @@ private fun YkiCompletionCard(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = "Harjoitus valmis",
+                text = "Practice complete",
                 color = palette.text,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Black
             )
             Text(
-                text = "Teit $answerCount vastausta. Katso palaute alta ja toista moduuli, kun haluat lisää harjoitusta.",
+                text = "You completed $answerCount answers. Review feedback below and repeat the module when you want more practice.",
                 color = palette.muted,
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
-                text = if (durable) "Edistyminen on valmis synkronoitavaksi." else "Edistyminen tallennettiin tähän harjoituskertaan.",
+                text = if (durable) "Progress is ready to sync." else "Progress was saved for this practice run.",
                 color = palette.soft,
                 style = MaterialTheme.typography.bodySmall
             )
@@ -380,9 +382,9 @@ private fun YkiProgressResultCard(
     palette: FloentlyPalette
 ) {
     val title = when (result) {
-        is YkiProgressSaveResult.Saved -> "Edistyminen tallennettu"
-        is YkiProgressSaveResult.Deferred -> "Edistyminen kirjattu"
-        is YkiProgressSaveResult.Failed -> "Edistymistä ei tallennettu"
+        is YkiProgressSaveResult.Saved -> "Progress saved"
+        is YkiProgressSaveResult.Deferred -> "Progress recorded"
+        is YkiProgressSaveResult.Failed -> "Progress was not saved"
     }
     val body = when (result) {
         is YkiProgressSaveResult.Saved -> "Tulos: ${result.record.scorePercent?.toString() ?: "ei vielä lopullinen"}"

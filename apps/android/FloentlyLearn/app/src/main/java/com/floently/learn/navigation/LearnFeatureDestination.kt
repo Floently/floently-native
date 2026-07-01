@@ -6,8 +6,13 @@ enum class LearnFeatureDestination(
     val releaseGuard: LearnReleaseGuard
 ) {
     YkiPractice(
-        title = "YKI practice",
-        subtitle = "Exam-style Finnish practice rebuilt natively with existing learning behavior preserved.",
+        title = "YKI Practice",
+        subtitle = "Step-by-step YKI preparation and skill practice.",
+        releaseGuard = LearnReleaseGuard.MustMatchExistingProduct
+    ),
+    YkiMockExam(
+        title = "YKI Mock Exam",
+        subtitle = "Full YKI exam simulation flow separated from practice.",
         releaseGuard = LearnReleaseGuard.MustMatchExistingProduct
     ),
     ProfessionalFinnish(
@@ -44,6 +49,7 @@ enum class LearnFeatureDestination(
     companion object {
         val primary: List<LearnFeatureDestination> = listOf(
             YkiPractice,
+            YkiMockExam,
             ProfessionalFinnish,
             Roleplay,
             Cards,

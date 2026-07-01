@@ -141,3 +141,22 @@ Implemented in:
 - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/cards/CardsScreen.kt`
 
 This pass keeps existing Cards practice behavior and changes high-impact visual structure/control styling.
+
+## M19-D/E implementation note
+
+YKI rebuild sources:
+
+- IMG_0409-IMG_0431: YKI Practice
+- IMG_0432-IMG_0479: YKI Mock Exam
+
+Implemented in:
+
+- `LearnFeatureDestination.kt`
+- `LearnSignedInShell.kt`
+- `LearnUtilityDrawer.kt`
+- `YkiFeatureScreen.kt`
+- `YkiSessionScreen.kt`
+
+Correction:
+
+- YKI Practice and YKI Mock Exam are now separate native destinations and visual modes.

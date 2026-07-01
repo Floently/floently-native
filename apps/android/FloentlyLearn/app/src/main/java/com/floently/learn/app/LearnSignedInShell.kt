@@ -26,6 +26,7 @@ import com.floently.learn.roleplay.RoleplayScreen
 import com.floently.learn.settings.LearnSettingsScreen
 import com.floently.learn.yki.PreviewYkiRepository
 import com.floently.learn.yki.YkiFeatureScreen
+import com.floently.learn.yki.YkiScreenMode
 import com.floently.shared.auth.FloentlyAuthSession
 
 @Composable
@@ -66,6 +67,13 @@ fun LearnSignedInShell(
             LearnFeatureDestination.YkiPractice -> YkiFeatureScreen(
                 repository = ykiRepository,
                 copy = copy,
+                mode = YkiScreenMode.Practice,
+                onBack = { selectedDestination = null }
+            )
+            LearnFeatureDestination.YkiMockExam -> YkiFeatureScreen(
+                repository = ykiRepository,
+                copy = copy,
+                mode = YkiScreenMode.MockExam,
                 onBack = { selectedDestination = null }
             )
             LearnFeatureDestination.ProfessionalFinnish -> ProfessionalFinnishScreen(
