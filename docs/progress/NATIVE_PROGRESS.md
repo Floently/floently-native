@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M18 web UI parity rebuild - M18-O2 old-source asset/file inventory.
+M18 web UI parity rebuild - M18-O3 reusable old-app drawer.
 
 ## Branch
 
@@ -131,3 +131,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M18-O1 added a big source parity audit using the old zip/tar source truth, without changing Kotlin app code.
 
 - M18-O2 added a docs-only old source asset/file inventory for logos, sounds, screens, themes, navigation, i18n, and access/account/billing files.
+
+- M18-O3 added a shared old-app-style Learn utility drawer and wired a floating Menu button into non-home signed-in screens, using the big source drawer audit without changing product access boundaries.

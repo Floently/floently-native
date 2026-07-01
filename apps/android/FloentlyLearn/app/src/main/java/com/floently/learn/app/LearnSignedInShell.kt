@@ -1,5 +1,8 @@
 package com.floently.learn.app
 
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +41,7 @@ fun LearnSignedInShell(
     val languageState = rememberLearnLanguageState()
     val copy = LearnTranslations.copy(languageState.value)
     var selectedDestination by remember { mutableStateOf<LearnFeatureDestination?>(null) }
+    var showShellDrawer by remember(session.user.email) { mutableStateOf(false) }
     val ykiRepository = remember { PreviewYkiRepository() }
     val professionalFinnishRepository = remember { PreviewProfessionalFinnishRepository() }
     val accountRepository = remember { PreviewAccountRepository() }
@@ -52,7 +56,8 @@ fun LearnSignedInShell(
             onDestinationSelected = { selectedDestination = it }
         )
     } else {
-        when (destination) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            when (destination) {
             LearnFeatureDestination.YkiPractice -> YkiFeatureScreen(
                 repository = ykiRepository,
                 copy = copy,
@@ -95,6 +100,25 @@ fun LearnSignedInShell(
                 copy = copy,
                 onBack = { selectedDestination = null },
                 onSignOut = onSignOut
+            )
+            }
+            LearnScreenMenuButton(onClick = { showShellDrawer = true })
+            LearnUtilityDrawer(
+                visible = showShellDrawer,
+                email = session.user.email,
+                onClose = { showShellDrawer = false },
+                onHome = {
+                    showShellDrawer = false
+                    selectedDestination = null
+                },
+                onDestinationSelected = { nextDestination ->
+                    showShellDrawer = false
+                    selectedDestination = nextDestination
+                },
+                onSignOut = {
+                    showShellDrawer = false
+                    onSignOut()
+                }
             )
         }
     }

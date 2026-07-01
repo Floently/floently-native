@@ -246,3 +246,7 @@ Remaining before confident testing/release:
 ## Asset inventory follow-up
 
 - M18-O2 created `docs/progress/OLD_SOURCE_ASSET_INVENTORY.md` to decide what, if anything, should be imported from the old source bundles before visual/device testing.
+
+## Drawer follow-up
+
+- M18-O3 added a reusable native Learn utility drawer for non-home signed-in screens, based on the old UtilityDrawer/navigation audit.

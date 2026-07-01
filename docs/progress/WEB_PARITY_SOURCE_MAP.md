@@ -214,3 +214,16 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
 - Correction:
   - Added docs-only inventory of old source assets, sounds, logos, screen/component source files, themes, navigation/drawer files, i18n files, and access/account/billing/auth files.
   - No Kotlin app code changed in this milestone.
+
+## M18-O3 reusable old-app drawer
+
+- Source:
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/packages/ui/components/UtilityDrawer.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/apps/client/config/navigation/AppShell_sidebar_sections.ts`
+- Native files:
+  - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/app/LearnUtilityDrawer.kt`
+  - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/app/LearnSignedInShell.kt`
+- Correction:
+  - Added a reusable old-app-style utility drawer for signed-in Learn screens.
+  - Added a floating Menu button on non-home screens so users can reach Home, Cards, Professional Finnish, YKI, Roleplay, Progress, Account, Settings, and sign out without returning manually.
+  - Preserved Learn/Read/Create access separation and did not import old web code directly.
