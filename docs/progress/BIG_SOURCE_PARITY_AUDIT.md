@@ -242,3 +242,7 @@ Remaining before confident testing/release:
 - Keep Learn/Read/Create access and payment separation intact.
 - Keep Android native implementation real native, not WebView.
 
+
+## Asset inventory follow-up
+
+- M18-O2 created `docs/progress/OLD_SOURCE_ASSET_INVENTORY.md` to decide what, if anything, should be imported from the old source bundles before visual/device testing.

@@ -204,3 +204,13 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
 - Correction:
   - Added a tracked audit that maps old source files to native Kotlin screens and records what is already ported, what is still missing, and what must be checked before visual/device testing.
   - No Kotlin app code changed in this milestone.
+
+## M18-O2 old-source asset/file inventory
+
+- Source:
+  - Large old source zip/tar extraction under `/home/vitus/floently-old-latest-source-truth-m18x6/files`.
+- Native repo:
+  - `docs/progress/OLD_SOURCE_ASSET_INVENTORY.md`
+- Correction:
+  - Added docs-only inventory of old source assets, sounds, logos, screen/component source files, themes, navigation/drawer files, i18n files, and access/account/billing/auth files.
+  - No Kotlin app code changed in this milestone.

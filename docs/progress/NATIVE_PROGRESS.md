@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M18 web UI parity rebuild - M18-O1 big source parity audit.
+M18 web UI parity rebuild - M18-O2 old-source asset/file inventory.
 
 ## Branch
 
@@ -129,3 +129,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M18-N1 ported Settings and Account toward old source shell: removed helper-card approximations, added language chips, support/privacy cards, Learn access boundary, billing boundary, plan, device, and product-access cards with Finnish labels.
 
 - M18-O1 added a big source parity audit using the old zip/tar source truth, without changing Kotlin app code.
+
+- M18-O2 added a docs-only old source asset/file inventory for logos, sounds, screens, themes, navigation, i18n, and access/account/billing files.
