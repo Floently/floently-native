@@ -241,3 +241,12 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
   - Made Settings support/privacy/terms/account-deletion rows open external URLs.
   - Added an Account deletion boundary card.
   - Preserved Learn/Read/Create access separation.
+
+## M18-O5 native smoke-test checklist
+
+- Native repo:
+  - `docs/progress/NATIVE_SMOKE_TEST_CHECKLIST.md`
+  - `scripts/android-learn-smoke-install.sh`
+- Correction:
+  - Added a real-device smoke-test checklist and debug APK build/install helper script.
+  - No Kotlin app code changed in this milestone.

@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M18 web UI parity rebuild - M18-O4 clickable Settings/Account links.
+M18 web UI parity rebuild - M18-O5 native smoke-test checklist.
 
 ## Branch
 
@@ -135,3 +135,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M18-O3 added a shared old-app-style Learn utility drawer and wired a floating Menu button into non-home signed-in screens, using the big source drawer audit without changing product access boundaries.
 
 - M18-O4 made Settings support/privacy/terms/account-deletion links externally clickable and added an Account deletion boundary card while preserving Learn/Read/Create separation.
+
+- M18-O5 added a native Android smoke-test checklist and debug APK install helper script for device testing; no Kotlin app code changed.

@@ -254,3 +254,7 @@ Remaining before confident testing/release:
 ## Account deletion/link follow-up
 
 - M18-O4 made Settings external links clickable and added an Account deletion boundary card without mixing Learn, Read, and Create access.
+
+## Smoke test follow-up
+
+- M18-O5 added `docs/progress/NATIVE_SMOKE_TEST_CHECKLIST.md` and `scripts/android-learn-smoke-install.sh` so device testing can start from a tracked checklist.
