@@ -48,3 +48,18 @@ Correction:
 - The picker follows the original drawer language list pattern: Suomi, Svenska, Русский, Eesti, Українська, العربية, English.
 - The Language card no longer hides the selector by routing directly away to Settings.
 - Added bottom drawer padding so lower drawer panels can scroll above the Android gesture bar.
+
+## M19-B5 functional drawer correction
+
+Device feedback:
+
+- Language picker opened but was not scrollable.
+- Languages were not connected to the app language state.
+- Bottom Theme / Session area was partly hidden by the Android gesture bar.
+
+Correction:
+
+- Drawer language picker now lists all enabled Learn languages and scrolls.
+- Selecting a language updates the same persisted Learn language state used by Settings.
+- Home and signed-in feature drawers both receive selectedLanguage/onLanguageSelected.
+- Bottom Theme and Session panels were changed to full-width visible cards with extra bottom padding.

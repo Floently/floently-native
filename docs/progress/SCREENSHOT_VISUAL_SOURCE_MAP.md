@@ -117,3 +117,13 @@ Implemented in:
 - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/app/LearnUtilityDrawer.kt`
 
 The language selector is a drawer popover, not a Settings navigation shortcut.
+
+## M19-B5 implementation note
+
+Drawer functional correction:
+
+- Language picker now scrolls and selects enabled Learn languages.
+- Selection is wired to persisted Learn language state.
+- Theme and Session bottom panels are visible and usable.
+
+This closes drawer functional blocking issues before moving faster to Cards/YKI visual rebuilds.

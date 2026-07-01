@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.floently.learn.i18n.LearnLanguage
 import com.floently.learn.navigation.LearnFeatureDestination
 
 private val DrawerBackdrop = Color(0xB0040A18)
@@ -79,6 +80,8 @@ fun BoxScope.LearnScreenMenuButton(
 fun LearnUtilityDrawer(
     visible: Boolean,
     email: String,
+    selectedLanguage: LearnLanguage = LearnLanguage.EN,
+    onLanguageSelected: (LearnLanguage) -> Unit = {},
     onClose: () -> Unit,
     onHome: () -> Unit,
     onDestinationSelected: (LearnFeatureDestination) -> Unit,
@@ -184,21 +187,26 @@ fun LearnUtilityDrawer(
 
                         Box(modifier = Modifier.fillMaxWidth()) {
                             DrawerLanguageCard(
+                                selectedLanguage = selectedLanguage,
                                 expanded = showLanguagePicker,
                                 onClick = { showLanguagePicker = !showLanguagePicker }
                             )
                             if (showLanguagePicker) {
                                 DrawerLanguagePickerPopover(
+                                    selectedLanguage = selectedLanguage,
                                     modifier = Modifier
                                         .align(Alignment.TopEnd)
-                                        .offset(y = (-288).dp),
-                                    onPick = { showLanguagePicker = false }
+                                        .offset(y = (-318).dp),
+                                    onPick = { language ->
+                                        onLanguageSelected(language)
+                                        showLanguagePicker = false
+                                    }
                                 )
                             }
                         }
 
                         DrawerBottomPanels(onSignOut = onSignOut)
-                        Spacer(modifier = Modifier.height(34.dp))
+                        Spacer(modifier = Modifier.height(92.dp))
                     }
                 }
             }
@@ -378,6 +386,7 @@ private fun DrawerRouteItem(
 
 @Composable
 private fun DrawerLanguageCard(
+    selectedLanguage: LearnLanguage,
     expanded: Boolean,
     onClick: () -> Unit
 ) {
@@ -401,14 +410,12 @@ private fun DrawerLanguageCard(
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Black
                 )
-                if (expanded) {
-                    Text(
-                        text = "Choose language",
-                        color = DrawerMuted,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                Text(
+                    text = if (expanded) "Choose language" else selectedLanguage.nativeLabel,
+                    color = DrawerMuted,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
             Surface(
                 color = Color(0xFF223465),
@@ -417,7 +424,7 @@ private fun DrawerLanguageCard(
                 modifier = Modifier.size(38.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(text = "🇬🇧", fontSize = 19.sp)
+                    Text(text = drawerFlag(selectedLanguage), fontSize = 19.sp)
                 }
             }
         }
@@ -426,26 +433,32 @@ private fun DrawerLanguageCard(
 
 @Composable
 private fun DrawerLanguagePickerPopover(
+    selectedLanguage: LearnLanguage,
     modifier: Modifier,
-    onPick: () -> Unit
+    onPick: (LearnLanguage) -> Unit
 ) {
     Surface(
         color = Color(0xFF070D1C),
         shape = RoundedCornerShape(22.dp),
         border = BorderStroke(1.dp, Color(0xFF223465)),
-        modifier = modifier.width(178.dp)
+        modifier = modifier
+            .width(202.dp)
+            .height(318.dp)
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 12.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            DrawerLanguageOption("🇫🇮", "Suomi", selected = false, onClick = onPick)
-            DrawerLanguageOption("🇸🇪", "Svenska", selected = false, onClick = onPick)
-            DrawerLanguageOption("🇷🇺", "Русский", selected = false, onClick = onPick)
-            DrawerLanguageOption("🇪🇪", "Eesti", selected = false, onClick = onPick)
-            DrawerLanguageOption("🇺🇦", "Українська", selected = false, onClick = onPick)
-            DrawerLanguageOption("🇸🇦", "العربية", selected = false, onClick = onPick)
-            DrawerLanguageOption("🇬🇧", "English", selected = true, onClick = onPick)
+            LearnLanguage.enabledLanguages.forEach { language ->
+                DrawerLanguageOption(
+                    flag = drawerFlag(language),
+                    label = language.nativeLabel,
+                    selected = language == selectedLanguage,
+                    onClick = { onPick(language) }
+                )
+            }
         }
     }
 }
@@ -483,53 +496,75 @@ private fun DrawerLanguageOption(
     }
 }
 
+private fun drawerFlag(language: LearnLanguage): String = when (language) {
+    LearnLanguage.FI -> "🇫🇮"
+    LearnLanguage.SV -> "🇸🇪"
+    LearnLanguage.RU -> "🇷🇺"
+    LearnLanguage.ET -> "🇪🇪"
+    LearnLanguage.UK -> "🇺🇦"
+    LearnLanguage.AR -> "🇸🇦"
+    LearnLanguage.EN -> "🇬🇧"
+    LearnLanguage.SO -> "🇸🇴"
+    LearnLanguage.FA -> "🇮🇷"
+    LearnLanguage.ZH -> "🇨🇳"
+    LearnLanguage.SQ -> "🇦🇱"
+    LearnLanguage.KU -> "☀️"
+    LearnLanguage.VI -> "🇻🇳"
+    LearnLanguage.BN -> "🇧🇩"
+    LearnLanguage.TR -> "🇹🇷"
+    LearnLanguage.TL -> "🇵🇭"
+    LearnLanguage.TH -> "🇹🇭"
+    LearnLanguage.NE -> "🇳🇵"
+    LearnLanguage.ES -> "🇪🇸"
+    LearnLanguage.UR -> "🇵🇰"
+}
+
 @Composable
 private fun DrawerBottomPanels(
     onSignOut: () -> Unit
 ) {
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Surface(
             color = DrawerRaised,
             shape = RoundedCornerShape(18.dp),
             border = BorderStroke(1.dp, DrawerBorder),
             modifier = Modifier
-                .weight(1f)
-                .height(90.dp)
+                .fillMaxWidth()
+                .height(82.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Theme",
-                    color = DrawerText,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Black
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Theme",
+                        color = DrawerText,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Black
+                    )
                     Text(
                         text = "Dark mode",
                         color = DrawerMuted,
-                        fontSize = 13.sp,
-                        modifier = Modifier.weight(1f)
+                        fontSize = 14.sp
                     )
-                    Surface(
-                        color = DrawerBlue,
-                        shape = RoundedCornerShape(999.dp),
-                        modifier = Modifier.size(width = 44.dp, height = 28.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.CenterEnd) {
-                            Surface(
-                                color = Color.White,
-                                shape = CircleShape,
-                                modifier = Modifier
-                                    .padding(end = 3.dp)
-                                    .size(22.dp)
-                            ) {}
-                        }
+                }
+                Surface(
+                    color = DrawerBlue,
+                    shape = RoundedCornerShape(999.dp),
+                    modifier = Modifier.size(width = 54.dp, height = 32.dp)
+                ) {
+                    Box(contentAlignment = Alignment.CenterEnd) {
+                        Surface(
+                            color = Color.White,
+                            shape = CircleShape,
+                            modifier = Modifier
+                                .padding(end = 4.dp)
+                                .size(24.dp)
+                        ) {}
                     }
                 }
             }
@@ -540,19 +575,26 @@ private fun DrawerBottomPanels(
             shape = RoundedCornerShape(18.dp),
             border = BorderStroke(1.dp, Color(0xFF705B1E)),
             modifier = Modifier
-                .weight(1f)
-                .height(90.dp)
+                .fillMaxWidth()
+                .height(82.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Session",
-                    color = DrawerText,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Black
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Session",
+                        color = DrawerText,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                    Text(
+                        text = "End this device session",
+                        color = DrawerMuted,
+                        fontSize = 14.sp
+                    )
+                }
                 Surface(
                     color = DrawerSurface,
                     shape = RoundedCornerShape(999.dp),
@@ -563,7 +605,7 @@ private fun DrawerBottomPanels(
                         color = DrawerDanger,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Black,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp)
                     )
                 }
             }

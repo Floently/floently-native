@@ -51,6 +51,11 @@ fun LearnSignedInShell(
         LearnHomeScreen(
             session = session,
             copy = copy,
+            selectedLanguage = languageState.value,
+            onLanguageSelected = { language ->
+                languageState.value = language
+                persistLearnLanguage(context, language)
+            },
             onSignOut = onSignOut,
             onBackToSuite = onBackToSuite,
             onDestinationSelected = { selectedDestination = it }
@@ -106,6 +111,11 @@ fun LearnSignedInShell(
             LearnUtilityDrawer(
                 visible = showShellDrawer,
                 email = session.user.email,
+                selectedLanguage = languageState.value,
+                onLanguageSelected = { language ->
+                    languageState.value = language
+                    persistLearnLanguage(context, language)
+                },
                 onClose = { showShellDrawer = false },
                 onHome = {
                     showShellDrawer = false

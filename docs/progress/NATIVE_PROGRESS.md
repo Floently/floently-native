@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M19 visual parity rebuild - M19-B3 drawer language picker.
+M19 visual parity rebuild - M19-B5 drawer functional fix.
 
 ## Branch
 
@@ -145,3 +145,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M19-B rebuilt the Learn drawer from screenshots IMG_0393 and IMG_0489-IMG_0493: large right panel, blue profile header, daily streak card, grouped rows, language card, theme/session panels, and shared Home/non-Home drawer usage.
 
 - M19-B3 added the screenshot-mapped drawer language picker popover from IMG_0490 and bottom padding for Android gesture navigation.
+
+- M19-B5 made the drawer language picker scrollable/selectable, wired it to persisted Learn language state, and made Theme/Session panels visible above Android gesture navigation.

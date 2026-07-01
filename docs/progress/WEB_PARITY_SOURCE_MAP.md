@@ -297,3 +297,14 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
   - Added the floating drawer language selector popover.
   - Prevented the Language card from hiding the selector by routing directly to Settings.
   - Added bottom scroll padding for Android gesture navigation.
+
+## M19-B5 drawer functional fix
+
+- Native files:
+  - `LearnUtilityDrawer.kt`
+  - `LearnHomeScreen.kt`
+  - `LearnSignedInShell.kt`
+- Correction:
+  - Drawer language selection now uses the same persisted Learn language state as Settings.
+  - Language picker scrolls through all enabled Learn languages.
+  - Bottom drawer session/theme controls are no longer clipped.

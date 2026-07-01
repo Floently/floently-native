@@ -55,6 +55,8 @@ import com.floently.shared.design.FloentlySecondaryButton
 fun LearnHomeScreen(
     session: FloentlyAuthSession,
     copy: LearnCopy = LearnTranslations.copy(LearnLanguage.EN),
+    selectedLanguage: LearnLanguage = LearnLanguage.EN,
+    onLanguageSelected: (LearnLanguage) -> Unit = {},
     onSignOut: () -> Unit,
     onBackToSuite: (() -> Unit)? = null,
     onDestinationSelected: (LearnFeatureDestination) -> Unit = {}
@@ -120,6 +122,8 @@ fun LearnHomeScreen(
             LearnUtilityDrawer(
                 visible = showOldAppDrawer,
                 email = session.user.email,
+                selectedLanguage = selectedLanguage,
+                onLanguageSelected = onLanguageSelected,
                 onClose = { showOldAppDrawer = false },
                 onHome = {
                     showOldAppDrawer = false
