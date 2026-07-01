@@ -127,3 +127,17 @@ Drawer functional correction:
 - Theme and Session bottom panels are visible and usable.
 
 This closes drawer functional blocking issues before moving faster to Cards/YKI visual rebuilds.
+
+## M19-C implementation note
+
+Cards visual rebuild source:
+
+- IMG_0397
+- IMG_0398
+- IMG_0399
+
+Implemented in:
+
+- `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/cards/CardsScreen.kt`
+
+This pass keeps existing Cards practice behavior and changes high-impact visual structure/control styling.

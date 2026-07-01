@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M19 visual parity rebuild - M19-B5 drawer functional fix.
+M19 visual parity rebuild - M19-C cards screenshot rebuild.
 
 ## Branch
 
@@ -147,3 +147,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M19-B3 added the screenshot-mapped drawer language picker popover from IMG_0490 and bottom padding for Android gesture navigation.
 
 - M19-B5 made the drawer language picker scrollable/selectable, wired it to persisted Learn language state, and made Theme/Session panels visible above Android gesture navigation.
+
+- M19-C rebuilt high-impact Cards practice visuals from IMG_0397-IMG_0399: two-tab Vocabulary/Sentences layout, English screenshot labels, larger card, bigger word, and screenshot-style controls.

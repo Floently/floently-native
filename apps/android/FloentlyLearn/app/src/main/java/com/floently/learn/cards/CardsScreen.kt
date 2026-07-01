@@ -150,7 +150,7 @@ fun CardsScreen(
                         selectedLanguage = selectedLanguage
                     )
                     else -> StrictCardsEmpty(
-                        message = statusMessage ?: "Tässä tilassa ei vielä ole kortteja.",
+                        message = statusMessage ?: "No cards are available in this mode yet.",
                         palette = palette,
                         onReviewBanks = { banksVisible = true },
                         onBack = onBack
@@ -163,28 +163,39 @@ fun CardsScreen(
     }
 }
 
+
 @Composable
 private fun StrictCardsBackBar(
     onBack: () -> Unit,
     palette: FloentlyPalette
 ) {
-    Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp)) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 6.dp, start = 8.dp, end = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Surface(
-            color = palette.cardMuted,
+            color = Color.Transparent,
             shape = RoundedCornerShape(999.dp),
-            border = BorderStroke(1.dp, palette.border),
-            modifier = Modifier.clickable(onClick = onBack)
+            border = BorderStroke(2.dp, Color(0xFFDDE6FF)),
+            modifier = Modifier
+                .height(54.dp)
+                .clickable(onClick = onBack)
         ) {
-            Text(
-                text = "Takaisin",
-                color = palette.primary,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
-            )
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = "Back",
+                    color = Color(0xFF7FA1FF),
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier.padding(horizontal = 25.dp)
+                )
+            }
         }
     }
 }
+
 
 @Composable
 private fun StrictCardModeTabs(
@@ -193,16 +204,17 @@ private fun StrictCardModeTabs(
     onChange: (CardsDeckType) -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 28.dp),
         horizontalArrangement = Arrangement.Center
     ) {
-        StrictModePill("Sanasto", CardsDeckType.Vocabulary, selected, palette, onChange)
-        Spacer(modifier = Modifier.width(8.dp))
-        StrictModePill("Lauseet", CardsDeckType.Phrases, selected, palette, onChange)
-        Spacer(modifier = Modifier.width(8.dp))
-        StrictModePill("Kielioppi", CardsDeckType.Grammar, selected, palette, onChange)
+        StrictModePill("Vocabulary", CardsDeckType.Vocabulary, selected, palette, onChange)
+        Spacer(modifier = Modifier.width(12.dp))
+        StrictModePill("Sentences", CardsDeckType.Phrases, selected, palette, onChange)
     }
 }
+
 
 @Composable
 private fun StrictModePill(
@@ -214,18 +226,22 @@ private fun StrictModePill(
 ) {
     val active = value == selected
     Surface(
-        color = if (active) palette.primary.copy(alpha = 0.18f) else palette.cardMuted,
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, if (active) palette.primary else palette.border),
-        modifier = Modifier.clickable { onChange(value) }
+        color = if (active) Color(0x332F68FF) else Color.Transparent,
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(2.dp, if (active) Color(0xFF6288FF) else Color(0xFF273A63)),
+        modifier = Modifier
+            .height(44.dp)
+            .clickable { onChange(value) }
     ) {
-        Text(
-            text = label,
-            color = if (active) palette.primary else palette.muted,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
-        )
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = label,
+                color = if (active) Color(0xFF7897F6) else Color(0xFFA4B0C8),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.padding(horizontal = 27.dp)
+            )
+        }
     }
 }
 
@@ -278,7 +294,7 @@ private fun StrictCardsLoading(palette: FloentlyPalette) {
     Box(modifier = Modifier.fillMaxWidth().height(420.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             CircularProgressIndicator(color = palette.primary)
-            Text(text = "Ladataan kortteja…", color = palette.muted)
+            Text(text = "Loading cards…", color = palette.muted)
         }
     }
 }
@@ -309,8 +325,8 @@ private fun StrictCardsEmpty(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-            StrictSmallChip("Tarkastele pinoja", palette, onReviewBanks)
-            StrictSmallChip("Lopeta istunto", palette, onBack)
+            StrictSmallChip("Review banks", palette, onReviewBanks)
+            StrictSmallChip("End session", palette, onBack)
         }
     }
 }
@@ -339,9 +355,9 @@ private fun StrictPracticeSession(
     val progressRatio = if (session.cards.isEmpty()) 0f else min(1f, max(0.08f, (session.currentCardIndex + 1).toFloat() / session.cards.size.toFloat()))
     val activeIndicator = min(3, (progressRatio * 4f).toInt())
     val header = when (selectedDeckType) {
-        CardsDeckType.Phrases -> "Lauseet"
-        CardsDeckType.Grammar -> "Kielioppi"
-        else -> "Sanasto"
+        CardsDeckType.Phrases -> "Sentences"
+        CardsDeckType.Grammar -> "Grammar"
+        else -> "Vocabulary"
     }
 
     if (session.completed || card == null) {
@@ -359,23 +375,23 @@ private fun StrictPracticeSession(
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            StrictRecallButton("↺ Kertaus", palette, onClick = {})
+            StrictRecallButton("↶ Recall", palette, onClick = {})
             Spacer(modifier = Modifier.weight(1f))
             Text(
                 text = header,
                 color = palette.soft,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+                fontSize = 35.sp,
+                fontWeight = FontWeight.Black
             )
             Spacer(modifier = Modifier.weight(1f))
-            StrictRecallButton("Kertaus ↻", palette, onClick = {})
+            StrictRecallButton("Recall ↷", palette, onClick = {})
         }
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 46.dp)
-                .height(4.dp)
+                .padding(horizontal = 66.dp)
+                .height(5.dp)
                 .clip(RoundedCornerShape(999.dp))
                 .background(palette.border.copy(alpha = 0.55f))
         ) {
@@ -391,23 +407,23 @@ private fun StrictPracticeSession(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 430.dp)
-                .padding(top = 10.dp),
+                .heightIn(min = 470.dp)
+                .padding(top = 14.dp),
             contentAlignment = Alignment.Center
         ) {
             Surface(
                 color = palette.cardMuted,
                 shape = RoundedCornerShape(30.dp),
                 shadowElevation = 12.dp,
-                modifier = Modifier.fillMaxWidth(0.86f)
+                modifier = Modifier.fillMaxWidth(0.90f)
             ) {
                 Surface(
                     color = palette.card,
                     shape = RoundedCornerShape(24.dp),
                     border = BorderStroke(1.dp, palette.border),
-                    modifier = Modifier.padding(8.dp).heightIn(min = 414.dp)
+                    modifier = Modifier.padding(8.dp).heightIn(min = 452.dp)
                 ) {
-                    Box(modifier = Modifier.fillMaxWidth().heightIn(min = 414.dp).padding(horizontal = 18.dp, vertical = 16.dp)) {
+                    Box(modifier = Modifier.fillMaxWidth().heightIn(min = 452.dp).padding(horizontal = 18.dp, vertical = 18.dp)) {
                         if (selectedDeckType != CardsDeckType.Grammar) {
                             NativeTtsIconButton(
                                 text = card.front,
@@ -418,7 +434,7 @@ private fun StrictPracticeSession(
 
                         if (!showBack) {
                             StrictIconActionButton(
-                                text = "Ohita",
+                                text = "Skip",
                                 palette = palette,
                                 modifier = Modifier.align(Alignment.TopEnd),
                                 onClick = {
@@ -442,7 +458,7 @@ private fun StrictPracticeSession(
                             modifier = Modifier
                                 .align(Alignment.Center)
                                 .fillMaxWidth()
-                                .padding(top = 48.dp, bottom = 78.dp),
+                                .padding(top = 58.dp, bottom = 96.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
@@ -474,17 +490,17 @@ private fun StrictPracticeSession(
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth()
                                 .border(1.dp, palette.border.copy(alpha = 0.65f), RoundedCornerShape(0.dp))
-                                .padding(top = 12.dp),
+                                .padding(top = 14.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             StrictFooterGhostButton(
-                                text = "Näytä vihje",
+                                text = "Show hint",
                                 palette = palette,
                                 onClick = { showHintPopup = true }
                             )
                             Spacer(modifier = Modifier.weight(1f))
                             StrictPrimaryCardAction(
-                                text = if (showBack) "↻" else "⟳",
+                                text = if (showBack) "Check" else "↻",
                                 palette = palette,
                                 active = true,
                                 onClick = { showBack = !showBack }
@@ -556,14 +572,14 @@ private fun StrictPracticeSession(
         }
 
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            StrictSmallChip("Tarkastele pinoja", palette, onToggleBanks)
+            StrictSmallChip("Review banks", palette, onToggleBanks)
             StrictOverlayLanguageStrip(
                 selectedOverlayCode = selectedOverlayCode,
                 selectedLanguage = selectedLanguage,
                 palette = palette,
                 onSelect = onOverlayLanguageSelected
             )
-            StrictEndSessionButton("Lopeta istunto", palette, onExit)
+            StrictEndSessionButton("End session", palette, onExit)
         }
     }
 }
@@ -605,7 +621,7 @@ private fun StrictHintPopup(
                         shape = RoundedCornerShape(999.dp)
                     ) {
                         Text(
-                            text = "VIHJE",
+                            text = "HINT",
                             color = palette.primary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
@@ -622,7 +638,7 @@ private fun StrictHintPopup(
                     )
 
                     StrictPrimaryCardAction(
-                        text = "Sulje",
+                        text = "Close",
                         palette = palette,
                         active = true,
                         onClick = onDismiss
@@ -723,14 +739,14 @@ private fun AdaptiveCardCopy(
     val length = text.trim().length
     val size = when (variant) {
         AdaptiveVariant.Front -> when {
-            sentence && length > 160 -> 24
-            sentence && length > 100 -> 26
-            sentence && length > 60 -> 30
-            sentence -> 34
-            length > 160 -> 22
-            length > 100 -> 26
-            length > 60 -> 32
-            else -> 40
+            sentence && length > 160 -> 25
+            sentence && length > 100 -> 28
+            sentence && length > 60 -> 32
+            sentence -> 36
+            length > 160 -> 26
+            length > 100 -> 30
+            length > 60 -> 40
+            else -> 52
         }
         AdaptiveVariant.Prompt -> if (sentence) 18 else 18
         AdaptiveVariant.Context -> 14
@@ -784,6 +800,7 @@ private fun StrictHintBubble(
     }
 }
 
+
 @Composable
 private fun StrictRecallButton(
     text: String,
@@ -791,20 +808,25 @@ private fun StrictRecallButton(
     onClick: () -> Unit
 ) {
     Surface(
-        color = palette.cardMuted,
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, palette.border),
-        modifier = Modifier.clickable(onClick = onClick)
+        color = Color(0xFF25376F),
+        shape = RoundedCornerShape(26.dp),
+        border = BorderStroke(1.dp, Color(0xFF31487F)),
+        modifier = Modifier
+            .height(54.dp)
+            .clickable(onClick = onClick)
     ) {
-        Text(
-            text = text,
-            color = palette.muted,
-            fontWeight = FontWeight.SemiBold,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp)
-        )
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = text,
+                color = Color(0xFFB8C6E7),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
+        }
     }
 }
+
 
 @Composable
 private fun StrictIconActionButton(
@@ -814,22 +836,26 @@ private fun StrictIconActionButton(
     onClick: () -> Unit
 ) {
     Surface(
-        color = palette.cardMuted,
-        shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(1.dp, palette.border),
+        color = Color(0xFF2A3E79),
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, Color(0xFF334B88)),
         shadowElevation = 6.dp,
-        modifier = modifier.width(58.dp).height(42.dp).clickable(onClick = onClick)
+        modifier = modifier
+            .width(72.dp)
+            .height(62.dp)
+            .clickable(onClick = onClick)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = text,
-                color = palette.muted,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold
+                color = Color(0xFFBAC6E3),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Black
             )
         }
     }
 }
+
 
 @Composable
 private fun StrictFooterGhostButton(
@@ -838,20 +864,25 @@ private fun StrictFooterGhostButton(
     onClick: () -> Unit
 ) {
     Surface(
-        color = palette.cardMuted,
-        shape = RoundedCornerShape(17.dp),
-        border = BorderStroke(1.dp, palette.border),
-        modifier = Modifier.clickable(onClick = onClick)
+        color = Color.Transparent,
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, Color(0xFF33476D)),
+        modifier = Modifier
+            .height(52.dp)
+            .clickable(onClick = onClick)
     ) {
-        Text(
-            text = text,
-            color = palette.muted,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
-        )
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = text,
+                color = Color(0xFFB8C4DA),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.padding(horizontal = 22.dp)
+            )
+        }
     }
 }
+
 
 @Composable
 private fun StrictPrimaryCardAction(
@@ -860,22 +891,28 @@ private fun StrictPrimaryCardAction(
     active: Boolean,
     onClick: () -> Unit
 ) {
+    val isCheck = text.length > 2
     Surface(
-        color = if (active) palette.cardMuted else palette.primary,
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, palette.border),
-        modifier = Modifier.width(118.dp).height(54.dp).clickable(onClick = onClick)
+        color = Color(0xFF5E83FF),
+        shape = RoundedCornerShape(if (isCheck) 32.dp else 999.dp),
+        border = BorderStroke(1.dp, Color(0xFF7DB4FF)),
+        shadowElevation = 10.dp,
+        modifier = Modifier
+            .width(if (isCheck) 158.dp else 82.dp)
+            .height(if (isCheck) 72.dp else 82.dp)
+            .clickable(onClick = onClick)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = text,
-                color = if (active) palette.muted else Color.White,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+                color = Color.White,
+                fontSize = if (isCheck) 20.sp else 38.sp,
+                fontWeight = FontWeight.Black
             )
         }
     }
 }
+
 
 @Composable
 private fun StrictSmallChip(
@@ -884,20 +921,26 @@ private fun StrictSmallChip(
     onClick: () -> Unit
 ) {
     Surface(
-        color = palette.cardMuted,
-        shape = RoundedCornerShape(17.dp),
-        border = BorderStroke(1.dp, palette.border),
-        modifier = Modifier.clickable(onClick = onClick)
+        color = Color(0xFF25376F),
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, Color(0xFF31487F)),
+        shadowElevation = 4.dp,
+        modifier = Modifier
+            .height(52.dp)
+            .clickable(onClick = onClick)
     ) {
-        Text(
-            text = text,
-            color = palette.muted,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
-        )
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = text,
+                color = Color(0xFFC0CBE2),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.padding(horizontal = 26.dp)
+            )
+        }
     }
 }
+
 
 @Composable
 private fun StrictEndSessionButton(
@@ -906,18 +949,21 @@ private fun StrictEndSessionButton(
     onClick: () -> Unit
 ) {
     Surface(
-        color = palette.cardMuted,
-        shape = RoundedCornerShape(28.dp),
-        border = BorderStroke(1.dp, palette.border),
-        shadowElevation = 4.dp,
-        modifier = Modifier.fillMaxWidth(0.54f).height(54.dp).clickable(onClick = onClick)
+        color = Color(0xFF25376F),
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, Color(0xFF31487F)),
+        shadowElevation = 5.dp,
+        modifier = Modifier
+            .fillMaxWidth(0.56f)
+            .height(72.dp)
+            .clickable(onClick = onClick)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = text,
-                color = palette.muted,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                color = Color(0xFFC0CBE2),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Black
             )
         }
     }
@@ -936,13 +982,13 @@ private fun StrictRatingPanel(
     ) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(
-                text = "Tarkistettu",
+                text = "Reviewed",
                 color = palette.accent,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.ExtraBold
             )
             Text(
-                text = "Valitse, kuinka hyvin muistit tämän kortin.",
+                text = "Choose how well you remembered this card.",
                 color = palette.text,
                 style = MaterialTheme.typography.bodyMedium
             )

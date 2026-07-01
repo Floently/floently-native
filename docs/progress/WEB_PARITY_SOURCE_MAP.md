@@ -308,3 +308,12 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
   - Drawer language selection now uses the same persisted Learn language state as Settings.
   - Language picker scrolls through all enabled Learn languages.
   - Bottom drawer session/theme controls are no longer clipped.
+
+## M19-C cards screenshot rebuild
+
+- Screenshot source:
+  - `IMG_0397-IMG_0399`
+- Native file:
+  - `CardsScreen.kt`
+- Correction:
+  - Cards practice visuals now follow the original screenshot flow more closely while preserving native data/session behavior.
