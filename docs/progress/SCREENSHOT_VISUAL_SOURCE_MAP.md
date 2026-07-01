@@ -177,3 +177,12 @@ Implemented in:
 - `AccountScreen.kt`
 
 No intermediate phone check is done; final device comparison comes after the full M19 sweep.
+
+## M19-I/J implementation note
+
+Final visual sweep:
+
+- Roleplay copy and cards were aligned with the screenshot-driven M19 rhythm.
+- Progress copy and cards were aligned with the screenshot-driven M19 rhythm.
+- No intermediate phone check was done.
+- Next step is one full-device check across all screens.

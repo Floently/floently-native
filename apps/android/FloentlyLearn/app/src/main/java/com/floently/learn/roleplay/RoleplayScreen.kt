@@ -84,13 +84,13 @@ fun RoleplayScreen(
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 Text(
-                    text = copy.roleplayTitle,
+                    text = "Roleplay",
                     color = palette.text,
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = copy.roleplaySubtitle,
+                    text = "Practice short, realistic Finnish conversations with AI-backed variation and beginner-safe correction.",
                     color = palette.muted,
                     style = MaterialTheme.typography.titleMedium
                 )
@@ -104,7 +104,7 @@ fun RoleplayScreen(
 
                 statusMessage?.let { message ->
                     RoleplayStatusCard(
-                        title = "Huomio",
+                        title = "Notice",
                         body = message,
                         palette = palette
                     )
@@ -113,14 +113,14 @@ fun RoleplayScreen(
                 val dashboard = dashboardState
                 if (dashboard == null || dashboard.isLoading) {
                     RoleplayStatusCard(
-                        title = "Ladataan keskusteluja…",
-                        body = "Haetaan ${selectedLevel.name}-tason harjoituksia.",
+                        title = "Loading conversations…",
+                        body = "Loading ${selectedLevel.name} practice scenarios.",
                         palette = palette
                     )
                 } else if (dashboard.scenarios.isEmpty()) {
                     RoleplayStatusCard(
-                        title = "Ei vielä keskusteluja tasolle ${dashboard.selectedLevel.name}",
-                        body = "Valitse toinen taso tai palaa myöhemmin, kun uusia harjoituksia on lisätty.",
+                        title = "No conversations yet for ${dashboard.selectedLevel.name}",
+                        body = "Choose another level or come back later when new scenarios have been added.",
                         palette = palette
                     )
                 } else {
@@ -128,7 +128,7 @@ fun RoleplayScreen(
                         RoleplayScenarioCard(
                             scenario = scenario,
                             palette = palette,
-                            actionLabel = if (scenario.locked) "Katso lukituksen syy" else copy.roleplayAction,
+                            actionLabel = if (scenario.locked) "Locked" else "Start roleplay",
                             onClick = {
                                 scope.launch {
                                     when (val result = repository.startSession(scenario.id)) {
@@ -146,7 +146,7 @@ fun RoleplayScreen(
                 }
 
                 FloentlyPrimaryButton(
-                    title = copy.backToLearn,
+                    title = "Back to Learn",
                     product = FloentlyProduct.Learn,
                     onClick = onBack
                 )
@@ -181,7 +181,7 @@ private fun RoleplaySessionScreen(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = copy.roleplaySubtitle,
+                text = "Practice short, realistic Finnish conversations with AI-backed variation and beginner-safe correction.",
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -201,18 +201,18 @@ private fun RoleplaySessionScreen(
 
             FloentlyCard(product = FloentlyProduct.Learn) {
                 Text(
-                    text = "Sinun vastauksesi",
+                    text = "Your response",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 OutlinedTextField(
                     value = reply,
                     onValueChange = { reply = it },
-                    label = { Text("Kirjoita suomeksi") },
+                    label = { Text("Write in Finnish") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    text = "Vinkki: yksi selkeä lause riittää. Esimerkiksi: Kiitos, se sopii hyvin.",
+                    text = "Tip: one clear sentence is enough. Example: Kiitos, se sopii hyvin.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 statusMessage?.let { message ->
@@ -222,12 +222,12 @@ private fun RoleplaySessionScreen(
                     )
                 }
                 FloentlyPrimaryButton(
-                    title = "Lähetä vastaus",
+                    title = "Send response",
                     product = FloentlyProduct.Learn,
                     onClick = {
                         val cleanReply = reply.trim()
                         if (cleanReply.isBlank()) {
-                            statusMessage = "Kirjoita lyhyt suomenkielinen vastaus ennen lähettämistä."
+                            statusMessage = "Write a short Finnish answer before sending."
                         } else {
                             scope.launch {
                                 when (val result = repository.sendLearnerMessage(session, cleanReply)) {
@@ -246,7 +246,7 @@ private fun RoleplaySessionScreen(
             }
 
             FloentlyPrimaryButton(
-                title = copy.backToLearn,
+                title = "Back to Learn",
                 product = FloentlyProduct.Learn,
                 onClick = onExit
             )
@@ -259,9 +259,9 @@ private fun RoleplayRouteHeader(
     palette: FloentlyPalette
 ) {
     Surface(
-        color = palette.card,
-        shape = RoundedCornerShape(28.dp),
-        border = BorderStroke(1.dp, palette.border),
+        color = Color(0xFF13213F),
+        shape = RoundedCornerShape(32.dp),
+        border = BorderStroke(1.dp, Color(0xFF2A3E6E)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -269,26 +269,26 @@ private fun RoleplayRouteHeader(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = "SPEAK",
+                text = "ROLEPLAY",
                 color = palette.accent,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 3.sp
             )
             Text(
-                text = "Speaking Lab",
+                text = "Conversation practice",
                 color = palette.text,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Black
             )
             Text(
-                text = "Short turns. Clear repair. Less pressure.",
+                text = "Short turns, clear repair, and less pressure.",
                 color = palette.muted,
                 style = MaterialTheme.typography.bodyMedium
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                RoleplayTinyPill("Step 1", "Record once", palette.primary, palette)
-                RoleplayTinyPill("Step 2", "Repair once", palette.accent, palette)
+                RoleplayTinyPill("Step 1", "Listen", palette.primary, palette)
+                RoleplayTinyPill("Step 2", "Reply", palette.accent, palette)
             }
         }
     }
@@ -358,9 +358,9 @@ private fun RoleplayScenarioCard(
     onClick: () -> Unit
 ) {
     Surface(
-        color = palette.cardMuted,
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, palette.border),
+        color = Color(0xFF13213F),
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, Color(0xFF2A3E6E)),
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
@@ -378,7 +378,7 @@ private fun RoleplayScenarioCard(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = if (scenario.locked) "LUKITTU" else "VALMIS",
+                    text = if (scenario.locked) "LOCKED" else "READY",
                     color = if (scenario.locked) palette.soft else palette.accent,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Black,

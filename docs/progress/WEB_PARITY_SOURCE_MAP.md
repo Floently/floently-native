@@ -343,3 +343,11 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
   - `IMG_0480-IMG_0494`
 - Correction:
   - Updated high-impact visual/copy structure for Home, Professional Finnish, Settings, and Account before the final full app check.
+
+## M19-I/J roleplay progress final sweep
+
+- Native files:
+  - `RoleplayScreen.kt`
+  - `LearnProgressScreen.kt`
+- Correction:
+  - Updated remaining Roleplay and Progress visible copy and card rhythm before the full device check.
