@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M19 visual parity rebuild - M19-B drawer screenshot rebuild.
+M19 visual parity rebuild - M19-B3 drawer language picker.
 
 ## Branch
 
@@ -143,3 +143,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M19-A recorded the uploaded original-app screenshot source map, scroll-continuation rule, and YKI naming distinction: YKI test means YKI Practice, while Full YKI Exam means YKI Mock Exam.
 
 - M19-B rebuilt the Learn drawer from screenshots IMG_0393 and IMG_0489-IMG_0493: large right panel, blue profile header, daily streak card, grouped rows, language card, theme/session panels, and shared Home/non-Home drawer usage.
+
+- M19-B3 added the screenshot-mapped drawer language picker popover from IMG_0490 and bottom padding for Android gesture navigation.

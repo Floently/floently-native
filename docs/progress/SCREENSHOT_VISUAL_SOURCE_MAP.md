@@ -105,3 +105,15 @@ Implemented in:
 - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/app/LearnHomeScreen.kt`
 
 The rebuild must still be compared on device before claiming exact drawer parity.
+
+## M19-B3 implementation note
+
+Drawer language picker source:
+
+- IMG_0490
+
+Implemented in:
+
+- `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/app/LearnUtilityDrawer.kt`
+
+The language selector is a drawer popover, not a Settings navigation shortcut.

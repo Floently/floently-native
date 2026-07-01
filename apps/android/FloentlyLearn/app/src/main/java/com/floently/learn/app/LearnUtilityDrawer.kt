@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,6 +24,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -80,6 +85,8 @@ fun LearnUtilityDrawer(
     onSignOut: () -> Unit
 ) {
     if (!visible) return
+
+    var showLanguagePicker by remember(email) { mutableStateOf(false) }
 
     Dialog(
         onDismissRequest = onClose,
@@ -175,11 +182,23 @@ fun LearnUtilityDrawer(
                             onClick = { onDestinationSelected(LearnFeatureDestination.Settings) }
                         )
 
-                        DrawerLanguageCard(
-                            onClick = { onDestinationSelected(LearnFeatureDestination.Settings) }
-                        )
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            DrawerLanguageCard(
+                                expanded = showLanguagePicker,
+                                onClick = { showLanguagePicker = !showLanguagePicker }
+                            )
+                            if (showLanguagePicker) {
+                                DrawerLanguagePickerPopover(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .offset(y = (-288).dp),
+                                    onPick = { showLanguagePicker = false }
+                                )
+                            }
+                        }
 
                         DrawerBottomPanels(onSignOut = onSignOut)
+                        Spacer(modifier = Modifier.height(34.dp))
                     }
                 }
             }
@@ -359,6 +378,7 @@ private fun DrawerRouteItem(
 
 @Composable
 private fun DrawerLanguageCard(
+    expanded: Boolean,
     onClick: () -> Unit
 ) {
     Surface(
@@ -374,13 +394,22 @@ private fun DrawerLanguageCard(
             modifier = Modifier.padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Language",
-                color = DrawerText,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Black,
-                modifier = Modifier.weight(1f)
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Language",
+                    color = DrawerText,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Black
+                )
+                if (expanded) {
+                    Text(
+                        text = "Choose language",
+                        color = DrawerMuted,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
             Surface(
                 color = Color(0xFF223465),
                 shape = CircleShape,
@@ -391,6 +420,65 @@ private fun DrawerLanguageCard(
                     Text(text = "🇬🇧", fontSize = 19.sp)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun DrawerLanguagePickerPopover(
+    modifier: Modifier,
+    onPick: () -> Unit
+) {
+    Surface(
+        color = Color(0xFF070D1C),
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, Color(0xFF223465)),
+        modifier = modifier.width(178.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            DrawerLanguageOption("🇫🇮", "Suomi", selected = false, onClick = onPick)
+            DrawerLanguageOption("🇸🇪", "Svenska", selected = false, onClick = onPick)
+            DrawerLanguageOption("🇷🇺", "Русский", selected = false, onClick = onPick)
+            DrawerLanguageOption("🇪🇪", "Eesti", selected = false, onClick = onPick)
+            DrawerLanguageOption("🇺🇦", "Українська", selected = false, onClick = onPick)
+            DrawerLanguageOption("🇸🇦", "العربية", selected = false, onClick = onPick)
+            DrawerLanguageOption("🇬🇧", "English", selected = true, onClick = onPick)
+        }
+    }
+}
+
+@Composable
+private fun DrawerLanguageOption(
+    flag: String,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = if (selected) Color(0xFF18295A) else Color.Transparent,
+        shape = RoundedCornerShape(999.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(38.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = flag, fontSize = 19.sp)
+            Spacer(modifier = Modifier.width(11.dp))
+            Text(
+                text = label,
+                color = DrawerText,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

@@ -35,3 +35,16 @@ The drawer now visually separates:
 - YKI Mock Exam
 
 The current native navigation still routes both to the existing YKI practice destination. A dedicated YKI Mock Exam route/screen must be added in the M19-E YKI Mock Exam rebuild.
+
+## M19-B3 language picker correction
+
+Screenshot source:
+
+- IMG_0490
+
+Correction:
+
+- Tapping the Language card now opens a floating language picker popover above the card.
+- The picker follows the original drawer language list pattern: Suomi, Svenska, Русский, Eesti, Українська, العربية, English.
+- The Language card no longer hides the selector by routing directly away to Settings.
+- Added bottom drawer padding so lower drawer panels can scroll above the Android gesture bar.

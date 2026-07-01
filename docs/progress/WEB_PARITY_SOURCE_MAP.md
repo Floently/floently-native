@@ -286,3 +286,14 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
   - Rebuilt the drawer from visual screenshot source rather than only source code.
   - Home and non-Home screens now share the same screenshot-mapped drawer.
   - YKI Practice and YKI Mock Exam are visually distinguished in the drawer.
+
+## M19-B3 drawer language picker
+
+- Screenshot source:
+  - `IMG_0490`
+- Native file:
+  - `LearnUtilityDrawer.kt`
+- Correction:
+  - Added the floating drawer language selector popover.
+  - Prevented the Language card from hiding the selector by routing directly to Settings.
+  - Added bottom scroll padding for Android gesture navigation.
