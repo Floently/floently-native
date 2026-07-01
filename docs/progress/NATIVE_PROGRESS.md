@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M18 web UI parity rebuild - M18-O5 native smoke-test checklist.
+M18 web UI parity rebuild - M18-O6R final pretest guard cleanup.
 
 ## Branch
 
@@ -137,3 +137,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M18-O4 made Settings support/privacy/terms/account-deletion links externally clickable and added an Account deletion boundary card while preserving Learn/Read/Create separation.
 
 - M18-O5 added a native Android smoke-test checklist and debug APK install helper script for device testing; no Kotlin app code changed.
+
+- M18-O6R removed the unused old SmartHelper Kotlin file after confirming no external references, then re-ran leftover guards and native builds before device testing.

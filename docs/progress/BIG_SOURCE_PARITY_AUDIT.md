@@ -258,3 +258,7 @@ Remaining before confident testing/release:
 ## Smoke test follow-up
 
 - M18-O5 added `docs/progress/NATIVE_SMOKE_TEST_CHECKLIST.md` and `scripts/android-learn-smoke-install.sh` so device testing can start from a tracked checklist.
+
+## SmartHelper cleanup follow-up
+
+- M18-O6R removed the unused `LearnSmartHelper.kt` file after confirming it had no remaining external references.

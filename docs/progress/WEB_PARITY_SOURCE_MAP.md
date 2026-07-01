@@ -250,3 +250,11 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
 - Correction:
   - Added a real-device smoke-test checklist and debug APK build/install helper script.
   - No Kotlin app code changed in this milestone.
+
+## M18-O6R final pretest guard cleanup
+
+- Native repo:
+  - removed `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/app/LearnSmartHelper.kt`
+- Correction:
+  - Removed unused old SmartHelper shell after all routes had been replaced by old-source-mapped native UI.
+  - Verified no leftover SmartHelper/WebView/legacy source path matches before device testing.
