@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,6 +45,8 @@ fun LearnSettingsScreen(
     onBack: () -> Unit,
     onSignOut: () -> Unit
 ) {
+    val uriHandler = LocalUriHandler.current
+
     FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
         Column(
             modifier = Modifier
@@ -87,7 +90,10 @@ fun LearnSettingsScreen(
                 palette = palette
             )
 
-            SettingsSupportCard(palette = palette)
+            SettingsSupportCard(
+                palette = palette,
+                onOpenUrl = { url -> uriHandler.openUri(url) }
+            )
 
             FloentlyPrimaryButton(
                 title = copy.backToLearn,
@@ -298,7 +304,8 @@ private fun SettingsInfoCard(
 
 @Composable
 private fun SettingsSupportCard(
-    palette: FloentlyPalette
+    palette: FloentlyPalette,
+    onOpenUrl: (String) -> Unit
 ) {
     Surface(
         color = palette.card,
@@ -316,10 +323,10 @@ private fun SettingsSupportCard(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Black
             )
-            SettingsLinkRow("Tuki", "https://learn.floently.com/support", palette)
-            SettingsLinkRow("Tietosuojaseloste", "https://learn.floently.com/privacy-policy", palette)
-            SettingsLinkRow("Käyttöehdot", "https://learn.floently.com/terms-of-use", palette)
-            SettingsLinkRow("Tilin poistaminen", "https://learn.floently.com/account-deletion", palette)
+            SettingsLinkRow("Tuki", "https://learn.floently.com/support", palette, onOpenUrl)
+            SettingsLinkRow("Tietosuojaseloste", "https://learn.floently.com/privacy-policy", palette, onOpenUrl)
+            SettingsLinkRow("Käyttöehdot", "https://learn.floently.com/terms-of-use", palette, onOpenUrl)
+            SettingsLinkRow("Tilin poistaminen", "https://learn.floently.com/account-deletion", palette, onOpenUrl)
             Text(
                 text = "Poistopyyntö aloitetaan asetuksista ja käsitellään normaalisti 24 tunnin sisällä, ellei laki, väärinkäytösten ehkäisy tai kirjanpito edellytä säilytystä.",
                 color = palette.soft,
@@ -333,13 +340,16 @@ private fun SettingsSupportCard(
 private fun SettingsLinkRow(
     label: String,
     value: String,
-    palette: FloentlyPalette
+    palette: FloentlyPalette,
+    onOpenUrl: (String) -> Unit
 ) {
     Surface(
         color = palette.cardMuted,
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, palette.border),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onOpenUrl(value) }
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -356,6 +366,13 @@ private fun SettingsLinkRow(
                 text = value,
                 color = palette.text,
                 style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Avaa linkki",
+                color = palette.accent,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.1.sp
             )
         }
     }

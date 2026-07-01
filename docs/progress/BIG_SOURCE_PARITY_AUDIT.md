@@ -250,3 +250,7 @@ Remaining before confident testing/release:
 ## Drawer follow-up
 
 - M18-O3 added a reusable native Learn utility drawer for non-home signed-in screens, based on the old UtilityDrawer/navigation audit.
+
+## Account deletion/link follow-up
+
+- M18-O4 made Settings external links clickable and added an Account deletion boundary card without mixing Learn, Read, and Create access.

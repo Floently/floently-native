@@ -3,6 +3,7 @@ package com.floently.learn.account
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -48,6 +50,7 @@ fun AccountScreen(
     onBack: () -> Unit,
     onSignOut: () -> Unit
 ) {
+    val uriHandler = LocalUriHandler.current
     var dashboardState by remember { mutableStateOf<AccountDashboardState?>(null) }
 
     LaunchedEffect(repository, session.user.email) {
@@ -115,6 +118,13 @@ fun AccountScreen(
                     maxDevices = dashboard.maxDevices,
                     devices = dashboard.devices,
                     palette = palette
+                )
+
+                AccountDeletionBoundaryCard(
+                    palette = palette,
+                    onOpenDeletion = {
+                        uriHandler.openUri("https://learn.floently.com/account-deletion")
+                    }
                 )
             }
 
@@ -536,6 +546,52 @@ private fun AccountActionRow(
         }
     }
 }
+
+@Composable
+private fun AccountDeletionBoundaryCard(
+    palette: FloentlyPalette,
+    onOpenDeletion: () -> Unit
+) {
+    Surface(
+        color = palette.card,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "Tilin poistamisen raja",
+                color = palette.text,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black
+            )
+            Text(
+                text = "Poistopyyntö käynnistetään erillisestä Learn-linkistä. Pyyntö ei poista Read- tai Create Studio -pääsyä automaattisesti, koska tuotteiden käyttöoikeudet pidetään erillään.",
+                color = palette.muted,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Surface(
+                color = Color(0xFFFF7A7A).copy(alpha = 0.16f),
+                shape = RoundedCornerShape(999.dp),
+                border = BorderStroke(1.dp, Color(0xFFFF7A7A).copy(alpha = 0.55f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onOpenDeletion)
+            ) {
+                Text(
+                    text = "Avaa tilin poistamisen ohje",
+                    color = Color(0xFFFFB0B0),
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier.padding(vertical = 13.dp, horizontal = 16.dp)
+                )
+            }
+        }
+    }
+}
+
 
 @Composable
 private fun AccountStatusCard(

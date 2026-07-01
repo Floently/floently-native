@@ -227,3 +227,17 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
   - Added a reusable old-app-style utility drawer for signed-in Learn screens.
   - Added a floating Menu button on non-home screens so users can reach Home, Cards, Professional Finnish, YKI, Roleplay, Progress, Account, Settings, and sign out without returning manually.
   - Preserved Learn/Read/Create access separation and did not import old web code directly.
+
+## M18-O4 clickable Settings/Account links
+
+- Source:
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/apps/client/app/account-deletion.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/apps/client/state/SettingsRoute.tsx`
+  - `/home/vitus/floently-old-latest-source-truth-m18x6/files/apps/client/app/legal/account-deletion.tsx`
+- Native files:
+  - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/settings/LearnSettingsScreen.kt`
+  - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/account/AccountScreen.kt`
+- Correction:
+  - Made Settings support/privacy/terms/account-deletion rows open external URLs.
+  - Added an Account deletion boundary card.
+  - Preserved Learn/Read/Create access separation.
