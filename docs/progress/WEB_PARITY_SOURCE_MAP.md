@@ -273,3 +273,16 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
   - "YKI test" must be treated as YKI Practice.
   - "Full YKI exam" must be treated as YKI Mock Exam.
   - M19 visual work must be screenshot-driven.
+
+## M19-B drawer screenshot rebuild
+
+- Screenshot source:
+  - `IMG_0393`
+  - `IMG_0489-IMG_0493`
+- Native files:
+  - `LearnUtilityDrawer.kt`
+  - `LearnHomeScreen.kt`
+- Correction:
+  - Rebuilt the drawer from visual screenshot source rather than only source code.
+  - Home and non-Home screens now share the same screenshot-mapped drawer.
+  - YKI Practice and YKI Mock Exam are visually distinguished in the drawer.

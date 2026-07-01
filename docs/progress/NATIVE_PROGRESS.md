@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M19 visual parity rebuild - M19-A screenshot source map and YKI naming.
+M19 visual parity rebuild - M19-B drawer screenshot rebuild.
 
 ## Branch
 
@@ -141,3 +141,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M18-O6R removed the unused old SmartHelper Kotlin file after confirming no external references, then re-ran leftover guards and native builds before device testing.
 
 - M19-A recorded the uploaded original-app screenshot source map, scroll-continuation rule, and YKI naming distinction: YKI test means YKI Practice, while Full YKI Exam means YKI Mock Exam.
+
+- M19-B rebuilt the Learn drawer from screenshots IMG_0393 and IMG_0489-IMG_0493: large right panel, blue profile header, daily streak card, grouped rows, language card, theme/session panels, and shared Home/non-Home drawer usage.

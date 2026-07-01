@@ -91,3 +91,17 @@ Do not claim exact visual parity until the rebuilt native screen is installed on
 6. M19-G: Professional Finnish rebuild from IMG_0394-IMG_0408
 7. M19-H: Settings/subscription/account rebuild from IMG_0480-IMG_0494
 8. M19-I: full device screenshot comparison pass
+
+## M19-B implementation note
+
+Drawer visual rebuild source:
+
+- IMG_0393
+- IMG_0489-IMG_0493
+
+Implemented in:
+
+- `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/app/LearnUtilityDrawer.kt`
+- `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/app/LearnHomeScreen.kt`
+
+The rebuild must still be compared on device before claiming exact drawer parity.
