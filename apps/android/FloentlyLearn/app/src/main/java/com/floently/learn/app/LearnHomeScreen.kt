@@ -71,33 +71,32 @@ fun LearnHomeScreen(
                 WebChromeHeader(palette = palette, onHome = {}, onMenu = { showOldAppDrawer = true })
                 Spacer(modifier = Modifier.height(28.dp))
                 Text(greeting(session), color = palette.text, style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Black)
-                Text("Valitse seuraava harjoitus tai avaa Menu nähdäksesi kaikki polut.", color = palette.muted, style = MaterialTheme.typography.titleMedium)
-                OldAppReadinessPillars(palette = palette)
-                WebHeroCard(
-                    label = "TYÖELÄMÄN SUOMI",
-                    title = "Seuraava paras askel",
-                    body = "Jatka tänään YKI-valmistautumista, sanastoa tai ammatillista suomea yhdestä näkymästä.",
-                    action = "Jatka polkua →",
+                Text("All caught up! Choose the pathway that needs attention next.", color = palette.muted, style = MaterialTheme.typography.titleMedium)
+                                WebHeroCard(
+                    label = "LANGUAGE TO WORK",
+                    title = "Next best step",
+                    body = "Bundle pathway active — continue YKI Prep or your profession track today.",
+                    action = "Continue pathway →",
                     progressText = "–",
                     palette = palette,
                     onAction = { onDestinationSelected(LearnFeatureDestination.YkiPractice) }
                 )
-                WebSectionLabel(text = "PIKA-ALOITUS", palette = palette)
+                WebSectionLabel(text = "PATHWAYS", palette = palette)
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
-                    WebPathTile("Sanasto ja roolipeli", "Kortit, fraasituki, kuuntelu ja ohjattu harjoittelu", "Oppiminen", palette.primary, palette, Modifier.weight(1f)) { onDestinationSelected(LearnFeatureDestination.Cards) }
-                    WebPathTile("Työpaikan tilanteet", "Ohjeet, vuoronvaihdot, raportointi ja hoitotyön tilanteet", "Tilanteet", palette.warning, palette, Modifier.weight(1f)) { onDestinationSelected(LearnFeatureDestination.ProfessionalFinnish) }
+                    WebPathTile("Vocabulary & roleplay", "Cards, phrase support, and guided practice", "Learn", palette.primary, palette, Modifier.weight(1f)) { onDestinationSelected(LearnFeatureDestination.Cards) }
+                    WebPathTile("Workplace scenarios", "Instructions, handovers, and reporting", "Scenarios", palette.warning, palette, Modifier.weight(1f)) { onDestinationSelected(LearnFeatureDestination.ProfessionalFinnish) }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
-                    WebPathTile("YKI-valmistautuminen", "Koesimulaatio, kirjoittaminen, puhuminen ja virallinen harjoittelu", "YKI", Color(0xFF9D7CFF), palette, Modifier.weight(1f)) { onDestinationSelected(LearnFeatureDestination.YkiPractice) }
-                    WebPathTile("Roolipeli", "Keskustelut, anti-repetition coaching ja beginner-safe vastaukset", "Puhe", palette.accent, palette, Modifier.weight(1f)) { onDestinationSelected(LearnFeatureDestination.Roleplay) }
+                    WebPathTile("YKI Prep", "Practice and exam simulation", "YKI", Color(0xFF9D7CFF), palette, Modifier.weight(1f)) { onDestinationSelected(LearnFeatureDestination.YkiPractice) }
+                    WebPathTile("All professions", "Vocabulary, interview, and work-ready Finnish", "Profession", palette.accent, palette, Modifier.weight(1f)) { onDestinationSelected(LearnFeatureDestination.ProfessionalFinnish) }
                 }
                 WebStatRow(palette = palette)
                 WebInfoCard(
-                    label = "OPAS",
-                    title = "Valitse harjoituspolku",
-                    body = "Avaa vihje, jos haluat nopean suunnan. Avaa Menu, kun haluat vaihtaa kortteihin, YKI-harjoitteluun, työpaikan tilanteisiin, tiliin tai asetuksiin.",
-                    primary = "Avaa vihje",
-                    secondary = "Avaa Menu",
+                    label = "FLOW",
+                    title = "Deployment-ready flow",
+                    body = "Navigation follows paid access, while Home and Billing still show the locked pathways clearly. That keeps upgrades understandable during deployment and later organization rollout.",
+                    primary = "Helpful hint",
+                    secondary = "Menu",
                     palette = palette,
                     onPrimary = { showOldAppHomeHint = true },
                     onSecondary = { showOldAppDrawer = true }
@@ -108,11 +107,11 @@ fun LearnHomeScreen(
             }
             OldAppHomeHintPopup(
                 visible = showOldAppHomeHint,
-                badgeLabel = "Hyödyllinen vihje",
-                title = "Etsitkö YKI-valmistautumista?",
-                body = "Avaa sivupalkki ja valitse YKI-valmistautuminen, kun haluat virallista koetyötä, tai käytä Työpaikan tilanteita, kun haluat puheviestintää työtilanteissa.",
-                primaryLabel = "Vie minut sinne",
-                secondaryLabel = "Sulje",
+                badgeLabel = "Helpful hint",
+                title = "Looking for YKI Prep?",
+                body = "Open the sidebar and choose YKI Prep when you want formal exam work, or use Workplace Scenarios when you want spoken work communication.",
+                primaryLabel = "Take me there",
+                secondaryLabel = "Dismiss",
                 onPrimary = {
                     showOldAppHomeHint = false
                     onDestinationSelected(LearnFeatureDestination.YkiPractice)

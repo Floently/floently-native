@@ -83,13 +83,13 @@ fun ProfessionalFinnishScreen(
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 Text(
-                    text = copy.professionalTitle,
+                    text = "Doctor",
                     color = palette.text,
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = copy.professionalSubtitle,
+                    text = "Keep this page profession-focused: flashcards, roleplay, and interview practice for the work context you paid for.",
                     color = palette.muted,
                     style = MaterialTheme.typography.titleMedium
                 )
@@ -103,7 +103,7 @@ fun ProfessionalFinnishScreen(
 
                 statusMessage?.let { message ->
                     ProfessionalStatusCard(
-                        title = "Huomio",
+                        title = "Notice",
                         body = message,
                         palette = palette
                     )
@@ -112,14 +112,14 @@ fun ProfessionalFinnishScreen(
                 val dashboard = dashboardState
                 if (dashboard == null || dashboard.isLoading) {
                     ProfessionalStatusCard(
-                        title = "Ladataan työpaikan suomea…",
-                        body = "Haetaan ${selectedDomain.displayName()} -harjoituksia.",
+                        title = "Loading workplace Finnish…",
+                        body = "Loading ${selectedDomain.displayName()} exercises.",
                         palette = palette
                     )
                 } else if (dashboard.modules.isEmpty()) {
                     ProfessionalStatusCard(
-                        title = "Ei vielä moduuleja",
-                        body = "Valitse toinen työtilanne tai palaa myöhemmin, kun uusia harjoituksia on lisätty.",
+                        title = "No modules yet",
+                        body = "Choose another workplace area or come back later when new exercises have been added.",
                         palette = palette
                     )
                 } else {
@@ -129,7 +129,7 @@ fun ProfessionalFinnishScreen(
                             module = module,
                             progress = progress,
                             palette = palette,
-                            actionLabel = if (module.locked) "Katso lukituksen syy" else copy.professionalAction,
+                            actionLabel = if (module.locked) "Locked" else "Open practice",
                             onClick = {
                                 scope.launch {
                                     when (val result = repository.startSession(module.id)) {
@@ -188,7 +188,7 @@ private fun ProfessionalFinnishSessionScreen(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = copy.professionalSubtitle,
+                text = "Keep this page profession-focused: flashcards, roleplay, and interview practice for the work context you paid for.",
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -216,7 +216,7 @@ private fun ProfessionalFinnishSessionScreen(
                     onContinue = {
                         val cleanResponse = response.trim()
                         if (cleanResponse.isBlank()) {
-                            statusMessage = "Kirjoita vastaus ennen jatkamista."
+                            statusMessage = "Write an answer before continuing."
                         } else {
                             scope.launch {
                                 session = repository.saveResponse(session, scenario.id, cleanResponse)
@@ -262,8 +262,8 @@ private fun ProfessionalSessionProgressCard(
                 trackColor = palette.border.copy(alpha = 0.45f)
             )
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                ProfessionalSessionMetricBox("Tilanne", "$current/$total", palette.warning, palette, Modifier.weight(1f))
-                ProfessionalSessionMetricBox("Vastaukset", responses.toString(), palette.accent, palette, Modifier.weight(1f))
+                ProfessionalSessionMetricBox("Scenario", "$current/$total", palette.warning, palette, Modifier.weight(1f))
+                ProfessionalSessionMetricBox("Responses", responses.toString(), palette.accent, palette, Modifier.weight(1f))
             }
         }
     }
@@ -304,9 +304,9 @@ private fun ProfessionalScenarioPracticeCard(
     onContinue: () -> Unit
 ) {
     Surface(
-        color = palette.card,
-        shape = RoundedCornerShape(28.dp),
-        border = BorderStroke(1.dp, palette.border),
+        color = Color(0xFF13213F),
+        shape = RoundedCornerShape(32.dp),
+        border = BorderStroke(1.dp, Color(0xFF2A3E6E)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -340,13 +340,13 @@ private fun ProfessionalScenarioPracticeCard(
             )
 
             ProfessionalPromptBlock(
-                label = "Tilanne",
+                label = "Situation",
                 body = scenario.context,
                 palette = palette
             )
 
             ProfessionalPromptBlock(
-                label = "Tehtävä",
+                label = "Task",
                 body = scenario.prompt,
                 palette = palette
             )
@@ -354,7 +354,7 @@ private fun ProfessionalScenarioPracticeCard(
             if (scenario.modelPhrases.isNotEmpty()) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "MALLILauseet",
+                        text = "MODEL PHRASES",
                         color = palette.accent,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
@@ -399,7 +399,7 @@ private fun ProfessionalScenarioPracticeCard(
                     .clickable(onClick = onContinue)
             ) {
                 Text(
-                    text = "Tallenna ja jatka",
+                    text = "Save and continue",
                     color = Color.White,
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Black,
@@ -493,7 +493,7 @@ private fun ProfessionalCompletionCard(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = "Harjoitus valmis",
+                text = "Practice complete",
                 color = palette.text,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Black
@@ -535,7 +535,7 @@ private fun ProfessionalRouteHeader(
                 letterSpacing = 3.sp
             )
             Text(
-                text = "Työpaikan tilanteet",
+                text = "Doctor",
                 color = palette.text,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Black
@@ -788,18 +788,18 @@ private fun ProfessionalFinnishDomain.domainColor(palette: FloentlyPalette): Col
 
 
 private fun ProfessionalFinnishDomain.displayName(): String = when (this) {
-    ProfessionalFinnishDomain.Healthcare -> "Hoitotyö"
-    ProfessionalFinnishDomain.Office -> "Toimisto"
-    ProfessionalFinnishDomain.CustomerService -> "Asiakaspalvelu"
+    ProfessionalFinnishDomain.Healthcare -> "Nurse"
+    ProfessionalFinnishDomain.Office -> "Doctor"
+    ProfessionalFinnishDomain.CustomerService -> "Practical Nurse"
     ProfessionalFinnishDomain.JobSearch -> "Työnhaku"
     ProfessionalFinnishDomain.Safety -> "Turvallisuus"
     ProfessionalFinnishDomain.SmallTalk -> "Small talk"
 }
 
 private fun ProfessionalFinnishScenarioType.displayName(): String = when (this) {
-    ProfessionalFinnishScenarioType.PhrasePractice -> "Fraasiharjoitus"
-    ProfessionalFinnishScenarioType.DialoguePractice -> "Dialogiharjoitus"
-    ProfessionalFinnishScenarioType.EmailWriting -> "Sähköpostin kirjoitus"
-    ProfessionalFinnishScenarioType.MeetingResponse -> "Kokousvastaus"
-    ProfessionalFinnishScenarioType.PhoneCall -> "Puhelu"
+    ProfessionalFinnishScenarioType.PhrasePractice -> "Phrase practice"
+    ProfessionalFinnishScenarioType.DialoguePractice -> "Dialogue practice"
+    ProfessionalFinnishScenarioType.EmailWriting -> "Email writing"
+    ProfessionalFinnishScenarioType.MeetingResponse -> "Meeting response"
+    ProfessionalFinnishScenarioType.PhoneCall -> "Phone call"
 }

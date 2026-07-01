@@ -55,18 +55,20 @@ fun LearnSettingsScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Text(
-                text = copy.settingsTitle,
+                text = "Settings",
                 color = palette.text,
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Kieli, tuki, tietosuoja ja Learn-sovelluksen rajat yhdessä paikassa.",
+                text = "Change only the things that make your learning smoother: speed, appearance, profile, and support.",
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
 
             SettingsRouteHeader(palette = palette)
+            SettingsProfileCard(palette = palette)
+            SettingsPathwayCard(palette = palette)
 
             SettingsLanguageCard(
                 selectedLanguage = selectedLanguage,
@@ -75,17 +77,17 @@ fun LearnSettingsScreen(
             )
 
             SettingsInfoCard(
-                badge = "KÄYTTÖOIKEUDET",
-                title = "Learn pysyy erillisenä",
-                body = "Floently Learn, Read ja Create Studio tarkistetaan erillisinä käyttöoikeuksina. Yhteinen tili voi olla sama, mutta pääsy ja maksut eivät sekoitu ilman erikseen lisättyä bundle-pakettia.",
+                badge = "ACCESS",
+                title = "Learn stays separate",
+                body = "Floently Learn, Read and Create Studio are checked as separate access rights. The account can be shared, but access and payments must not mix unless a bundle is added.",
                 accent = palette.primary,
                 palette = palette
             )
 
             SettingsInfoCard(
-                badge = "LASKUTUS",
-                title = "Mobiilimaksujen raja",
-                body = "Kun Androidissa otetaan käyttöön digitaaliset ostot, niiden pitää kulkea Google Play Billingin kautta. Web-checkout pysyy webissä.",
+                badge = "BILLING",
+                title = "Mobile payment boundary",
+                body = "When Android digital purchases are enabled, they must go through Google Play Billing. Web checkout stays on the web.",
                 accent = palette.warning,
                 palette = palette
             )
@@ -124,26 +126,26 @@ private fun SettingsRouteHeader(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = "ASETUKSET",
+                text = "PREFERENCES",
                 color = palette.accent,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 3.sp
             )
             Text(
-                text = "Sovelluksen hallinta",
+                text = "Settings",
                 color = palette.text,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Black
             )
             Text(
-                text = "Pidä kieli, tuki, tietosuoja ja tilin rajat selkeinä ennen julkaisua.",
+                text = "Change only the things that make your learning smoother: speed, appearance, profile, and support.",
                 color = palette.muted,
                 style = MaterialTheme.typography.bodyMedium
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SettingsTinyPill("Tuote", "Learn", palette.primary)
-                SettingsTinyPill("Tila", "Natiivi", palette.accent)
+                SettingsTinyPill("Product", "Learn", palette.primary)
+                SettingsTinyPill("Mode", "Native", palette.accent)
             }
         }
     }
@@ -172,6 +174,153 @@ private fun SettingsTinyPill(
     }
 }
 
+
+@Composable
+private fun SettingsProfileCard(
+    palette: FloentlyPalette
+) {
+    Surface(
+        color = Color(0xFF5A85FF),
+        shape = RoundedCornerShape(34.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    color = Color.White,
+                    shape = CircleShape,
+                    modifier = Modifier.size(72.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "floently",
+                            color = Color(0xFF2459D6),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                Surface(
+                    color = Color.White.copy(alpha = 0.20f),
+                    shape = RoundedCornerShape(999.dp)
+                ) {
+                    Text(
+                        text = "Choose from gallery",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Black,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                    )
+                }
+            }
+            Text(
+                text = "Vitus Idi",
+                color = Color.White,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Black
+            )
+            Text(
+                text = "vitus.idi@floently.com",
+                color = Color.White.copy(alpha = 0.82f),
+                fontSize = 18.sp
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Surface(
+                    color = Color.White.copy(alpha = 0.16f),
+                    shape = RoundedCornerShape(999.dp)
+                ) {
+                    Text(
+                        text = "Use initials",
+                        color = Color.White,
+                        fontWeight = FontWeight.Black,
+                        modifier = Modifier.padding(horizontal = 17.dp, vertical = 10.dp)
+                    )
+                }
+                Surface(
+                    color = Color.White.copy(alpha = 0.16f),
+                    shape = RoundedCornerShape(999.dp)
+                ) {
+                    Text(
+                        text = "Use logo",
+                        color = Color.White,
+                        fontWeight = FontWeight.Black,
+                        modifier = Modifier.padding(horizontal = 17.dp, vertical = 10.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsPathwayCard(
+    palette: FloentlyPalette
+) {
+    Surface(
+        color = Color(0xFF13213F),
+        shape = RoundedCornerShape(30.dp),
+        border = BorderStroke(1.dp, Color(0xFF2A3E6E)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(
+                text = "My pathway",
+                color = palette.text,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black
+            )
+            Text(
+                text = "Track your current goal, pathway, and access model.",
+                color = palette.muted,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            SettingsPathwayRow("MAIN GOAL", "YKI, work, and life in Finland", palette)
+            SettingsPathwayRow("CURRENT PROFESSION", "doctor, nurse, practical nurse", palette)
+            SettingsPathwayRow("CURRENT PATHWAY", "Professional Pathway · doctor", palette)
+            SettingsPathwayRow("ACCESS TYPE", "Individual", palette)
+        }
+    }
+}
+
+@Composable
+private fun SettingsPathwayRow(
+    label: String,
+    value: String,
+    palette: FloentlyPalette
+) {
+    Surface(
+        color = Color(0xFF172541),
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, Color(0xFF2A3E6E)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 13.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = label,
+                color = palette.muted,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 2.4.sp
+            )
+            Text(
+                text = value,
+                color = palette.text,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Black
+            )
+        }
+    }
+}
 @Composable
 private fun SettingsLanguageCard(
     selectedLanguage: LearnLanguage,
@@ -189,13 +338,13 @@ private fun SettingsLanguageCard(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
-                text = "Kieli",
+                text = "Language",
                 color = palette.text,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Black
             )
             Text(
-                text = "Valittu kieli: ${selectedLanguage.displayLabel}",
+                text = "Selected language: ${selectedLanguage.displayLabel}",
                 color = palette.muted,
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -218,7 +367,7 @@ private fun SettingsLanguageCard(
             }
 
             Text(
-                text = "Kielivalinta tallennetaan laitteelle ja pysyy Learnin sisällä.",
+                text = "Language selection is saved on this device and stays inside Learn.",
                 color = palette.soft,
                 style = MaterialTheme.typography.bodySmall
             )

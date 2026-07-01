@@ -343,7 +343,7 @@ private fun AccountBillingCard(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = "Laskutus ja tilaus",
+                text = "Billing ja tilaus",
                 color = palette.text,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Black
@@ -351,7 +351,7 @@ private fun AccountBillingCard(
 
             if (actions.isEmpty()) {
                 Text(
-                    text = "Laskutusrajat näkyvät täällä, kun palvelu palauttaa ne.",
+                    text = "Billingrajat näkyvät täällä, kun palvelu palauttaa ne.",
                     color = palette.muted,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -563,7 +563,7 @@ private fun AccountDeletionBoundaryCard(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = "Tilin poistamisen raja",
+                text = "Accountn poistamisen raja",
                 color = palette.text,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Black
@@ -628,9 +628,9 @@ private fun LearnPlanStatus.shortText(): String = when (this) {
 }
 
 private fun LearnPlanStatus.friendlyText(): String = when (this) {
-    LearnPlanStatus.Active -> "Käyttöoikeus aktiivinen"
-    LearnPlanStatus.Pending -> "Käyttöoikeus odottaa"
-    LearnPlanStatus.Missing -> "Käyttöoikeus tarvitaan"
+    LearnPlanStatus.Active -> "Access aktiivinen"
+    LearnPlanStatus.Pending -> "Access odottaa"
+    LearnPlanStatus.Missing -> "Access tarvitaan"
 }
 
 private fun LearnDeviceStatus.statusColor(palette: FloentlyPalette): Color = when (this) {
@@ -648,7 +648,7 @@ private fun String.localizedAccessTitle(): String = when {
     startsWith("Read:") -> "Read"
     startsWith("Create Studio:") -> "Create Studio"
     startsWith("No bundle") -> "Bundle"
-    else -> "Käyttöoikeus"
+    else -> "Access"
 }
 
 private fun String.localizedAccountText(): String = when (this) {
@@ -658,7 +658,7 @@ private fun String.localizedAccountText(): String = when (this) {
     "Learn access is active." -> "Learn-käyttöoikeus on aktiivinen."
     "Current plan" -> "Nykyinen paketti"
     "Floently Learn access is checked separately from Read and Create." -> "Floently Learn -käyttöoikeus tarkistetaan erillään Readista ja Createsta."
-    "Access active" -> "Käyttöoikeus aktiivinen"
+    "Access active" -> "Access aktiivinen"
     "Start 3-day trial" -> "Aloita 3 päivän kokeilu"
     "Trial entry belongs to the billing surface. Android live purchases must use Google Play Billing when enabled." -> "Kokeilun aloitus kuuluu laskutusnäkymään. Androidin live-ostot käyttävät Google Play Billingiä, kun ne otetaan käyttöön."
     "Store billing boundary" -> "Kauppalaskutuksen raja"

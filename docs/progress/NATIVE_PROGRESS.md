@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M19 visual parity rebuild - M19-D/E YKI practice and mock rebuild.
+M19 visual parity rebuild - M19-F/G/H home professional settings sweep.
 
 ## Branch
 
@@ -153,3 +153,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M19-D/E separated YKI Practice from YKI Mock Exam in navigation and rebuilt high-impact YKI visuals/naming from IMG_0409-IMG_0479 while preserving existing YKI session behavior.
 
 - M19-DER repaired the YKI Mock Exam feature contract so the new destination is included in release/access/parity guard mapping.
+
+- M19-F/G/H updated Home, Professional Finnish, Settings, and Account visible structure/copy from screenshots IMG_0390-IMG_0394 and IMG_0480-IMG_0494 without an intermediate phone check.

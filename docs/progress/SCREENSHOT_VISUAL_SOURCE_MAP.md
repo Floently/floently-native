@@ -160,3 +160,20 @@ Implemented in:
 Correction:
 
 - YKI Practice and YKI Mock Exam are now separate native destinations and visual modes.
+
+## M19-F/G/H implementation note
+
+Screenshot sources:
+
+- IMG_0390-IMG_0392: Home
+- IMG_0394-IMG_0408: Professional Finnish / My Profession
+- IMG_0480-IMG_0494: Settings/account/subscription continuation
+
+Implemented in:
+
+- `LearnHomeScreen.kt`
+- `ProfessionalFinnishScreen.kt`
+- `LearnSettingsScreen.kt`
+- `AccountScreen.kt`
+
+No intermediate phone check is done; final device comparison comes after the full M19 sweep.

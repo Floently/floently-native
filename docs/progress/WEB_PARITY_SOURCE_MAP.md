@@ -334,3 +334,12 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
   - `LearnFeatureContract.kt`
 - Correction:
   - Added exhaustive release/access/parity contract mapping for the new `YkiMockExam` destination.
+
+## M19-F/G/H home professional settings sweep
+
+- Screenshot source:
+  - `IMG_0390-IMG_0392`
+  - `IMG_0394-IMG_0408`
+  - `IMG_0480-IMG_0494`
+- Correction:
+  - Updated high-impact visual/copy structure for Home, Professional Finnish, Settings, and Account before the final full app check.
