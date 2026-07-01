@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M18 web UI parity rebuild - M18-O6R final pretest guard cleanup.
+M19 visual parity rebuild - M19-A screenshot source map and YKI naming.
 
 ## Branch
 
@@ -139,3 +139,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M18-O5 added a native Android smoke-test checklist and debug APK install helper script for device testing; no Kotlin app code changed.
 
 - M18-O6R removed the unused old SmartHelper Kotlin file after confirming no external references, then re-ran leftover guards and native builds before device testing.
+
+- M19-A recorded the uploaded original-app screenshot source map, scroll-continuation rule, and YKI naming distinction: YKI test means YKI Practice, while Full YKI Exam means YKI Mock Exam.

@@ -258,3 +258,18 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
 - Correction:
   - Removed unused old SmartHelper shell after all routes had been replaced by old-source-mapped native UI.
   - Verified no leftover SmartHelper/WebView/legacy source path matches before device testing.
+
+## M19-A screenshot visual source map
+
+- Screenshot source:
+  - `IMG_0390-IMG_0392`: Home
+  - `IMG_0393`: Side drawer
+  - `IMG_0397-IMG_0399`: Cards
+  - `IMG_0409-IMG_0431`: YKI Practice
+  - `IMG_0432-IMG_0479`: YKI Mock Exam
+  - `IMG_0480-IMG_0494`: Settings, subscription, language drawer
+- Correction:
+  - Multi-screenshot pages must be combined as continuous scroll captures.
+  - "YKI test" must be treated as YKI Practice.
+  - "Full YKI exam" must be treated as YKI Mock Exam.
+  - M19 visual work must be screenshot-driven.
