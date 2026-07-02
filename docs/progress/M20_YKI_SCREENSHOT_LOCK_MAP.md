@@ -216,3 +216,18 @@ Correction:
 - Check answer appears separately from Next task.
 - Correct and wrong answer states are rendered after explicit checking.
 - YKI Mock Exam remains paused until Practice is accepted.
+
+## M20-G function pass
+
+YKI Practice UI was close enough to preserve for the next pass.
+
+Functional corrections:
+
+- Listening Play audio now triggers Finnish TextToSpeech from the YKI Practice bank task script.
+- Speaking tasks now include native microphone recording controls.
+- Android manifest now declares RECORD_AUDIO.
+- Practice task data is routed through `YkiPracticeBank.practiceTasks()` instead of being loaded as UI-local fixed content.
+- Writing tasks now use empty editable fields.
+- Writing fields have autocorrect disabled.
+- Writing fields do not show placeholder text.
+- YKI Mock Exam remains paused until YKI Practice is functionally accepted.

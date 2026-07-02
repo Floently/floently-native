@@ -120,3 +120,13 @@ The YKI implementation from commit `9743611` is not accepted.
 A successful debug/release build is not enough.
 
 The accepted standard is visual and functional parity against each screenshot. Placeholder data is not allowed.
+
+## M20-G YKI Practice functional acceptance note
+
+YKI Practice visual layout is close enough for a function pass, but it is not accepted until:
+
+- listening audio works,
+- speaking recording works,
+- writing fields are editable without autocorrect or placeholder text,
+- task content comes from the YKI bank layer,
+- the user confirms Practice behavior.

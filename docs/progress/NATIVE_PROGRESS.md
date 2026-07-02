@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M20 section-lock rebuild - M20-E YKI Practice real content flow.
+M20 section-lock rebuild - M20-G YKI Practice function pass.
 
 ## Branch
 
@@ -169,3 +169,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M20-DX records user rejection of the placeholder YKI implementation: M20-D used fake passages/questions and non-functional options; next rebuild must lock YKI Practice only from exact screenshot/source content before touching YKI Mock Exam.
 
 - M20-E rebuilt YKI Practice only with screenshot-derived passages/questions/options and selectable answer behavior; YKI Mock Exam remains paused until Practice is accepted.
+
+- M20-G corrected YKI Practice functions: listening audio uses Finnish TTS from the practice bank script, speaking has native recorder controls, writing fields are empty/editable with autocorrect disabled, and Practice task data is routed through a bank object.

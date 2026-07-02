@@ -1,5 +1,20 @@
 package com.floently.learn.yki
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.media.MediaRecorder
+import android.os.Build
+import android.speech.tts.TextToSpeech
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
+import androidx.core.content.ContextCompat
+import java.io.File
+import java.util.Locale
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -66,17 +81,20 @@ private data class PracticeTask(
     val defaultWrongIndex: Int = -1,
     val answerText: String = "",
     val wordCounter: String = "",
-    val saved: Boolean = false
+    val saved: Boolean = false,
+    val audioScript: String = "",
+    val bankSource: String = "native-yki-practice-bank"
 )
 
 @Composable
 fun YkiPracticeExactScreen(
     onBack: () -> Unit
 ) {
-    val tasks = remember { ykiPracticeTasks() }
+    val tasks = remember { YkiPracticeBank.practiceTasks() }
     var index by remember { mutableIntStateOf(-1) }
     val selected = remember { mutableStateMapOf<Int, Int>() }
     val checked = remember { mutableStateMapOf<Int, Boolean>() }
+    val writingAnswers = remember { mutableStateMapOf<Int, String>() }
 
     Box(
         modifier = Modifier
@@ -104,6 +122,8 @@ fun YkiPracticeExactScreen(
                     taskIndex = index,
                     selectedIndex = selected[index],
                     isChecked = checked[index] == true,
+                    writingValue = writingAnswers[index].orEmpty(),
+                    onWritingChange = { value -> writingAnswers[index] = value },
                     onSelect = { selected[index] = it },
                     onCheck = { checked[index] = true },
                     onNext = {
@@ -299,6 +319,8 @@ private fun PracticeTaskScreen(
     taskIndex: Int,
     selectedIndex: Int?,
     isChecked: Boolean,
+    writingValue: String,
+    onWritingChange: (String) -> Unit,
     onSelect: (Int) -> Unit,
     onCheck: () -> Unit,
     onNext: () -> Unit,
@@ -361,34 +383,7 @@ private fun PracticeTaskScreen(
                 }
 
                 if (task.skill == Skill.Listening) {
-                    Surface(
-                        color = Color(0xFF223153),
-                        shape = RoundedCornerShape(15.dp),
-                        border = BorderStroke(1.dp, border),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(92.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text("Listening audio", color = muted, fontSize = 12.sp)
-                            Surface(
-                                color = purple,
-                                shape = RoundedCornerShape(999.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(38.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text("Play audio", color = Color.White, fontWeight = FontWeight.Black)
-                                }
-                            }
-                            Text("Listen first, then choose the best answer.", color = muted, fontSize = 11.sp)
-                        }
-                    }
+                    ListeningAudioButton(task = task)
                 }
 
                 if (task.question.isNotBlank()) {
@@ -430,11 +425,15 @@ private fun PracticeTaskScreen(
                 }
 
                 if (task.skill == Skill.Writing) {
-                    WritingBlock(task = task)
+                    WritingBlock(
+                        task = task,
+                        value = writingValue,
+                        onValueChange = onWritingChange
+                    )
                 }
 
                 if (task.skill == Skill.Speaking) {
-                    BigButton("Start conversation roleplay", orange, {})
+                    SpeakingRecordingControls(task = task)
                     Surface(
                         color = Color(0xFF111A2F),
                         shape = RoundedCornerShape(12.dp),
@@ -486,26 +485,227 @@ private fun PracticeTaskScreen(
     }
 }
 
+
 @Composable
-private fun WritingBlock(task: PracticeTask) {
+private fun ListeningAudioButton(task: PracticeTask) {
+    val context = LocalContext.current
+    var ready by remember { mutableStateOf(false) }
+    var playing by remember { mutableStateOf(false) }
+    val ttsHolder = remember { arrayOfNulls<TextToSpeech>(1) }
+
+    DisposableEffect(context) {
+        val engine = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                ttsHolder[0]?.language = Locale("fi", "FI")
+                ready = true
+            }
+        }
+        ttsHolder[0] = engine
+
+        onDispose {
+            engine.stop()
+            engine.shutdown()
+        }
+    }
+
     Surface(
-        color = Color(0xFF0F172B),
+        color = Color(0xFF223153),
         shape = RoundedCornerShape(15.dp),
         border = BorderStroke(1.dp, border),
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 220.dp)
+            .height(104.dp)
     ) {
-        Text(
-            text = task.answerText,
-            color = Color(0xFFE7ECFF),
-            fontSize = 13.sp,
-            lineHeight = 18.sp,
-            modifier = Modifier.padding(13.dp)
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Listening audio", color = muted, fontSize = 12.sp)
+            Surface(
+                color = if (playing) orange else purple,
+                shape = RoundedCornerShape(999.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(42.dp)
+                    .clickable {
+                        val engine = ttsHolder[0]
+                        if (playing) {
+                            engine?.stop()
+                            playing = false
+                        } else if (ready && engine != null) {
+                            val script = task.audioScript.ifBlank {
+                                listOf(task.title, task.question, task.options.joinToString(". ")).joinToString(". ")
+                            }
+                            engine.speak(script, TextToSpeech.QUEUE_FLUSH, null, "yki-practice-${task.screenshot}")
+                            playing = true
+                        }
+                    }
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = when {
+                            playing -> "Stop audio"
+                            ready -> "Play audio"
+                            else -> "Preparing audio..."
+                        },
+                        color = Color.White,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+            }
+            Text(
+                text = "Audio comes from the YKI Practice bank task script.",
+                color = muted,
+                fontSize = 11.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun SpeakingRecordingControls(task: PracticeTask) {
+    val context = LocalContext.current
+    var hasPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
         )
     }
+    var recorder by remember { mutableStateOf<MediaRecorder?>(null) }
+    var isRecording by remember { mutableStateOf(false) }
+    var savedPath by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasPermission = granted
+        if (!granted) {
+            error = "Microphone permission is required for speaking practice."
+        }
+    }
+
+    fun startRecording() {
+        if (!hasPermission) {
+            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            return
+        }
+
+        val output = File(context.cacheDir, "yki-practice-${task.screenshot}-${System.currentTimeMillis()}.m4a")
+        val nextRecorder = newYkiMediaRecorder(context)
+        try {
+            nextRecorder.setAudioSource(MediaRecorder.AudioSource.MIC)
+            nextRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            nextRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            nextRecorder.setOutputFile(output.absolutePath)
+            nextRecorder.prepare()
+            nextRecorder.start()
+            recorder = nextRecorder
+            savedPath = output.absolutePath
+            error = null
+            isRecording = true
+        } catch (e: Exception) {
+            nextRecorder.release()
+            error = "Recording could not start."
+            isRecording = false
+        }
+    }
+
+    fun stopRecording() {
+        val active = recorder ?: return
+        try {
+            active.stop()
+        } catch (_: RuntimeException) {
+            error = "Recording was too short to save."
+        } finally {
+            active.release()
+            recorder = null
+            isRecording = false
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            try {
+                recorder?.stop()
+            } catch (_: RuntimeException) {
+            } finally {
+                recorder?.release()
+            }
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        BigButton(
+            text = if (isRecording) "Stop recording" else "Start voice recording",
+            color = if (isRecording) red else orange,
+            onClick = {
+                if (isRecording) stopRecording() else startRecording()
+            }
+        )
+
+        Surface(
+            color = Color(0xFF111A2F),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, border),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = when {
+                    error != null -> error.orEmpty()
+                    isRecording -> "Recording... speak your answer now."
+                    savedPath != null -> "Recording saved for this speaking task."
+                    else -> "Use the microphone to record your speaking response."
+                },
+                color = if (error != null) Color(0xFFFFC6CC) else muted,
+                textAlign = TextAlign.Center,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(vertical = 13.dp, horizontal = 12.dp)
+            )
+        }
+    }
+}
+
+@Suppress("DEPRECATION")
+private fun newYkiMediaRecorder(context: Context): MediaRecorder =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        MediaRecorder(context)
+    } else {
+        MediaRecorder()
+    }
+
+
+@Composable
+private fun WritingBlock(
+    task: PracticeTask,
+    value: String,
+    onValueChange: (String) -> Unit
+) {
+    val target = task.wordCounter.substringAfter("/", "100 words").trim().ifBlank { "100 words" }
+    val count = value.trim().split(Regex("\\s+")).filter { it.isNotBlank() }.size
+
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 220.dp),
+        textStyle = androidx.compose.ui.text.TextStyle(
+            color = Color(0xFFE7ECFF),
+            fontSize = 13.sp,
+            lineHeight = 18.sp
+        ),
+        keyboardOptions = KeyboardOptions(
+            autoCorrect = false,
+            imeAction = ImeAction.Default
+        ),
+        singleLine = false,
+        minLines = 8,
+        shape = RoundedCornerShape(15.dp)
+    )
+
     Text(
-        text = task.wordCounter,
+        text = "$count / $target",
         color = muted,
         fontSize = 12.sp,
         textAlign = TextAlign.End,
@@ -637,7 +837,8 @@ private fun SmallButton(
     }
 }
 
-private fun ykiPracticeTasks(): List<PracticeTask> = listOf(
+private object YkiPracticeBank {
+    fun practiceTasks(): List<PracticeTask> = listOf(
     PracticeTask(
         screenshot = "IMG_0410-IMG_0411",
         skill = Skill.Reading,
@@ -717,7 +918,8 @@ private fun ykiPracticeTasks(): List<PracticeTask> = listOf(
             "Yksilöiden valinnoilla ei ole mitään merkitystä",
             "Kierrätys on riittävä toimenpide ilmastonmuutoksen hidastamiseen"
         ),
-        correctIndex = 0
+        correctIndex = 0,
+        audioScript = "Kuuntele ote luennosta. Eksekutiivinen funktio tarkoittaa kykyä vaihtaa tehtävien välillä ja hallita huomiota."
     ),
     PracticeTask(
         screenshot = "IMG_0417-IMG_0418",
@@ -734,7 +936,8 @@ private fun ykiPracticeTasks(): List<PracticeTask> = listOf(
             "Yksityistä rahoitusta hankkeelle"
         ),
         correctIndex = 0,
-        defaultWrongIndex = 1
+        defaultWrongIndex = 1,
+        audioScript = "Kuuntele radiouutinen. Liikuntakeskuksen vastustajat ehdottavat nykyisten tilojen kunnostamista uuden rakentamisen sijaan."
     ),
     PracticeTask(
         screenshot = "IMG_0419",
@@ -766,7 +969,8 @@ private fun ykiPracticeTasks(): List<PracticeTask> = listOf(
             "Työnhakukurssien suorittaminen",
             "Verkostoituminen opiskeluaikana ja alan tapahtumissa"
         ),
-        correctIndex = 3
+        correctIndex = 3,
+        audioScript = "Kuuntele haastattelu. Asiantuntija sanoo, että verkostoituminen opiskeluaikana ja alan tapahtumissa auttaa nuoria löytämään töitä."
     ),
     PracticeTask(
         screenshot = "IMG_0421",
@@ -783,7 +987,8 @@ private fun ykiPracticeTasks(): List<PracticeTask> = listOf(
             "Asiakas on muuttanut vaatimuksiaan"
         ),
         correctIndex = 1,
-        defaultWrongIndex = 0
+        defaultWrongIndex = 0,
+        audioScript = "Kuuntele työtovereiden keskustelu. Projekti on myöhässä, koska alihankkija ei ole toimittanut osia ajoissa."
     ),
     PracticeTask(
         screenshot = "IMG_0422",
@@ -860,3 +1065,4 @@ private fun ykiPracticeTasks(): List<PracticeTask> = listOf(
         passage = "Soitat palvelutoimistoon varataksesi ajan. Sinun täytyy selittää syy käyntiisi, ehdottaa sopivaa aikaa ja vahvistaa varaus. Harjoittele tätä puhelinkeskustelua AI-kumppanin kanssa.\n\nKäytä kohteliasta kieltä. Kuuntele AI:n kysymykset tarkasti ja vastaa täysillä lauseilla. Tavoite on viisi vuoroa."
     )
 )
+}
