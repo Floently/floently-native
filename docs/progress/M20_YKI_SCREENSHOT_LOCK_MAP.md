@@ -184,3 +184,21 @@ Implemented a deterministic native YKI exact sequence screen:
 - Practice flow includes IMG_0409-IMG_0431 mapped sequence states.
 - Mock flow includes IMG_0432-IMG_0479 mapped sequence states.
 - This is the first implementation pass for the YKI section lock and must be installed and compared against screenshots before acceptance.
+
+## M20-D rejection
+
+M20-D is rejected.
+
+Reason:
+
+- It represented screenshot names but not the exact screenshot content.
+- It used placeholder passages and questions.
+- Options were not selectable in the expected way.
+- YKI Mock Exam flow could not be progressed through properly.
+- It did not match the screenshots beyond the first YKI Practice page.
+
+Correction:
+
+- M20-E must rebuild YKI Practice only.
+- The Practice rebuild must use the exact passages, exact questions, exact options, exact visible answer states, and exact layout from IMG_0409-IMG_0431.
+- YKI Mock Exam must wait until YKI Practice is accepted.

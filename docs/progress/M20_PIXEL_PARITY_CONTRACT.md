@@ -112,3 +112,11 @@ The YKI implementation must represent:
 The next locked section is YKI, because the user identified it as the clearest source and the current native implementation is farthest from the screenshots.
 
 The next implementation must start with a YKI screenshot-by-screenshot map before changing layout code.
+
+## M20-D rejection guard
+
+The YKI implementation from commit `9743611` is not accepted.
+
+A successful debug/release build is not enough.
+
+The accepted standard is visual and functional parity against each screenshot. Placeholder data is not allowed.
