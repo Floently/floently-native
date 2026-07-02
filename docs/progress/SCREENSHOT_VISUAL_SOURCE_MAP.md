@@ -202,3 +202,14 @@ Implemented foundation:
 - `LearnFeatureDestination.EverydayFinnish`
 - drawer/Home route correction
 - Professional Finnish hub section representation
+
+## M20-B pixel parity contract
+
+New rule:
+
+- Every screenshot must be represented.
+- Every alignment, spacing, text color, card color, button position, timer, play button, and visible function must match the original screenshot source.
+- M19-style broad visual sweeps are rejected.
+- M20 proceeds one section at a time and does not move forward until that section is accepted.
+
+YKI is the next strict target because it has the clearest screenshot sequence and the current native result is not close enough.

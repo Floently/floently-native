@@ -359,3 +359,11 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
   - Drawer and Home no longer route Everyday Finnish directly to Cards.
   - Professional Finnish now represents Roleplay, Cards, Interview, Speech recording, and Report writing.
   - M20 switches to section-lock rebuilds instead of broad visual sweeps.
+
+## M20-B pixel parity contract
+
+- Correction:
+  - Every screenshot is now a required acceptance source.
+  - Every line, spacing, alignment, color, and function state must be represented.
+  - Future patches must use section-lock workflow.
+  - YKI Practice and YKI Mock Exam are the next strict reconstruction targets.

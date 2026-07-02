@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M20 section-lock rebuild - M20-A flow foundation hubs.
+M20 section-lock rebuild - M20-B pixel parity contract.
 
 ## Branch
 
@@ -159,3 +159,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M19-I/J updated Roleplay and Progress copy/visual rhythm and recorded the final M19 sweep report before the single full-device check.
 
 - M20-A started the section-lock rebuild after user rejection of broad M19 parity: Everyday Finnish is now a hub, drawer/Home no longer route Everyday directly to Cards, and Professional Finnish now represents Roleplay, Cards, Interview, Speech recording, and Report writing.
+
+- M20-B recorded the non-negotiable pixel parity contract: every screenshot, alignment, spacing, text, color, button position, function state, and logical flow must be represented; no section can move forward until accepted.
