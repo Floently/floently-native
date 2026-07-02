@@ -13,6 +13,7 @@ import com.floently.learn.account.AccountScreen
 import com.floently.learn.account.PreviewAccountRepository
 import com.floently.learn.cards.CardsRepository
 import com.floently.learn.cards.CardsScreen
+import com.floently.learn.everyday.EverydayFinnishScreen
 import com.floently.learn.i18n.LearnTranslations
 import com.floently.learn.i18n.persistLearnLanguage
 import com.floently.learn.i18n.rememberLearnLanguageState
@@ -64,6 +65,12 @@ fun LearnSignedInShell(
     } else {
         Box(modifier = Modifier.fillMaxSize()) {
             when (destination) {
+            LearnFeatureDestination.EverydayFinnish -> EverydayFinnishScreen(
+                onBack = { selectedDestination = null },
+                onDestinationSelected = { nextDestination ->
+                    selectedDestination = nextDestination
+                }
+            )
             LearnFeatureDestination.YkiPractice -> YkiFeatureScreen(
                 repository = ykiRepository,
                 copy = copy,
@@ -79,7 +86,10 @@ fun LearnSignedInShell(
             LearnFeatureDestination.ProfessionalFinnish -> ProfessionalFinnishScreen(
                 repository = professionalFinnishRepository,
                 copy = copy,
-                onBack = { selectedDestination = null }
+                onBack = { selectedDestination = null },
+                onDestinationSelected = { nextDestination ->
+                    selectedDestination = nextDestination
+                }
             )
             LearnFeatureDestination.Roleplay -> RoleplayScreen(
                 repository = roleplayRepository,

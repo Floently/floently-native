@@ -143,7 +143,7 @@ fun LearnUtilityDrawer(
                             title = "Everyday Finnish",
                             subtitle = "General cards, vocabulary and roleplay.",
                             iconColor = Color(0xFF213A65),
-                            onClick = { onDestinationSelected(LearnFeatureDestination.Cards) }
+                            onClick = { onDestinationSelected(LearnFeatureDestination.EverydayFinnish) }
                         )
                         DrawerRouteItem(
                             icon = "🗂️",

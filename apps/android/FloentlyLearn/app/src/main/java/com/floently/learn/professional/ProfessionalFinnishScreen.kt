@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.floently.learn.i18n.LearnCopy
+import com.floently.learn.navigation.LearnFeatureDestination
 import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
@@ -52,7 +53,8 @@ import kotlinx.coroutines.launch
 fun ProfessionalFinnishScreen(
     repository: ProfessionalFinnishRepository,
     copy: LearnCopy,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onDestinationSelected: (LearnFeatureDestination) -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
     var selectedDomain by remember { mutableStateOf(ProfessionalFinnishDomain.Healthcare) }
@@ -95,6 +97,11 @@ fun ProfessionalFinnishScreen(
                 )
 
                 ProfessionalRouteHeader(palette = palette)
+                ProfessionalPracticeHub(
+                    palette = palette,
+                    onRoleplay = { onDestinationSelected(LearnFeatureDestination.Roleplay) },
+                    onCards = { onDestinationSelected(LearnFeatureDestination.Cards) }
+                )
                 ProfessionalDomainStrip(
                     selectedDomain = selectedDomain,
                     palette = palette,
@@ -237,6 +244,100 @@ private fun ProfessionalFinnishSessionScreen(
     }
 }
 
+
+@Composable
+private fun ProfessionalPracticeHub(
+    palette: FloentlyPalette,
+    onRoleplay: () -> Unit,
+    onCards: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        ProfessionalHubAction(
+            label = "ROLEPLAY",
+            title = "Professional roleplay",
+            body = "Practise the workplace conversation flow inside your profession.",
+            accent = palette.accent,
+            palette = palette,
+            onClick = onRoleplay
+        )
+        ProfessionalHubAction(
+            label = "CARDS",
+            title = "Professional cards",
+            body = "Profession-specific vocabulary and phrase recall.",
+            accent = palette.primary,
+            palette = palette,
+            onClick = onCards
+        )
+        ProfessionalHubAction(
+            label = "INTERVIEW",
+            title = "Interview",
+            body = "Interview preparation is represented here and will be connected after the screen is visually accepted.",
+            accent = Color(0xFF9D7CFF),
+            palette = palette,
+            onClick = {}
+        )
+        ProfessionalHubAction(
+            label = "SPEECH",
+            title = "Speech recording",
+            body = "Speech recording belongs in this hub and must match the old app flow.",
+            accent = palette.warning,
+            palette = palette,
+            onClick = {}
+        )
+        ProfessionalHubAction(
+            label = "REPORT",
+            title = "Report writing",
+            body = "Work report writing belongs to Professional Finnish only.",
+            accent = Color(0xFF3EC5A8),
+            palette = palette,
+            onClick = {}
+        )
+    }
+}
+
+@Composable
+private fun ProfessionalHubAction(
+    label: String,
+    title: String,
+    body: String,
+    accent: Color,
+    palette: FloentlyPalette,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = Color(0xFF13213F),
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, Color(0xFF2A3E6E)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp)
+        ) {
+            Text(
+                text = label,
+                color = accent,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 2.4.sp
+            )
+            Text(
+                text = title,
+                color = palette.text,
+                fontSize = 23.sp,
+                fontWeight = FontWeight.Black
+            )
+            Text(
+                text = body,
+                color = palette.muted,
+                fontSize = 16.sp,
+                lineHeight = 23.sp
+            )
+        }
+    }
+}
 @Composable
 private fun ProfessionalSessionProgressCard(
     progress: Float,

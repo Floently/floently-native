@@ -5,6 +5,11 @@ enum class LearnFeatureDestination(
     val subtitle: String,
     val releaseGuard: LearnReleaseGuard
 ) {
+    EverydayFinnish(
+        title = "Everyday Finnish",
+        subtitle = "Hub for roleplay, cards, interview practice, and speech recording.",
+        releaseGuard = LearnReleaseGuard.MustMatchExistingProduct
+    ),
     YkiPractice(
         title = "YKI Practice",
         subtitle = "Step-by-step YKI preparation and skill practice.",
@@ -48,6 +53,7 @@ enum class LearnFeatureDestination(
 
     companion object {
         val primary: List<LearnFeatureDestination> = listOf(
+            EverydayFinnish,
             YkiPractice,
             YkiMockExam,
             ProfessionalFinnish,

@@ -55,6 +55,22 @@ enum class LearnReleaseRequirement {
 object LearnFeatureContracts {
     val all: Map<LearnFeatureDestination, LearnFeatureContract> = LearnFeatureDestination.primary.associateWith { destination ->
         when (destination) {
+            LearnFeatureDestination.EverydayFinnish -> LearnFeatureContract(
+                destination = destination,
+                parityRequirements = listOf(
+                    LearnParityRequirement.ExistingContentParity,
+                    LearnParityRequirement.ExistingAnimationParity,
+                    LearnParityRequirement.ExistingAudioParity
+                ),
+                accessRequirements = defaultAccessRequirements(),
+                interactionRequirements = listOf(
+                    LearnInteractionRequirement.NativeNavigation,
+                    LearnInteractionRequirement.NativeAnimations,
+                    LearnInteractionRequirement.OfflineSafeState,
+                    LearnInteractionRequirement.ErrorRecovery
+                ),
+                releaseRequirements = defaultReleaseRequirements()
+            )
             LearnFeatureDestination.YkiPractice -> LearnFeatureContract(
                 destination = destination,
                 parityRequirements = listOf(

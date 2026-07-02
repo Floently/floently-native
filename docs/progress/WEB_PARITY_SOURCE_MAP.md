@@ -351,3 +351,11 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
   - `LearnProgressScreen.kt`
 - Correction:
   - Updated remaining Roleplay and Progress visible copy and card rhythm before the full device check.
+
+## M20-A flow foundation hubs
+
+- Correction:
+  - Added Everyday Finnish as a real hub destination.
+  - Drawer and Home no longer route Everyday Finnish directly to Cards.
+  - Professional Finnish now represents Roleplay, Cards, Interview, Speech recording, and Report writing.
+  - M20 switches to section-lock rebuilds instead of broad visual sweeps.

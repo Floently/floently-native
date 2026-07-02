@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M19 visual parity rebuild - M19-I/J roleplay progress final sweep.
+M20 section-lock rebuild - M20-A flow foundation hubs.
 
 ## Branch
 
@@ -157,3 +157,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M19-F/G/H updated Home, Professional Finnish, Settings, and Account visible structure/copy from screenshots IMG_0390-IMG_0394 and IMG_0480-IMG_0494 without an intermediate phone check.
 
 - M19-I/J updated Roleplay and Progress copy/visual rhythm and recorded the final M19 sweep report before the single full-device check.
+
+- M20-A started the section-lock rebuild after user rejection of broad M19 parity: Everyday Finnish is now a hub, drawer/Home no longer route Everyday directly to Cards, and Professional Finnish now represents Roleplay, Cards, Interview, Speech recording, and Report writing.

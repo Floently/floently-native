@@ -186,3 +186,19 @@ Final visual sweep:
 - Progress copy and cards were aligned with the screenshot-driven M19 rhythm.
 - No intermediate phone check was done.
 - Next step is one full-device check across all screens.
+
+## M20-A section-lock correction
+
+User correction:
+
+- Everyday Finnish must be a hub, not a direct Cards shortcut.
+- Everyday Finnish includes Roleplay, Cards, Interview, and Speech recording.
+- Professional Finnish includes Roleplay, Cards, Interview, Speech recording, and Report writing.
+- Future M20 work must lock one section against screenshots before moving to the next.
+
+Implemented foundation:
+
+- `EverydayFinnishScreen.kt`
+- `LearnFeatureDestination.EverydayFinnish`
+- drawer/Home route correction
+- Professional Finnish hub section representation

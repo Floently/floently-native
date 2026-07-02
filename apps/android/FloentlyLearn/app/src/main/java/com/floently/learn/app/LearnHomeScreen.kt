@@ -83,7 +83,7 @@ fun LearnHomeScreen(
                 )
                 WebSectionLabel(text = "PATHWAYS", palette = palette)
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
-                    WebPathTile("Vocabulary & roleplay", "Cards, phrase support, and guided practice", "Learn", palette.primary, palette, Modifier.weight(1f)) { onDestinationSelected(LearnFeatureDestination.Cards) }
+                    WebPathTile("Everyday Finnish", "Roleplay, cards, interview and speech recording", "Everyday", palette.primary, palette, Modifier.weight(1f)) { onDestinationSelected(LearnFeatureDestination.EverydayFinnish) }
                     WebPathTile("Workplace scenarios", "Instructions, handovers, and reporting", "Scenarios", palette.warning, palette, Modifier.weight(1f)) { onDestinationSelected(LearnFeatureDestination.ProfessionalFinnish) }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
