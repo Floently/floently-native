@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M20 section-lock rebuild - M20-B pixel parity contract.
+M20 section-lock rebuild - M20-C YKI screenshot lock map.
 
 ## Branch
 
@@ -161,3 +161,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M20-A started the section-lock rebuild after user rejection of broad M19 parity: Everyday Finnish is now a hub, drawer/Home no longer route Everyday directly to Cards, and Professional Finnish now represents Roleplay, Cards, Interview, Speech recording, and Report writing.
 
 - M20-B recorded the non-negotiable pixel parity contract: every screenshot, alignment, spacing, text, color, button position, function state, and logical flow must be represented; no section can move forward until accepted.
+
+- M20-C mapped every YKI Practice and YKI Mock Exam screenshot from IMG_0409-IMG_0479 into required native states before rebuilding YKI.

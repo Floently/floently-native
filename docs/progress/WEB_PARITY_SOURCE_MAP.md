@@ -367,3 +367,11 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
   - Every line, spacing, alignment, color, and function state must be represented.
   - Future patches must use section-lock workflow.
   - YKI Practice and YKI Mock Exam are the next strict reconstruction targets.
+
+## M20-C YKI screenshot lock map
+
+- Screenshot source:
+  - `IMG_0409-IMG_0431`
+  - `IMG_0432-IMG_0479`
+- Correction:
+  - YKI Practice and YKI Mock Exam now have a screenshot-by-screenshot implementation map before any further layout work.

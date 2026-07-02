@@ -213,3 +213,14 @@ New rule:
 - M20 proceeds one section at a time and does not move forward until that section is accepted.
 
 YKI is the next strict target because it has the clearest screenshot sequence and the current native result is not close enough.
+
+## M20-C YKI screenshot lock map
+
+Mapped screenshots:
+
+- IMG_0409-IMG_0431: YKI Practice exact dark flow
+- IMG_0432-IMG_0479: YKI Mock Exam exact light flow
+
+Rule:
+
+- YKI cannot move forward until every screen, timer, play button, answer state, writing state, speaking state, progress indicator, and result screen is represented.
