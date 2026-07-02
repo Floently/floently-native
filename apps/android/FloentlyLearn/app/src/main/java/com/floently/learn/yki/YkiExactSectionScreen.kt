@@ -115,7 +115,7 @@ fun YkiExactSectionScreen(
     if (mode == YkiScreenMode.MockExam) {
         YkiMockExactFlow(onBack = onBack)
     } else {
-        YkiPracticeExactFlow(onBack = onBack)
+        YkiPracticeExactScreen(onBack = onBack)
     }
 }
 

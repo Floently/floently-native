@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M20 section-lock rebuild - M20-DX rejected placeholder YKI.
+M20 section-lock rebuild - M20-E YKI Practice real content flow.
 
 ## Branch
 
@@ -167,3 +167,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M20-D replaced generic YKI module UI with deterministic screenshot-sequence YKI Practice and YKI Mock Exam screens for IMG_0409-IMG_0479.
 
 - M20-DX records user rejection of the placeholder YKI implementation: M20-D used fake passages/questions and non-functional options; next rebuild must lock YKI Practice only from exact screenshot/source content before touching YKI Mock Exam.
+
+- M20-E rebuilt YKI Practice only with screenshot-derived passages/questions/options and selectable answer behavior; YKI Mock Exam remains paused until Practice is accepted.

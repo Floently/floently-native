@@ -73,3 +73,7 @@ M20-E must rebuild YKI Practice only from:
 - IMG_0431
 
 YKI Mock Exam IMG_0432-IMG_0479 must not be worked on until YKI Practice is accepted.
+
+## Follow-up
+
+M20-E begins the correction by replacing YKI Practice placeholder content with real screenshot-derived Practice content and explicit selectable/checkable answer states.

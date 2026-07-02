@@ -202,3 +202,17 @@ Correction:
 - M20-E must rebuild YKI Practice only.
 - The Practice rebuild must use the exact passages, exact questions, exact options, exact visible answer states, and exact layout from IMG_0409-IMG_0431.
 - YKI Mock Exam must wait until YKI Practice is accepted.
+
+## M20-E implementation note
+
+YKI Practice was rebuilt again after M20-D rejection.
+
+Correction:
+
+- Practice no longer uses placeholder passages/questions.
+- Practice now has exact screenshot-derived passages, questions, answer options, writing prompts, and speaking prompts from IMG_0410-IMG_0431.
+- Answer options are selectable.
+- Answers do not auto-approve.
+- Check answer appears separately from Next task.
+- Correct and wrong answer states are rendered after explicit checking.
+- YKI Mock Exam remains paused until Practice is accepted.
