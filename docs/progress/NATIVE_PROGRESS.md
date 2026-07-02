@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M20 section-lock rebuild - M20-C YKI screenshot lock map.
+M20 section-lock rebuild - M20-D YKI exact sequence screens.
 
 ## Branch
 
@@ -163,3 +163,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M20-B recorded the non-negotiable pixel parity contract: every screenshot, alignment, spacing, text, color, button position, function state, and logical flow must be represented; no section can move forward until accepted.
 
 - M20-C mapped every YKI Practice and YKI Mock Exam screenshot from IMG_0409-IMG_0479 into required native states before rebuilding YKI.
+
+- M20-D replaced generic YKI module UI with deterministic screenshot-sequence YKI Practice and YKI Mock Exam screens for IMG_0409-IMG_0479.

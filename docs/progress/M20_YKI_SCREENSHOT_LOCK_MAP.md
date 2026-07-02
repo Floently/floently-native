@@ -174,3 +174,13 @@ Likely files:
 ## Acceptance
 
 YKI is accepted only when the user confirms that IMG_0409-IMG_0479 are represented visually and logically.
+
+## M20-D implementation note
+
+Implemented a deterministic native YKI exact sequence screen:
+
+- `YkiFeatureScreen.kt` now delegates YKI to `YkiExactSectionScreen`.
+- `YkiExactSectionScreen.kt` contains separate dark YKI Practice and light YKI Mock Exam flows.
+- Practice flow includes IMG_0409-IMG_0431 mapped sequence states.
+- Mock flow includes IMG_0432-IMG_0479 mapped sequence states.
+- This is the first implementation pass for the YKI section lock and must be installed and compared against screenshots before acceptance.

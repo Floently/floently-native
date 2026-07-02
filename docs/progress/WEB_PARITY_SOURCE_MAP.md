@@ -375,3 +375,11 @@ A stricter follow-up answer port requires expanding native `StudyCard` models to
   - `IMG_0432-IMG_0479`
 - Correction:
   - YKI Practice and YKI Mock Exam now have a screenshot-by-screenshot implementation map before any further layout work.
+
+## M20-D YKI exact sequence screens
+
+- Correction:
+  - Generic YKI module UI was replaced by deterministic YKI Practice and YKI Mock Exam screenshot-sequence screens.
+  - YKI Practice is dark.
+  - YKI Mock Exam is light.
+  - Every mapped screenshot in IMG_0409-IMG_0479 has a represented native state.

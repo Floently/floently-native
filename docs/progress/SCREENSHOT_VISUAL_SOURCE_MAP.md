@@ -224,3 +224,16 @@ Mapped screenshots:
 Rule:
 
 - YKI cannot move forward until every screen, timer, play button, answer state, writing state, speaking state, progress indicator, and result screen is represented.
+
+## M20-D YKI exact sequence implementation
+
+Native files:
+
+- `YkiFeatureScreen.kt`
+- `YkiExactSectionScreen.kt`
+
+Implemented:
+
+- Dark YKI Practice deterministic sequence for IMG_0409-IMG_0431.
+- Light YKI Mock Exam deterministic sequence for IMG_0432-IMG_0479.
+- Next step is YKI-only install and screenshot comparison.
