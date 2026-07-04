@@ -113,7 +113,7 @@ fun YkiExactSectionScreen(
     onBack: () -> Unit
 ) {
     if (mode == YkiScreenMode.MockExam) {
-        YkiMockExactFlow(onBack = onBack)
+        YkiMockExamExactScreen(onBack = onBack)
     } else {
         YkiPracticeExactScreen(onBack = onBack)
     }

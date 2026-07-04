@@ -111,3 +111,23 @@ The source screenshots end at speaking task states, but native Practice now adds
 - Word-compatible export
 
 This completion state is product-required feedback after shorter Practice sessions.
+
+## M20-M Mock Exam implementation note
+
+YKI Mock Exam screenshots are now represented through `YkiMockExamBank.kt` and `YkiMockExamExactScreen.kt`.
+
+The timer screenshots are interpreted as live countdown states:
+
+- preparation countdowns auto-advance,
+- recording countdowns auto-start recording when microphone permission is available,
+- submitted state moves to next question or Submit exam,
+- results state includes export options.
+
+## M20-MR2 Mock pretest guard
+
+Mock testing is blocked until the build passes with:
+
+- every Mock screenshot ID represented,
+- delay/timer logic compiled,
+- route set to the new bank-driven Mock screen,
+- export actions present.

@@ -301,3 +301,34 @@ Implemented:
 - Added PDF export.
 - Added Word-compatible `.doc` export.
 - Added Android FileProvider and report cache path for sharing exported feedback.
+
+## M20-M YKI Mock Exam bank/timer state flow
+
+Moved to the next locked section after YKI Practice.
+
+Implemented:
+
+- Added `YkiMockExamBank.kt`.
+- Added `YkiMockExamExactScreen.kt`.
+- Routed YKI Mock Exam mode to the new bank-driven screen.
+- Mock overview maps IMG_0432-IMG_0434.
+- Reading maps IMG_0436-IMG_0442.
+- Writing maps IMG_0443-IMG_0446.
+- Timed preparation and recording map IMG_0447-IMG_0477.
+- Results/export map IMG_0478-IMG_0479.
+- Preparation timers auto-advance.
+- Recording timers use microphone recording and saved/submitted states.
+- Final Mock evaluation exports PDF and Word-compatible reports.
+
+## M20-MR2 YKI Mock Exam pretest lock
+
+Before user testing, Mock Exam must satisfy:
+
+- `YkiMockExamBank.kt` exists.
+- `YkiMockExamExactScreen.kt` exists.
+- Mock mode routes to `YkiMockExamExactScreen`.
+- All required Mock screenshot IDs IMG_0432-IMG_0479 are represented.
+- Preparation timers auto-run.
+- Recording timers use microphone recording and submitted/sent states.
+- Writing fields are editable and saved before continuing.
+- Results include PDF and Word-compatible evaluation exports.

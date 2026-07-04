@@ -177,3 +177,7 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M20-I records every YKI screenshot as a required state, extracts Practice content into a bank file, adds a Practice screenshot state map, and fixes writing/speaking button state transitions.
 
 - M20-K corrected YKI Practice speaking flow so preparation automatically starts recording, adds sent state, and adds final evaluation export as PDF and Word-compatible document.
+
+- M20-M added a bank-driven YKI Mock Exam screen with overview, reading, writing, timed preparation, timed recording, submitted/results states, and PDF/Word evaluation exports.
+
+- M20-MR2 repairs the Mock Exam build, adds a strict Mock screenshot state contract, and guards all IMG_0432-IMG_0479 Mock states before testing.
