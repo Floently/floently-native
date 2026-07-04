@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-M20 section-lock rebuild - M20-G YKI Practice function pass.
+M20 section-lock rebuild - M20-I YKI Practice bank/button/timer lock.
 
 ## Branch
 
@@ -171,3 +171,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M20-E rebuilt YKI Practice only with screenshot-derived passages/questions/options and selectable answer behavior; YKI Mock Exam remains paused until Practice is accepted.
 
 - M20-G corrected YKI Practice functions: listening audio uses Finnish TTS from the practice bank script, speaking has native recorder controls, writing fields are empty/editable with autocorrect disabled, and Practice task data is routed through a bank object.
+
+- M20-I extracted YKI Practice content into a dedicated bank file and corrected Practice button/timer states: Writing Save answer now changes into Next task, and Speaking now has preparation countdown, speaking countdown/recording, save state, and next transition.

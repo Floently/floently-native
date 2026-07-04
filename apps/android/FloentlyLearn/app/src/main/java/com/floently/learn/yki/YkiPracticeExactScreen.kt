@@ -39,6 +39,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -66,25 +68,21 @@ private val orange = Color(0xFFFFA326)
 private val green = Color(0xFF2FC075)
 private val red = Color(0xFFE05562)
 
-private enum class Skill { Reading, Listening, Writing, Speaking }
+private typealias Skill = YkiPracticeSkill
+private typealias PracticeTask = YkiPracticeBankTask
 
-private data class PracticeTask(
-    val screenshot: String,
-    val skill: Skill,
-    val number: String,
-    val title: String,
-    val cefr: String,
-    val passage: String,
-    val question: String = "",
-    val options: List<String> = emptyList(),
-    val correctIndex: Int = -1,
-    val defaultWrongIndex: Int = -1,
-    val answerText: String = "",
-    val wordCounter: String = "",
-    val saved: Boolean = false,
-    val audioScript: String = "",
-    val bankSource: String = "native-yki-practice-bank"
-)
+private enum class WritingButtonState {
+    Draft,
+    Saved
+}
+
+private enum class SpeakingStage {
+    Prompt,
+    Preparing,
+    ReadyToSpeak,
+    Speaking,
+    Saved
+}
 
 @Composable
 fun YkiPracticeExactScreen(
@@ -95,6 +93,7 @@ fun YkiPracticeExactScreen(
     val selected = remember { mutableStateMapOf<Int, Int>() }
     val checked = remember { mutableStateMapOf<Int, Boolean>() }
     val writingAnswers = remember { mutableStateMapOf<Int, String>() }
+    val writingButtonStates = remember { mutableStateMapOf<Int, WritingButtonState>() }
 
     Box(
         modifier = Modifier
@@ -123,7 +122,14 @@ fun YkiPracticeExactScreen(
                     selectedIndex = selected[index],
                     isChecked = checked[index] == true,
                     writingValue = writingAnswers[index].orEmpty(),
-                    onWritingChange = { value -> writingAnswers[index] = value },
+                    writingButtonState = writingButtonStates[index] ?: WritingButtonState.Draft,
+                    onWritingChange = { value ->
+                        writingAnswers[index] = value
+                        writingButtonStates[index] = WritingButtonState.Draft
+                    },
+                    onSaveWriting = {
+                        writingButtonStates[index] = WritingButtonState.Saved
+                    },
                     onSelect = { selected[index] = it },
                     onCheck = { checked[index] = true },
                     onNext = {
@@ -320,7 +326,9 @@ private fun PracticeTaskScreen(
     selectedIndex: Int?,
     isChecked: Boolean,
     writingValue: String,
+    writingButtonState: WritingButtonState,
     onWritingChange: (String) -> Unit,
+    onSaveWriting: () -> Unit,
     onSelect: (Int) -> Unit,
     onCheck: () -> Unit,
     onNext: () -> Unit,
@@ -464,8 +472,8 @@ private fun PracticeTaskScreen(
                                 }
                             )
                         }
-                        task.skill == Skill.Writing && !task.saved -> {
-                            SmallButton("Save answer", orange, Color.White, onNext)
+                        task.skill == Skill.Writing && writingButtonState == WritingButtonState.Draft -> {
+                            SmallButton("Save answer", orange, Color.White, onSaveWriting)
                         }
                         else -> {
                             SmallButton("Next task", purple, Color.White, onNext)
@@ -572,9 +580,10 @@ private fun SpeakingRecordingControls(task: PracticeTask) {
         )
     }
     var recorder by remember { mutableStateOf<MediaRecorder?>(null) }
-    var isRecording by remember { mutableStateOf(false) }
-    var savedPath by remember { mutableStateOf<String?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var stage by remember(task.screenshot) { mutableStateOf(SpeakingStage.Prompt) }
+    var seconds by remember(task.screenshot) { mutableIntStateOf(0) }
+    var savedPath by remember(task.screenshot) { mutableStateOf<String?>(null) }
+    var error by remember(task.screenshot) { mutableStateOf<String?>(null) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -603,24 +612,47 @@ private fun SpeakingRecordingControls(task: PracticeTask) {
             recorder = nextRecorder
             savedPath = output.absolutePath
             error = null
-            isRecording = true
+            stage = SpeakingStage.Speaking
+            seconds = 60
         } catch (e: Exception) {
             nextRecorder.release()
             error = "Recording could not start."
-            isRecording = false
+            stage = SpeakingStage.ReadyToSpeak
         }
     }
 
-    fun stopRecording() {
-        val active = recorder ?: return
-        try {
-            active.stop()
-        } catch (_: RuntimeException) {
-            error = "Recording was too short to save."
-        } finally {
-            active.release()
-            recorder = null
-            isRecording = false
+    fun saveRecording() {
+        val active = recorder
+        if (active != null) {
+            try {
+                active.stop()
+            } catch (_: RuntimeException) {
+                error = "Recording was too short to save."
+            } finally {
+                active.release()
+                recorder = null
+            }
+        }
+        stage = SpeakingStage.Saved
+        seconds = 0
+    }
+
+    LaunchedEffect(stage, seconds) {
+        when {
+            stage == SpeakingStage.Preparing && seconds > 0 -> {
+                delay(1000)
+                seconds -= 1
+            }
+            stage == SpeakingStage.Preparing && seconds <= 0 -> {
+                stage = SpeakingStage.ReadyToSpeak
+            }
+            stage == SpeakingStage.Speaking && seconds > 0 -> {
+                delay(1000)
+                seconds -= 1
+            }
+            stage == SpeakingStage.Speaking && seconds <= 0 -> {
+                saveRecording()
+            }
         }
     }
 
@@ -637,10 +669,29 @@ private fun SpeakingRecordingControls(task: PracticeTask) {
 
     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
         BigButton(
-            text = if (isRecording) "Stop recording" else "Start voice recording",
-            color = if (isRecording) red else orange,
+            text = when (stage) {
+                SpeakingStage.Prompt -> "Start conversation roleplay"
+                SpeakingStage.Preparing -> "Prepare to speak 00:${seconds.toString().padStart(2, '0')}"
+                SpeakingStage.ReadyToSpeak -> "Start speaking"
+                SpeakingStage.Speaking -> "Save answer"
+                SpeakingStage.Saved -> "Answer saved"
+            },
+            color = when (stage) {
+                SpeakingStage.Speaking -> red
+                SpeakingStage.Saved -> purple
+                else -> orange
+            },
             onClick = {
-                if (isRecording) stopRecording() else startRecording()
+                when (stage) {
+                    SpeakingStage.Prompt -> {
+                        stage = SpeakingStage.Preparing
+                        seconds = 30
+                    }
+                    SpeakingStage.Preparing -> Unit
+                    SpeakingStage.ReadyToSpeak -> startRecording()
+                    SpeakingStage.Speaking -> saveRecording()
+                    SpeakingStage.Saved -> Unit
+                }
             }
         )
 
@@ -653,9 +704,12 @@ private fun SpeakingRecordingControls(task: PracticeTask) {
             Text(
                 text = when {
                     error != null -> error.orEmpty()
-                    isRecording -> "Recording... speak your answer now."
-                    savedPath != null -> "Recording saved for this speaking task."
-                    else -> "Use the microphone to record your speaking response."
+                    stage == SpeakingStage.Prompt -> "Read the YKI bank speaking prompt, then start preparation."
+                    stage == SpeakingStage.Preparing -> "Prepare your spoken answer. Recording has not started yet."
+                    stage == SpeakingStage.ReadyToSpeak -> "Preparation finished. Start speaking when ready."
+                    stage == SpeakingStage.Speaking -> "Speaking time 00:${seconds.toString().padStart(2, '0')}. Tap Save answer when finished."
+                    stage == SpeakingStage.Saved && savedPath != null -> "Speaking answer saved. Use Next task to continue."
+                    else -> "Speaking answer saved. Use Next task to continue."
                 },
                 color = if (error != null) Color(0xFFFFC6CC) else muted,
                 textAlign = TextAlign.Center,
@@ -835,234 +889,4 @@ private fun SmallButton(
             )
         }
     }
-}
-
-private object YkiPracticeBank {
-    fun practiceTasks(): List<PracticeTask> = listOf(
-    PracticeTask(
-        screenshot = "IMG_0410-IMG_0411",
-        skill = Skill.Reading,
-        number = "1/17",
-        title = "Lue artikkeli maahanmuutosta ja vastaa.",
-        cefr = "B2 — Can understand articles on social topics.",
-        passage = "Suomi tarvitsee lähivuosikymmeninä merkittävää maahanmuuttoa väestön ikääntymisestä johtuvan työvoimapulan paikkaamiseksi. Erityisesti sosiaali- ja terveysala sekä rakennussektori kärsivät jo nyt osaajapulasta.\n\nMaahanmuuttajien kotoutuminen on avainasemassa. Onnistunut kotoutuminen edellyttää kielitaitoa, työllistymistä ja sosiaalisia verkostoja. Suomen kielen oppiminen on usein suurin este nopealle työllistymiselle.\n\nViranomaiset ja järjestöt tarjoavat kotouttamispalveluja, mutta resurssit eivät aina riitä yksilölliseen tukeen. Erityisesti heikosti koulutettujen maahanmuuttajien kohdalla prosessi voi venyä vuosiksi. Asiantuntijat korostavat, että panostaminen varhaiseen kielenopetukseen ja työllistymisen tukeen maksaa itsensä takaisin yhteiskunnalle.",
-        question = "Miksi Suomi tarvitsee maahanmuuttoa asiantuntijoiden mukaan?",
-        options = listOf(
-            "Maahanmuuttajat tuovat uutta teknologiaa Suomeen",
-            "Ikääntymisestä johtuva työvoimapula on keskeinen syy",
-            "Suomen syntyvyys on laskenut alle nollatason",
-            "Suomessa ei enää ole riittävästi nuoria kouluttautumaan"
-        ),
-        correctIndex = 1
-    ),
-    PracticeTask(
-        screenshot = "IMG_0412",
-        skill = Skill.Reading,
-        number = "2/17",
-        title = "Lue artikkeli etätyöstä ja vastaa.",
-        cefr = "B2 — Can understand articles and reports on contemporary work.",
-        passage = "Etätyö on yleistynyt monilla aloilla nopeasti. Osa työntekijöistä kokee sen helpottavan arkea, koska työmatkoihin ei kulu aikaa ja työpäivää on helpompi rytmittää kotona. Sen sijaan perheen kanssa ahtaissa oloissa asuvat kokevat usein etätyön raskaammaksi kuin toimistossa työskentelyn.\n\nOsa asiantuntijoista on huolissaan siitä, että pitkittynyt etätyö heikentää tiimien yhteenkuuluvuutta ja vaikeuttaa uusien työntekijöiden perehdyttämistä. Ratkaisuna monet yritykset ovat ottaneet käyttöön hybridimallin, jossa toimistolla käydään muutamana päivänä viikossa.",
-        question = "Miksi etätyö voi olla haastavampaa joillekin työntekijöille kuin toisille?",
-        options = listOf(
-            "Koska etätyö on aina vähemmän tuottavaa kuin toimistotyö",
-            "Koska työnantajat eivät luota etätyöntekijöihin",
-            "Koska ahtaat asuinolosuhteet voivat tehdä etätyöstä raskaampaa",
-            "Koska kotona ei ole riittävästi teknologiaa"
-        ),
-        correctIndex = 2
-    ),
-    PracticeTask(
-        screenshot = "IMG_0413-IMG_0414",
-        skill = Skill.Reading,
-        number = "3/17",
-        title = "Lue lehtiartikkeli ja vastaa.",
-        cefr = "B2 — Can understand articles and reports on contemporary problems.",
-        passage = "Suomen terveydenhuoltojärjestelmä perustuu universaaliin hoitovelvollisuuteen: jokainen Suomessa asuva on oikeutettu terveydenhoitopalveluihin asuinpaikastaan riippumatta. Käytännössä palvelut tuotetaan kuntien, hyvinvointialueiden ja yksityisen sektorin yhteistyönä.\n\nViime vuosina yksityisten terveyspalvelujen käyttö on kasvanut huomattavasti. Syynä on usein julkisen sektorin pitkät jonotusajat erikoissairaanhoitoon. Maksukykyisillä on mahdollisuus ohittaa jonot yksityisellä vastaanotolla, mikä herättää kysymyksiä tasa-arvosta.\n\nSosiaali- ja terveysministeriö on pyrkinyt purkamaan hoitojonoja lisäämällä lähipalveluja ja tehostamalla digitaalisia palveluja. Digilääkäripalveluiden käyttö on erityisesti nuorten ja työssäkäyvien parissa yleistynyt nopeasti.",
-        question = "Mitä artikkeli sanoo yksityisten terveyspalvelujen lisääntymisestä?",
-        options = listOf(
-            "Se on parantanut kaikkien suomalaisten pääsyä hoitoon tasapuolisesti",
-            "Se on vähentänyt digitaalisten palvelujen tarvetta",
-            "Se herättää kysymyksiä yhdenvertaisuudesta, koska hoitoon pääsy riippuu maksukyvystä",
-            "Se on korvannut kokonaan julkisen terveydenhuollon"
-        ),
-        correctIndex = 2,
-        defaultWrongIndex = 0
-    ),
-    PracticeTask(
-        screenshot = "IMG_0415",
-        skill = Skill.Reading,
-        number = "4/17",
-        title = "Lue artikkeli julkisista palveluista ja vastaa.",
-        cefr = "B2 — Can understand argumentation in public-service texts.",
-        passage = "Kehitys on tuonut mukanaan tehokkuutta ja joustavuutta. Palveluja voi käyttää vuorokauden ympäri, ja jonotusajat ovat lyhentyneet. Kuitenkin kaikille digitaaliset palvelut eivät ole yhtä helppokäyttöisiä. Ikääntyneet, maahanmuuttajat ja henkilöt, joilla on heikko digilukutaito, tarvitsevat usein henkilökohtaista tukea asioinnissa.\n\nJulkishallinto onkin pyrkinyt pitämään henkilökohtaisen asioinnin vaihtoehdon saatavilla niille, jotka eivät pysty tai halua käyttää sähköisiä kanavia.",
-        question = "Mikä on artikkelin pääviesti digitalisaatiosta julkisissa palveluissa?",
-        options = listOf(
-            "Digilukutaito on parantunut kaikissa väestöryhmissä",
-            "Digitalisointi on hyödyllistä, mutta kaikki eivät pysty hyödyntämään sitä yhtäläisesti",
-            "Julkishallinto on luopunut kokonaan perinteisestä asioinnista",
-            "Digitalisointi on täysin epäonnistunut julkisissa palveluissa"
-        ),
-        correctIndex = 1
-    ),
-    PracticeTask(
-        screenshot = "IMG_0416",
-        skill = Skill.Reading,
-        number = "5/17",
-        title = "Lue artikkeli ympäristöasioista ja vastaa.",
-        cefr = "B2 — Can understand opinion and criticism in articles.",
-        passage = "Silti kuluttajavalinnoilla on merkitystä. Kasvipohjaisen ruokavalion yleistyminen, joukkoliikenteen suosiminen ja energiatehokkaan asumisen lisääntyminen ovat konkreettisia tapoja pienentää omaa hiilijalanjälkeä.\n\nKriitikot kuitenkin muistuttavat, että vastuun siirtäminen yksilöille vie huomion pois rakenteellisista ratkaisuista, kuten energiapolitiikasta ja teollisuuden sääntelystä. Tehokkain muutos syntyy yhdistämällä poliittiset päätökset ja yksilöllinen toiminta.",
-        question = "Mitä kriitikot sanovat yksilöiden vastuusta ympäristöasioissa?",
-        options = listOf(
-            "Vastuun painottaminen yksilöille voi haitata rakenteellisten ratkaisujen hakemista",
-            "Yksilöt ovat päävastuussa ilmastonmuutoksen torjumisesta",
-            "Yksilöiden valinnoilla ei ole mitään merkitystä",
-            "Kierrätys on riittävä toimenpide ilmastonmuutoksen hidastamiseen"
-        ),
-        correctIndex = 0,
-        audioScript = "Kuuntele ote luennosta. Eksekutiivinen funktio tarkoittaa kykyä vaihtaa tehtävien välillä ja hallita huomiota."
-    ),
-    PracticeTask(
-        screenshot = "IMG_0417-IMG_0418",
-        skill = Skill.Listening,
-        number = "6/17",
-        title = "Kuuntele radiouutinen ja vastaa.",
-        cefr = "B2 — Can understand radio news and identify the main information.",
-        passage = "",
-        question = "Mitä liikuntakeskuksen vastustajat ehdottavat?",
-        options = listOf(
-            "Nykyisten tilojen kunnostamista uuden rakentamisen sijaan",
-            "Hankkeen kokonaan peruuttamista",
-            "Halvempaa rakennustapaa",
-            "Yksityistä rahoitusta hankkeelle"
-        ),
-        correctIndex = 0,
-        defaultWrongIndex = 1,
-        audioScript = "Kuuntele radiouutinen. Liikuntakeskuksen vastustajat ehdottavat nykyisten tilojen kunnostamista uuden rakentamisen sijaan."
-    ),
-    PracticeTask(
-        screenshot = "IMG_0419",
-        skill = Skill.Listening,
-        number = "7/17",
-        title = "Kuuntele ote luennosta ja vastaa.",
-        cefr = "B2 — Can follow extended speech in a lecture on familiar topics.",
-        passage = "",
-        question = "Mitä tarkoitetaan eksekutiivisella funktiolla tässä yhteydessä?",
-        options = listOf(
-            "Kykyä vaihtaa tehtävien välillä ja hallita huomiota",
-            "Laajaa sanavarastoa molemmissa kielissä",
-            "Pitkäkestoista muistia",
-            "Kykyä puhua kahta kieltä samanaikaisesti"
-        ),
-        correctIndex = 0
-    ),
-    PracticeTask(
-        screenshot = "IMG_0420",
-        skill = Skill.Listening,
-        number = "8/17",
-        title = "Kuuntele haastattelu ja vastaa.",
-        cefr = "B2 — Can understand interviews on professional topics.",
-        passage = "",
-        question = "Mitä asiantuntija pitää parhaana keinona löytää töitä nuorille?",
-        options = listOf(
-            "Kansainvälinen kokemus ulkomailla",
-            "Mahdollisimman monen hakemuksen lähettäminen",
-            "Työnhakukurssien suorittaminen",
-            "Verkostoituminen opiskeluaikana ja alan tapahtumissa"
-        ),
-        correctIndex = 3,
-        audioScript = "Kuuntele haastattelu. Asiantuntija sanoo, että verkostoituminen opiskeluaikana ja alan tapahtumissa auttaa nuoria löytämään töitä."
-    ),
-    PracticeTask(
-        screenshot = "IMG_0421",
-        skill = Skill.Listening,
-        number = "9/17",
-        title = "Kuuntele työtovereiden keskustelu ja vastaa.",
-        cefr = "B1 — Can follow the main points of extended discussion on familiar topics.",
-        passage = "",
-        question = "Miksi projekti on myöhässä?",
-        options = listOf(
-            "Projektitiimillä on liian vähän resursseja",
-            "Alihankkija ei ole toimittanut osia ajoissa",
-            "Johto muutti projektin tavoitteita",
-            "Asiakas on muuttanut vaatimuksiaan"
-        ),
-        correctIndex = 1,
-        defaultWrongIndex = 0,
-        audioScript = "Kuuntele työtovereiden keskustelu. Projekti on myöhässä, koska alihankkija ei ole toimittanut osia ajoissa."
-    ),
-    PracticeTask(
-        screenshot = "IMG_0422",
-        skill = Skill.Writing,
-        number = "10/17",
-        title = "Kirjoita mielipidekirjoitus.",
-        cefr = "B1 — Can write accounts of experiences, expressing opinions with reasons.",
-        passage = "Jotkut ihmiset ajattelevat, että älypuhelimet ovat tehneet sosiaalisesta elämästä köyhempää, koska ihmiset katsovat puhelimiaan seurueessa ollessaan. Toiset taas ajattelevat, että älypuhelimet ovat parantaneet yhteydenpitoa.\n\nKirjoita 80-120 sanaa. Esitä oma mielipiteesi ja perustele se kahdella argumentilla. Käytä asiatyyliä.\n\nAloita esittämällä mielipiteesi selkeästi. Kirjoita kaksi selkeää perustelua. Päätä lyhyellä yhteenvedolla tai johtopäätöksellä.",
-        answerText = "Hyvä sulle kuuluu on ollut parisuhde on tosi pelottavaa kaikki mitä rakastin sitä ei se ole niin helppoa se ei vastannut mitään ei seuraa sua ja voidaan sopia myös se on ihan ok jos se ei vastannut vielä yksi on joukosta löydät täältä ei oo vielä siinä viestissä on ollut tosi kiltti tyttö ei se on ihan ok mutta en haluaa olla mukana tekemässä tikusta ei oo vielä nukkunut",
-        wordCounter = "69 / 100 words"
-    ),
-    PracticeTask(
-        screenshot = "IMG_0423",
-        skill = Skill.Writing,
-        number = "11/17",
-        title = "Kirjoita argumentoiva teksti.",
-        cefr = "B2 — Can write an essay presenting arguments for and against a position.",
-        passage = "Kaupunki harkitsee yksityisautoilun rajoittamista keskustassa ilmanlaadun ja liikenteen sujuvuuden parantamiseksi. Monet asukkaat vastustavat muutosta.\n\nKirjoita 100-130 sanaa. Esitä sekä puolesta- että vastaargumentteja ja päätä omaan kantaasi. Käytä asiallista ja selkeää kieltä.\n\nEsitä vähintään yksi puolesta- ja yksi vastaargumentti. Perustele oma kantasi loppukappaleessa. Vältä liian arkista kieltä.",
-        answerText = "Yö on tosi vaikea saada kokeilemaan jos yöllinen se että alle 5 vuota ei oo vielä siinä viestissä saat olla missä tahansa Yu ei oo vielä nukkunut muutama vuosi on vaihtunut se että kiusan se että kiusan sua ja sun Tarja Turunen olen yrittänyt että se ei vastannut mitään muuta kuin suomi ei se että alle ja kuoli ja se näkyy sun pitää sinut lämpimänä tai jäähtyneenä se että alle 5 ei kerro koko ajan lisää se on ihan hyvä mutta",
-        wordCounter = "79 / 115 words"
-    ),
-    PracticeTask(
-        screenshot = "IMG_0424-IMG_0425",
-        skill = Skill.Writing,
-        number = "12/17",
-        title = "Kirjoita lyhyt raportti.",
-        cefr = "B2 — Can write a structured report on a familiar topic.",
-        passage = "Olet osallistunut yhteisösi asukasiltaan, jossa käsiteltiin lähipuiston kunnostamista. Kirjoita lyhyt raportti kokouksen tuloksista puiston suunnitteluryhmälle.\n\nRaportin tulee sisältää:\n- kokouksessa esitetyt ongelmat\n- asukkaiden toiveet\n- suositeltava seuraava toimenpide\n\nKirjoita 90-120 sanaa.\n\nKäytä selkeää rakennetta: ongelmat > toiveet > toimenpide. Raporttikirjoitus on tiivistä ja asiallista.",
-        answerText = "Vuoden ensimmäinen kokonainen broileri on tosi pelottavaa ja se näkyy myös siinä tapauksessa jos se ei ole mitään järkeä ja sen jälkeen lupasit monta vuotta hyvää kuvaa ei ole mitään järkeä on ollut parisuhde ja se näkyy sun käytössä on myös se on ihan hyvä juttu siinä vaiheessa että se ei vastannut vielä ole mutta en löytänyt mutta en löytänyt nopeasti palaa takaisin ja masturboida webcam amatoori isot upeat ja se näkyy myös päätyi kuukausi ja",
-        wordCounter = "76 / 105 words",
-        saved = true
-    ),
-    PracticeTask(
-        screenshot = "IMG_0426-IMG_0427",
-        skill = Skill.Writing,
-        number = "13/17",
-        title = "Kirjoita virallinen sähköpostiviesti.",
-        cefr = "B1 — Can write a formal letter or email on familiar topics.",
-        passage = "Olet tilannut verkkokaupasta tuotteen, joka on tullut rikki. Kirjoita reklamaatioviesti verkkokaupan asiakaspalveluun.\n\nViestin tulee sisältää:\n- tilausnumero (keksitty, esim. TK-20481)\n- kuvaus ongelmasta\n- mitä toivot tilanteen ratkaisuksi\n\nKirjoita 80-110 sanaa virallisella asiakaspalvelutyyliä käyttäen.\n\nKäytä virallista tervehdystä ja lopetusta. Esitä faktat selkeässä järjestyksessä. Pyyntösi pitää olla yksiselitteinen.",
-        answerText = "Nuo on ollut tosi huono puoli että on aika erota asiasanat arviointi on tosi vaikea löytää jos se ei ole vielä julkisia että se ei ole vielä julkisia että se ei vastannut mitään tekemistä niin että ne on niin tärkeä nyt on tilanne oli joku suunnitelma se että kiusan se että kiusan sua ei oo vielä siinä viestissä on tosi pelottavaa kaikki nähtävä se että kiusan se on ihan ok jos et haluaa ostaa mitä lupasit monta",
-        wordCounter = "77 / 95 words",
-        saved = true
-    ),
-    PracticeTask(
-        screenshot = "IMG_0428",
-        skill = Skill.Speaking,
-        number = "14/17",
-        title = "Keskustelu työn haasteista.",
-        cefr = "B2 — Can take an active part in discussions in familiar contexts.",
-        passage = "Osallistu keskusteluun työn stressistä AI-kumppanin kanssa. Kerro omista kokemuksistasi, anna mielipiteesi stressinhallinnan keinoista ja kysy kumppanin ajatuksia.\n\nReagoi AI:n vastauksiin — älä vain monologoi. Käytä korjauskieltä jos et ymmärrä: 'Tarkoitatko, että...?'"
-    ),
-    PracticeTask(
-        screenshot = "IMG_0429",
-        skill = Skill.Speaking,
-        number = "15/17",
-        title = "Terveydenhuollon roolipeli.",
-        cefr = "B2 — Can describe experiences and give reasons for professional decisions.",
-        passage = "Harjoittele terveydenhuollon tilanteita AI-kumppanin kanssa. Olet potilas, joka käy lääkärissä. Kerro oireesi selkeästi ja kysy tietoa hoitovaihtoehdoista.\n\nKäytä täsmällistä kieltä oireista: milloin alkoi, kuinka vakava, mikä helpottaa. Esitä myös yksi kysymys lääkärille."
-    ),
-    PracticeTask(
-        screenshot = "IMG_0430",
-        skill = Skill.Speaking,
-        number = "16/17",
-        title = "Mielipide suomalaisesta ruokakulttuurista.",
-        cefr = "B1 — Can express and justify opinions on familiar topics.",
-        passage = "Kerro suomalaisesta ruokakulttuurista AI-kumppanille. Puhu ainakin kahdesta suomalaisesta ruoasta ja sano, pidätkö niistä vai et. Perustele mielipiteesi.\n\nKäytä rakennetta: mainitse ruoka > anna mielipide > perustele. Vältä liian lyhyitä vastauksia."
-    ),
-    PracticeTask(
-        screenshot = "IMG_0431",
-        skill = Skill.Speaking,
-        number = "17/17",
-        title = "Ajanvaraus puhelimitse.",
-        cefr = "B1 — Can deal with most situations likely to arise when booking appointments.",
-        passage = "Soitat palvelutoimistoon varataksesi ajan. Sinun täytyy selittää syy käyntiisi, ehdottaa sopivaa aikaa ja vahvistaa varaus. Harjoittele tätä puhelinkeskustelua AI-kumppanin kanssa.\n\nKäytä kohteliasta kieltä. Kuuntele AI:n kysymykset tarkasti ja vastaa täysillä lauseilla. Tavoite on viisi vuoroa."
-    )
-)
 }

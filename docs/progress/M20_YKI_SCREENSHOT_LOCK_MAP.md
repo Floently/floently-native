@@ -231,3 +231,28 @@ Functional corrections:
 - Writing fields have autocorrect disabled.
 - Writing fields do not show placeholder text.
 - YKI Mock Exam remains paused until YKI Practice is functionally accepted.
+
+## M20-I YKI Practice bank/button/timer lock
+
+User feedback after M20-G:
+
+- Practice UI is good enough to preserve.
+- Button states still need to follow screenshots.
+- Writing Save answer must change into Next task instead of auto-moving.
+- Speaking/listening material must come from a bank layer, not UI-local placeholder content.
+- Speaking must represent preparation and speaking countdown states from the screenshot sequence.
+
+Implemented:
+
+- Extracted YKI Practice task content into `YkiPracticeBank.kt`.
+- `YkiPracticeExactScreen.kt` now consumes `YkiPracticeBank.practiceTasks()`.
+- Writing uses empty editable answer state.
+- Writing Save answer changes button state to Next task.
+- Speaking flow now has:
+  - Start conversation roleplay
+  - Prepare countdown
+  - Start speaking
+  - Speaking countdown with recording
+  - Save answer
+  - Next task
+- YKI Mock Exam remains paused.

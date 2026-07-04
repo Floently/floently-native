@@ -130,3 +130,12 @@ YKI Practice visual layout is close enough for a function pass, but it is not ac
 - writing fields are editable without autocorrect or placeholder text,
 - task content comes from the YKI bank layer,
 - the user confirms Practice behavior.
+
+## M20-I YKI Practice state rule
+
+YKI Practice is not accepted until button states follow the screenshot sequence:
+
+- choice tasks: select > check answer > feedback > next task
+- writing tasks: type > save answer > next task
+- speaking tasks: start roleplay > prepare countdown > start speaking > speaking countdown/recording > save answer > next task
+- task material must come from the YKI bank layer
