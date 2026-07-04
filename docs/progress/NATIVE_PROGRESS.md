@@ -181,3 +181,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M20-M added a bank-driven YKI Mock Exam screen with overview, reading, writing, timed preparation, timed recording, submitted/results states, and PDF/Word evaluation exports.
 
 - M20-MR2 repairs the Mock Exam build, adds a strict Mock screenshot state contract, and guards all IMG_0432-IMG_0479 Mock states before testing.
+
+- M20-O rebuilt YKI Mock Exam behavior to mimic a real exam: no correct/wrong feedback during the exam, listening section with bank audio tasks, full reading/writing/listening/speaking structure, and final-only evaluation.

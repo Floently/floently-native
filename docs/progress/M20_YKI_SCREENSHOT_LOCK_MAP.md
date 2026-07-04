@@ -332,3 +332,20 @@ Before user testing, Mock Exam must satisfy:
 - Recording timers use microphone recording and submitted/sent states.
 - Writing fields are editable and saved before continuing.
 - Results include PDF and Word-compatible evaluation exports.
+
+## M20-O YKI Mock Exam correctness rebuild
+
+User rejected first Mock implementation.
+
+Implemented:
+
+- Mock Exam now behaves like an exam, not Practice.
+- No correct/wrong feedback during Mock.
+- No green/red answer correction during Mock.
+- Correctness is used only in final evaluation.
+- Reading has 3 bank tasks.
+- Writing has 2 bank tasks.
+- Listening now has preparation plus 3 bank audio tasks.
+- Speaking has 3 preparation/recording task pairs.
+- Final speaking task leads to Submit exam.
+- Mock content remains bank-driven through `YkiMockExamBank.kt`.

@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.media.MediaRecorder
 import android.os.Build
+import java.util.Locale
+import android.speech.tts.TextToSpeech
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
@@ -324,6 +326,7 @@ private fun MockTask(
 
                 if (task.phase == YkiMockPhase.ListeningTimer) {
                     MockStaticTimer(task = task)
+                    MockListeningAudioButton(task = task)
                 }
 
                 if (task.passage.isNotBlank()) {
@@ -382,32 +385,15 @@ private fun MockTask(
                     )
                 }
 
-                if (isChecked && task.options.isNotEmpty()) {
-                    val correct = selectedIndex == task.correctIndex
-                    Surface(
-                        color = if (correct) Color(0xFFEAF8F1) else Color(0xFFFFEEF0),
-                        shape = RoundedCornerShape(18.dp),
-                        border = BorderStroke(1.dp, if (correct) mockBankGreen else mockBankRed),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = if (correct) "Correct. Continue to the next state." else "Needs review. The correct answer is highlighted.",
-                            color = if (correct) mockBankGreen else mockBankRed,
-                            fontWeight = FontWeight.Black,
-                            modifier = Modifier.padding(14.dp)
-                        )
-                    }
-                }
-
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                     MockGhostButton("Previous", onPrevious)
                     Spacer(modifier = Modifier.weight(1f))
                     when {
-                        task.options.isNotEmpty() && !isChecked -> {
+                        task.options.isNotEmpty() -> {
                             MockActionButton(
-                                text = "Continue",
+                                text = if (task.phase == YkiMockPhase.ListeningTimer) "Save listening answer" else "Continue",
                                 color = if (selectedIndex == null) Color(0xFFB9C5E7) else mockBankBlue,
-                                onClick = { if (selectedIndex != null) onCheck() }
+                                onClick = { if (selectedIndex != null) onNext() }
                             )
                         }
                         task.phase == YkiMockPhase.Writing && writingState == MockWritingState.Draft -> {
@@ -619,7 +605,7 @@ private fun MockTimedTask(
                         }
                         isSent -> {
                             MockActionButton(
-                                text = if (task.screenshots.contains("IMG_0477")) "Submit exam" else "Next question",
+                                text = if (task.finalSubmit || task.screenshots.contains("IMG_0477")) "Submit exam" else "Next question",
                                 color = mockBankGreen,
                                 onClick = onNext
                             )
@@ -632,6 +618,57 @@ private fun MockTimedTask(
             }
         }
     }
+}
+
+
+@Composable
+private fun MockListeningAudioButton(task: YkiMockExamTask) {
+    val context = LocalContext.current
+    var ready by remember(task.bankTaskId) { mutableStateOf(false) }
+    var playing by remember(task.bankTaskId) { mutableStateOf(false) }
+    val engineHolder = remember(task.bankTaskId) { arrayOfNulls<TextToSpeech>(1) }
+
+    DisposableEffect(task.bankTaskId) {
+        val engine = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                engineHolder[0]?.language = Locale("fi", "FI")
+                ready = true
+            }
+        }
+        engineHolder[0] = engine
+
+        onDispose {
+            engine.stop()
+            engine.shutdown()
+            playing = false
+        }
+    }
+
+    MockPrimaryButton(
+        text = when {
+            playing -> "Stop audio"
+            ready -> "Play listening audio"
+            else -> "Preparing audio..."
+        },
+        color = if (playing) mockBankRed else mockBankBlue,
+        onClick = {
+            val engine = engineHolder[0]
+            if (engine != null && ready) {
+                if (playing) {
+                    engine.stop()
+                    playing = false
+                } else {
+                    engine.speak(
+                        task.audioScript.ifBlank { task.prompt },
+                        TextToSpeech.QUEUE_FLUSH,
+                        null,
+                        "yki-mock-${task.bankTaskId}"
+                    )
+                    playing = true
+                }
+            }
+        }
+    )
 }
 
 @Composable
@@ -680,18 +717,8 @@ private fun MockOption(
     correct: Boolean,
     onClick: () -> Unit
 ) {
-    val bg = when {
-        checked && correct -> Color(0xFFEAF8F1)
-        checked && selected && !correct -> Color(0xFFFFEEF0)
-        selected -> Color(0xFFEAF1FF)
-        else -> Color.White
-    }
-    val stroke = when {
-        checked && correct -> mockBankGreen
-        checked && selected && !correct -> mockBankRed
-        selected -> mockBankBlue
-        else -> mockBankBorder
-    }
+    val bg = if (selected) Color(0xFFEAF1FF) else Color.White
+    val stroke = if (selected) mockBankBlue else mockBankBorder
 
     Surface(
         color = bg,
@@ -709,16 +736,11 @@ private fun MockOption(
                 modifier = Modifier
                     .size(24.dp)
                     .clip(CircleShape)
-                    .background(stroke),
+                    .background(if (selected) mockBankBlue else Color(0xFFE7EBF3)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = when {
-                        checked && correct -> "✓"
-                        checked && selected && !correct -> "×"
-                        selected -> "•"
-                        else -> ""
-                    },
+                    text = if (selected) "•" else "",
                     color = Color.White,
                     fontWeight = FontWeight.Black
                 )
@@ -839,7 +861,7 @@ private fun buildMockEvaluationReport(
     val speakingTasks = tasks.withIndex().filter { (_, task) -> task.skill == YkiMockSkill.Speaking && task.phase == YkiMockPhase.RecordingTimer }
 
     val correct = choiceTasks.count { (index, task) ->
-        checkedAnswers[index] == true && selectedAnswers[index] == task.correctIndex
+        selectedAnswers[index] == task.correctIndex
     }
     val writingSubmitted = writingTasks.count { (index, _) -> writingAnswers[index].orEmpty().trim().isNotBlank() }
     val speakingSubmitted = speakingTasks.count { (index, _) -> recordingPaths[index].orEmpty().isNotBlank() }

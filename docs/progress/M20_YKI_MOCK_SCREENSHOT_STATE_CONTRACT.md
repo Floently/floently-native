@@ -71,3 +71,23 @@ Every screenshot is a required functional state, not decoration.
 - Recording states must save/send before next question or submit exam.
 - Results must show evaluation.
 - PDF and Word-compatible export must be available.
+
+## M20-O correction
+
+Mock Exam must not show answer correctness during the exam.
+
+Allowed during exam:
+
+- selected option state,
+- saved answer state,
+- timer state,
+- recording/submitted state.
+
+Not allowed during exam:
+
+- Correct feedback,
+- Needs review feedback,
+- green/red correction,
+- highlighted correct answer.
+
+Correction/evaluation belongs only on the final results screen.
