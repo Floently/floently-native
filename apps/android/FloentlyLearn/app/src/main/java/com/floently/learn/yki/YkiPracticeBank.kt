@@ -22,6 +22,7 @@ internal data class YkiPracticeBankTask(
     val wordCounter: String = "",
     val saved: Boolean = false,
     val audioScript: String = "",
+    val bankTaskId: String = screenshot,
     val bankSource: String = "native-yki-practice-bank"
 )
 internal object YkiPracticeBank {

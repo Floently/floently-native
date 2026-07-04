@@ -256,3 +256,23 @@ Implemented:
   - Save answer
   - Next task
 - YKI Mock Exam remains paused.
+
+## M20-I screenshot state-machine lock
+
+User clarified that every screenshot has a purpose and must drive the flow.
+
+Implemented:
+
+- Added `M20_YKI_SCREENSHOT_STATE_PURPOSES.md`.
+- Extracted YKI Practice content into `YkiPracticeBank.kt`.
+- Added `YkiPracticeStateMap.kt` for screenshot-driven Practice states.
+- Practice UI now consumes the bank and state map.
+- Writing Save answer changes state to Next task instead of moving automatically.
+- Speaking flow now follows state sequence:
+  - Start conversation roleplay
+  - preparation countdown
+  - Start speaking
+  - speaking countdown/recording
+  - Save answer
+  - Next task
+- YKI Mock Exam timer sequence is documented and remains the next locked implementation after Practice acceptance.

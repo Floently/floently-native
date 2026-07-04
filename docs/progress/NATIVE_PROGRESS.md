@@ -173,3 +173,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M20-G corrected YKI Practice functions: listening audio uses Finnish TTS from the practice bank script, speaking has native recorder controls, writing fields are empty/editable with autocorrect disabled, and Practice task data is routed through a bank object.
 
 - M20-I extracted YKI Practice content into a dedicated bank file and corrected Practice button/timer states: Writing Save answer now changes into Next task, and Speaking now has preparation countdown, speaking countdown/recording, save state, and next transition.
+
+- M20-I records every YKI screenshot as a required state, extracts Practice content into a bank file, adds a Practice screenshot state map, and fixes writing/speaking button state transitions.

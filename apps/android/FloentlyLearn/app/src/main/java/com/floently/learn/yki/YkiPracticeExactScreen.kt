@@ -441,7 +441,7 @@ private fun PracticeTaskScreen(
                 }
 
                 if (task.skill == Skill.Speaking) {
-                    SpeakingRecordingControls(task = task)
+                    SpeakingRecordingControls(task = task, onNext = onNext)
                     Surface(
                         color = Color(0xFF111A2F),
                         shape = RoundedCornerShape(12.dp),
@@ -458,25 +458,27 @@ private fun PracticeTaskScreen(
                     }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    SmallButton("Back", Color(0xFF111A2F), muted, onPrevious)
-                    Spacer(modifier = Modifier.weight(1f))
-                    when {
-                        task.options.isNotEmpty() && !isChecked -> {
-                            SmallButton(
-                                text = "Check answer",
-                                bgColor = if (selectedIndex == null) Color(0xFF4D4578) else purple,
-                                fgColor = Color.White,
-                                onClick = {
-                                    if (selectedIndex != null) onCheck()
-                                }
-                            )
-                        }
-                        task.skill == Skill.Writing && writingButtonState == WritingButtonState.Draft -> {
-                            SmallButton("Save answer", orange, Color.White, onSaveWriting)
-                        }
-                        else -> {
-                            SmallButton("Next task", purple, Color.White, onNext)
+                if (task.skill != Skill.Speaking) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        SmallButton("Back", Color(0xFF111A2F), muted, onPrevious)
+                        Spacer(modifier = Modifier.weight(1f))
+                        when {
+                            task.options.isNotEmpty() && !isChecked -> {
+                                SmallButton(
+                                    text = "Check answer",
+                                    bgColor = if (selectedIndex == null) Color(0xFF4D4578) else purple,
+                                    fgColor = Color.White,
+                                    onClick = {
+                                        if (selectedIndex != null) onCheck()
+                                    }
+                                )
+                            }
+                            task.skill == Skill.Writing && writingButtonState == WritingButtonState.Draft -> {
+                                SmallButton("Save answer", orange, Color.White, onSaveWriting)
+                            }
+                            else -> {
+                                SmallButton("Next task", purple, Color.White, onNext)
+                            }
                         }
                     }
                 }
@@ -572,8 +574,12 @@ private fun ListeningAudioButton(task: PracticeTask) {
 }
 
 @Composable
-private fun SpeakingRecordingControls(task: PracticeTask) {
+private fun SpeakingRecordingControls(
+    task: PracticeTask,
+    onNext: () -> Unit
+) {
     val context = LocalContext.current
+    val screenshotState = remember(task.screenshot) { YkiPracticeStateMap.forTask(task) }
     var hasPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
@@ -613,7 +619,7 @@ private fun SpeakingRecordingControls(task: PracticeTask) {
             savedPath = output.absolutePath
             error = null
             stage = SpeakingStage.Speaking
-            seconds = 60
+            seconds = screenshotState.responseSeconds.coerceAtLeast(60)
         } catch (e: Exception) {
             nextRecorder.release()
             error = "Recording could not start."
@@ -670,11 +676,11 @@ private fun SpeakingRecordingControls(task: PracticeTask) {
     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
         BigButton(
             text = when (stage) {
-                SpeakingStage.Prompt -> "Start conversation roleplay"
+                SpeakingStage.Prompt -> screenshotState.buttonLabel
                 SpeakingStage.Preparing -> "Prepare to speak 00:${seconds.toString().padStart(2, '0')}"
                 SpeakingStage.ReadyToSpeak -> "Start speaking"
                 SpeakingStage.Speaking -> "Save answer"
-                SpeakingStage.Saved -> "Answer saved"
+                SpeakingStage.Saved -> "Next task"
             },
             color = when (stage) {
                 SpeakingStage.Speaking -> red
@@ -685,12 +691,12 @@ private fun SpeakingRecordingControls(task: PracticeTask) {
                 when (stage) {
                     SpeakingStage.Prompt -> {
                         stage = SpeakingStage.Preparing
-                        seconds = 30
+                        seconds = screenshotState.prepareSeconds.coerceAtLeast(30)
                     }
                     SpeakingStage.Preparing -> Unit
                     SpeakingStage.ReadyToSpeak -> startRecording()
                     SpeakingStage.Speaking -> saveRecording()
-                    SpeakingStage.Saved -> Unit
+                    SpeakingStage.Saved -> onNext()
                 }
             }
         )

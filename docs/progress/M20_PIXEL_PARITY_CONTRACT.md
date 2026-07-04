@@ -139,3 +139,18 @@ YKI Practice is not accepted until button states follow the screenshot sequence:
 - writing tasks: type > save answer > next task
 - speaking tasks: start roleplay > prepare countdown > start speaking > speaking countdown/recording > save answer > next task
 - task material must come from the YKI bank layer
+
+## M20-I screenshot-state rule
+
+Each YKI screenshot must be interpreted as a functional state, not decoration.
+
+The state contract is now recorded in:
+
+- `docs/progress/M20_YKI_SCREENSHOT_STATE_PURPOSES.md`
+
+YKI Practice is accepted only after the user confirms:
+
+- bank-driven content,
+- choice check/next behavior,
+- writing save/next behavior,
+- speaking preparation/recording/save/next behavior.
