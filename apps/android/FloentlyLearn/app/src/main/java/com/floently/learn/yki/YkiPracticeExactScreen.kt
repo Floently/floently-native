@@ -79,9 +79,9 @@ private enum class WritingButtonState {
 private enum class SpeakingStage {
     Prompt,
     Preparing,
-    ReadyToSpeak,
     Speaking,
-    Saved
+    Saved,
+    Sent
 }
 
 @Composable
@@ -94,6 +94,7 @@ fun YkiPracticeExactScreen(
     val checked = remember { mutableStateMapOf<Int, Boolean>() }
     val writingAnswers = remember { mutableStateMapOf<Int, String>() }
     val writingButtonStates = remember { mutableStateMapOf<Int, WritingButtonState>() }
+    val speakingRecordings = remember { mutableStateMapOf<Int, String>() }
 
     Box(
         modifier = Modifier
@@ -114,6 +115,22 @@ fun YkiPracticeExactScreen(
                 PracticeLanding(
                     onStart = { index = 0 }
                 )
+            } else if (index >= tasks.size) {
+                PracticeEvaluationScreen(
+                    tasks = tasks,
+                    selectedAnswers = selected.toMap(),
+                    checkedAnswers = checked.toMap(),
+                    writingAnswers = writingAnswers.toMap(),
+                    recordingPaths = speakingRecordings.toMap(),
+                    onRestart = {
+                        index = -1
+                        selected.clear()
+                        checked.clear()
+                        writingAnswers.clear()
+                        writingButtonStates.clear()
+                        speakingRecordings.clear()
+                    }
+                )
             } else {
                 val task = tasks[index]
                 PracticeTaskScreen(
@@ -130,11 +147,18 @@ fun YkiPracticeExactScreen(
                     onSaveWriting = {
                         writingButtonStates[index] = WritingButtonState.Saved
                     },
+                    onSpeakingSaved = { path ->
+                        if (!path.isNullOrBlank()) {
+                            speakingRecordings[index] = path
+                        }
+                    },
                     onSelect = { selected[index] = it },
                     onCheck = { checked[index] = true },
                     onNext = {
                         if (index < tasks.lastIndex) {
                             index += 1
+                        } else {
+                            index = tasks.size
                         }
                     },
                     onPrevious = {
@@ -329,6 +353,7 @@ private fun PracticeTaskScreen(
     writingButtonState: WritingButtonState,
     onWritingChange: (String) -> Unit,
     onSaveWriting: () -> Unit,
+    onSpeakingSaved: (String?) -> Unit,
     onSelect: (Int) -> Unit,
     onCheck: () -> Unit,
     onNext: () -> Unit,
@@ -441,7 +466,7 @@ private fun PracticeTaskScreen(
                 }
 
                 if (task.skill == Skill.Speaking) {
-                    SpeakingRecordingControls(task = task, onNext = onNext)
+                    SpeakingRecordingControls(task = task, onNext = onNext, onSaved = onSpeakingSaved)
                     Surface(
                         color = Color(0xFF111A2F),
                         shape = RoundedCornerShape(12.dp),
@@ -495,6 +520,120 @@ private fun PracticeTaskScreen(
     }
 }
 
+
+
+@Composable
+private fun PracticeEvaluationScreen(
+    tasks: List<PracticeTask>,
+    selectedAnswers: Map<Int, Int>,
+    checkedAnswers: Map<Int, Boolean>,
+    writingAnswers: Map<Int, String>,
+    recordingPaths: Map<Int, String>,
+    onRestart: () -> Unit
+) {
+    val context = LocalContext.current
+    val report = remember(
+        tasks,
+        selectedAnswers,
+        checkedAnswers,
+        writingAnswers,
+        recordingPaths
+    ) {
+        YkiPracticeEvaluation.build(
+            tasks = tasks,
+            selectedAnswers = selectedAnswers,
+            checkedAnswers = checkedAnswers,
+            writingAnswers = writingAnswers,
+            recordingPaths = recordingPaths
+        )
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        LevelTabs()
+
+        Surface(
+            color = panel,
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(1.dp, border),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                SkillChip("Evaluation", purple)
+
+                Text(
+                    text = report.title,
+                    color = text,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Black
+                )
+
+                Text(
+                    text = report.scoreLine,
+                    color = Color(0xFFDCE7FF),
+                    fontSize = 15.sp,
+                    lineHeight = 21.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = report.summary,
+                    color = muted,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
+                )
+
+                Surface(
+                    color = Color(0xFF1C2C4E),
+                    shape = RoundedCornerShape(15.dp),
+                    border = BorderStroke(1.dp, Color(0xFF273E6B)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = report.lines.takeLast(5).joinToString("\n"),
+                        color = Color(0xFFDCE7FF),
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp,
+                        modifier = Modifier.padding(13.dp)
+                    )
+                }
+
+                BigButton(
+                    text = "Download PDF evaluation",
+                    color = purple,
+                    onClick = {
+                        YkiPracticeEvaluationExporter.share(
+                            context = context,
+                            report = report,
+                            format = YkiPracticeExportFormat.Pdf
+                        )
+                    }
+                )
+
+                BigButton(
+                    text = "Download Word evaluation",
+                    color = orange,
+                    onClick = {
+                        YkiPracticeEvaluationExporter.share(
+                            context = context,
+                            report = report,
+                            format = YkiPracticeExportFormat.Word
+                        )
+                    }
+                )
+
+                SmallButton(
+                    text = "Restart practice",
+                    bgColor = Color(0xFF111A2F),
+                    fgColor = muted,
+                    onClick = onRestart
+                )
+            }
+        }
+    }
+}
 
 @Composable
 private fun ListeningAudioButton(task: PracticeTask) {
@@ -576,7 +715,8 @@ private fun ListeningAudioButton(task: PracticeTask) {
 @Composable
 private fun SpeakingRecordingControls(
     task: PracticeTask,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    onSaved: (String?) -> Unit
 ) {
     val context = LocalContext.current
     val screenshotState = remember(task.screenshot) { YkiPracticeStateMap.forTask(task) }
@@ -591,18 +731,11 @@ private fun SpeakingRecordingControls(
     var savedPath by remember(task.screenshot) { mutableStateOf<String?>(null) }
     var error by remember(task.screenshot) { mutableStateOf<String?>(null) }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        hasPermission = granted
-        if (!granted) {
-            error = "Microphone permission is required for speaking practice."
-        }
-    }
-
     fun startRecording() {
         if (!hasPermission) {
-            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            error = "Allow microphone permission before starting preparation."
+            stage = SpeakingStage.Prompt
+            seconds = 0
             return
         }
 
@@ -623,7 +756,8 @@ private fun SpeakingRecordingControls(
         } catch (e: Exception) {
             nextRecorder.release()
             error = "Recording could not start."
-            stage = SpeakingStage.ReadyToSpeak
+            stage = SpeakingStage.Prompt
+            seconds = 0
         }
     }
 
@@ -643,6 +777,19 @@ private fun SpeakingRecordingControls(
         seconds = 0
     }
 
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasPermission = granted
+        if (granted) {
+            error = null
+            stage = SpeakingStage.Preparing
+            seconds = screenshotState.prepareSeconds.coerceAtLeast(30)
+        } else {
+            error = "Microphone permission is required for speaking practice."
+        }
+    }
+
     LaunchedEffect(stage, seconds) {
         when {
             stage == SpeakingStage.Preparing && seconds > 0 -> {
@@ -650,7 +797,7 @@ private fun SpeakingRecordingControls(
                 seconds -= 1
             }
             stage == SpeakingStage.Preparing && seconds <= 0 -> {
-                stage = SpeakingStage.ReadyToSpeak
+                startRecording()
             }
             stage == SpeakingStage.Speaking && seconds > 0 -> {
                 delay(1000)
@@ -678,25 +825,34 @@ private fun SpeakingRecordingControls(
             text = when (stage) {
                 SpeakingStage.Prompt -> screenshotState.buttonLabel
                 SpeakingStage.Preparing -> "Prepare to speak 00:${seconds.toString().padStart(2, '0')}"
-                SpeakingStage.ReadyToSpeak -> "Start speaking"
-                SpeakingStage.Speaking -> "Save answer"
-                SpeakingStage.Saved -> "Next task"
+                SpeakingStage.Speaking -> "Recording 00:${seconds.toString().padStart(2, '0')}"
+                SpeakingStage.Saved -> "Send answer"
+                SpeakingStage.Sent -> "Next task"
             },
             color = when (stage) {
                 SpeakingStage.Speaking -> red
-                SpeakingStage.Saved -> purple
+                SpeakingStage.Saved,
+                SpeakingStage.Sent -> purple
                 else -> orange
             },
             onClick = {
                 when (stage) {
                     SpeakingStage.Prompt -> {
-                        stage = SpeakingStage.Preparing
-                        seconds = screenshotState.prepareSeconds.coerceAtLeast(30)
+                        if (!hasPermission) {
+                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        } else {
+                            error = null
+                            stage = SpeakingStage.Preparing
+                            seconds = screenshotState.prepareSeconds.coerceAtLeast(30)
+                        }
                     }
                     SpeakingStage.Preparing -> Unit
-                    SpeakingStage.ReadyToSpeak -> startRecording()
                     SpeakingStage.Speaking -> saveRecording()
-                    SpeakingStage.Saved -> onNext()
+                    SpeakingStage.Saved -> {
+                        onSaved(savedPath)
+                        stage = SpeakingStage.Sent
+                    }
+                    SpeakingStage.Sent -> onNext()
                 }
             }
         )
@@ -711,11 +867,11 @@ private fun SpeakingRecordingControls(
                 text = when {
                     error != null -> error.orEmpty()
                     stage == SpeakingStage.Prompt -> "Read the YKI bank speaking prompt, then start preparation."
-                    stage == SpeakingStage.Preparing -> "Prepare your spoken answer. Recording has not started yet."
-                    stage == SpeakingStage.ReadyToSpeak -> "Preparation finished. Start speaking when ready."
-                    stage == SpeakingStage.Speaking -> "Speaking time 00:${seconds.toString().padStart(2, '0')}. Tap Save answer when finished."
-                    stage == SpeakingStage.Saved && savedPath != null -> "Speaking answer saved. Use Next task to continue."
-                    else -> "Speaking answer saved. Use Next task to continue."
+                    stage == SpeakingStage.Preparing -> "Prepare your answer. Recording starts automatically when the timer ends."
+                    stage == SpeakingStage.Speaking -> "Recording is active. It saves automatically when the timer ends, or tap to save now."
+                    stage == SpeakingStage.Saved -> "Recording saved. Send answer to include it in your evaluation."
+                    stage == SpeakingStage.Sent -> "Speaking answer sent. Use Next task to continue."
+                    else -> "Speaking answer sent. Use Next task to continue."
                 },
                 color = if (error != null) Color(0xFFFFC6CC) else muted,
                 textAlign = TextAlign.Center,

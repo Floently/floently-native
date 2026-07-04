@@ -175,3 +175,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M20-I extracted YKI Practice content into a dedicated bank file and corrected Practice button/timer states: Writing Save answer now changes into Next task, and Speaking now has preparation countdown, speaking countdown/recording, save state, and next transition.
 
 - M20-I records every YKI screenshot as a required state, extracts Practice content into a bank file, adds a Practice screenshot state map, and fixes writing/speaking button state transitions.
+
+- M20-K corrected YKI Practice speaking flow so preparation automatically starts recording, adds sent state, and adds final evaluation export as PDF and Word-compatible document.

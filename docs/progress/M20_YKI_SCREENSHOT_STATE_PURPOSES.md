@@ -101,3 +101,13 @@ Before a section is accepted, every screenshot must be represented as one of:
 - speaking/recording countdown state
 - submitted state
 - results state
+
+## M20-K Practice completion state
+
+The source screenshots end at speaking task states, but native Practice now adds the required product completion state:
+
+- final evaluation screen
+- PDF export
+- Word-compatible export
+
+This completion state is product-required feedback after shorter Practice sessions.

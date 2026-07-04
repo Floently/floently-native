@@ -276,3 +276,28 @@ Implemented:
   - Save answer
   - Next task
 - YKI Mock Exam timer sequence is documented and remains the next locked implementation after Practice acceptance.
+
+## M20-K YKI Practice automatic recording and evaluation export
+
+User feedback after M20-I:
+
+- Speaking preparation must flow automatically into recording.
+- There must not be an extra Start speaking press after preparation.
+- After recording, the answer must reach a sent/saved state.
+- After the whole Practice flow, the student must receive an evaluation.
+- The evaluation must be exportable/downloadable as PDF and Word-compatible document.
+
+Implemented:
+
+- Speaking state now flows:
+  - Start conversation roleplay
+  - preparation countdown
+  - automatic recording start
+  - recording countdown
+  - auto-save or manual save
+  - Send answer
+  - Next task
+- Added final YKI Practice Evaluation screen.
+- Added PDF export.
+- Added Word-compatible `.doc` export.
+- Added Android FileProvider and report cache path for sharing exported feedback.
