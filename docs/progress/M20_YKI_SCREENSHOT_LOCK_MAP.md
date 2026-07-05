@@ -349,3 +349,28 @@ Implemented:
 - Speaking has 3 preparation/recording task pairs.
 - Final speaking task leads to Submit exam.
 - Mock content remains bank-driven through `YkiMockExamBank.kt`.
+
+## M20-R YKI Mock full parity rebuild contract
+
+User screenshots after M20-O confirmed that the Mock Exam still requires a full parity rebuild.
+
+The next code pass must follow `docs/progress/M20_YKI_MOCK_FULL_PARITY_REBUILD_CONTRACT.md`.
+
+Key locked requirements:
+
+- Mock landing must show all three level bands.
+- Mock landing must include old app overview/coverage/action cards.
+- A light exam summary page must appear before task 1.
+- B1-B2 Mock structure must be 17 tasks:
+  - Reading 5
+  - Listening 4
+  - Writing 4
+  - Speaking 4
+- Mock must not reveal correct/wrong during the exam.
+- Speaking must include:
+  - 10s prompt reading
+  - 30s preparation
+  - 60s recording
+  - minimum 30s valid recording
+  - recording complete state
+- Results must include deeper writing and speaking evaluation, not only objective scores.

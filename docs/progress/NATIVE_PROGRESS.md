@@ -183,3 +183,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M20-MR2 repairs the Mock Exam build, adds a strict Mock screenshot state contract, and guards all IMG_0432-IMG_0479 Mock states before testing.
 
 - M20-O rebuilt YKI Mock Exam behavior to mimic a real exam: no correct/wrong feedback during the exam, listening section with bank audio tasks, full reading/writing/listening/speaking structure, and final-only evaluation.
+
+- M20-R locked the full YKI Mock parity rebuild contract from user screenshots: landing levels, exam summary, 17-task structure, section-specific visual states, speaking timing model, and deeper final evaluation.
