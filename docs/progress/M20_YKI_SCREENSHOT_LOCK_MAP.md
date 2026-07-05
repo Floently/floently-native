@@ -374,3 +374,48 @@ Key locked requirements:
   - minimum 30s valid recording
   - recording complete state
 - Results must include deeper writing and speaking evaluation, not only objective scores.
+
+## M20-S YKI Mock full parity rebuild
+
+Implemented the full parity rebuild required by M20-R:
+
+- Dark old-app style YKI landing.
+- Level selector with A1-A2, B1-B2, C1-C2.
+- Exam overview and exam coverage cards.
+- Start/action cards including Mock cycle, Recording speaking, Conversation speaking, Guided YKI practice.
+- Light `YKI B1-B2 exam` summary screen before task 1.
+- 17-task exam structure:
+  - Reading 5
+  - Listening 4
+  - Writing 4
+  - Speaking 4
+- Progress dots represent 17 tasks.
+- Mock answers are saved silently during the exam.
+- No correct/wrong feedback during the exam.
+- Listening has pre-start timing and bank audio.
+- Speaking has 10s prompt-read, 30s response prep, 60s recording, 30s minimum, and recording-complete state.
+- Results include deeper objective/productive skill evaluation and PDF/Word export.
+
+## M20-SR YKI Mock full parity repair
+
+Repair after M20-S failed build:
+
+- Fixed `MockOption` parameter mismatch.
+- Corrected strict task-count guard to count `bankTaskId =` entries instead of the `YkiMockExamTask` data class declaration.
+- M20-S remains the active full parity rebuild content.
+
+## M20-SR2 YKI Mock compile repair
+
+Repair after M20-SR failed build:
+
+- Renamed Mock `SpeakingStage` to `MockSpeakingStage` so it no longer collides with Practice `SpeakingStage`.
+- Restored `MockOption(textValue = ...)` to avoid shadowing the shared `text` color.
+- M20-S full parity rebuild remains the active Mock implementation.
+
+## M20-SR3 YKI Mock text color compile repair
+
+Repair after M20-SR2 failed build:
+
+- Renamed Mock global color `text` to `mockText`.
+- Kept `MockOption(textValue = ...)` explicit.
+- Made the level/action text calls explicit to avoid Compose `Text(...)` overload ambiguity.

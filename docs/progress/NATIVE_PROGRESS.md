@@ -185,3 +185,11 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M20-O rebuilt YKI Mock Exam behavior to mimic a real exam: no correct/wrong feedback during the exam, listening section with bank audio tasks, full reading/writing/listening/speaking structure, and final-only evaluation.
 
 - M20-R locked the full YKI Mock parity rebuild contract from user screenshots: landing levels, exam summary, 17-task structure, section-specific visual states, speaking timing model, and deeper final evaluation.
+
+- M20-S rebuilt YKI Mock to the full 17-task old-app-style flow: dark landing with all level bands, exam summary, 5 reading, 4 listening, 4 writing, 4 speaking tasks, speaking 10/30/60 timing with 30s minimum, final-only deep evaluation, PDF and Word export.
+
+- M20-SR repaired the M20-S full parity rebuild compile issue and corrected the 17-task guard to count bank tasks, not the data class declaration.
+
+- M20-SR2 repaired Mock compile blockers by namespacing the Mock speaking enum and restoring MockOption textValue usage without shadowing the shared text color.
+
+- M20-SR3 repaired the remaining Mock compile blocker by renaming the Mock global text color to mockText and making textValue Text calls explicit.

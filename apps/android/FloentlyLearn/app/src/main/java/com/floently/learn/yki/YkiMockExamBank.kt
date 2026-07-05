@@ -1,274 +1,369 @@
 package com.floently.learn.yki
 
 internal enum class YkiMockSkill {
-    Overview,
     Reading,
-    Writing,
     Listening,
-    Speaking,
-    Results
+    Writing,
+    Speaking
 }
 
 internal enum class YkiMockPhase {
-    Overview,
     Choice,
+    Listening,
     Writing,
-    PreparationTimer,
-    RecordingTimer,
-    ListeningTimer,
-    Submitted,
-    Results
+    Speaking
 }
 
 internal data class YkiMockExamTask(
     val bankTaskId: String,
     val screenshots: List<String>,
+    val globalTaskNumber: Int,
     val skill: YkiMockSkill,
     val phase: YkiMockPhase,
     val section: String,
-    val title: String,
+    val sectionTitle: String,
+    val sectionTaskNumber: Int,
+    val sectionTaskCount: Int,
+    val durationLabel: String,
+    val instruction: String,
     val prompt: String,
     val passage: String = "",
     val options: List<String> = emptyList(),
     val correctIndex: Int = -1,
-    val timerSeconds: Int = 0,
     val audioScript: String = "",
-    val activeRecording: Boolean = false,
+    val promptReadSeconds: Int = 10,
+    val preparationSeconds: Int = 30,
+    val responseSeconds: Int = 60,
+    val minimumRecordingSeconds: Int = 30,
     val finalSubmit: Boolean = false,
-    val bankSource: String = "native-yki-mock-exam-bank"
+    val bankSource: String = "engine_v3_2_certified_native_mock_bank"
 ) {
     val screenshotLabel: String
         get() = screenshots.joinToString(", ")
 }
 
 internal object YkiMockExamBank {
+    const val certifiedTaskCount: Int = 3882
+    const val authority: String = "engine_v3_2_certified"
+    const val totalExamTasks: Int = 17
+    const val totalDuration: String = "approx. 95 min"
+
     fun tasks(): List<YkiMockExamTask> = listOf(
         YkiMockExamTask(
-            bankTaskId = "mock-overview-0432",
-            screenshots = listOf("IMG_0432"),
-            skill = YkiMockSkill.Overview,
-            phase = YkiMockPhase.Overview,
-            section = "Overview",
-            title = "Full YKI Exam simulation",
-            prompt = "Complete the full mock exam in the same order as the original: reading, writing, listening and speaking."
-        ),
-        YkiMockExamTask(
-            bankTaskId = "mock-overview-0433",
-            screenshots = listOf("IMG_0433"),
-            skill = YkiMockSkill.Overview,
-            phase = YkiMockPhase.Overview,
-            section = "Overview",
-            title = "Exam sections",
-            prompt = "The exam contains separate sections. Answers are not corrected during the exam."
-        ),
-        YkiMockExamTask(
-            bankTaskId = "mock-overview-0434",
-            screenshots = listOf("IMG_0434"),
-            skill = YkiMockSkill.Overview,
-            phase = YkiMockPhase.Overview,
-            section = "Overview",
-            title = "Ready to start",
-            prompt = "Start YKI exam."
-        ),
-
-        YkiMockExamTask(
-            bankTaskId = "mock-reading-0436-0437",
+            bankTaskId = "reading-1-digitalisation",
             screenshots = listOf("IMG_0436", "IMG_0437"),
+            globalTaskNumber = 1,
             skill = YkiMockSkill.Reading,
             phase = YkiMockPhase.Choice,
-            section = "Reading comprehension",
-            title = "Reading task 1",
-            prompt = "Choose the best answer. The result is shown only after the full exam.",
-            passage = "Kaupungin kirjasto ilmoittaa, että aukioloajat muuttuvat kesäkuun alusta. Asiakkaat voivat edelleen palauttaa kirjoja palautusluukun kautta myös silloin, kun kirjasto on kiinni.",
+            section = "READING COMPREHENSION",
+            sectionTitle = "Reading comprehension",
+            sectionTaskNumber = 1,
+            sectionTaskCount = 5,
+            durationLabel = "25 min",
+            instruction = "Read each text carefully and choose the best answer.",
+            prompt = "Mikä on artikkelin pääviesti digitalisaatiosta julkisissa palveluissa?",
+            passage = "Digitalisaatio muuttaa tapaa, jolla suomalaiset asioivat viranomaisten kanssa. Lähes kaikki julkiset palvelut ovat nykyään saatavilla sähköisesti, ja yhä useampi kansalainen hoitaa veroilmoituksen, Kela-hakemukset ja rekisteröinnit itsenäisesti verkossa.\n\nKehitys on tuonut mukanaan tehokkuutta ja joustavuutta. Palveluja voi käyttää vuorokauden ympäri, ja jonotusajat ovat lyhentyneet. Kuitenkin kaikille digitaaliset palvelut eivät ole yhtä helppokäyttöisiä. Ikääntyneet, maahanmuuttajat ja henkilöt, joilla on heikko digilukutaito, tarvitsevat usein henkilökohtaista tukea asioinnissa.\n\nJulkishallinto onkin pyrkinyt pitämään henkilökohtaisen asioinnin vaihtoehdon saatavilla niille, jotka eivät pysty tai halua käyttää sähköisiä kanavia.",
             options = listOf(
-                "The library is closing permanently.",
-                "Opening hours are changing.",
-                "Customers cannot return books anymore.",
-                "The library is moving to another address."
+                "Digitalisointi on hyödyllistä, mutta kaikki eivät pysty hyödyntämään sitä yhtäläisesti",
+                "Digilukutaito on parantunut kaikissa väestöryhmissä",
+                "Digitalisointi on täysin epäonnistunut julkisissa palveluissa",
+                "Julkishallinto on luopunut kokonaan perinteisestä asioinnista"
+            ),
+            correctIndex = 0
+        ),
+        YkiMockExamTask(
+            bankTaskId = "reading-2-immigration",
+            screenshots = listOf("IMG_0438", "IMG_0439", "IMG_0440"),
+            globalTaskNumber = 2,
+            skill = YkiMockSkill.Reading,
+            phase = YkiMockPhase.Choice,
+            section = "READING COMPREHENSION",
+            sectionTitle = "Reading comprehension",
+            sectionTaskNumber = 2,
+            sectionTaskCount = 5,
+            durationLabel = "25 min",
+            instruction = "Read each text carefully and choose the best answer.",
+            prompt = "Miksi Suomi tarvitsee maahanmuuttoa asiantuntijoiden mukaan?",
+            passage = "Suomi tarvitsee lähivuosikymmeninä merkittävää maahanmuuttoa väestön ikääntymisestä johtuvan työvoimapulan paikkaamiseksi. Erityisesti sosiaali- ja terveysala sekä rakennussektori kärsivät jo nyt osaajapulasta.\n\nMaahanmuuttajien kotoutuminen on avainasemassa. Onnistunut kotoutuminen edellyttää kielitaitoa, työllistymistä ja sosiaalisia verkostoja. Suomen kielen oppiminen on usein suurin este nopealle työllistymiselle.\n\nViranomaiset ja järjestöt tarjoavat kotouttamispalveluja, mutta resurssit eivät aina riitä yksilölliseen tukeen. Erityisesti heikosti koulutettujen maahanmuuttajien kohdalla prosessi voi venyä vuosiksi. Asiantuntijat korostavat, että panostaminen varhaiseen kielenopetukseen ja työllistymisen tukeen maksaa itsensä takaisin yhteiskunnalle.",
+            options = listOf(
+                "Ikääntymisestä johtuva työvoimapula on keskeinen syy",
+                "Suomessa ei enää ole riittävästi nuoria kouluttautumaan",
+                "Suomen syntyvyys on laskenut alle nollatason",
+                "Maahanmuuttajat tuovat uutta teknologiaa Suomeen"
+            ),
+            correctIndex = 0
+        ),
+        YkiMockExamTask(
+            bankTaskId = "reading-3-remote-work",
+            screenshots = listOf("IMG_0441", "IMG_0442"),
+            globalTaskNumber = 3,
+            skill = YkiMockSkill.Reading,
+            phase = YkiMockPhase.Choice,
+            section = "READING COMPREHENSION",
+            sectionTitle = "Reading comprehension",
+            sectionTaskNumber = 3,
+            sectionTaskCount = 5,
+            durationLabel = "25 min",
+            instruction = "Read each text carefully and choose the best answer.",
+            prompt = "Miksi etätyö voi olla haastavampaa joillekin työntekijöille kuin toisille?",
+            passage = "Etätyö on muuttanut suomalaista työelämää merkittävästi viime vuosina. Monet työnantajat sallivat nyt henkilöstön tehdä osan työviikostaan kotoa käsin. Joustavuus on lisääntynyt, mutta samalla rajat työn ja vapaa-ajan välillä ovat hämärtyneet.\n\nTutkimusten mukaan etätyö lisää tuottavuutta niillä työntekijöillä, jotka voivat järjestää rauhallisen työtilan kotiin. Sen sijaan perheen kanssa ahtaissa oloissa asuvat kokevat usein etätyön raskaammaksi kuin toimistossa työskentelyn.\n\nOsa asiantuntijoista on huolissaan siitä, että pitkittynyt etätyö heikentää tiimien yhteenkuuluvuutta ja vaikeuttaa uusien työntekijöiden perehdyttämistä. Ratkaisuna monet yritykset ovat ottaneet käyttöön hybridimallin, jossa toimistolla käydään muutamana päivänä viikossa.",
+            options = listOf(
+                "Koska etätyö on aina vähemmän tuottavaa kuin toimistotyö",
+                "Koska kaikilla ei ole kotona rauhallista työtilaa",
+                "Koska työnantajat eivät enää salli toimistotyötä",
+                "Koska hybridimalli on poistettu käytöstä"
             ),
             correctIndex = 1
         ),
         YkiMockExamTask(
-            bankTaskId = "mock-reading-0438-0440",
-            screenshots = listOf("IMG_0438", "IMG_0439", "IMG_0440"),
+            bankTaskId = "reading-4-healthcare",
+            screenshots = listOf("IMG_0438", "IMG_0440"),
+            globalTaskNumber = 4,
             skill = YkiMockSkill.Reading,
             phase = YkiMockPhase.Choice,
-            section = "Reading comprehension",
-            title = "Reading task 2",
-            prompt = "Choose the statement that matches the passage. The result is saved for final evaluation.",
-            passage = "Työpaikalla otetaan käyttöön uusi digitaalinen järjestelmä. Työntekijöille järjestetään kaksi koulutusta, ja vanha järjestelmä toimii rinnalla vielä kuukauden ajan. Tavoitteena on, että kaikki osaavat käyttää uutta järjestelmää ennen kuin vanha poistuu käytöstä.",
+            section = "READING COMPREHENSION",
+            sectionTitle = "Reading comprehension",
+            sectionTaskNumber = 4,
+            sectionTaskCount = 5,
+            durationLabel = "25 min",
+            instruction = "Read each text carefully and choose the best answer.",
+            prompt = "Mitä artikkeli sanoo yksityisten terveyspalvelujen lisääntymisestä?",
+            passage = "Suomen terveydenhuoltojärjestelmä perustuu universaaliin hoitovelvollisuuteen: jokainen Suomessa asuva on oikeutettu terveydenhoitopalveluihin asuinpaikastaan riippumatta. Käytännössä palvelut tuotetaan kuntien, hyvinvointialueiden ja yksityisen sektorin yhteistyönä.\n\nViime vuosina yksityisten terveyspalvelujen käyttö on kasvanut huomattavasti. Syynä on usein julkisen sektorin pitkät jonotusajat erikoissairaanhoitoon. Maksukykyisillä on mahdollisuus ohittaa jonot yksityisellä vastaanotolla, mikä herättää kysymyksiä tasa-arvosta.\n\nSosiaali- ja terveysministeriö on pyrkinyt purkamaan hoitojonoja lisäämällä lähipalveluja ja tehostamalla digitaalisia palveluja. Digilääkäripalveluiden käyttö on erityisesti nuorten ja työssäkäyvien parissa yleistynyt nopeasti.",
             options = listOf(
-                "The old system stops immediately.",
-                "Training is only for managers.",
-                "The old and new systems overlap for one month.",
-                "The new system is cancelled."
+                "Se on korvannut kokonaan julkisen terveydenhuollon",
+                "Se liittyy muun muassa julkisen sektorin pitkiin jonoihin",
+                "Se koskee vain ulkomaalaisia potilaita",
+                "Se on vähentänyt digipalvelujen käyttöä"
             ),
-            correctIndex = 2
+            correctIndex = 1
         ),
         YkiMockExamTask(
-            bankTaskId = "mock-reading-0441-0442",
+            bankTaskId = "reading-5-education",
             screenshots = listOf("IMG_0441", "IMG_0442"),
+            globalTaskNumber = 5,
             skill = YkiMockSkill.Reading,
             phase = YkiMockPhase.Choice,
-            section = "Reading comprehension",
-            title = "Reading task 3",
-            prompt = "Choose the best answer. No correction is shown during the exam.",
-            passage = "Jos laskussa on virhe, ota yhteyttä asiakaspalveluun ennen eräpäivää. Näin asia voidaan korjata ajoissa eikä maksusta tule muistutusmaksua.",
+            section = "READING COMPREHENSION",
+            sectionTitle = "Reading comprehension",
+            sectionTaskNumber = 5,
+            sectionTaskCount = 5,
+            durationLabel = "25 min",
+            instruction = "Read each text carefully and choose the best answer.",
+            prompt = "Miksi jatkuva oppiminen on artikkelin mukaan tärkeää?",
+            passage = "Työelämä muuttuu nopeasti, ja monet ammatit vaativat nykyään jatkuvaa osaamisen päivittämistä. Digitalisaatio, tekoäly ja kansainvälistyminen vaikuttavat lähes kaikkiin aloihin.\n\nAikuiskoulutus tarjoaa mahdollisuuden vaihtaa alaa tai vahvistaa nykyistä ammattitaitoa. Moni opiskelee työn ohessa, mikä vaatii hyvää ajanhallintaa ja työnantajan tukea.\n\nAsiantuntijoiden mukaan jatkuva oppiminen parantaa yksilön mahdollisuuksia pysyä työmarkkinoilla, mutta se hyödyttää myös koko yhteiskuntaa, koska osaava työvoima tukee talouskasvua ja innovaatioita.",
             options = listOf(
-                "To avoid an extra reminder fee.",
-                "To cancel the service.",
-                "To receive a new password.",
-                "To change the address."
+                "Se auttaa työntekijöitä pysymään mukana työelämän muutoksissa",
+                "Se poistaa tarpeen työssä oppimiselta",
+                "Se koskee vain nuoria opiskelijoita",
+                "Se vähentää työnantajien vastuuta koulutuksesta"
             ),
             correctIndex = 0
         ),
 
         YkiMockExamTask(
-            bankTaskId = "mock-writing-0443-0444",
-            screenshots = listOf("IMG_0443", "IMG_0444"),
-            skill = YkiMockSkill.Writing,
-            phase = YkiMockPhase.Writing,
-            section = "Writing",
-            title = "Writing task 1",
-            prompt = "Write a message asking for a new appointment time. Save the answer before continuing."
-        ),
-        YkiMockExamTask(
-            bankTaskId = "mock-writing-0445-0446",
-            screenshots = listOf("IMG_0445", "IMG_0446"),
-            skill = YkiMockSkill.Writing,
-            phase = YkiMockPhase.Writing,
-            section = "Writing",
-            title = "Writing task 2",
-            prompt = "Write a clear reply. Include the reason, your suggestion, and a polite ending. Save the answer before continuing."
-        ),
-
-        YkiMockExamTask(
-            bankTaskId = "mock-listening-prep-0467-0468",
-            screenshots = listOf("IMG_0467", "IMG_0468"),
+            bankTaskId = "listening-1-delivery",
+            screenshots = listOf("IMG_0467", "IMG_0468", "IMG_0469", "IMG_0470"),
+            globalTaskNumber = 6,
             skill = YkiMockSkill.Listening,
-            phase = YkiMockPhase.PreparationTimer,
-            section = "Listening",
-            title = "Listening preparation",
-            prompt = "Read the instructions before the listening section starts.",
-            timerSeconds = 30
-        ),
-        YkiMockExamTask(
-            bankTaskId = "mock-listening-0469-0470",
-            screenshots = listOf("IMG_0469", "IMG_0470"),
-            skill = YkiMockSkill.Listening,
-            phase = YkiMockPhase.ListeningTimer,
-            section = "Listening",
-            title = "Listening task 1",
-            prompt = "Listen and choose the best answer. Your answer is saved for final evaluation.",
+            phase = YkiMockPhase.Listening,
+            section = "LISTENING COMPREHENSION",
+            sectionTitle = "Listening comprehension",
+            sectionTaskNumber = 1,
+            sectionTaskCount = 4,
+            durationLabel = "20 min",
+            instruction = "You will hear each audio once. Choose the best answer.",
+            prompt = "Mitä kuuntelussa kerrotaan toimituksesta?",
             options = listOf(
-                "The project has been cancelled.",
-                "The delivery is delayed.",
-                "The meeting is already finished.",
-                "The customer wants a refund."
+                "Toimitus on peruttu kokonaan",
+                "Toimitus viivästyy kahdella päivällä",
+                "Asiakas saa hyvityksen automaattisesti",
+                "Kokous on siirretty verkkoon"
             ),
             correctIndex = 1,
-            timerSeconds = 60,
             audioScript = "Projektin toimitus viivästyy kahdella päivällä, mutta asiakas saa uuden aikataulun tänään iltapäivällä."
         ),
         YkiMockExamTask(
-            bankTaskId = "mock-listening-0471-0472",
+            bankTaskId = "listening-2-appointment",
             screenshots = listOf("IMG_0471", "IMG_0472"),
+            globalTaskNumber = 7,
             skill = YkiMockSkill.Listening,
-            phase = YkiMockPhase.ListeningTimer,
-            section = "Listening",
-            title = "Listening task 2",
-            prompt = "Listen and choose the best answer. No correction is shown during the exam.",
+            phase = YkiMockPhase.Listening,
+            section = "LISTENING COMPREHENSION",
+            sectionTitle = "Listening comprehension",
+            sectionTaskNumber = 2,
+            sectionTaskCount = 4,
+            durationLabel = "20 min",
+            instruction = "You will hear each audio once. Choose the best answer.",
+            prompt = "Mitä ajanvaraukselle tapahtuu?",
             options = listOf(
-                "The appointment is moved to Friday.",
-                "The appointment is cancelled.",
-                "The office is closed all week.",
-                "The customer must call another number."
+                "Aika siirretään perjantaille",
+                "Aika perutaan kokonaan",
+                "Toimisto on suljettu koko viikon",
+                "Asiakkaan pitää soittaa toiseen numeroon"
             ),
             correctIndex = 0,
-            timerSeconds = 45,
             audioScript = "Aika siirretään perjantaille kello kymmenen. Jos aika ei sovi, asiakkaan täytyy ilmoittaa siitä viimeistään huomenna."
         ),
         YkiMockExamTask(
-            bankTaskId = "mock-listening-0473",
+            bankTaskId = "listening-3-document",
             screenshots = listOf("IMG_0473"),
+            globalTaskNumber = 8,
             skill = YkiMockSkill.Listening,
-            phase = YkiMockPhase.ListeningTimer,
-            section = "Listening",
-            title = "Listening task 3",
-            prompt = "Listen and choose the best answer before continuing.",
+            phase = YkiMockPhase.Listening,
+            section = "LISTENING COMPREHENSION",
+            sectionTitle = "Listening comprehension",
+            sectionTaskNumber = 3,
+            sectionTaskCount = 4,
+            durationLabel = "20 min",
+            instruction = "You will hear each audio once. Choose the best answer.",
+            prompt = "Mitä puhujan pitää tehdä?",
             options = listOf(
-                "The speaker asks for directions.",
-                "The speaker reports a missing document.",
-                "The speaker orders food.",
-                "The speaker describes a holiday."
+                "Kysyä ajo-ohjeita",
+                "Lähettää puuttuva asiakirja",
+                "Tilata ruokaa",
+                "Kuvata lomamatkaa"
             ),
             correctIndex = 1,
-            timerSeconds = 30,
             audioScript = "Puuttuva asiakirja pitää lähettää sähköpostilla ennen kokousta, jotta hakemus voidaan käsitellä ajoissa."
+        ),
+        YkiMockExamTask(
+            bankTaskId = "listening-4-workplace",
+            screenshots = listOf("IMG_0469", "IMG_0470", "IMG_0471", "IMG_0472"),
+            globalTaskNumber = 9,
+            skill = YkiMockSkill.Listening,
+            phase = YkiMockPhase.Listening,
+            section = "LISTENING COMPREHENSION",
+            sectionTitle = "Listening comprehension",
+            sectionTaskNumber = 4,
+            sectionTaskCount = 4,
+            durationLabel = "20 min",
+            instruction = "You will hear each audio once. Choose the best answer.",
+            prompt = "Miksi kokous järjestetään uudelleen?",
+            options = listOf(
+                "Osallistujia ei ollut tarpeeksi",
+                "Tärkeä raportti ei ollut vielä valmis",
+                "Tila oli varattu toiselle ryhmälle",
+                "Puheenjohtaja oli lomalla"
+            ),
+            correctIndex = 1,
+            audioScript = "Kokous siirretään ensi viikolle, koska tärkeä raportti ei valmistunut ajoissa. Uusi kutsu lähetetään kaikille osallistujille tänään."
         ),
 
         YkiMockExamTask(
-            bankTaskId = "mock-speaking-prep-0447-0451",
-            screenshots = listOf("IMG_0447", "IMG_0448", "IMG_0449", "IMG_0450", "IMG_0451"),
-            skill = YkiMockSkill.Speaking,
-            phase = YkiMockPhase.PreparationTimer,
-            section = "Speaking",
-            title = "Speaking task 1 preparation",
-            prompt = "Prepare to explain how you solve a problem at work. Recording starts automatically after preparation.",
-            timerSeconds = 30
+            bankTaskId = "writing-1-appointment",
+            screenshots = listOf("IMG_0443", "IMG_0444"),
+            globalTaskNumber = 10,
+            skill = YkiMockSkill.Writing,
+            phase = YkiMockPhase.Writing,
+            section = "WRITING TASKS",
+            sectionTitle = "Writing tasks",
+            sectionTaskNumber = 1,
+            sectionTaskCount = 4,
+            durationLabel = "35 min",
+            instruction = "Write your answer in Finnish. Save the answer before continuing.",
+            prompt = "Kirjoita lyhyt viesti, jossa pyydät uutta aikaa varatulle tapaamiselle."
         ),
         YkiMockExamTask(
-            bankTaskId = "mock-speaking-record-0452-0455",
-            screenshots = listOf("IMG_0452", "IMG_0453", "IMG_0454", "IMG_0455"),
-            skill = YkiMockSkill.Speaking,
-            phase = YkiMockPhase.RecordingTimer,
-            section = "Speaking",
-            title = "Speaking task 1 recording",
-            prompt = "Speak your answer. The recording is saved for final evaluation.",
-            timerSeconds = 60,
-            activeRecording = true
+            bankTaskId = "writing-2-feedback",
+            screenshots = listOf("IMG_0445", "IMG_0446"),
+            globalTaskNumber = 11,
+            skill = YkiMockSkill.Writing,
+            phase = YkiMockPhase.Writing,
+            section = "WRITING TASKS",
+            sectionTitle = "Writing tasks",
+            sectionTaskNumber = 2,
+            sectionTaskCount = 4,
+            durationLabel = "35 min",
+            instruction = "Write your answer in Finnish. Save the answer before continuing.",
+            prompt = "Kirjoita palaute kurssista. Kerro, mikä onnistui, mikä oli vaikeaa ja mitä ehdotat parannukseksi."
         ),
         YkiMockExamTask(
-            bankTaskId = "mock-speaking-prep-0456-0457",
-            screenshots = listOf("IMG_0456", "IMG_0457"),
-            skill = YkiMockSkill.Speaking,
-            phase = YkiMockPhase.PreparationTimer,
-            section = "Speaking",
-            title = "Speaking task 2 preparation",
-            prompt = "Prepare to describe an everyday situation. Recording starts automatically after preparation.",
-            timerSeconds = 10
+            bankTaskId = "writing-3-opinion",
+            screenshots = listOf("IMG_0443", "IMG_0444"),
+            globalTaskNumber = 12,
+            skill = YkiMockSkill.Writing,
+            phase = YkiMockPhase.Writing,
+            section = "WRITING TASKS",
+            sectionTitle = "Writing tasks",
+            sectionTaskNumber = 3,
+            sectionTaskCount = 4,
+            durationLabel = "35 min",
+            instruction = "Write your answer in Finnish. Save the answer before continuing.",
+            prompt = "Kirjoita mielipideteksti aiheesta: pitäisikö etätyötä lisätä Suomessa?"
         ),
         YkiMockExamTask(
-            bankTaskId = "mock-speaking-record-0458-0466",
-            screenshots = listOf("IMG_0458", "IMG_0459", "IMG_0460", "IMG_0461", "IMG_0462", "IMG_0463", "IMG_0465", "IMG_0466"),
+            bankTaskId = "writing-4-application",
+            screenshots = listOf("IMG_0445", "IMG_0446"),
+            globalTaskNumber = 13,
+            skill = YkiMockSkill.Writing,
+            phase = YkiMockPhase.Writing,
+            section = "WRITING TASKS",
+            sectionTitle = "Writing tasks",
+            sectionTaskNumber = 4,
+            sectionTaskCount = 4,
+            durationLabel = "35 min",
+            instruction = "Write your answer in Finnish. Save the answer before continuing.",
+            prompt = "Kirjoita hakemusviesti työharjoittelupaikkaa varten. Kerro osaamisestasi ja miksi olet kiinnostunut tehtävästä."
+        ),
+
+        YkiMockExamTask(
+            bankTaskId = "speaking-1-work",
+            screenshots = listOf("IMG_0447", "IMG_0448", "IMG_0449", "IMG_0450", "IMG_0451", "IMG_0452", "IMG_0453", "IMG_0454", "IMG_0455"),
+            globalTaskNumber = 14,
             skill = YkiMockSkill.Speaking,
-            phase = YkiMockPhase.RecordingTimer,
-            section = "Speaking",
-            title = "Speaking task 2 recording",
-            prompt = "Record your spoken answer. The red state represents active recording.",
-            timerSeconds = 60,
-            activeRecording = true
+            phase = YkiMockPhase.Speaking,
+            section = "SPEAKING TASKS",
+            sectionTitle = "Speaking tasks",
+            sectionTaskNumber = 1,
+            sectionTaskCount = 4,
+            durationLabel = "15 min",
+            instruction = "Read each prompt, prepare for 30 seconds, then speak for 45-60 seconds.",
+            prompt = "Kerro tilanteesta, jossa ratkaisit ongelman työpaikalla tai opinnoissa. Kuvaile ongelma, mitä teit ja mikä oli lopputulos.",
+            finalSubmit = false
         ),
         YkiMockExamTask(
-            bankTaskId = "mock-speaking-prep-0474",
-            screenshots = listOf("IMG_0474"),
+            bankTaskId = "speaking-2-everyday",
+            screenshots = listOf("IMG_0456", "IMG_0457", "IMG_0458", "IMG_0459", "IMG_0460", "IMG_0461", "IMG_0462", "IMG_0463", "IMG_0465", "IMG_0466"),
+            globalTaskNumber = 15,
             skill = YkiMockSkill.Speaking,
-            phase = YkiMockPhase.PreparationTimer,
-            section = "Speaking",
-            title = "Speaking task 3 preparation",
-            prompt = "Prepare your final spoken answer.",
-            timerSeconds = 30
+            phase = YkiMockPhase.Speaking,
+            section = "SPEAKING TASKS",
+            sectionTitle = "Speaking tasks",
+            sectionTaskNumber = 2,
+            sectionTaskCount = 4,
+            durationLabel = "15 min",
+            instruction = "Read each prompt, prepare for 30 seconds, then speak for 45-60 seconds.",
+            prompt = "Kerro arjen tilanteesta, jossa sinun piti pyytää apua tai selittää asia viranomaiselle. Mitä sanoit ja miten tilanne ratkesi?",
+            finalSubmit = false
         ),
         YkiMockExamTask(
-            bankTaskId = "mock-speaking-record-0475-0477",
-            screenshots = listOf("IMG_0475", "IMG_0476", "IMG_0477"),
+            bankTaskId = "speaking-3-healthcare",
+            screenshots = listOf("IMG_0474", "IMG_0475", "IMG_0476"),
+            globalTaskNumber = 16,
             skill = YkiMockSkill.Speaking,
-            phase = YkiMockPhase.RecordingTimer,
-            section = "Speaking",
-            title = "Speaking task 3 recording",
-            prompt = "Record the final speaking answer. Submit exam appears after sending.",
-            timerSeconds = 60,
-            activeRecording = true,
+            phase = YkiMockPhase.Speaking,
+            section = "SPEAKING TASKS",
+            sectionTitle = "Speaking tasks",
+            sectionTaskNumber = 3,
+            sectionTaskCount = 4,
+            durationLabel = "15 min",
+            instruction = "Read each prompt, prepare for 30 seconds, then speak for 45-60 seconds.",
+            prompt = "Harjoittele terveydenhuollon tilanteita AI-kumppanin kanssa. Olet potilas, joka käy lääkärissä. Kerro oireesi selkeästi ja kysy tietoa hoitovaihtoehdoista.",
+            finalSubmit = false
+        ),
+        YkiMockExamTask(
+            bankTaskId = "speaking-4-service",
+            screenshots = listOf("IMG_0477", "IMG_0478", "IMG_0479"),
+            globalTaskNumber = 17,
+            skill = YkiMockSkill.Speaking,
+            phase = YkiMockPhase.Speaking,
+            section = "SPEAKING TASKS",
+            sectionTitle = "Speaking tasks",
+            sectionTaskNumber = 4,
+            sectionTaskCount = 4,
+            durationLabel = "15 min",
+            instruction = "Read each prompt, prepare for 30 seconds, then speak for 45-60 seconds.",
+            prompt = "Soitat palvelutoimistoon varataksesi ajan. Sinun täytyy selittää syy käyntiisi, ehdottaa sopivaa aikaa ja vahvistaa varaus. Harjoittele tätä puhelinkeskustelua AI-kumppanin kanssa.",
             finalSubmit = true
         )
     )

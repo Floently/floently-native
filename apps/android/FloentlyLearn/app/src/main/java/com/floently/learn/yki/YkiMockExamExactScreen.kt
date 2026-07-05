@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.media.MediaRecorder
 import android.os.Build
-import java.util.Locale
 import android.speech.tts.TextToSpeech
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -16,6 +15,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -48,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -55,22 +56,44 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import java.io.File
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlinx.coroutines.delay
 
-private val mockBankBg = Color(0xFFF7F8FC)
-private val mockBankCard = Color.White
-private val mockBankBorder = Color(0xFFDCE2EE)
-private val mockBankText = Color(0xFF172033)
-private val mockBankMuted = Color(0xFF69748A)
-private val mockBankBlue = Color(0xFF3B63FF)
-private val mockBankPurple = Color(0xFF7B61FF)
-private val mockBankGreen = Color(0xFF18A05E)
-private val mockBankRed = Color(0xFFD94255)
-private val mockBankOrange = Color(0xFFFF9F1C)
+private val darkBg = Color(0xFF071837)
+private val darkCard = Color(0xFF10264C)
+private val darkBorder = Color(0xFF284A85)
+private val darkText = Color(0xFFEAF1FF)
+private val darkMuted = Color(0xFFA8B8D8)
+private val blue = Color(0xFF2F5BEA)
+private val blueSoft = Color(0xFFEAF1FF)
+private val lightBg = Color(0xFFF5F8FC)
+private val white = Color.White
+private val border = Color(0xFFD7E1F1)
+private val mockText = Color(0xFF111827)
+private val muted = Color(0xFF697386)
+private val green = Color(0xFF3F946E)
+private val red = Color(0xFFD94255)
+private val orange = Color(0xFFFF9F1C)
 
-private enum class MockWritingState {
+private enum class MockRouteStage {
+    Landing,
+    Summary,
+    Exam,
+    Results
+}
+
+private enum class WritingState {
     Draft,
     Saved
+}
+
+private enum class MockSpeakingStage {
+    PromptReading,
+    PreparingResponse,
+    Recording,
+    Completed
 }
 
 @Composable
@@ -78,372 +101,601 @@ fun YkiMockExamExactScreen(
     onBack: () -> Unit
 ) {
     val tasks = remember { YkiMockExamBank.tasks() }
-    var index by remember { mutableIntStateOf(0) }
-    val selected = remember { mutableStateMapOf<Int, Int>() }
-    val checked = remember { mutableStateMapOf<Int, Boolean>() }
-    val writingAnswers = remember { mutableStateMapOf<Int, String>() }
-    val writingStates = remember { mutableStateMapOf<Int, MockWritingState>() }
-    val recordingPaths = remember { mutableStateMapOf<Int, String>() }
+    var routeStage by remember { mutableStateOf(MockRouteStage.Landing) }
+    var currentIndex by remember { mutableIntStateOf(0) }
 
+    val selectedAnswers = remember { mutableStateMapOf<Int, Int>() }
+    val writingAnswers = remember { mutableStateMapOf<Int, String>() }
+    val writingStates = remember { mutableStateMapOf<Int, WritingState>() }
+    val speakingDurations = remember { mutableStateMapOf<Int, Int>() }
+    val speakingFiles = remember { mutableStateMapOf<Int, String>() }
+    val listeningPlayed = remember { mutableStateMapOf<Int, Boolean>() }
+
+    when (routeStage) {
+        MockRouteStage.Landing -> MockLandingScreen(
+            onBack = onBack,
+            onStart = {
+                routeStage = MockRouteStage.Summary
+            }
+        )
+
+        MockRouteStage.Summary -> MockExamSummaryScreen(
+            onBack = {
+                routeStage = MockRouteStage.Landing
+            },
+            onStart = {
+                currentIndex = 0
+                routeStage = MockRouteStage.Exam
+            }
+        )
+
+        MockRouteStage.Exam -> {
+            if (currentIndex >= tasks.size) {
+                routeStage = MockRouteStage.Results
+            } else {
+                val task = tasks[currentIndex]
+                MockExamTaskScreen(
+                    task = task,
+                    totalTasks = tasks.size,
+                    currentIndex = currentIndex,
+                    selectedIndex = selectedAnswers[currentIndex],
+                    writingValue = writingAnswers[currentIndex].orEmpty(),
+                    writingState = writingStates[currentIndex] ?: WritingState.Draft,
+                    recordingDuration = speakingDurations[currentIndex],
+                    listeningPlayed = listeningPlayed[currentIndex] == true,
+                    onBack = {
+                        if (currentIndex > 0) {
+                            currentIndex -= 1
+                        } else {
+                            routeStage = MockRouteStage.Summary
+                        }
+                    },
+                    onSelect = { selectedAnswers[currentIndex] = it },
+                    onWritingChange = {
+                        writingAnswers[currentIndex] = it
+                        writingStates[currentIndex] = WritingState.Draft
+                    },
+                    onSaveWriting = {
+                        writingStates[currentIndex] = WritingState.Saved
+                    },
+                    onListeningPlayed = {
+                        listeningPlayed[currentIndex] = true
+                    },
+                    onSpeakingComplete = { duration, path ->
+                        speakingDurations[currentIndex] = duration
+                        if (!path.isNullOrBlank()) speakingFiles[currentIndex] = path
+                    },
+                    onNext = {
+                        if (task.finalSubmit || currentIndex >= tasks.lastIndex) {
+                            routeStage = MockRouteStage.Results
+                        } else {
+                            currentIndex += 1
+                        }
+                    }
+                )
+            }
+        }
+
+        MockRouteStage.Results -> MockDeepResultsScreen(
+            tasks = tasks,
+            selectedAnswers = selectedAnswers.toMap(),
+            writingAnswers = writingAnswers.toMap(),
+            speakingDurations = speakingDurations.toMap(),
+            speakingFiles = speakingFiles.toMap(),
+            onBack = {
+                routeStage = MockRouteStage.Exam
+                currentIndex = tasks.lastIndex
+            },
+            onRestart = {
+                currentIndex = 0
+                selectedAnswers.clear()
+                writingAnswers.clear()
+                writingStates.clear()
+                speakingDurations.clear()
+                speakingFiles.clear()
+                listeningPlayed.clear()
+                routeStage = MockRouteStage.Landing
+            }
+        )
+    }
+}
+
+@Composable
+private fun MockLandingScreen(
+    onBack: () -> Unit,
+    onStart: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(mockBankBg)
+            .background(darkBg)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .animateContentSize()
-                .padding(horizontal = 18.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(15.dp)
+                .padding(horizontal = 38.dp, vertical = 38.dp),
+            verticalArrangement = Arrangement.spacedBy(22.dp)
         ) {
-            MockTopBar(onBack)
-
-            if (index >= tasks.size) {
-                MockResultsScreen(
-                    tasks = tasks,
-                    selectedAnswers = selected.toMap(),
-                    checkedAnswers = checked.toMap(),
-                    writingAnswers = writingAnswers.toMap(),
-                    recordingPaths = recordingPaths.toMap(),
-                    onRestart = {
-                        index = 0
-                        selected.clear()
-                        checked.clear()
-                        writingAnswers.clear()
-                        writingStates.clear()
-                        recordingPaths.clear()
-                    },
-                    onBack = {
-                        index = (tasks.lastIndex).coerceAtLeast(0)
-                    }
-                )
-            } else {
-                val task = tasks[index]
-                when (task.phase) {
-                    YkiMockPhase.Overview -> MockOverview(
-                        task = task,
-                        onStart = { index = (index + 1).coerceAtMost(tasks.size) }
-                    )
-                    YkiMockPhase.Choice,
-                    YkiMockPhase.Writing,
-                    YkiMockPhase.ListeningTimer -> MockTask(
-                        task = task,
-                        selectedIndex = selected[index],
-                        isChecked = checked[index] == true,
-                        writingValue = writingAnswers[index].orEmpty(),
-                        writingState = writingStates[index] ?: MockWritingState.Draft,
-                        onSelect = { selected[index] = it },
-                        onCheck = { checked[index] = true },
-                        onWritingChange = { value ->
-                            writingAnswers[index] = value
-                            writingStates[index] = MockWritingState.Draft
-                        },
-                        onSaveWriting = {
-                            writingStates[index] = MockWritingState.Saved
-                        },
-                        onPrevious = { index = (index - 1).coerceAtLeast(0) },
-                        onNext = { index = (index + 1).coerceAtMost(tasks.size) }
-                    )
-                    YkiMockPhase.PreparationTimer,
-                    YkiMockPhase.RecordingTimer -> MockTimedTask(
-                        task = task,
-                        isSent = recordingPaths[index].orEmpty().isNotBlank(),
-                        onSent = { path ->
-                            if (!path.isNullOrBlank()) recordingPaths[index] = path
-                        },
-                        onPrevious = { index = (index - 1).coerceAtLeast(0) },
-                        onNext = { index = (index + 1).coerceAtMost(tasks.size) }
-                    )
-                    YkiMockPhase.Submitted,
-                    YkiMockPhase.Results -> {
-                        index = tasks.size
-                    }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(0.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("▸", color = Color(0xFF00D6FF), fontSize = 44.sp, fontWeight = FontWeight.Black)
+                    Text("floently", color = Color(0xFF1CA7FF), fontSize = 34.sp, fontStyle = FontStyle.Italic)
                 }
+                DarkPill("Home") {}
+                Spacer(modifier = Modifier.width(12.dp))
+                DarkPill("Menu") {}
+            }
 
+            Spacer(modifier = Modifier.height(54.dp))
+
+            Chip("YKI EXAM", blue, darkBg)
+
+            Text(
+                text = "Full YKI exam simulation for real outcomes",
+                color = darkText,
+                fontSize = 40.sp,
+                lineHeight = 48.sp,
+                fontWeight = FontWeight.Black
+            )
+
+            Text(
+                text = "Choose a level band and run the formal YKI flow. Use this route when you need exam-true practice that also supports work, citizenship, permanent residence, and long-term language goals.",
+                color = darkMuted,
+                fontSize = 21.sp,
+                lineHeight = 31.sp
+            )
+
+            LevelSelector()
+
+            WhiteLandingCard(
+                title = "Exam overview",
+                body = "${YkiMockExamBank.certifiedTaskCount} tasks in the certified bank · Authority:\n${YkiMockExamBank.authority}\n\nUses the certified YKI task index and level-banded pool rather than a guided practice subset."
+            )
+
+            WhiteCoverageCard()
+
+            DarkActionCard(
+                title = "Start B1-B2 YKI exam now",
+                body = "Open the full exam runtime for the selected level band.",
+                leftChip = "Exam",
+                rightAction = "Start",
+                onClick = onStart
+            )
+
+            DarkActionCard(
+                title = "Mock cycle",
+                body = "Open a preparation cycle for timing pressure, exam confidence, and readiness for work and life in Finland.",
+                leftChip = "Preparation",
+                rightAction = "Open",
+                onClick = onStart
+            )
+
+            DarkActionCard(
+                title = "Recording speaking",
+                body = "Open the recorded-speaking preparation surface for solo speaking.",
+                leftChip = "Speaking",
+                rightAction = "Open",
+                onClick = onStart
+            )
+
+            DarkActionCard(
+                title = "Conversation speaking",
+                body = "Open the conversation-speaking surface when you want more realistic communication practice.",
+                leftChip = "Conversation",
+                rightAction = "Open",
+                onClick = onStart
+            )
+
+            DarkActionCard(
+                title = "Guided YKI practice",
+                body = "Open the lighter practice surface when you want guided feedback before returning to the full YKI route.",
+                leftChip = "Practice",
+                rightAction = "Open",
+                onClick = onStart
+            )
+
+            MockPrimaryButton(
+                text = "Start B1-B2 YKI exam now",
+                color = blue,
+                onClick = onStart
+            )
+        }
+    }
+}
+
+@Composable
+private fun LevelSelector() {
+    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        LevelPill("A1-A2", selected = false)
+        LevelPill("B1-B2", selected = true)
+        LevelPill("C1-C2", selected = false)
+    }
+}
+
+@Composable
+private fun LevelPill(
+    textValue: String,
+    selected: Boolean
+) {
+    Surface(
+        color = if (selected) blue else Color(0xFF0B1E42),
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, if (selected) Color(0xFF6D8DFF) else Color(0xFF283D68))
+    ) {
+        Text(
+            text = textValue,
+            color = if (selected) Color.White else darkText,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Black,
+            modifier = Modifier.padding(horizontal = 26.dp, vertical = 15.dp)
+        )
+    }
+}
+
+@Composable
+private fun WhiteLandingCard(
+    title: String,
+    body: String
+) {
+    Surface(
+        color = white,
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(28.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(title, color = mockText, fontSize = 25.sp, fontWeight = FontWeight.Black)
+            Text(body, color = Color(0xFF4B5563), fontSize = 20.sp, lineHeight = 30.sp)
+        }
+    }
+}
+
+@Composable
+private fun WhiteCoverageCard() {
+    Surface(
+        color = white,
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(28.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            Text("Exam coverage", color = mockText, fontSize = 25.sp, fontWeight = FontWeight.Black)
+            CoverageRow("Reading", "965 tasks · about 25 min", "READING")
+            CoverageRow("Listening", "227 tasks · about 25 min", "LISTENING")
+            CoverageRow("Writing", "2046 tasks · about 35 min", "WRITING")
+            CoverageRow("Speaking", "644 tasks · about 20 min", "SPEAKING")
+        }
+    }
+}
+
+@Composable
+private fun CoverageRow(
+    title: String,
+    sub: String,
+    chip: String
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, color = mockText, fontSize = 22.sp, fontWeight = FontWeight.Black)
+            Text(sub, color = muted, fontSize = 20.sp)
+        }
+        Surface(color = blueSoft, shape = RoundedCornerShape(999.dp)) {
+            Text(
+                text = chip,
+                color = blue,
+                fontWeight = FontWeight.Black,
+                fontSize = 17.sp,
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun DarkActionCard(
+    title: String,
+    body: String,
+    leftChip: String,
+    rightAction: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = darkCard,
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, darkBorder),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Column(
+            modifier = Modifier.padding(28.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(title, color = darkText, fontSize = 25.sp, fontWeight = FontWeight.Black)
+            Text(body, color = darkMuted, fontSize = 20.sp, lineHeight = 30.sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = Color(0xFF152D6A), shape = RoundedCornerShape(999.dp)) {
+                    Text(leftChip, color = Color(0xFF6D8DFF), fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                Surface(color = Color(0xFF1B3170), shape = RoundedCornerShape(999.dp)) {
+                    Text(rightAction, color = Color(0xFF7FA0FF), fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MockExamSummaryScreen(
+    onBack: () -> Unit,
+    onStart: () -> Unit
+) {
+    LightShell {
+        BackPill(onBack)
+        Spacer(modifier = Modifier.height(36.dp))
+
+        Text(
+            text = "YKI B1-B2 exam",
+            color = mockText,
+            fontSize = 43.sp,
+            lineHeight = 48.sp,
+            fontWeight = FontWeight.Black
+        )
+
+        Text(
+            text = "Practice exam with real-format questions at B1-B2 level.\nWork through each section in order.",
+            color = Color(0xFF4B5563),
+            fontSize = 22.sp,
+            lineHeight = 32.sp
+        )
+
+        Surface(
+            color = white,
+            shape = RoundedCornerShape(28.dp),
+            border = BorderStroke(1.dp, border),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(28.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                Text("Exam sections", color = mockText, fontSize = 26.sp, fontWeight = FontWeight.Black)
+                SummaryRow("1", "Reading comprehension", "25 min · 5 tasks")
+                SummaryRow("2", "Listening comprehension", "20 min · 4 tasks")
+                SummaryRow("3", "Writing tasks", "35 min · 4 tasks")
+                SummaryRow("4", "Speaking tasks", "15 min · 4 tasks")
+
+                Surface(color = border, modifier = Modifier.fillMaxWidth().height(1.dp)) {}
                 Text(
-                    text = "${task.screenshotLabel} mapped from YKI Mock screenshot state",
-                    color = mockBankMuted,
-                    fontSize = 11.sp,
+                    text = "17 tasks total · approx. 95 min",
+                    color = muted,
+                    fontSize = 19.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         }
+
+        MockPrimaryButton("Start YKI exam", blue, onStart)
     }
 }
 
 @Composable
-private fun MockTopBar(onBack: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        MockPill("Back", mockBankBlue, onBack)
-        Spacer(modifier = Modifier.weight(1f))
-        Text(
-            text = "YKI Mock Exam",
-            color = mockBankText,
-            fontSize = 23.sp,
-            fontWeight = FontWeight.Black
-        )
-    }
-}
-
-@Composable
-private fun MockOverview(
-    task: YkiMockExamTask,
-    onStart: () -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Surface(
-            color = mockBankCard,
-            shape = RoundedCornerShape(32.dp),
-            border = BorderStroke(1.dp, mockBankBorder),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(22.dp),
-                verticalArrangement = Arrangement.spacedBy(13.dp)
-            ) {
-                Text(
-                    text = "FULL YKI EXAM",
-                    color = mockBankPurple,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 3.4.sp
-                )
-                Text(
-                    text = task.title,
-                    color = mockBankText,
-                    fontSize = 34.sp,
-                    lineHeight = 38.sp,
-                    fontWeight = FontWeight.Black
-                )
-                Text(
-                    text = task.prompt,
-                    color = mockBankMuted,
-                    fontSize = 16.sp,
-                    lineHeight = 23.sp
-                )
-            }
-        }
-
-        MockSectionCard("Reading comprehension", "Read passages and answer questions.", "18 min")
-        MockSectionCard("Writing", "Write messages and structured answers.", "20 min")
-        MockSectionCard("Listening", "Timed listening and answer states.", "12 min")
-        MockSectionCard("Speaking", "Timed preparation and automatic recording.", "15 min")
-
-        MockPrimaryButton(
-            text = if (task.screenshots.contains("IMG_0434")) "Start YKI exam" else "Continue overview",
-            color = mockBankBlue,
-            onClick = onStart
-        )
-    }
-}
-
-@Composable
-private fun MockSectionCard(
+private fun SummaryRow(
+    number: String,
     title: String,
-    body: String,
-    time: String
+    sub: String
 ) {
-    Surface(
-        color = mockBankCard,
-        shape = RoundedCornerShape(26.dp),
-        border = BorderStroke(1.dp, mockBankBorder),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(17.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(7.dp)
-            ) {
-                Text(title, color = mockBankText, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                Text(body, color = mockBankMuted, fontSize = 15.sp, lineHeight = 21.sp)
-            }
-            Surface(
-                color = Color(0xFFEAF1FF),
-                shape = RoundedCornerShape(999.dp)
-            ) {
-                Text(
-                    text = time,
-                    color = mockBankBlue,
-                    fontWeight = FontWeight.Black,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                )
-            }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(number, color = blue, fontSize = 22.sp, fontWeight = FontWeight.Black, modifier = Modifier.width(48.dp))
+        Column {
+            Text(title, color = mockText, fontSize = 22.sp, fontWeight = FontWeight.Black)
+            Text(sub, color = muted, fontSize = 19.sp)
         }
     }
 }
 
 @Composable
-private fun MockTask(
+private fun MockExamTaskScreen(
     task: YkiMockExamTask,
+    totalTasks: Int,
+    currentIndex: Int,
     selectedIndex: Int?,
-    isChecked: Boolean,
     writingValue: String,
-    writingState: MockWritingState,
+    writingState: WritingState,
+    recordingDuration: Int?,
+    listeningPlayed: Boolean,
+    onBack: () -> Unit,
     onSelect: (Int) -> Unit,
-    onCheck: () -> Unit,
     onWritingChange: (String) -> Unit,
     onSaveWriting: () -> Unit,
-    onPrevious: () -> Unit,
+    onListeningPlayed: () -> Unit,
+    onSpeakingComplete: (Int, String?) -> Unit,
     onNext: () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        MockProgressDots(task.skill)
+    LightShell {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            BackPill(onBack)
+            Spacer(modifier = Modifier.weight(1f))
+            MockProgressDots(total = totalTasks, currentIndex = currentIndex)
+        }
 
-        Surface(
-            color = mockBankCard,
-            shape = RoundedCornerShape(30.dp),
-            border = BorderStroke(1.dp, mockBankBorder),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(19.dp),
-                verticalArrangement = Arrangement.spacedBy(13.dp)
-            ) {
-                Text(
-                    text = task.section.uppercase(),
-                    color = mockBankPurple,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 2.8.sp
-                )
-
-                Text(
-                    text = task.title,
-                    color = mockBankText,
-                    fontSize = 25.sp,
-                    lineHeight = 30.sp,
-                    fontWeight = FontWeight.Black
-                )
-
-                if (task.phase == YkiMockPhase.ListeningTimer) {
-                    MockStaticTimer(task = task)
-                    MockListeningAudioButton(task = task)
-                }
-
-                if (task.passage.isNotBlank()) {
-                    Surface(
-                        color = Color(0xFFF4F6FB),
-                        shape = RoundedCornerShape(22.dp),
-                        border = BorderStroke(1.dp, mockBankBorder),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = task.passage,
-                            color = mockBankText,
-                            fontSize = 16.sp,
-                            lineHeight = 23.sp,
-                            modifier = Modifier.padding(15.dp)
-                        )
-                    }
-                }
-
-                Text(
-                    text = task.prompt,
-                    color = mockBankMuted,
-                    fontSize = 16.sp,
-                    lineHeight = 23.sp
-                )
-
-                if (task.phase == YkiMockPhase.Writing) {
-                    OutlinedTextField(
-                        value = writingValue,
-                        onValueChange = onWritingChange,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 190.dp),
-                        textStyle = TextStyle(
-                            color = mockBankText,
-                            fontSize = 15.sp,
-                            lineHeight = 22.sp
-                        ),
-                        keyboardOptions = KeyboardOptions(
-                            autoCorrect = false,
-                            imeAction = ImeAction.Default
-                        ),
-                        singleLine = false,
-                        minLines = 8,
-                        shape = RoundedCornerShape(18.dp)
-                    )
-                }
-
-                task.options.forEachIndexed { i, option ->
-                    MockOption(
-                        text = option,
-                        selected = selectedIndex == i,
-                        checked = isChecked,
-                        correct = task.correctIndex == i,
-                        onClick = { onSelect(i) }
-                    )
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    MockGhostButton("Previous", onPrevious)
-                    Spacer(modifier = Modifier.weight(1f))
-                    when {
-                        task.options.isNotEmpty() -> {
-                            MockActionButton(
-                                text = if (task.phase == YkiMockPhase.ListeningTimer) "Save listening answer" else "Continue",
-                                color = if (selectedIndex == null) Color(0xFFB9C5E7) else mockBankBlue,
-                                onClick = { if (selectedIndex != null) onNext() }
-                            )
-                        }
-                        task.phase == YkiMockPhase.Writing && writingState == MockWritingState.Draft -> {
-                            MockActionButton("Save answer", mockBankOrange, onSaveWriting)
-                        }
-                        task.phase == YkiMockPhase.Writing && writingState == MockWritingState.Saved -> {
-                            MockActionButton("Continue to next section", mockBankBlue, onNext)
-                        }
-                        else -> {
-                            MockActionButton("Next question", mockBankBlue, onNext)
-                        }
-                    }
-                }
-            }
+        when (task.phase) {
+            YkiMockPhase.Choice -> MockChoiceTask(task, selectedIndex, onSelect, onNext)
+            YkiMockPhase.Listening -> MockListeningTask(task, selectedIndex, listeningPlayed, onListeningPlayed, onSelect, onNext)
+            YkiMockPhase.Writing -> MockWritingTask(task, writingValue, writingState, onWritingChange, onSaveWriting, onNext)
+            YkiMockPhase.Speaking -> MockSpeakingTask(task, recordingDuration, onSpeakingComplete, onNext)
         }
     }
 }
 
 @Composable
-private fun MockTimedTask(
+private fun MockChoiceTask(
     task: YkiMockExamTask,
-    isSent: Boolean,
-    onSent: (String?) -> Unit,
-    onPrevious: () -> Unit,
+    selectedIndex: Int?,
+    onSelect: (Int) -> Unit,
+    onNext: () -> Unit
+) {
+    SectionHeader(task)
+    Text(task.instruction, color = Color(0xFF4B5563), fontSize = 22.sp, lineHeight = 31.sp, fontStyle = FontStyle.Italic)
+    QuestionCard(task = task, selectedIndex = selectedIndex, onSelect = onSelect)
+    MockPrimaryButton(
+        text = "Next question",
+        color = if (selectedIndex == null) Color(0xFF9FB4E8) else blue,
+        onClick = { if (selectedIndex != null) onNext() }
+    )
+}
+
+@Composable
+private fun MockListeningTask(
+    task: YkiMockExamTask,
+    selectedIndex: Int?,
+    listeningPlayed: Boolean,
+    onListeningPlayed: () -> Unit,
+    onSelect: (Int) -> Unit,
+    onNext: () -> Unit
+) {
+    var preStartRemaining by remember(task.bankTaskId) { mutableIntStateOf(if (task.sectionTaskNumber == 1) 10 else 0) }
+    var taskRemaining by remember(task.bankTaskId) { mutableIntStateOf(60) }
+
+    LaunchedEffect(task.bankTaskId, preStartRemaining) {
+        if (preStartRemaining > 0) {
+            delay(1000)
+            preStartRemaining -= 1
+        }
+    }
+
+    LaunchedEffect(task.bankTaskId, listeningPlayed, taskRemaining, preStartRemaining) {
+        if (preStartRemaining <= 0 && listeningPlayed && taskRemaining > 0) {
+            delay(1000)
+            taskRemaining -= 1
+        }
+    }
+
+    SectionHeader(task)
+
+    if (preStartRemaining > 0) {
+        TimerPanel(
+            title = "Listening starts soon",
+            body = "Read the instruction before the listening section starts.",
+            time = "00:${preStartRemaining.toString().padStart(2, '0')}",
+            active = false
+        )
+    } else {
+        Text(task.instruction, color = Color(0xFF4B5563), fontSize = 22.sp, lineHeight = 31.sp, fontStyle = FontStyle.Italic)
+        TimerPanel(
+            title = if (listeningPlayed) "Timed listening answer" else "Ready for audio",
+            body = if (listeningPlayed) "Choose the best answer before continuing." else "Play the listening audio, then choose an answer.",
+            time = "00:${taskRemaining.coerceAtLeast(0).toString().padStart(2, '0')}",
+            active = listeningPlayed
+        )
+        MockListeningAudioButton(task = task, onPlayed = onListeningPlayed)
+        QuestionCard(task = task, selectedIndex = selectedIndex, onSelect = onSelect)
+        MockPrimaryButton(
+            text = "Next question",
+            color = if (selectedIndex == null) Color(0xFF9FB4E8) else blue,
+            onClick = { if (selectedIndex != null) onNext() }
+        )
+    }
+}
+
+@Composable
+private fun MockWritingTask(
+    task: YkiMockExamTask,
+    value: String,
+    writingState: WritingState,
+    onChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onNext: () -> Unit
+) {
+    SectionHeader(task)
+    Text(task.instruction, color = Color(0xFF4B5563), fontSize = 22.sp, lineHeight = 31.sp, fontStyle = FontStyle.Italic)
+
+    Surface(
+        color = white,
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(26.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            Text(task.prompt, color = mockText, fontSize = 22.sp, lineHeight = 31.sp, fontWeight = FontWeight.Bold)
+            OutlinedTextField(
+                value = value,
+                onValueChange = onChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 250.dp),
+                textStyle = TextStyle(color = mockText, fontSize = 18.sp, lineHeight = 27.sp),
+                keyboardOptions = KeyboardOptions(autoCorrect = false, imeAction = ImeAction.Default),
+                minLines = 10,
+                singleLine = false,
+                shape = RoundedCornerShape(20.dp)
+            )
+
+            if (writingState == WritingState.Saved) {
+                StatusPanel("Answer saved", "Your writing response will be evaluated after the full exam.")
+            }
+        }
+    }
+
+    when (writingState) {
+        WritingState.Draft -> MockPrimaryButton(
+            text = "Save answer",
+            color = if (value.trim().isBlank()) Color(0xFF9FB4E8) else blue,
+            onClick = { if (value.trim().isNotBlank()) onSave() }
+        )
+
+        WritingState.Saved -> MockPrimaryButton("Next question", blue, onNext)
+    }
+}
+
+@Composable
+private fun MockSpeakingTask(
+    task: YkiMockExamTask,
+    existingDuration: Int?,
+    onSpeakingComplete: (Int, String?) -> Unit,
     onNext: () -> Unit
 ) {
     val context = LocalContext.current
-    var remaining by remember(task.bankTaskId) { mutableIntStateOf(task.timerSeconds) }
+    var stage by remember(task.bankTaskId) {
+        mutableStateOf(if (existingDuration != null) MockSpeakingStage.Completed else MockSpeakingStage.PromptReading)
+    }
+    var remaining by remember(task.bankTaskId) { mutableIntStateOf(task.promptReadSeconds) }
     var recorder by remember(task.bankTaskId) { mutableStateOf<MediaRecorder?>(null) }
     var recordingStarted by remember(task.bankTaskId) { mutableStateOf(false) }
     var savedPath by remember(task.bankTaskId) { mutableStateOf<String?>(null) }
+    var savedDuration by remember(task.bankTaskId) { mutableIntStateOf(existingDuration ?: 0) }
     var error by remember(task.bankTaskId) { mutableStateOf<String?>(null) }
     var hasPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-        )
+        mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         hasPermission = granted
         if (!granted) {
-            error = "Microphone permission is required for recording tasks."
+            error = "Microphone permission is required for speaking tasks."
         }
     }
 
     fun startRecording() {
-        if (!hasPermission || recordingStarted || isSent) return
-
+        if (!hasPermission || recordingStarted) return
         val output = File(context.cacheDir, "yki-mock-${task.bankTaskId}-${System.currentTimeMillis()}.m4a")
         val nextRecorder = newMockMediaRecorder(context)
         try {
@@ -463,7 +715,7 @@ private fun MockTimedTask(
         }
     }
 
-    fun saveRecording() {
+    fun completeRecording(duration: Int) {
         val active = recorder
         if (active != null) {
             try {
@@ -475,32 +727,41 @@ private fun MockTimedTask(
                 recorder = null
             }
         }
-        onSent(savedPath)
+        savedDuration = duration.coerceAtLeast(0)
+        stage = MockSpeakingStage.Completed
+        onSpeakingComplete(savedDuration, savedPath)
     }
 
-    LaunchedEffect(task.bankTaskId, remaining, hasPermission, isSent) {
+    LaunchedEffect(task.bankTaskId, stage, remaining, hasPermission) {
         when {
-            task.phase == YkiMockPhase.PreparationTimer && remaining > 0 -> {
+            stage == MockSpeakingStage.PromptReading && remaining > 0 -> {
                 delay(1000)
                 remaining -= 1
             }
-            task.phase == YkiMockPhase.PreparationTimer && remaining <= 0 -> {
-                onNext()
+            stage == MockSpeakingStage.PromptReading && remaining <= 0 -> {
+                stage = MockSpeakingStage.PreparingResponse
+                remaining = task.preparationSeconds
             }
-            task.phase == YkiMockPhase.RecordingTimer && hasPermission && !recordingStarted && !isSent -> {
+            stage == MockSpeakingStage.PreparingResponse && remaining > 0 -> {
+                delay(1000)
+                remaining -= 1
+            }
+            stage == MockSpeakingStage.PreparingResponse && remaining <= 0 && hasPermission -> {
+                stage = MockSpeakingStage.Recording
+                remaining = task.responseSeconds
                 startRecording()
             }
-            task.phase == YkiMockPhase.RecordingTimer && remaining > 0 && !isSent -> {
+            stage == MockSpeakingStage.Recording && remaining > 0 -> {
                 delay(1000)
                 remaining -= 1
             }
-            task.phase == YkiMockPhase.RecordingTimer && remaining <= 0 && !isSent -> {
-                saveRecording()
+            stage == MockSpeakingStage.Recording && remaining <= 0 -> {
+                completeRecording(task.responseSeconds)
             }
         }
     }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(task.bankTaskId) {
         onDispose {
             try {
                 recorder?.stop()
@@ -511,118 +772,243 @@ private fun MockTimedTask(
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        MockProgressDots(task.skill)
+    SectionHeader(task)
+    Text(task.instruction, color = Color(0xFF4B5563), fontSize = 22.sp, lineHeight = 31.sp, fontStyle = FontStyle.Italic)
 
-        Surface(
-            color = mockBankCard,
-            shape = RoundedCornerShape(30.dp),
-            border = BorderStroke(1.dp, mockBankBorder),
-            modifier = Modifier.fillMaxWidth()
+    Surface(
+        color = white,
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(26.dp),
+            verticalArrangement = Arrangement.spacedBy(22.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(19.dp),
-                verticalArrangement = Arrangement.spacedBy(13.dp)
-            ) {
-                Text(
-                    text = task.section.uppercase(),
-                    color = mockBankPurple,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 2.8.sp
+            Text(task.prompt, color = Color(0xFF6B7280), fontSize = 23.sp, lineHeight = 35.sp, fontWeight = FontWeight.Bold)
+
+            when (stage) {
+                MockSpeakingStage.PromptReading -> TimerPanel(
+                    title = "Read the prompt",
+                    body = "Prompt reading time before response preparation.",
+                    time = "00:${remaining.coerceAtLeast(0).toString().padStart(2, '0')}",
+                    active = false
                 )
 
-                Text(
-                    text = task.title,
-                    color = mockBankText,
-                    fontSize = 25.sp,
-                    lineHeight = 30.sp,
-                    fontWeight = FontWeight.Black
+                MockSpeakingStage.PreparingResponse -> TimerPanel(
+                    title = "Prepare your response",
+                    body = "Recording starts automatically when preparation ends.",
+                    time = "00:${remaining.coerceAtLeast(0).toString().padStart(2, '0')}",
+                    active = false
                 )
 
+                MockSpeakingStage.Recording -> {
+                    val recorded = task.responseSeconds - remaining
+                    TimerPanel(
+                        title = "Recording",
+                        body = if (recorded < task.minimumRecordingSeconds) {
+                            "Minimum valid recording is 30 seconds."
+                        } else {
+                            "You may finish now or continue to 60 seconds."
+                        },
+                        time = "00:${remaining.coerceAtLeast(0).toString().padStart(2, '0')}",
+                        active = true
+                    )
+                    MockPrimaryButton(
+                        text = if (recorded < task.minimumRecordingSeconds) {
+                            "Recording... ${recorded}s / 30s minimum"
+                        } else {
+                            "Finish recording"
+                        },
+                        color = if (recorded < task.minimumRecordingSeconds) Color(0xFF9FB4E8) else red,
+                        onClick = {
+                            if (recorded >= task.minimumRecordingSeconds) completeRecording(recorded)
+                        }
+                    )
+                }
+
+                MockSpeakingStage.Completed -> StatusPanel(
+                    title = "Recording complete",
+                    body = "Recorded: ${savedDuration.coerceAtLeast(existingDuration ?: 0)}s"
+                )
+            }
+
+            if (!hasPermission && stage != MockSpeakingStage.Completed) {
+                MockPrimaryButton(
+                    text = "Allow microphone",
+                    color = orange,
+                    onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }
+                )
+            }
+
+            if (error != null) {
+                Text(error.orEmpty(), color = red, fontSize = 16.sp)
+            }
+        }
+    }
+
+    if (stage == MockSpeakingStage.Completed) {
+        MockPrimaryButton(
+            text = if (task.finalSubmit) "Submit exam" else "Next question",
+            color = blue,
+            onClick = onNext
+        )
+    }
+}
+
+@Composable
+private fun SectionHeader(task: YkiMockExamTask) {
+    Surface(
+        color = white,
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(26.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "${task.section} · TASK ${task.sectionTaskNumber} OF ${task.sectionTaskCount}",
+                color = blue,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 3.sp
+            )
+            Text(task.sectionTitle, color = mockText, fontSize = 34.sp, fontWeight = FontWeight.Black)
+            Text(task.durationLabel, color = muted, fontSize = 20.sp)
+        }
+    }
+}
+
+@Composable
+private fun QuestionCard(
+    task: YkiMockExamTask,
+    selectedIndex: Int?,
+    onSelect: (Int) -> Unit
+) {
+    Surface(
+        color = white,
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(26.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            if (task.passage.isNotBlank()) {
                 Surface(
-                    color = if (task.phase == YkiMockPhase.RecordingTimer && !isSent) Color(0xFFFFEEF0) else Color(0xFFF4F6FB),
-                    shape = RoundedCornerShape(28.dp),
-                    border = BorderStroke(
-                        1.dp,
-                        if (task.phase == YkiMockPhase.RecordingTimer && !isSent) mockBankRed.copy(alpha = 0.45f) else mockBankBorder
-                    ),
+                    color = Color(0xFFF1F5FB),
+                    shape = RoundedCornerShape(22.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(
-                        modifier = Modifier.padding(22.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = "00:${remaining.coerceAtLeast(0).toString().padStart(2, '0')}",
-                            color = if (task.phase == YkiMockPhase.RecordingTimer && !isSent) mockBankRed else mockBankText,
-                            fontSize = 48.sp,
-                            fontWeight = FontWeight.Black
+                    Row {
+                        Box(
+                            modifier = Modifier
+                                .width(5.dp)
+                                .heightIn(min = 180.dp)
+                                .background(blue)
                         )
-                        Text(
-                            text = when {
-                                isSent -> "Submitted"
-                                task.phase == YkiMockPhase.PreparationTimer -> "Prepare your answer"
-                                task.phase == YkiMockPhase.RecordingTimer -> "Recording"
-                                else -> "Timed task"
-                            },
-                            color = if (task.phase == YkiMockPhase.RecordingTimer && !isSent) mockBankRed else mockBankMuted,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Black
-                        )
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Text("TEKSTI", color = blue, fontSize = 18.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp)
+                            Text(task.passage, color = Color(0xFF1F2937), fontSize = 22.sp, lineHeight = 33.sp)
+                        }
                     }
                 }
+            }
 
-                Text(
-                    text = when {
-                        error != null -> error.orEmpty()
-                        isSent -> "Answer sent. Continue to the next state."
-                        task.phase == YkiMockPhase.PreparationTimer -> "Preparation runs automatically. The next state starts when the timer ends."
-                        task.phase == YkiMockPhase.RecordingTimer && !hasPermission -> "Allow microphone permission to start the automatic recording."
-                        task.phase == YkiMockPhase.RecordingTimer -> "Recording runs automatically and is saved when the timer ends."
-                        else -> task.prompt
-                    },
-                    color = if (error != null) mockBankRed else mockBankMuted,
-                    fontSize = 16.sp,
-                    lineHeight = 23.sp
+            Text(task.prompt, color = mockText, fontSize = 23.sp, lineHeight = 31.sp, fontWeight = FontWeight.Black)
+
+            task.options.forEachIndexed { index, option ->
+                MockOption(
+                    textValue = "${('A'.code + index).toChar()}. $option",
+                    selected = selectedIndex == index,
+                    onClick = { onSelect(index) }
                 )
-
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    MockGhostButton("Previous", onPrevious)
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    when {
-                        task.phase == YkiMockPhase.RecordingTimer && !hasPermission -> {
-                            MockActionButton("Allow microphone", mockBankOrange) {
-                                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                            }
-                        }
-                        task.phase == YkiMockPhase.RecordingTimer && !isSent -> {
-                            MockActionButton("Save answer", mockBankRed) {
-                                saveRecording()
-                            }
-                        }
-                        isSent -> {
-                            MockActionButton(
-                                text = if (task.finalSubmit || task.screenshots.contains("IMG_0477")) "Submit exam" else "Next question",
-                                color = mockBankGreen,
-                                onClick = onNext
-                            )
-                        }
-                        else -> {
-                            MockActionButton("Timer running", Color(0xFFB9C5E7)) {}
-                        }
-                    }
-                }
             }
         }
     }
 }
 
+@Composable
+private fun MockOption(
+    textValue: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = if (selected) Color(0xFFEAF1FF) else white,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, if (selected) blue else border),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Text(
+            text = textValue,
+            color = mockText,
+            fontSize = 21.sp,
+            lineHeight = 27.sp,
+            modifier = Modifier.padding(22.dp)
+        )
+    }
+}
 
 @Composable
-private fun MockListeningAudioButton(task: YkiMockExamTask) {
+private fun TimerPanel(
+    title: String,
+    body: String,
+    time: String,
+    active: Boolean
+) {
+    Surface(
+        color = if (active) Color(0xFFFFEEF0) else Color(0xFFF1F5FB),
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, if (active) red.copy(alpha = 0.45f) else border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(9.dp)
+        ) {
+            Text(time, color = if (active) red else mockText, fontSize = 44.sp, fontWeight = FontWeight.Black)
+            Text(title, color = if (active) red else blue, fontSize = 21.sp, fontWeight = FontWeight.Black)
+            Text(body, color = muted, fontSize = 16.sp, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+@Composable
+private fun StatusPanel(
+    title: String,
+    body: String
+) {
+    Surface(
+        color = Color(0xFFEEF3FF),
+        shape = RoundedCornerShape(18.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(title, color = Color(0xFF18B77A), fontSize = 24.sp, fontWeight = FontWeight.Black)
+            Text(body, color = muted, fontSize = 18.sp)
+        }
+    }
+}
+
+@Composable
+private fun MockListeningAudioButton(
+    task: YkiMockExamTask,
+    onPlayed: () -> Unit
+) {
     val context = LocalContext.current
     var ready by remember(task.bankTaskId) { mutableStateOf(false) }
     var playing by remember(task.bankTaskId) { mutableStateOf(false) }
@@ -650,7 +1036,7 @@ private fun MockListeningAudioButton(task: YkiMockExamTask) {
             ready -> "Play listening audio"
             else -> "Preparing audio..."
         },
-        color = if (playing) mockBankRed else mockBankBlue,
+        color = if (playing) red else blue,
         onClick = {
             val engine = engineHolder[0]
             if (engine != null && ready) {
@@ -658,6 +1044,7 @@ private fun MockListeningAudioButton(task: YkiMockExamTask) {
                     engine.stop()
                     playing = false
                 } else {
+                    onPlayed()
                     engine.speak(
                         task.audioScript.ifBlank { task.prompt },
                         TextToSpeech.QUEUE_FLUSH,
@@ -672,324 +1059,244 @@ private fun MockListeningAudioButton(task: YkiMockExamTask) {
 }
 
 @Composable
-private fun MockStaticTimer(task: YkiMockExamTask) {
-    var remaining by remember(task.bankTaskId) { mutableIntStateOf(task.timerSeconds) }
-
-    LaunchedEffect(task.bankTaskId, remaining) {
-        if (remaining > 0) {
-            delay(1000)
-            remaining -= 1
-        }
-    }
-
-    Surface(
-        color = Color(0xFFF4F6FB),
-        shape = RoundedCornerShape(28.dp),
-        border = BorderStroke(1.dp, mockBankBorder),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(22.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text(
-                text = "00:${remaining.coerceAtLeast(0).toString().padStart(2, '0')}",
-                color = mockBankText,
-                fontSize = 48.sp,
-                fontWeight = FontWeight.Black
-            )
-            Text(
-                text = "Timed answer",
-                color = mockBankMuted,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Black
-            )
-        }
-    }
-}
-
-@Composable
-private fun MockOption(
-    text: String,
-    selected: Boolean,
-    checked: Boolean,
-    correct: Boolean,
-    onClick: () -> Unit
-) {
-    val bg = if (selected) Color(0xFFEAF1FF) else Color.White
-    val stroke = if (selected) mockBankBlue else mockBankBorder
-
-    Surface(
-        color = bg,
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, stroke),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-    ) {
-        Row(
-            modifier = Modifier.padding(15.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .background(if (selected) mockBankBlue else Color(0xFFE7EBF3)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = if (selected) "•" else "",
-                    color = Color.White,
-                    fontWeight = FontWeight.Black
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = text,
-                color = mockBankText,
-                fontSize = 16.sp,
-                lineHeight = 22.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
-
-@Composable
-private fun MockResultsScreen(
+private fun MockDeepResultsScreen(
     tasks: List<YkiMockExamTask>,
     selectedAnswers: Map<Int, Int>,
-    checkedAnswers: Map<Int, Boolean>,
     writingAnswers: Map<Int, String>,
-    recordingPaths: Map<Int, String>,
-    onRestart: () -> Unit,
-    onBack: () -> Unit
+    speakingDurations: Map<Int, Int>,
+    speakingFiles: Map<Int, String>,
+    onBack: () -> Unit,
+    onRestart: () -> Unit
 ) {
     val context = LocalContext.current
-    val report = remember(tasks, selectedAnswers, checkedAnswers, writingAnswers, recordingPaths) {
-        buildMockEvaluationReport(tasks, selectedAnswers, checkedAnswers, writingAnswers, recordingPaths)
+    val report = remember(tasks, selectedAnswers, writingAnswers, speakingDurations, speakingFiles) {
+        buildDeepMockReport(tasks, selectedAnswers, writingAnswers, speakingDurations, speakingFiles)
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        MockProgressDots(YkiMockSkill.Results)
+    LightShell {
+        BackPill(onBack)
+        Text("Results overview", color = mockText, fontSize = 43.sp, fontWeight = FontWeight.Black)
 
         Surface(
-            color = mockBankCard,
-            shape = RoundedCornerShape(32.dp),
-            border = BorderStroke(1.dp, mockBankBorder),
+            color = white,
+            shape = RoundedCornerShape(28.dp),
+            border = BorderStroke(1.dp, border),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(
-                modifier = Modifier.padding(22.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                Text(
-                    text = "RESULTS",
-                    color = mockBankPurple,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 3.4.sp
-                )
-                Text(
-                    text = "YKI Mock Exam complete",
-                    color = mockBankText,
-                    fontSize = 32.sp,
-                    lineHeight = 36.sp,
-                    fontWeight = FontWeight.Black
-                )
-
-                Surface(
-                    color = Color(0xFFEAF8F1),
-                    shape = RoundedCornerShape(28.dp),
-                    border = BorderStroke(1.dp, mockBankGreen.copy(alpha = 0.45f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(18.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text("B1/B2 readiness", color = mockBankGreen, fontSize = 16.sp, fontWeight = FontWeight.Black)
-                        Text(report.scoreLine.substringAfter(": ").ifBlank { "Review" }, color = mockBankText, fontSize = 42.sp, fontWeight = FontWeight.Black)
-                    }
-                }
-
-                Text(
-                    text = report.summary,
-                    color = mockBankMuted,
-                    fontSize = 15.sp,
-                    lineHeight = 21.sp
-                )
-
-                MockPrimaryButton("Download PDF evaluation", mockBankBlue) {
-                    YkiPracticeEvaluationExporter.share(context, report, YkiPracticeExportFormat.Pdf)
-                }
-
-                MockPrimaryButton("Download Word evaluation", mockBankOrange) {
-                    YkiPracticeEvaluationExporter.share(context, report, YkiPracticeExportFormat.Word)
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    MockGhostButton("Previous", onBack)
-                    Spacer(modifier = Modifier.weight(1f))
-                    MockActionButton("Restart", mockBankPurple, onRestart)
-                }
-
-                Text(
-                    text = "IMG_0478 and IMG_0479 mapped: results overview and share/export state.",
-                    color = mockBankMuted,
-                    fontSize = 11.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
+            Column(modifier = Modifier.padding(26.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text("B1-B2 exam summary", color = mockText, fontSize = 26.sp, fontWeight = FontWeight.Black)
+                Text(report.scoreLine, color = Color(0xFF4B5563), fontSize = 21.sp)
+                Text(report.summary, color = Color(0xFF4B5563), fontSize = 20.sp, lineHeight = 29.sp)
             }
         }
+
+        Surface(
+            color = white,
+            shape = RoundedCornerShape(28.dp),
+            border = BorderStroke(1.dp, border),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(26.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Detailed evaluation", color = mockText, fontSize = 26.sp, fontWeight = FontWeight.Black)
+                report.lines.take(18).forEach {
+                    Text(it, color = Color(0xFF4B5563), fontSize = 18.sp, lineHeight = 25.sp)
+                }
+            }
+        }
+
+        MockPrimaryButton("Download PDF evaluation", blue) {
+            YkiPracticeEvaluationExporter.share(context, report, YkiPracticeExportFormat.Pdf)
+        }
+
+        MockPrimaryButton("Download Word evaluation", orange) {
+            YkiPracticeEvaluationExporter.share(context, report, YkiPracticeExportFormat.Word)
+        }
+
+        MockGhostButton("Restart exam", onRestart)
     }
 }
 
-private fun buildMockEvaluationReport(
+private fun buildDeepMockReport(
     tasks: List<YkiMockExamTask>,
     selectedAnswers: Map<Int, Int>,
-    checkedAnswers: Map<Int, Boolean>,
     writingAnswers: Map<Int, String>,
-    recordingPaths: Map<Int, String>
+    speakingDurations: Map<Int, Int>,
+    speakingFiles: Map<Int, String>
 ): YkiPracticeEvaluationReport {
-    val choiceTasks = tasks.withIndex().filter { (_, task) -> task.options.isNotEmpty() && task.correctIndex >= 0 }
-    val writingTasks = tasks.withIndex().filter { (_, task) -> task.skill == YkiMockSkill.Writing }
-    val speakingTasks = tasks.withIndex().filter { (_, task) -> task.skill == YkiMockSkill.Speaking && task.phase == YkiMockPhase.RecordingTimer }
+    val reading = tasks.withIndex().filter { (_, task) -> task.skill == YkiMockSkill.Reading }
+    val listening = tasks.withIndex().filter { (_, task) -> task.skill == YkiMockSkill.Listening }
+    val writing = tasks.withIndex().filter { (_, task) -> task.skill == YkiMockSkill.Writing }
+    val speaking = tasks.withIndex().filter { (_, task) -> task.skill == YkiMockSkill.Speaking }
 
-    val correct = choiceTasks.count { (index, task) ->
-        selectedAnswers[index] == task.correctIndex
+    val readingCorrect = reading.count { (index, task) -> selectedAnswers[index] == task.correctIndex }
+    val listeningCorrect = listening.count { (index, task) -> selectedAnswers[index] == task.correctIndex }
+    val objectiveTotal = reading.size + listening.size
+    val objectiveCorrect = readingCorrect + listeningCorrect
+
+    val writingSubmitted = writing.count { (index, _) -> writingAnswers[index].orEmpty().trim().isNotBlank() }
+    val speakingSubmitted = speaking.count { (index, _) -> speakingDurations[index] ?: 0 >= 30 || speakingFiles[index].orEmpty().isNotBlank() }
+
+    val readiness = when {
+        objectiveCorrect >= 8 && writingSubmitted >= 3 && speakingSubmitted >= 3 -> "Strong B1-B2 readiness"
+        objectiveCorrect >= 6 && writingSubmitted >= 2 && speakingSubmitted >= 2 -> "Developing B1-B2 readiness"
+        else -> "Needs more targeted practice before exam readiness"
     }
-    val writingSubmitted = writingTasks.count { (index, _) -> writingAnswers[index].orEmpty().trim().isNotBlank() }
-    val speakingSubmitted = speakingTasks.count { (index, _) -> recordingPaths[index].orEmpty().isNotBlank() }
-
-    val percent = if (choiceTasks.isEmpty()) 0 else ((correct.toDouble() / choiceTasks.size.toDouble()) * 100).toInt()
 
     val lines = mutableListOf<String>()
-    lines += "YKI Mock Exam feedback"
-    lines += "- Reading/listening choice score: $correct / ${choiceTasks.size}"
-    lines += "- Writing submitted: $writingSubmitted / ${writingTasks.size}"
-    lines += "- Speaking recordings sent: $speakingSubmitted / ${speakingTasks.size}"
+    lines += "Objective skills"
+    lines += "- Reading comprehension: $readingCorrect / ${reading.size}"
+    lines += "- Listening comprehension: $listeningCorrect / ${listening.size}"
     lines += ""
-    tasks.forEachIndexed { index, task ->
-        lines += "- ${task.screenshotLabel} ${task.section}: ${task.title}"
-        if (task.options.isNotEmpty()) {
-            lines += "  Selected: ${selectedAnswers[index]?.let { task.options.getOrNull(it) }.orEmpty().ifBlank { "No answer" }}"
+    lines += "Writing evaluation"
+    writing.forEach { (index, task) ->
+        val words = writingAnswers[index].orEmpty().trim().split(Regex("\\s+")).filter { it.isNotBlank() }.size
+        val status = when {
+            words == 0 -> "not submitted"
+            words < 25 -> "short answer; expand with reasons and examples"
+            words < 70 -> "submitted; add more structure and detail"
+            else -> "good length; review grammar, connectors and task focus"
         }
+        lines += "- ${task.sectionTitle} task ${task.sectionTaskNumber}: $status"
     }
+    lines += ""
+    lines += "Speaking evaluation"
+    speaking.forEach { (index, task) ->
+        val duration = speakingDurations[index] ?: 0
+        val status = when {
+            duration < 30 -> "too short or missing; aim for at least 45 seconds"
+            duration < 45 -> "valid minimum reached; expand fluency and examples"
+            duration <= 60 -> "completed in target range; review clarity, grammar and pronunciation"
+            else -> "completed"
+        }
+        lines += "- ${task.sectionTitle} task ${task.sectionTaskNumber}: $status (${duration}s)"
+    }
+    lines += ""
+    lines += "Recommendations"
+    lines += "- Review reading/listening questions missed after the exam."
+    lines += "- For writing, focus on clear structure: opening, reason, details, ending."
+    lines += "- For speaking, practise 45-60 second answers with connectors and concrete examples."
+    lines += "- Repeat the full mock under timing pressure before the real exam."
+
+    val created = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
 
     return YkiPracticeEvaluationReport(
-        title = "YKI Mock Exam Evaluation",
-        createdAt = "Created in Floently Native",
-        scoreLine = "B1/B2 readiness: $percent%",
-        summary = "The mock exam captured reading/listening checks, writing answers, speaking recordings, and screenshot-driven timer states.",
+        title = "YKI B1-B2 Mock Exam Evaluation",
+        createdAt = "Created: $created",
+        scoreLine = "Objective score: $objectiveCorrect / $objectiveTotal. Readiness: $readiness.",
+        summary = "Completed ${tasks.size} tasks: reading $readingCorrect/${reading.size}, listening $listeningCorrect/${listening.size}, writing submitted $writingSubmitted/${writing.size}, speaking recorded $speakingSubmitted/${speaking.size}.",
         lines = lines
     )
 }
 
 @Composable
-private fun MockProgressDots(skill: YkiMockSkill) {
-    val active = when (skill) {
-        YkiMockSkill.Overview -> 0
-        YkiMockSkill.Reading -> 1
-        YkiMockSkill.Writing -> 2
-        YkiMockSkill.Listening -> 3
-        YkiMockSkill.Speaking -> 4
-        YkiMockSkill.Results -> 5
-    }
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center
-    ) {
-        repeat(6) { i ->
+private fun MockProgressDots(
+    total: Int,
+    currentIndex: Int
+) {
+    Row(horizontalArrangement = Arrangement.End) {
+        repeat(total) { i ->
             Box(
                 modifier = Modifier
-                    .padding(horizontal = 4.dp)
-                    .size(if (i == active) 14.dp else 10.dp)
+                    .padding(horizontal = 3.dp)
+                    .size(if (i == currentIndex) 13.dp else 11.dp)
                     .clip(CircleShape)
-                    .background(if (i <= active) mockBankBlue else Color(0xFFD6DCE8))
+                    .background(
+                        when {
+                            i < currentIndex -> green
+                            i == currentIndex -> blue
+                            else -> Color(0xFFDCE7F5)
+                        }
+                    )
             )
         }
     }
 }
 
 @Composable
-private fun MockPill(
-    text: String,
+private fun LightShell(content: @Composable ColumnScope.() -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(lightBg)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .animateContentSize()
+                .padding(horizontal = 38.dp, vertical = 36.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+private fun BackPill(onBack: () -> Unit) {
+    Surface(
+        color = blueSoft,
+        shape = RoundedCornerShape(999.dp),
+        modifier = Modifier
+            .height(58.dp)
+            .clickable(onClick = onBack)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = "← Back",
+                color = blue,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.padding(horizontal = 24.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun DarkPill(
+    textValue: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = Color(0xFF12264A),
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, Color(0xFF1F355A)),
+        modifier = Modifier
+            .height(56.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = textValue,
+                color = Color(0xFF6D8DFF),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.padding(horizontal = 26.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun Chip(
+    textValue: String,
     color: Color,
-    onClick: () -> Unit
+    bg: Color
 ) {
     Surface(
-        color = Color.White,
+        color = bg,
         shape = RoundedCornerShape(999.dp),
-        border = BorderStroke(1.dp, mockBankBorder),
-        modifier = Modifier
-            .height(48.dp)
-            .clickable(onClick = onClick)
+        border = BorderStroke(1.dp, color.copy(alpha = 0.55f))
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = text,
-                color = color,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Black,
-                modifier = Modifier.padding(horizontal = 22.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun MockGhostButton(
-    text: String,
-    onClick: () -> Unit
-) {
-    Surface(
-        color = Color.White,
-        shape = RoundedCornerShape(999.dp),
-        border = BorderStroke(1.dp, mockBankBorder),
-        modifier = Modifier
-            .height(50.dp)
-            .clickable(onClick = onClick)
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = text,
-                color = mockBankMuted,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Black,
-                modifier = Modifier.padding(horizontal = 17.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun MockActionButton(
-    text: String,
-    color: Color,
-    onClick: () -> Unit
-) {
-    Surface(
-        color = color,
-        shape = RoundedCornerShape(999.dp),
-        modifier = Modifier
-            .height(50.dp)
-            .clickable(onClick = onClick)
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = text,
-                color = Color.White,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Black,
-                modifier = Modifier.padding(horizontal = 18.dp)
-            )
-        }
+        Text(
+            text = textValue,
+            color = color,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 3.sp,
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp)
+        )
     }
 }
 
@@ -1004,11 +1311,31 @@ private fun MockPrimaryButton(
         shape = RoundedCornerShape(999.dp),
         modifier = Modifier
             .fillMaxWidth()
+            .height(70.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(text, color = white, fontSize = 23.sp, fontWeight = FontWeight.Black)
+        }
+    }
+}
+
+@Composable
+private fun MockGhostButton(
+    text: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = white,
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, border),
+        modifier = Modifier
+            .fillMaxWidth()
             .height(58.dp)
             .clickable(onClick = onClick)
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(text, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            Text(text, color = blue, fontSize = 20.sp, fontWeight = FontWeight.Black)
         }
     }
 }
