@@ -193,3 +193,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M20-SR2 repaired Mock compile blockers by namespacing the Mock speaking enum and restoring MockOption textValue usage without shadowing the shared text color.
 
 - M20-SR3 repaired the remaining Mock compile blocker by renaming the Mock global text color to mockText and making textValue Text calls explicit.
+
+- M21-R started Home visual parity audit after source-mapped Home component migration and cleanup passed debug/release verification.
