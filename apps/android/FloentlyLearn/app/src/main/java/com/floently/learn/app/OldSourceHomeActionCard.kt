@@ -21,7 +21,7 @@ import com.floently.shared.design.FloentlyPalette
 
 @Composable
 fun OldSourceHomeActionCard(
-    label: String,
+    label: String? = null,
     title: String,
     body: String,
     primary: String,
@@ -40,7 +40,9 @@ fun OldSourceHomeActionCard(
             modifier = Modifier.padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            OldSourceSectionLabel(text = label, palette = palette)
+            if (label != null) {
+                OldSourceSectionLabel(text = label, palette = palette)
+            }
 
             Text(
                 text = title,

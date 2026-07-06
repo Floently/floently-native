@@ -195,3 +195,4 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M20-SR3 repaired the remaining Mock compile blocker by renaming the Mock global text color to mockText and making textValue Text calls explicit.
 
 - M21-R started Home visual parity audit after source-mapped Home component migration and cleanup passed debug/release verification.
+\n- M23-A aligned Home full-screen order and guide/readiness labels to old source: hero, pathways, readiness, stats, guide.\n

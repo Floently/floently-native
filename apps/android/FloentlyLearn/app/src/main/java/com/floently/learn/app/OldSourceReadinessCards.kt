@@ -36,7 +36,7 @@ fun OldSourceReadinessCards(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Readiness pillars",
+                    text = "Valmiuspilarit",
                     color = palette.text,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Black,
@@ -48,7 +48,7 @@ fun OldSourceReadinessCards(
                     border = BorderStroke(1.dp, palette.border)
                 ) {
                     Text(
-                        text = "Est. level $estimatedLevel",
+                        text = "Arvioitu taso $estimatedLevel",
                         color = palette.primary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Black,

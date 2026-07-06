@@ -133,10 +133,10 @@ fun LearnHomeScreen(
                         onClick = { onDestinationSelected(LearnFeatureDestination.ProfessionalFinnish) }
                     )
                 }
-                OldSourceHomeStatsRow(palette = palette)
                 OldSourceReadinessCards(palette = palette)
+                OldSourceHomeStatsRow(palette = palette)
                 OldSourceHomeActionCard(
-                    label = "FLOW",
+                    label = null,
                     title = "Deployment-ready flow",
                     body = "Navigation follows paid access, while Home and Billing still show the locked pathways clearly. That keeps upgrades understandable during deployment and later organization rollout.",
                     primary = "Helpful hint",

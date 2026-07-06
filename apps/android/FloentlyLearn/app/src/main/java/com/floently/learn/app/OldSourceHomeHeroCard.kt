@@ -79,7 +79,7 @@ fun OldSourceHomeHeroCard(
                     .width(84.dp)
                     .height(210.dp)
                     .offset(x = ((sweep * 540f) - 240f).dp, y = (-28).dp)
-                    .background(Color.White.copy(alpha = 0.16f), RoundedCornerShape(999.dp))
+                    .background(Color.White.copy(alpha = 0.14f), RoundedCornerShape(999.dp))
             )
 
             Row(
@@ -207,7 +207,7 @@ fun OldSourceHomeHeroCard(
                             border = BorderStroke(1.dp, Color(0x40F0C86D))
                         ) {
                             Text(
-                                text = "🔥 $streakDays",
+                                text = "🔥  $streakDays",
                                 color = Color(0xFFF0C86D),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
