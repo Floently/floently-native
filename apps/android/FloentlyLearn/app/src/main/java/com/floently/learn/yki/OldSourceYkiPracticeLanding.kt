@@ -51,7 +51,7 @@ internal fun OldSourceYkiPracticeLanding(onStart: () -> Unit) {
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
             text = "Practice YKI with guided blocks before the full exam simulation.",
@@ -62,19 +62,19 @@ internal fun OldSourceYkiPracticeLanding(onStart: () -> Unit) {
 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             listOf("A2-B1", "B1-B2", "B2-C1").forEach { band ->
-                OldPracticePill(band, selectedLevel == band, Modifier.weight(1f)) { selectedLevel = band }
+                OldPracticePill(band, selectedLevel == band, Modifier.weight(1f).height(40.dp)) { selectedLevel = band }
             }
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             focusOptions.take(3).forEach { focus ->
-                OldPracticePill(focus, selectedFocus == focus, Modifier.weight(1f)) { selectedFocus = focus }
+                OldPracticePill(focus, selectedFocus == focus, Modifier.weight(1f).height(38.dp)) { selectedFocus = focus }
             }
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             focusOptions.drop(3).forEach { focus ->
-                OldPracticePill(focus, selectedFocus == focus, Modifier.weight(1f)) { selectedFocus = focus }
+                OldPracticePill(focus, selectedFocus == focus, Modifier.weight(1f).height(38.dp)) { selectedFocus = focus }
             }
             Spacer(modifier = Modifier.weight(1f))
         }
@@ -100,9 +100,9 @@ internal fun OldSourceYkiPracticeLanding(onStart: () -> Unit) {
             onClick = onStart,
             colors = ButtonDefaults.buttonColors(containerColor = oldYkiPurple),
             shape = RoundedCornerShape(999.dp),
-            modifier = Modifier.fillMaxWidth().height(52.dp)
+            modifier = Modifier.fillMaxWidth().height(50.dp)
         ) {
-            Text("Start exam block", color = Color.White, fontWeight = FontWeight.Black)
+            Text("Start practice", color = Color.White, fontWeight = FontWeight.Black)
         }
     }
 }
@@ -113,7 +113,7 @@ private fun OldPracticePill(label: String, active: Boolean, modifier: Modifier =
         color = if (active) oldYkiPurple else oldPracticeSurface,
         shape = RoundedCornerShape(999.dp),
         border = BorderStroke(1.dp, if (active) oldYkiPurple else oldPracticeBorder),
-        modifier = modifier.height(42.dp).clickable(onClick = onClick)
+        modifier = modifier.clickable(onClick = onClick)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(label, color = if (active) Color.White else oldPracticeText, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
@@ -127,14 +127,14 @@ private fun OldPracticeTaskCard(title: String, detail: String, meta: String, act
         color = oldPracticeSurface,
         shape = RoundedCornerShape(18.dp),
         border = BorderStroke(1.dp, oldPracticeBorder),
-        modifier = modifier.height(178.dp).clickable(onClick = onClick)
+        modifier = modifier.height(166.dp).clickable(onClick = onClick)
     ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Box(modifier = Modifier.size(30.dp).clip(RoundedCornerShape(9.dp)).background(accent.copy(alpha = 0.14f)))
-            Text(title, color = oldPracticeText, fontSize = 15.sp, fontWeight = FontWeight.Black, lineHeight = 18.sp)
+            Text(title, color = oldPracticeText, fontSize = 14.sp, fontWeight = FontWeight.Black, lineHeight = 18.sp)
             Text(detail, color = oldPracticeMuted, fontSize = 12.sp, lineHeight = 16.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
             Spacer(modifier = Modifier.weight(1f))
-            Text(meta, color = oldPracticeMuted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(meta, color = oldPracticeMuted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(actionLabel, color = accent, fontSize = 12.sp, fontWeight = FontWeight.Black)
         }
     }
@@ -144,12 +144,12 @@ private fun OldPracticeTaskCard(title: String, detail: String, meta: String, act
 private fun OldPracticeInfoCard(title: String, body: String, metrics: List<Pair<String, Int>> = emptyList()) {
     Surface(
         color = oldPracticeInfo,
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, Color(0xFFD8E3F2)),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(title, color = oldPracticeText, fontSize = 16.sp, fontWeight = FontWeight.Black)
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(title, color = oldPracticeText, fontSize = 15.sp, fontWeight = FontWeight.Black)
             Text(body, color = Color(0xFF4B5573), fontSize = 13.sp, lineHeight = 20.sp)
             if (metrics.isNotEmpty()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {

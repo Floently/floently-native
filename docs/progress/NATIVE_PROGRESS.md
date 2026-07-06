@@ -197,3 +197,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M21-R started Home visual parity audit after source-mapped Home component migration and cleanup passed debug/release verification.
 \n- M23-A aligned Home full-screen order and guide/readiness labels to old source: hero, pathways, readiness, stats, guide.\n
 - M24-E started YKI Practice landing old-source parity audit after M24-D passed debug/release at commit 0c4592b.
+
+- M24-F tuned YKI Practice old-source landing spacing, card heights, info cards, and CTA label toward recovered React Native source.
