@@ -42,23 +42,23 @@ fun OldSourcePathwayCard(
         shape = RoundedCornerShape(14.dp),
         border = BorderStroke(1.dp, palette.border),
         modifier = modifier
-            .height(158.dp)
+            .height(150.dp)
             .clickable(onClick = onClick)
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(9.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(32.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(accent.copy(alpha = if (locked) 0.10f else 0.18f)),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
                     modifier = Modifier
-                        .size(if (locked) 9.dp else 13.dp)
+                        .size(if (locked) 8.dp else 12.dp)
                         .clip(CircleShape)
                         .background(if (locked) palette.muted else accent)
                 )
@@ -67,9 +67,9 @@ fun OldSourcePathwayCard(
             Text(
                 text = title,
                 color = if (locked) palette.muted else palette.text,
-                fontSize = 15.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Black,
-                lineHeight = 18.sp,
+                lineHeight = 17.sp,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -97,7 +97,7 @@ fun OldSourcePathwayCard(
                     fontWeight = FontWeight.Black,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                 )
             }
         }
@@ -115,7 +115,7 @@ fun OldSourceSectionLabel(
         color = palette.accent,
         fontSize = 11.sp,
         fontWeight = FontWeight.Black,
-        letterSpacing = 2.8.sp,
+        letterSpacing = 0.6.sp,
         modifier = modifier.fillMaxWidth()
     )
 }

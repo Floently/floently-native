@@ -69,7 +69,7 @@ fun OldSourceHomeHeroCard(
 
     Surface(
         color = Color(0xFF0F1F45),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, Color(0xFF1C2F5A)),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -89,7 +89,7 @@ fun OldSourceHomeHeroCard(
                 Box(
                     modifier = Modifier
                         .width(4.dp)
-                        .height(132.dp)
+                        .height(128.dp)
                         .clip(RoundedCornerShape(999.dp))
                         .background(Color.White.copy(alpha = 0.10f))
                 )
@@ -142,8 +142,8 @@ fun OldSourceHomeHeroCard(
                     Text(
                         text = title,
                         color = palette.text,
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.Black,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
                         letterSpacing = (-0.3).sp,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
@@ -152,8 +152,8 @@ fun OldSourceHomeHeroCard(
                     Text(
                         text = subtitle,
                         color = palette.muted,
-                        fontSize = 14.sp,
-                        lineHeight = 21.sp,
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp,
                         maxLines = 4,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -167,8 +167,8 @@ fun OldSourceHomeHeroCard(
                             text = ctaLabel,
                             color = Color.White,
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.Black,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
                         )
                     }
                 }
@@ -181,21 +181,21 @@ fun OldSourceHomeHeroCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(76.dp)
+                            .size(72.dp)
                             .clip(CircleShape)
-                            .border(BorderStroke(7.dp, palette.cardMuted), CircleShape),
+                            .border(BorderStroke(5.dp, palette.cardMuted), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(62.dp)
+                                .size(72.dp)
                                 .clip(CircleShape)
-                                .border(BorderStroke(7.dp, palette.primary), CircleShape)
+                                .border(BorderStroke(5.dp, palette.primary), CircleShape)
                         )
                         Text(
                             text = "$completedPct%",
                             color = palette.text,
-                            fontSize = 16.sp,
+                            fontSize = 15.sp,
                             fontWeight = FontWeight.Black
                         )
                     }
@@ -207,10 +207,10 @@ fun OldSourceHomeHeroCard(
                             border = BorderStroke(1.dp, Color(0x40F0C86D))
                         ) {
                             Text(
-                                text = "$streakDays päivää",
+                                text = "🔥 $streakDays",
                                 color = Color(0xFFF0C86D),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Black,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                             )
                         }
