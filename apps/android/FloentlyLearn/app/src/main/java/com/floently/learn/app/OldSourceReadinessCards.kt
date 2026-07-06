@@ -2,15 +2,7 @@ package com.floently.learn.app
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -20,66 +12,97 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.floently.shared.design.FloentlyPalette
 
 @Composable
 fun OldSourceReadinessCards(
-    palette: FloentlyPalette
+    palette: FloentlyPalette,
+    estimatedLevel: String = "B1"
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    Surface(
+        color = palette.cardMuted,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        OldSourceReadinessCard("Kuuntele", "Ääni", palette.primary, palette, Modifier.weight(1f))
-        OldSourceReadinessCard("Puhu", "Rooli", palette.accent, palette, Modifier.weight(1f))
-        OldSourceReadinessCard("Kirjoita", "YKI", palette.warning, palette, Modifier.weight(1f))
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Valmiuspilarit",
+                    color = palette.text,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier.weight(1f)
+                )
+                Surface(
+                    color = palette.card,
+                    shape = RoundedCornerShape(999.dp),
+                    border = BorderStroke(1.dp, palette.border)
+                ) {
+                    Text(
+                        text = "Arvioitu taso $estimatedLevel",
+                        color = palette.primary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                    )
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OldSourceSkillMeter("Kuuntelu", 78, palette.primary, palette)
+                OldSourceSkillMeter("Puhuminen", 64, palette.accent, palette)
+                OldSourceSkillMeter("Kirjoittaminen", 56, palette.warning, palette)
+            }
+        }
     }
 }
 
 @Composable
-private fun OldSourceReadinessCard(
-    title: String,
+private fun OldSourceSkillMeter(
     label: String,
-    accent: Color,
-    palette: FloentlyPalette,
-    modifier: Modifier
+    pct: Int,
+    color: Color,
+    palette: FloentlyPalette
 ) {
-    Surface(
-        color = Color(0xFF0D1D42),
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, palette.border),
-        modifier = modifier.height(92.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(7.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = label,
+                color = palette.text,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = "$pct%",
+                color = palette.muted,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Black
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(RoundedCornerShape(999.dp))
+                .background(palette.card)
         ) {
             Box(
                 modifier = Modifier
-                    .size(14.dp)
-                    .clip(CircleShape)
-                    .background(accent)
-            )
-            Text(
-                text = title,
-                color = palette.text,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.ExtraBold,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = label.uppercase(),
-                color = accent,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 0.7.sp
+                    .fillMaxWidth(pct.coerceIn(0, 100) / 100f)
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(color)
             )
         }
     }
