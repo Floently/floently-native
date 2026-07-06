@@ -94,14 +94,46 @@ fun LearnHomeScreen(
                     onCta = { onDestinationSelected(LearnFeatureDestination.YkiPractice) }
                 )
 
-                WebSectionLabel(text = "PATHWAYS", palette = palette)
+                OldSourceSectionLabel(text = "Pathways", palette = palette)
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
-                    WebPathTile("Everyday Finnish", "Roleplay, cards, interview and speech recording", "Everyday", palette.primary, palette, Modifier.weight(1f)) { onDestinationSelected(LearnFeatureDestination.EverydayFinnish) }
-                    WebPathTile("Workplace scenarios", "Instructions, handovers, and reporting", "Scenarios", palette.warning, palette, Modifier.weight(1f)) { onDestinationSelected(LearnFeatureDestination.ProfessionalFinnish) }
+                    OldSourcePathwayCard(
+                        title = "Everyday Finnish",
+                        subtitle = "Roleplay, cards, interview and speech recording",
+                        tag = "Everyday",
+                        accent = palette.primary,
+                        palette = palette,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onDestinationSelected(LearnFeatureDestination.EverydayFinnish) }
+                    )
+                    OldSourcePathwayCard(
+                        title = "Workplace scenarios",
+                        subtitle = "Instructions, handovers, and reporting",
+                        tag = "Scenarios",
+                        accent = palette.warning,
+                        palette = palette,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onDestinationSelected(LearnFeatureDestination.ProfessionalFinnish) }
+                    )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
-                    WebPathTile("YKI Prep", "Practice and exam simulation", "YKI", Color(0xFF9D7CFF), palette, Modifier.weight(1f)) { onDestinationSelected(LearnFeatureDestination.YkiPractice) }
-                    WebPathTile("All professions", "Vocabulary, interview, and work-ready Finnish", "Profession", palette.accent, palette, Modifier.weight(1f)) { onDestinationSelected(LearnFeatureDestination.ProfessionalFinnish) }
+                    OldSourcePathwayCard(
+                        title = "YKI Prep",
+                        subtitle = "Practice and exam simulation",
+                        tag = "YKI",
+                        accent = Color(0xFF9D7CFF),
+                        palette = palette,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onDestinationSelected(LearnFeatureDestination.YkiPractice) }
+                    )
+                    OldSourcePathwayCard(
+                        title = "All professions",
+                        subtitle = "Vocabulary, interview, and work-ready Finnish",
+                        tag = "Profession",
+                        accent = palette.accent,
+                        palette = palette,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onDestinationSelected(LearnFeatureDestination.ProfessionalFinnish) }
+                    )
                 }
                 WebStatRow(palette = palette)
                 WebInfoCard(
