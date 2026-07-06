@@ -135,7 +135,7 @@ fun LearnHomeScreen(
                         onClick = { onDestinationSelected(LearnFeatureDestination.ProfessionalFinnish) }
                     )
                 }
-                WebStatRow(palette = palette)
+                OldSourceHomeStatsRow(palette = palette)
                 WebInfoCard(
                     label = "FLOW",
                     title = "Deployment-ready flow",
