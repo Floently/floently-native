@@ -39,26 +39,26 @@ fun OldSourcePathwayCard(
 ) {
     Surface(
         color = palette.cardMuted,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(OldSourceHomeTokens.cardRadius),
         border = BorderStroke(1.dp, palette.border),
         modifier = modifier
-            .height(150.dp)
+            .height(OldSourceHomeTokens.quickCardHeight)
             .clickable(onClick = onClick)
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.padding(OldSourceHomeTokens.quickCardPadding),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(OldSourceHomeTokens.quickDotSize)
                     .clip(RoundedCornerShape(10.dp))
                     .background(accent.copy(alpha = if (locked) 0.10f else 0.18f)),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
                     modifier = Modifier
-                        .size(if (locked) 8.dp else 12.dp)
+                        .size(if (locked) 8.dp else OldSourceHomeTokens.quickDotInnerSize)
                         .clip(CircleShape)
                         .background(if (locked) palette.muted else accent)
                 )
@@ -113,9 +113,9 @@ fun OldSourceSectionLabel(
     Text(
         text = text.uppercase(),
         color = palette.accent,
-        fontSize = 11.sp,
+        fontSize = OldSourceHomeTokens.sectionLabelSize,
         fontWeight = FontWeight.Bold,
-        letterSpacing = 0.6.sp,
+        letterSpacing = OldSourceHomeTokens.sectionLabelSpacing,
         modifier = modifier.fillMaxWidth().padding(bottom = 10.dp)
     )
 }

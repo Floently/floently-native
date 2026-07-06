@@ -60,7 +60,7 @@ private fun OldSourceHomeStatBox(
 ) {
     Surface(
         color = palette.cardMuted,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(OldSourceHomeTokens.cardRadius),
         border = BorderStroke(1.dp, palette.border),
         modifier = modifier
     ) {
@@ -72,7 +72,7 @@ private fun OldSourceHomeStatBox(
             Text(
                 text = value,
                 color = palette.text,
-                fontSize = 26.sp,
+                fontSize = OldSourceHomeTokens.statValueSize,
                 fontWeight = FontWeight.Black,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -80,7 +80,7 @@ private fun OldSourceHomeStatBox(
             Text(
                 text = label,
                 color = palette.muted,
-                fontSize = 11.sp,
+                fontSize = OldSourceHomeTokens.statLabelSize,
                 lineHeight = 14.sp,
                 textAlign = TextAlign.Center,
                 maxLines = 2,

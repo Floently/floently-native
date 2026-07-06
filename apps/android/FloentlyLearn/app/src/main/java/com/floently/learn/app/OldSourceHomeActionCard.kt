@@ -32,7 +32,7 @@ fun OldSourceHomeActionCard(
 ) {
     Surface(
         color = palette.card,
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(OldSourceHomeTokens.largeCardRadius),
         border = BorderStroke(1.dp, palette.border),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -45,7 +45,7 @@ fun OldSourceHomeActionCard(
             Text(
                 text = title,
                 color = palette.text,
-                fontSize = 20.sp,
+                fontSize = OldSourceHomeTokens.guideTitleSize,
                 fontWeight = FontWeight.Bold,
                 lineHeight = 25.sp
             )
@@ -53,8 +53,8 @@ fun OldSourceHomeActionCard(
             Text(
                 text = body,
                 color = palette.muted,
-                fontSize = 14.sp,
-                lineHeight = 21.sp
+                fontSize = OldSourceHomeTokens.guideBodySize,
+                lineHeight = OldSourceHomeTokens.guideBodyLineHeight
             )
 
             if (secondary == null) {

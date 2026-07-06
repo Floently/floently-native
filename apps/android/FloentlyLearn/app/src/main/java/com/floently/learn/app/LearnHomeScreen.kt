@@ -68,7 +68,7 @@ fun LearnHomeScreen(
                 modifier = Modifier
                     .verticalScroll(rememberScrollState())
                     .animateContentSize(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(OldSourceHomeTokens.pageGap)
             ) {
                 OldSourcePageHeader(
                     palette = palette,

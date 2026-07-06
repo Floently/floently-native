@@ -69,7 +69,7 @@ fun OldSourceHomeHeroCard(
 
     Surface(
         color = Color(0xFF0F1F45),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(OldSourceHomeTokens.largeCardRadius),
         border = BorderStroke(1.dp, Color(0xFF1C2F5A)),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -142,9 +142,9 @@ fun OldSourceHomeHeroCard(
                     Text(
                         text = title,
                         color = palette.text,
-                        fontSize = 22.sp,
+                        fontSize = OldSourceHomeTokens.heroTitleSize,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.3).sp,
+                        letterSpacing = OldSourceHomeTokens.heroTitleSpacing,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -152,8 +152,8 @@ fun OldSourceHomeHeroCard(
                     Text(
                         text = subtitle,
                         color = palette.muted,
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp,
+                        fontSize = OldSourceHomeTokens.heroSubSize,
+                        lineHeight = OldSourceHomeTokens.heroSubLineHeight,
                         maxLines = 4,
                         overflow = TextOverflow.Ellipsis
                     )

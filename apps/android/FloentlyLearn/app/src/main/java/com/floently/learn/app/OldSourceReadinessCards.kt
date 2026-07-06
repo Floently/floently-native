@@ -23,7 +23,7 @@ fun OldSourceReadinessCards(
 ) {
     Surface(
         color = palette.cardMuted,
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(OldSourceHomeTokens.largeCardRadius),
         border = BorderStroke(1.dp, palette.border),
         modifier = Modifier.fillMaxWidth()
     ) {
