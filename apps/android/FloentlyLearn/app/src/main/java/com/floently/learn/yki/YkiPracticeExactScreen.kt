@@ -268,80 +268,235 @@ private fun LevelTab(
 
 @Composable
 private fun PracticeLanding(onStart: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
-        LevelTabs()
+    var selectedLevel by remember { mutableStateOf("B1-B2") }
+    var selectedFocus by remember { mutableStateOf("Mixed") }
+    val focusOptions = listOf("Mixed", "Reading", "Listening", "Writing", "Speaking")
+    val counts = listOf(
+        "Reading" to 24,
+        "Listening" to 18,
+        "Writing" to 16,
+        "Speaking" to 14
+    )
+    val recommendedSections = "Reading • Listening • Writing • Speaking"
 
-        Surface(
-            color = panel,
-            shape = RoundedCornerShape(24.dp),
-            border = BorderStroke(1.dp, border),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = "B1-B2 exam block",
-                    color = text,
-                    fontSize = 21.sp,
-                    fontWeight = FontWeight.Black
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    SkillChip("Reading 5", purple)
-                    SkillChip("Listening 4", purple)
-                    SkillChip("Writing 4", orange)
-                }
-                SkillChip("Speaking 4", orange)
-                Text(
-                    text = "Exact practice screens are rebuilt from IMG_0409-IMG_0431. Start here and move through the same reading, listening, writing and speaking order.",
-                    color = muted,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Text(
+            text = "Practice YKI with guided blocks before the full exam simulation.",
+            color = practiceMuted,
+            fontSize = 14.sp,
+            lineHeight = 21.sp
+        )
+
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+            listOf("A2-B1", "B1-B2", "B2-C1").forEach { band ->
+                PracticePill(
+                    label = band,
+                    active = selectedLevel == band,
+                    modifier = Modifier.weight(1f),
+                    onClick = { selectedLevel = band }
                 )
             }
         }
 
-        Surface(
-            color = panel,
-            shape = RoundedCornerShape(22.dp),
-            border = BorderStroke(1.dp, border),
-            modifier = Modifier.fillMaxWidth()
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            focusOptions.take(3).forEach { focus ->
+                PracticePill(
+                    label = focus,
+                    active = selectedFocus == focus,
+                    modifier = Modifier.weight(1f),
+                    onClick = { selectedFocus = focus }
+                )
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            focusOptions.drop(3).forEach { focus ->
+                PracticePill(
+                    label = focus,
+                    active = selectedFocus == focus,
+                    modifier = Modifier.weight(1f),
+                    onClick = { selectedFocus = focus }
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            OldPracticeTaskCard(
+                title = "Overview",
+                detail = "Adaptive preparation for reading, listening, writing, and speaking.",
+                meta = "B1-B2 pathway",
+                actionLabel = "Open",
+                accent = ykiPurple,
+                modifier = Modifier.weight(1f),
+                onClick = {}
+            )
+            OldPracticeTaskCard(
+                title = "Guided pathway",
+                detail = "Start with the next recommended ${selectedFocus.lowercase()} block for $selectedLevel.",
+                meta = "15 min",
+                actionLabel = "Start practice",
+                accent = practiceBlue,
+                modifier = Modifier.weight(1f),
+                onClick = onStart
+            )
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            OldPracticeTaskCard(
+                title = "Mock cycle",
+                detail = "Move from short practice into timed mock exam pressure.",
+                meta = "Recommended after practice",
+                actionLabel = "Open",
+                accent = practiceAmber,
+                modifier = Modifier.weight(1f),
+                onClick = onStart
+            )
+            OldPracticeTaskCard(
+                title = "Full exam",
+                detail = "Run a full YKI-style practice set for $selectedLevel.",
+                meta = "Reading • Listening • Writing • Speaking",
+                actionLabel = "Start",
+                accent = ykiPurple,
+                modifier = Modifier.weight(1f),
+                onClick = onStart
+            )
+        }
+
+        PracticeInfoCard(
+            title = "Find this later",
+            body = "YKI Practice stays available from Home → YKI Prep. Mock exam and full exam are separate so practice never mixes with test pressure."
+        )
+
+        PracticeInfoCard(
+            title = "Bank coverage for $selectedLevel",
+            body = "72 tasks available · Recommended focus ${selectedFocus.lowercase()} · Sections: $recommendedSections",
+            metrics = counts
+        )
+
+        Button(
+            onClick = onStart,
+            colors = ButtonDefaults.buttonColors(containerColor = ykiPurple),
+            shape = RoundedCornerShape(999.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(9.dp)
-            ) {
-                Text(
-                    text = "YKI cards",
-                    color = text,
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.Black
-                )
-                Text(
-                    text = "Start the same task order shown in the screenshots. Reading first, then listening, writing and speaking.",
-                    color = muted,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp
-                )
-                Surface(
-                    color = purple,
-                    shape = RoundedCornerShape(999.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(44.dp)
-                        .clickable(onClick = {})
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text("Open YKI cards", color = Color.White, fontWeight = FontWeight.Black)
+            Text("Start exam block", color = Color.White, fontWeight = FontWeight.Black)
+        }
+    }
+}
+
+@Composable
+private fun PracticePill(
+    label: String,
+    active: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = if (active) ykiPurple else practiceSurface,
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, if (active) ykiPurple else practiceBorder),
+        modifier = modifier
+            .height(42.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = label,
+                color = if (active) Color.White else practiceText,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
+private fun OldPracticeTaskCard(
+    title: String,
+    detail: String,
+    meta: String,
+    actionLabel: String,
+    accent: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = practiceSurface,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, practiceBorder),
+        modifier = modifier
+            .height(178.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(accent.copy(alpha = 0.14f))
+            )
+            Text(title, color = practiceText, fontSize = 15.sp, fontWeight = FontWeight.Black, lineHeight = 18.sp)
+            Text(detail, color = practiceMuted, fontSize = 12.sp, lineHeight = 16.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            Spacer(modifier = Modifier.weight(1f))
+            Text(meta, color = practiceMuted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(actionLabel, color = accent, fontSize = 12.sp, fontWeight = FontWeight.Black)
+        }
+    }
+}
+
+@Composable
+private fun PracticeInfoCard(
+    title: String,
+    body: String,
+    metrics: List<Pair<String, Int>> = emptyList()
+) {
+    Surface(
+        color = practiceInfo,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, Color(0xFFD8E3F2)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(title, color = practiceText, fontSize = 16.sp, fontWeight = FontWeight.Black)
+            Text(body, color = Color(0xFF4B5573), fontSize = 13.sp, lineHeight = 20.sp)
+            if (metrics.isNotEmpty()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    metrics.forEach { (label, value) ->
+                        Surface(
+                            color = Color.White,
+                            shape = RoundedCornerShape(999.dp),
+                            border = BorderStroke(1.dp, Color(0xFFD8E3F2))
+                        ) {
+                            Text(
+                                text = "$label $value",
+                                color = practiceText,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                            )
+                        }
                     }
                 }
             }
         }
-
-        BigButton("Start exam block", purple, onStart)
     }
 }
+
 
 @Composable
 private fun PracticeTaskScreen(
