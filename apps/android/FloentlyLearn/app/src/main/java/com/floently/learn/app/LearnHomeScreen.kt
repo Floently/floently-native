@@ -1,7 +1,5 @@
 package com.floently.learn.app
 
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
@@ -232,65 +230,6 @@ private fun OldAppEmberBackground(palette: com.floently.shared.design.FloentlyPa
                             else -> palette.warning.copy(alpha = 0.18f)
                         }
                     )
-            )
-        }
-    }
-}
-
-@Composable
-private fun OldAppReadinessPillars(
-    palette: com.floently.shared.design.FloentlyPalette
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        OldAppReadinessPillar("Kuuntele", "Ääni", palette.primary, palette, Modifier.weight(1f))
-        OldAppReadinessPillar("Puhu", "Rooli", palette.accent, palette, Modifier.weight(1f))
-        OldAppReadinessPillar("Kirjoita", "YKI", palette.warning, palette, Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun OldAppReadinessPillar(
-    title: String,
-    label: String,
-    color: Color,
-    palette: com.floently.shared.design.FloentlyPalette,
-    modifier: Modifier
-) {
-    Surface(
-        color = Color(0xFF0D1D42),
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, palette.border),
-        modifier = modifier.height(92.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(7.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(14.dp)
-                    .clip(CircleShape)
-                    .background(color)
-            )
-            Text(
-                text = title,
-                color = palette.text,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.ExtraBold,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = label.uppercase(),
-                color = color,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 0.7.sp
             )
         }
     }
