@@ -114,8 +114,8 @@ fun OldSourceSectionLabel(
         text = text.uppercase(),
         color = palette.accent,
         fontSize = 11.sp,
-        fontWeight = FontWeight.Black,
+        fontWeight = FontWeight.Bold,
         letterSpacing = 0.6.sp,
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth().padding(bottom = 10.dp)
     )
 }

@@ -68,7 +68,7 @@ fun LearnHomeScreen(
                 modifier = Modifier
                     .verticalScroll(rememberScrollState())
                     .animateContentSize(),
-                verticalArrangement = Arrangement.spacedBy(18.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 OldSourcePageHeader(
                     palette = palette,
@@ -134,7 +134,6 @@ fun LearnHomeScreen(
                     )
                 }
                 OldSourceHomeStatsRow(palette = palette)
-                OldSourceSectionLabel(text = "Readiness", palette = palette)
                 OldSourceReadinessCards(palette = palette)
                 OldSourceHomeActionCard(
                     label = "FLOW",

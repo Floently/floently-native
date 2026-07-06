@@ -23,20 +23,20 @@ fun OldSourceReadinessCards(
 ) {
     Surface(
         color = palette.cardMuted,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(22.dp),
         border = BorderStroke(1.dp, palette.border),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(13.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Valmiuspilarit",
+                    text = "Readiness pillars",
                     color = palette.text,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Black,
@@ -48,7 +48,7 @@ fun OldSourceReadinessCards(
                     border = BorderStroke(1.dp, palette.border)
                 ) {
                     Text(
-                        text = "Arvioitu taso $estimatedLevel",
+                        text = "Est. level $estimatedLevel",
                         color = palette.primary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Black,

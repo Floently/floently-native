@@ -52,7 +52,7 @@ fun OldSourceHomeHeroCard(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2800),
+            animation = tween(durationMillis = 3200),
             repeatMode = RepeatMode.Restart
         ),
         label = "hero-sweep"
@@ -61,7 +61,7 @@ fun OldSourceHomeHeroCard(
         initialValue = 1f,
         targetValue = 1.045f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1300),
+            animation = tween(durationMillis = 1200),
             repeatMode = RepeatMode.Reverse
         ),
         label = "live-pulse"
@@ -76,10 +76,10 @@ fun OldSourceHomeHeroCard(
         Box(modifier = Modifier.fillMaxWidth()) {
             Box(
                 modifier = Modifier
-                    .width(96.dp)
-                    .height(220.dp)
-                    .offset(x = ((sweep * 540f) - 240f).dp, y = (-24).dp)
-                    .background(Color.White.copy(alpha = 0.14f), RoundedCornerShape(999.dp))
+                    .width(84.dp)
+                    .height(210.dp)
+                    .offset(x = ((sweep * 540f) - 240f).dp, y = (-28).dp)
+                    .background(Color.White.copy(alpha = 0.16f), RoundedCornerShape(999.dp))
             )
 
             Row(
@@ -98,18 +98,18 @@ fun OldSourceHomeHeroCard(
 
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(9.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
                             text = eyebrow.uppercase(),
                             color = palette.primary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
-                            letterSpacing = 1.1.sp
+                            letterSpacing = 0.7.sp
                         )
 
                         Surface(
@@ -132,8 +132,8 @@ fun OldSourceHomeHeroCard(
                                 Text(
                                     text = "Vire päällä",
                                     color = Color(0xFF8FF2C3),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Black
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
@@ -168,7 +168,7 @@ fun OldSourceHomeHeroCard(
                             color = Color.White,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
                         )
                     }
                 }
@@ -177,7 +177,7 @@ fun OldSourceHomeHeroCard(
 
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
                 ) {
                     Box(
                         modifier = Modifier

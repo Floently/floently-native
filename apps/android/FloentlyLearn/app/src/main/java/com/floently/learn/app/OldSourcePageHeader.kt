@@ -58,9 +58,9 @@ fun OldSourcePageHeader(
     val transition = rememberInfiniteTransition(label = "old-page-header")
     val pulse by transition.animateFloat(
         initialValue = 1f,
-        targetValue = if (pulseMenu) 1.06f else 1f,
+        targetValue = if (pulseMenu) 1.045f else 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 850),
+            animation = tween(durationMillis = 900),
             repeatMode = RepeatMode.Reverse
         ),
         label = "menu-pulse"
@@ -69,7 +69,7 @@ fun OldSourcePageHeader(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1800),
+            animation = tween(durationMillis = 2200),
             repeatMode = RepeatMode.Restart
         ),
         label = "menu-attention"
@@ -140,8 +140,8 @@ fun OldSourcePageHeader(
                     ) {
                         Box(
                             modifier = Modifier
-                                .width(90.dp)
-                                .height(58.dp)
+                                .width(84.dp)
+                                .height(54.dp)
                                 .scale(0.96f + (beacon * 0.04f))
                                 .border(
                                     BorderStroke(1.dp, Color(0xBF8FB1FF)),
@@ -150,13 +150,13 @@ fun OldSourcePageHeader(
                         )
                         Box(
                             modifier = Modifier
-                                .width(88.dp)
-                                .height(56.dp)
+                                .width(82.dp)
+                                .height(52.dp)
                                 .background(Color(0x2E4F7FFF), RoundedCornerShape(999.dp))
                         )
                         Box(
                             modifier = Modifier
-                                .offset(x = ((beacon * 26f) - 13f).dp, y = (-24).dp)
+                                .offset(x = ((beacon * 24f) - 12f).dp, y = (-22).dp)
                                 .size(8.dp)
                                 .background(Color(0xFFAFC4FF), RoundedCornerShape(4.dp))
                         )
@@ -194,7 +194,7 @@ fun OldSourcePageHeader(
             Text(
                 text = title,
                 color = text,
-                fontSize = if (compact) 20.sp else 26.sp,
+                fontSize = if (compact) 20.sp else 24.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = if (compact) (-0.2).sp else (-0.3).sp,
                 maxLines = 2,
@@ -206,7 +206,7 @@ fun OldSourcePageHeader(
                     text = subtitle,
                     color = muted,
                     fontSize = 13.sp,
-                    lineHeight = 20.sp,
+                    lineHeight = 19.sp,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
