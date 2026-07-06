@@ -105,12 +105,12 @@ fun LearnUtilityDrawer(
 
             Surface(
                 color = DrawerSurface,
-                shape = RoundedCornerShape(0.dp),
+                shape = RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp),
                 border = BorderStroke(1.dp, DrawerBorder),
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .fillMaxHeight()
-                    .fillMaxWidth(0.82f)
+                    .fillMaxWidth(0.86f)
             ) {
                 Column(
                     modifier = Modifier
@@ -124,7 +124,7 @@ fun LearnUtilityDrawer(
 
                     Column(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
-                        verticalArrangement = Arrangement.spacedBy(18.dp)
+                        verticalArrangement = Arrangement.spacedBy(17.dp)
                     ) {
                         DrawerStreakCard()
 
@@ -221,10 +221,10 @@ private fun DrawerProfileHeader(
 ) {
     Surface(
         color = DrawerBlue,
-        shape = RoundedCornerShape(0.dp),
+        shape = RoundedCornerShape(topStart = 28.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .height(176.dp)
+            .height(188.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Surface(
@@ -249,7 +249,7 @@ private fun DrawerProfileHeader(
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = 22.dp, end = 18.dp, bottom = 28.dp),
+                    .padding(start = 22.dp, end = 18.dp, bottom = 24.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
@@ -269,7 +269,7 @@ private fun DrawerProfileHeader(
 
                 Spacer(modifier = Modifier.width(14.dp))
 
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         text = "Vitus Idi",
                         color = Color.White,
@@ -285,6 +285,19 @@ private fun DrawerProfileHeader(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    Surface(
+                        color = Color.White.copy(alpha = 0.16f),
+                        shape = RoundedCornerShape(999.dp),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.22f))
+                    ) {
+                        Text(
+                            text = "B1–B2 · YKI prep",
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black,
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
         }
@@ -381,6 +394,14 @@ private fun DrawerRouteItem(
                 overflow = TextOverflow.Ellipsis
             )
         }
+
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "›",
+            color = DrawerMuted,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Light
+        )
     }
 }
 
