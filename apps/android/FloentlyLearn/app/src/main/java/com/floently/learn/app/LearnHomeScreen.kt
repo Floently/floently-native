@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -67,20 +66,34 @@ fun LearnHomeScreen(
     FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
         Box {
             OldAppEmberBackground(palette = palette)
-            Column(modifier = Modifier.verticalScroll(rememberScrollState()).animateContentSize(), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                WebChromeHeader(palette = palette, onHome = {}, onMenu = { showOldAppDrawer = true })
-                Spacer(modifier = Modifier.height(28.dp))
-                Text(greeting(session), color = palette.text, style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Black)
-                Text("All caught up! Choose the pathway that needs attention next.", color = palette.muted, style = MaterialTheme.typography.titleMedium)
-                                WebHeroCard(
-                    label = "LANGUAGE TO WORK",
-                    title = "Next best step",
-                    body = "Bundle pathway active — continue YKI Prep or your profession track today.",
-                    action = "Continue pathway →",
-                    progressText = "–",
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .animateContentSize(),
+                verticalArrangement = Arrangement.spacedBy(18.dp)
+            ) {
+                OldSourcePageHeader(
                     palette = palette,
-                    onAction = { onDestinationSelected(LearnFeatureDestination.YkiPractice) }
+                    eyebrow = "KieliTaika",
+                    showEyebrow = false,
+                    showLogo = true,
+                    title = greeting(session),
+                    subtitle = "All caught up! Choose the pathway that needs attention next.",
+                    pulseMenu = true,
+                    onMenuPress = { showOldAppDrawer = true }
                 )
+
+                OldSourceHomeHeroCard(
+                    palette = palette,
+                    eyebrow = "Language to Work",
+                    title = "Next best step",
+                    subtitle = "Bundle pathway active — continue YKI Prep or your profession track today.",
+                    ctaLabel = "Continue pathway →",
+                    completedPct = 100,
+                    streakDays = 1,
+                    onCta = { onDestinationSelected(LearnFeatureDestination.YkiPractice) }
+                )
+
                 WebSectionLabel(text = "PATHWAYS", palette = palette)
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
                     WebPathTile("Everyday Finnish", "Roleplay, cards, interview and speech recording", "Everyday", palette.primary, palette, Modifier.weight(1f)) { onDestinationSelected(LearnFeatureDestination.EverydayFinnish) }
