@@ -136,6 +136,8 @@ fun LearnHomeScreen(
                     )
                 }
                 OldSourceHomeStatsRow(palette = palette)
+                OldSourceSectionLabel(text = "Readiness", palette = palette)
+                OldSourceReadinessCards(palette = palette)
                 WebInfoCard(
                     label = "FLOW",
                     title = "Deployment-ready flow",
