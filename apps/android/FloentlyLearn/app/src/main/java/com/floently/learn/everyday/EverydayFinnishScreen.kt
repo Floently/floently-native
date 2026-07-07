@@ -77,19 +77,19 @@ fun EverydayFinnishScreen(
             EverydayActionCard(
                 label = "INTERVIEW",
                 title = "Interview",
-                body = "Interview practice will be connected here after the visual hub is approved.",
+                body = "Practise realistic job interview conversations with the roleplay engine.",
                 accent = Color(0xFF9D7CFF),
                 palette = palette,
-                onClick = {}
+                onClick = { onDestinationSelected(LearnFeatureDestination.Roleplay) }
             )
 
             EverydayActionCard(
                 label = "SPEECH",
                 title = "Speech recording",
-                body = "Recording flow placeholder. It must match the old app before release.",
+                body = "Practise spoken answers through the YKI speaking and roleplay flows.",
                 accent = palette.warning,
                 palette = palette,
-                onClick = {}
+                onClick = { onDestinationSelected(LearnFeatureDestination.Yki) }
             )
 
             FloentlyPrimaryButton(

@@ -215,3 +215,4 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M27-B fixed Roleplay extraction integration by renaming legacy local components after extracted OldSource components became the active runtime call targets.
 
 - M28-A started Android production-freeze gap audit before iOS SwiftUI work begins.
+\n- M28-B removed reachable Everyday Finnish placeholder actions by routing Interview to Roleplay and Speech recording to YKI speaking/runtime flow for production-freeze readiness.\n
