@@ -205,3 +205,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M26-A started all-screen parity acceleration map after Home, YKI Practice landing, and YKI Mock landing verified debug/release.
 
 - M26-C moving into remaining parity implementation packs: Cards, Roleplay/Speaking, Professional, Progress, Settings, Auth/Billing.
+
+- M26-D applied real Cards composable parity tuning to mode tabs, runtime card shell, footer, dots, and spacing.

@@ -113,7 +113,7 @@ fun CardsScreen(
                 modifier = Modifier
                     .verticalScroll(rememberScrollState())
                     .animateContentSize(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 StrictCardsBackBar(onBack = onBack, palette = palette)
                 StrictCardModeTabs(
@@ -228,18 +228,18 @@ private fun StrictModePill(
     Surface(
         color = if (active) Color(0x332F68FF) else Color.Transparent,
         shape = RoundedCornerShape(999.dp),
-        border = BorderStroke(2.dp, if (active) Color(0xFF6288FF) else Color(0xFF273A63)),
+        border = BorderStroke(1.dp, if (active) Color(0xFF6288FF) else Color(0xFF273A63)),
         modifier = Modifier
-            .height(44.dp)
+            .height(40.dp)
             .clickable { onChange(value) }
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = label,
                 color = if (active) Color(0xFF7897F6) else Color(0xFFA4B0C8),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Black,
-                modifier = Modifier.padding(horizontal = 27.dp)
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 22.dp)
             )
         }
     }
@@ -308,7 +308,7 @@ private fun StrictCardsEmpty(
 ) {
     Surface(
         color = palette.card,
-        shape = RoundedCornerShape(30.dp),
+        shape = RoundedCornerShape(28.dp),
         border = BorderStroke(1.dp, palette.border),
         modifier = Modifier.fillMaxWidth().heightIn(min = 430.dp)
     ) {
@@ -407,23 +407,23 @@ private fun StrictPracticeSession(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 470.dp)
-                .padding(top = 14.dp),
+                .heightIn(min = 452.dp)
+                .padding(top = 12.dp),
             contentAlignment = Alignment.Center
         ) {
             Surface(
                 color = palette.cardMuted,
-                shape = RoundedCornerShape(30.dp),
-                shadowElevation = 12.dp,
+                shape = RoundedCornerShape(28.dp),
+                shadowElevation = 10.dp,
                 modifier = Modifier.fillMaxWidth(0.90f)
             ) {
                 Surface(
                     color = palette.card,
-                    shape = RoundedCornerShape(24.dp),
+                    shape = RoundedCornerShape(22.dp),
                     border = BorderStroke(1.dp, palette.border),
-                    modifier = Modifier.padding(8.dp).heightIn(min = 452.dp)
+                    modifier = Modifier.padding(7.dp).heightIn(min = 438.dp)
                 ) {
-                    Box(modifier = Modifier.fillMaxWidth().heightIn(min = 452.dp).padding(horizontal = 18.dp, vertical = 18.dp)) {
+                    Box(modifier = Modifier.fillMaxWidth().heightIn(min = 438.dp).padding(horizontal = 18.dp, vertical = 16.dp)) {
                         if (selectedDeckType != CardsDeckType.Grammar) {
                             NativeTtsIconButton(
                                 text = card.front,
@@ -458,9 +458,9 @@ private fun StrictPracticeSession(
                             modifier = Modifier
                                 .align(Alignment.Center)
                                 .fillMaxWidth()
-                                .padding(top = 58.dp, bottom = 96.dp),
+                                .padding(top = 54.dp, bottom = 88.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             if (!showBack) {
                                 AdaptiveCardCopy(
@@ -564,14 +564,14 @@ private fun StrictPracticeSession(
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 4.dp)
-                        .size(9.dp)
+                        .size(8.dp)
                         .clip(CircleShape)
                         .background(if (index == activeIndicator) palette.primary else palette.border)
                 )
             }
         }
 
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             StrictSmallChip("Review banks", palette, onToggleBanks)
             StrictOverlayLanguageStrip(
                 selectedOverlayCode = selectedOverlayCode,
@@ -1030,7 +1030,7 @@ private fun StrictReviewComplete(
     val summary = repository.summarize(session)
     Surface(
         color = palette.card,
-        shape = RoundedCornerShape(30.dp),
+        shape = RoundedCornerShape(28.dp),
         border = BorderStroke(1.dp, palette.border),
         modifier = Modifier.fillMaxWidth().heightIn(min = 430.dp)
     ) {
