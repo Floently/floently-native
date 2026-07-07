@@ -1,36 +1,26 @@
 package com.floently.learn.roleplay
 
-import com.floently.shared.design.FloentlyPalette
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.Alignment
-import androidx.compose.material3.Surface
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.background
-import androidx.compose.foundation.BorderStroke
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,15 +28,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.floently.learn.audio.NativeTtsButton
 import com.floently.learn.i18n.LearnCopy
 import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
 import com.floently.shared.design.FloentlyScreen
+import java.util.Locale
 import kotlinx.coroutines.launch
+
+internal enum class RoleplaySpeechPhase {
+    Idle,
+    Listening,
+    Processing,
+    Ready,
+    Error,
+    Unavailable
+}
 
 @Composable
 fun RoleplayScreen(
@@ -90,7 +90,7 @@ fun RoleplayScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Practice short, realistic Finnish conversations with AI-backed variation and beginner-safe correction.",
+                    text = "Practice short, realistic Finnish conversations with speech, transcript review, and AI-backed coaching.",
                     color = palette.muted,
                     style = MaterialTheme.typography.titleMedium
                 )
@@ -163,9 +163,126 @@ private fun RoleplaySessionScreen(
     onSessionChange: (RoleplaySession) -> Unit,
     onExit: () -> Unit
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var reply by remember(session.id, session.learnerTurns) { mutableStateOf("") }
+    var recordedText by remember(session.id, session.learnerTurns) { mutableStateOf("") }
     var statusMessage by remember(session.id, session.learnerTurns) { mutableStateOf<String?>(null) }
+    var speechPhase by remember(session.id, session.learnerTurns) { mutableStateOf(RoleplaySpeechPhase.Idle) }
+    var hasAudioPermission by remember {
+        mutableStateOf(context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
+    }
+
+    val speechAvailable = remember(context) { SpeechRecognizer.isRecognitionAvailable(context) }
+    val speechRecognizer = remember(context, speechAvailable) {
+        if (speechAvailable) SpeechRecognizer.createSpeechRecognizer(context) else null
+    }
+    val speechIntent = remember {
+        Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale("fi", "FI").toLanguageTag())
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Puhu suomea")
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        hasAudioPermission = granted
+        if (granted && speechRecognizer != null) {
+            recordedText = ""
+            speechPhase = RoleplaySpeechPhase.Listening
+            statusMessage = null
+            speechRecognizer.startListening(speechIntent)
+        } else if (!granted) {
+            speechPhase = RoleplaySpeechPhase.Error
+            statusMessage = "Microphone permission is needed for speaking practice. You can still type your answer."
+        }
+    }
+
+    DisposableEffect(speechRecognizer) {
+        val listener = object : RecognitionListener {
+            override fun onReadyForSpeech(params: Bundle?) {
+                speechPhase = RoleplaySpeechPhase.Listening
+                statusMessage = "Listening… speak one clear Finnish answer."
+            }
+
+            override fun onBeginningOfSpeech() {
+                speechPhase = RoleplaySpeechPhase.Listening
+            }
+
+            override fun onRmsChanged(rmsdB: Float) = Unit
+            override fun onBufferReceived(buffer: ByteArray?) = Unit
+
+            override fun onEndOfSpeech() {
+                speechPhase = RoleplaySpeechPhase.Processing
+                statusMessage = "Preparing your recorded answer…"
+            }
+
+            override fun onError(error: Int) {
+                speechPhase = if (speechAvailable) RoleplaySpeechPhase.Error else RoleplaySpeechPhase.Unavailable
+                statusMessage = roleplaySpeechErrorMessage(error)
+            }
+
+            override fun onResults(results: Bundle?) {
+                val transcript = results.firstSpeechResult()
+                if (transcript == null) {
+                    speechPhase = RoleplaySpeechPhase.Error
+                    statusMessage = "I could not hear enough Finnish. Try again or type your answer."
+                } else {
+                    recordedText = transcript
+                    reply = transcript
+                    speechPhase = RoleplaySpeechPhase.Ready
+                    statusMessage = "Recorded response captured. Review it, edit if needed, then send."
+                }
+            }
+
+            override fun onPartialResults(partialResults: Bundle?) {
+                partialResults.firstSpeechResult()?.let { partial ->
+                    recordedText = partial
+                    reply = partial
+                }
+            }
+
+            override fun onEvent(eventType: Int, params: Bundle?) = Unit
+        }
+
+        speechRecognizer?.setRecognitionListener(listener)
+        onDispose {
+            speechRecognizer?.destroy()
+        }
+    }
+
+    fun startSpeech() {
+        if (speechRecognizer == null) {
+            speechPhase = RoleplaySpeechPhase.Unavailable
+            statusMessage = "Speech recognition is not available on this device. Type your response instead."
+            return
+        }
+        if (!hasAudioPermission) {
+            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            return
+        }
+        recordedText = ""
+        speechPhase = RoleplaySpeechPhase.Listening
+        statusMessage = null
+        speechRecognizer.cancel()
+        speechRecognizer.startListening(speechIntent)
+    }
+
+    fun stopSpeech() {
+        speechRecognizer?.stopListening()
+        speechPhase = RoleplaySpeechPhase.Processing
+        statusMessage = "Preparing your recorded answer…"
+    }
+
+    fun clearSpeech() {
+        speechRecognizer?.cancel()
+        recordedText = ""
+        if (speechPhase != RoleplaySpeechPhase.Unavailable) {
+            speechPhase = RoleplaySpeechPhase.Idle
+        }
+        statusMessage = null
+    }
 
     FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
         Column(
@@ -174,16 +291,10 @@ private fun RoleplaySessionScreen(
                 .animateContentSize(),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            Text(
-                text = session.scenario.title,
-                color = palette.text,
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Practice short, realistic Finnish conversations with AI-backed variation and beginner-safe correction.",
-                color = palette.muted,
-                style = MaterialTheme.typography.titleMedium
+            OldSourceRoleplayScenarioHeader(
+                scenario = session.scenario,
+                palette = palette,
+                onExit = onExit
             )
 
             OldSourceRoleplaySessionProgressCard(
@@ -199,6 +310,24 @@ private fun RoleplaySessionScreen(
                 )
             }
 
+            OldSourceRoleplayMicPanel(
+                phase = speechPhase,
+                recordedText = recordedText,
+                speechAvailable = speechAvailable,
+                palette = palette,
+                onStart = ::startSpeech,
+                onStop = ::stopSpeech,
+                onClear = ::clearSpeech
+            )
+
+            if (recordedText.isNotBlank()) {
+                OldSourceRecordedResponseCard(
+                    recordedText = recordedText,
+                    palette = palette,
+                    onUseResponse = { reply = recordedText }
+                )
+            }
+
             FloentlyCard(product = FloentlyProduct.Learn) {
                 Text(
                     text = "Your response",
@@ -208,7 +337,7 @@ private fun RoleplaySessionScreen(
                 OutlinedTextField(
                     value = reply,
                     onValueChange = { reply = it },
-                    label = { Text("Write in Finnish") },
+                    label = { Text("Speak or write in Finnish") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
@@ -227,12 +356,14 @@ private fun RoleplaySessionScreen(
                     onClick = {
                         val cleanReply = reply.trim()
                         if (cleanReply.isBlank()) {
-                            statusMessage = "Write a short Finnish answer before sending."
+                            statusMessage = "Speak or write a short Finnish answer before sending."
                         } else {
                             scope.launch {
                                 when (val result = repository.sendLearnerMessage(session, cleanReply)) {
                                     is RoleplaySessionResult.Ready -> {
                                         reply = ""
+                                        recordedText = ""
+                                        speechPhase = RoleplaySpeechPhase.Idle
                                         statusMessage = null
                                         onSessionChange(result.session)
                                     }
@@ -244,314 +375,25 @@ private fun RoleplaySessionScreen(
                     }
                 )
             }
-
-            FloentlyPrimaryButton(
-                title = "Back to Learn",
-                product = FloentlyProduct.Learn,
-                onClick = onExit
-            )
         }
     }
 }
 
-@Composable
-private fun RoleplayRouteHeader(
-    palette: FloentlyPalette
-) {
-    Surface(
-        color = Color(0xFF13213F),
-        shape = RoundedCornerShape(32.dp),
-        border = BorderStroke(1.dp, Color(0xFF2A3E6E)),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text(
-                text = "ROLEPLAY",
-                color = palette.accent,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 3.sp
-            )
-            Text(
-                text = "Conversation practice",
-                color = palette.text,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Black
-            )
-            Text(
-                text = "Short turns, clear repair, and less pressure.",
-                color = palette.muted,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                RoleplayTinyPill("Step 1", "Listen", palette.primary, palette)
-                RoleplayTinyPill("Step 2", "Reply", palette.accent, palette)
-            }
-        }
-    }
-}
+private fun Bundle?.firstSpeechResult(): String? = this
+    ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+    ?.firstOrNull()
+    ?.trim()
+    ?.takeIf { it.isNotBlank() }
 
-@Composable
-private fun RoleplayTinyPill(
-    label: String,
-    value: String,
-    color: Color,
-    palette: FloentlyPalette
-) {
-    Surface(
-        color = color.copy(alpha = 0.14f),
-        shape = RoundedCornerShape(999.dp),
-        border = BorderStroke(1.dp, color.copy(alpha = 0.42f))
-    ) {
-        Text(
-            text = "$label · $value",
-            color = color,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
-private fun RoleplayLevelStrip(
-    selectedLevel: RoleplayLevel,
-    palette: FloentlyPalette,
-    onSelect: (RoleplayLevel) -> Unit
-) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        RoleplayLevel.entries.forEach { level ->
-            val active = level == selectedLevel
-            Surface(
-                color = if (active) palette.primary.copy(alpha = 0.18f) else palette.cardMuted,
-                shape = RoundedCornerShape(999.dp),
-                border = BorderStroke(1.dp, if (active) palette.primary else palette.border),
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { onSelect(level) }
-            ) {
-                Text(
-                    text = level.name,
-                    color = if (active) palette.primary else palette.muted,
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Black,
-                    modifier = Modifier.padding(vertical = 10.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun LegacyRoleplayScenarioCard(
-    scenario: RoleplayScenario,
-    palette: FloentlyPalette,
-    actionLabel: String,
-    onClick: () -> Unit
-) {
-    Surface(
-        color = Color(0xFF13213F),
-        shape = RoundedCornerShape(28.dp),
-        border = BorderStroke(1.dp, Color(0xFF2A3E6E)),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(14.dp)
-                        .clip(CircleShape)
-                        .background(if (scenario.locked) palette.soft else palette.accent)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = if (scenario.locked) "LOCKED" else "READY",
-                    color = if (scenario.locked) palette.soft else palette.accent,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.4.sp
-                )
-            }
-
-            Text(
-                text = scenario.title,
-                color = palette.text,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.ExtraBold
-            )
-            Text(
-                text = scenario.description,
-                color = palette.muted,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = scenario.helperText(),
-                color = palette.soft,
-                style = MaterialTheme.typography.bodySmall
-            )
-
-            Surface(
-                color = if (scenario.locked) palette.card else palette.primary,
-                shape = RoundedCornerShape(999.dp),
-                border = BorderStroke(1.dp, if (scenario.locked) palette.border else palette.primary),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = actionLabel,
-                    color = if (scenario.locked) palette.muted else Color.White,
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Black,
-                    modifier = Modifier.padding(vertical = 12.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun RoleplayStatusCard(
-    title: String,
-    body: String,
-    palette: FloentlyPalette
-) {
-    Surface(
-        color = palette.card,
-        shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(1.dp, palette.border),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(title, color = palette.text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
-            Text(body, color = palette.muted, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-}
-
-@Composable
-private fun LegacyRoleplaySessionProgressCard(
-    turns: Int,
-    repeatedCueCount: Int,
-    palette: FloentlyPalette
-) {
-    Surface(
-        color = palette.card,
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, palette.border),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            RoleplayMetricBox("Vuorot", turns.toString(), palette.primary, palette, Modifier.weight(1f))
-            RoleplayMetricBox("Vaihtelu", repeatedCueCount.toString(), palette.accent, palette, Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-private fun RoleplayMetricBox(
-    label: String,
-    value: String,
-    color: Color,
-    palette: FloentlyPalette,
-    modifier: Modifier
-) {
-    Surface(
-        color = palette.cardMuted,
-        shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(1.dp, palette.border),
-        modifier = modifier
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(value, color = palette.text, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
-            Text(label.uppercase(), color = color, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-        }
-    }
-}
-
-@Composable
-private fun LegacyRoleplayTranscriptBubble(
-    message: RoleplayMessage,
-    palette: FloentlyPalette
-) {
-    val isLearner = message.speaker == RoleplaySpeaker.Learner
-    val bubbleColor = if (isLearner) palette.primary else palette.cardMuted
-    val textColor = if (isLearner) Color.White else palette.text
-    val align = if (isLearner) Alignment.CenterEnd else Alignment.CenterStart
-    val speakerLabel = message.displayName()
-
-    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = align) {
-        Column(
-            modifier = Modifier.fillMaxWidth(0.82f),
-            horizontalAlignment = if (isLearner) Alignment.End else Alignment.Start,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = speakerLabel,
-                color = if (isLearner) palette.muted else palette.soft,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Surface(
-                color = bubbleColor,
-                shape = RoundedCornerShape(
-                    topStart = 18.dp,
-                    topEnd = 18.dp,
-                    bottomStart = if (isLearner) 18.dp else 6.dp,
-                    bottomEnd = if (isLearner) 6.dp else 18.dp
-                ),
-                border = if (isLearner) null else BorderStroke(1.dp, palette.border)
-            ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(message.text, color = textColor, style = MaterialTheme.typography.bodyMedium)
-                    if (!isLearner) {
-                        NativeTtsButton(text = message.text, label = "Kuuntele")
-                    }
-                    message.coachingNote?.let { note ->
-                        Text(
-                            text = "Valmentajan huomio: $note",
-                            color = if (isLearner) Color.White.copy(alpha = 0.82f) else palette.soft,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-
-private fun RoleplayScenario.helperText(): String {
-    val safety = if (beginnerSafe) "Aloittelijaystävällinen" else "Vaativampi"
-    return "$safety keskustelu: ${type.name.lowercase()}."
-}
-
-private fun RoleplayMessage.displayName(): String = when (speaker) {
-    RoleplaySpeaker.Learner -> "Sinä"
-    RoleplaySpeaker.Coach -> "Valmentaja"
-    RoleplaySpeaker.Partner -> "Keskustelukumppani"
+private fun roleplaySpeechErrorMessage(error: Int): String = when (error) {
+    SpeechRecognizer.ERROR_AUDIO -> "The microphone could not capture audio. Try again or type your answer."
+    SpeechRecognizer.ERROR_CLIENT -> "Speech recognition stopped. Try the mic again or type your answer."
+    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission is needed for speaking practice."
+    SpeechRecognizer.ERROR_NETWORK,
+    SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Speech recognition needs a working network connection on this device."
+    SpeechRecognizer.ERROR_NO_MATCH -> "I could not hear enough Finnish. Try again or type your answer."
+    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "The microphone is already busy. Wait a moment and try again."
+    SpeechRecognizer.ERROR_SERVER -> "Speech recognition service is temporarily unavailable. Type your answer for now."
+    SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech was detected. Tap the mic and answer with one clear Finnish sentence."
+    else -> "Speech recognition stopped. Try again or type your answer."
 }
