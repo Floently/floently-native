@@ -213,3 +213,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M27-A extracted Roleplay old-source visual components and delegated dashboard/session runtime to them while preserving Kotlin repository and AI flow.
 
 - M27-B fixed Roleplay extraction integration by renaming legacy local components after extracted OldSource components became the active runtime call targets.
+
+- M28-A started Android production-freeze gap audit before iOS SwiftUI work begins.
