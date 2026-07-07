@@ -207,3 +207,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M26-C moving into remaining parity implementation packs: Cards, Roleplay/Speaking, Professional, Progress, Settings, Auth/Billing.
 
 - M26-D applied real Cards composable parity tuning to mode tabs, runtime card shell, footer, dots, and spacing.
+
+- M26-E recorded the proven native speed build method: old-source recovery, feature-pack batching, extract-and-delegate, runtime preservation, and debug/release gates before Android freeze and iOS port.
