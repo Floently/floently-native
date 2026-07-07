@@ -199,3 +199,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M24-E started YKI Practice landing old-source parity audit after M24-D passed debug/release at commit 0c4592b.
 
 - M24-F tuned YKI Practice old-source landing spacing, card heights, info cards, and CTA label toward recovered React Native source.
+
+- M25-A wired YKI Mock landing to dedicated old-source Compose module while preserving existing mock runtime.
