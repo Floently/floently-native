@@ -221,3 +221,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M28-D started placeholder reachability gate after Everyday route fix passed debug/release.
 
 - M29-B started screenshot-based parity execution after device QA showed Android is not yet old-app parity; iOS remains blocked.
+
+- M29-C rebuilt Everyday Finnish as old-app style two-entry Vocabulary & Roleplay screen with A1-C2 level rail; removed generic four-card hub.
