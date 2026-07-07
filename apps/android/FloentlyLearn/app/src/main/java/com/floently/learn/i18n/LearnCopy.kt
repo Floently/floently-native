@@ -44,7 +44,17 @@ data class LearnCopy(
     val languageSaved: String,
     val privacySupportTitle: String,
     val privacySupportBody: String,
-    val backToLearn: String
+    val backToLearn: String,
+    val everydayTitle: String,
+    val everydaySubtitle: String,
+    val everydayHeroEyebrow: String,
+    val everydayHeroTitle: String,
+    val everydayHeroBody: String,
+    val everydayLevelEyebrow: String,
+    val everydayChoosePractice: String,
+    val everydayCardsBody: String,
+    val everydayRoleplayBody: String,
+    val everydayOpenTemplate: String
 ) {
     fun welcome(name: String): String = welcomeTemplate.replace("{name}", name)
     fun signedIn(email: String): String = signedInTemplate.replace("{email}", email)
@@ -98,7 +108,17 @@ object LearnTranslations {
             languageSaved = "Tallenna",
             privacySupportTitle = "Ohje ja tuki",
             privacySupportBody = "Tuki ja yhteydenotto",
-            backToLearn = "Takaisin Oppiminen"
+            backToLearn = "Takaisin Oppiminen",
+            everydayTitle = "Sanasto ja roolipeli",
+            everydaySubtitle = "Valitse kortit nopeaan muistamiseen tai ohjattu roolipeli arjen keskusteluihin.",
+            everydayHeroEyebrow = "ARJEN SUOMI",
+            everydayHeroTitle = "Rakenna arjen suomea kahdella tavalla",
+            everydayHeroBody = "Aloita korteilla, kun tarvitset sanastotukea. Vaihda roolipeliin, kun haluat puheharjoittelua.",
+            everydayLevelEyebrow = "KOKO SUOMEN POLKU",
+            everydayChoosePractice = "VALITSE HARJOITUS",
+            everydayCardsBody = "Harjoittele hyödyllisiä suomen sanoja ja lauseita nopeilla korteilla.",
+            everydayRoleplayBody = "Harjoittele lyhyitä tosielämän keskusteluja ohjatulla tuella ja korjauksilla.",
+            everydayOpenTemplate = "Avaa {title} →"
         ),
         LearnLanguage.SV to LearnCopy(
             appTitle = "Floently Learn",

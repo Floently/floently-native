@@ -21,6 +21,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.floently.learn.i18n.LearnCopy
 import com.floently.learn.navigation.LearnFeatureDestination
 import com.floently.shared.design.FloentlyPalette
 import com.floently.shared.design.FloentlyPrimaryButton
@@ -37,6 +42,7 @@ import com.floently.shared.design.FloentlyScreen
 
 @Composable
 fun EverydayFinnishScreen(
+    copy: LearnCopy,
     onBack: () -> Unit,
     onDestinationSelected: (LearnFeatureDestination) -> Unit
 ) {
@@ -47,39 +53,43 @@ fun EverydayFinnishScreen(
                 .animateContentSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            var selectedBand by remember { mutableStateOf("A1-A2") }
+
             Text(
-                text = "Vocabulary & roleplay",
+                text = copy.everydayTitle,
                 color = palette.text,
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Black
             )
             Text(
-                text = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+                text = copy.everydaySubtitle,
                 color = palette.muted,
                 style = MaterialTheme.typography.titleMedium
             )
 
-            EverydayOldSourceHero(palette = palette)
+            EverydayOldSourceHero(copy = copy, palette = palette)
 
-            EverydayOldSourceLevelRail(palette = palette)
+            EverydayOldSourceLevelRail(selectedBand = selectedBand, onBandSelected = { selectedBand = it }, copy = copy, palette = palette)
 
-            EverydaySectionLabel("CHOOSE PRACTICE", palette)
+            EverydaySectionLabel(copy.everydayChoosePractice, palette)
 
             EverydayOldSourceEntryCard(
                 label = "CARDS",
                 title = "Cards",
-                body = "Practise useful Finnish words and sentences with quick recall cards.",
+                body = copy.everydayCardsBody,
                 accent = palette.primary,
                 palette = palette,
+                copy = copy,
                 onClick = { onDestinationSelected(LearnFeatureDestination.Cards) }
             )
 
             EverydayOldSourceEntryCard(
                 label = "ROLEPLAY",
                 title = "Roleplay",
-                body = "Practise short real-life conversations with guided coaching and repair.",
+                body = copy.everydayRoleplayBody,
                 accent = palette.accent,
                 palette = palette,
+                copy = copy,
                 onClick = { onDestinationSelected(LearnFeatureDestination.Roleplay) }
             )
 
@@ -94,6 +104,7 @@ fun EverydayFinnishScreen(
 
 @Composable
 private fun EverydayOldSourceHero(
+    copy: LearnCopy,
     palette: FloentlyPalette
 ) {
     Surface(
@@ -123,7 +134,7 @@ private fun EverydayOldSourceHero(
                 }
                 Spacer(modifier = Modifier.size(12.dp))
                 Text(
-                    text = "EVERYDAY FINNISH",
+                    text = copy.everydayHeroEyebrow,
                     color = palette.primary,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Black,
@@ -132,14 +143,14 @@ private fun EverydayOldSourceHero(
             }
 
             Text(
-                text = "Build daily Finnish in two ways",
+                text = copy.everydayHeroTitle,
                 color = palette.text,
                 fontSize = 27.sp,
                 lineHeight = 32.sp,
                 fontWeight = FontWeight.Black
             )
             Text(
-                text = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+                text = copy.everydayHeroBody,
                 color = palette.muted,
                 fontSize = 15.sp,
                 lineHeight = 22.sp
@@ -150,6 +161,9 @@ private fun EverydayOldSourceHero(
 
 @Composable
 private fun EverydayOldSourceLevelRail(
+    selectedBand: String,
+    onBandSelected: (String) -> Unit,
+    copy: LearnCopy,
     palette: FloentlyPalette
 ) {
     Surface(
@@ -163,23 +177,23 @@ private fun EverydayOldSourceLevelRail(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = "FULL FINNISH PATH",
+                text = copy.everydayLevelEyebrow,
                 color = palette.soft,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 1.8.sp
             )
             Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                listOf("A1", "A2", "B1", "B2", "C1", "C2").forEach { level ->
+                listOf("A1-A2", "B1-B2", "C1-C2").forEach { level ->
                     Surface(
-                        color = if (level == "A1") palette.primary.copy(alpha = 0.22f) else palette.cardMuted,
+                        color = if (level == selectedBand) palette.primary.copy(alpha = 0.22f) else palette.cardMuted,
                         shape = RoundedCornerShape(999.dp),
-                        border = BorderStroke(1.dp, if (level == "A1") palette.primary else palette.border),
-                        modifier = Modifier.weight(1f)
+                        border = BorderStroke(1.dp, if (level == selectedBand) palette.primary else palette.border),
+                        modifier = Modifier.weight(1f).clickable { onBandSelected(level) }
                     ) {
                         Text(
                             text = level,
-                            color = if (level == "A1") palette.primary else palette.muted,
+                            color = if (level == selectedBand) palette.primary else palette.muted,
                             textAlign = TextAlign.Center,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Black,
@@ -214,6 +228,7 @@ private fun EverydayOldSourceEntryCard(
     body: String,
     accent: Color,
     palette: FloentlyPalette,
+    copy: LearnCopy,
     onClick: () -> Unit
 ) {
     Surface(
@@ -256,7 +271,7 @@ private fun EverydayOldSourceEntryCard(
                 lineHeight = 22.sp
             )
             Text(
-                text = "Open $title →",
+                text = copy.everydayOpenTemplate.replace("{title}", title),
                 color = accent,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Black

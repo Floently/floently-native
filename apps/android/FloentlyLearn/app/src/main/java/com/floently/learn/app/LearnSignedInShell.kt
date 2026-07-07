@@ -66,6 +66,7 @@ fun LearnSignedInShell(
         Box(modifier = Modifier.fillMaxSize()) {
             when (destination) {
             LearnFeatureDestination.EverydayFinnish -> EverydayFinnishScreen(
+                copy = copy,
                 onBack = { selectedDestination = null },
                 onDestinationSelected = { nextDestination ->
                     selectedDestination = nextDestination
