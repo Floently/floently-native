@@ -114,7 +114,7 @@ fun YkiMockExamExactScreen(
     when (routeStage) {
         MockRouteStage.Landing -> MockLandingScreen(
             onBack = onBack,
-            onStart = {
+            onStartMock = {
                 routeStage = MockRouteStage.Summary
             }
         )
@@ -205,7 +205,9 @@ private fun MockLandingScreen(
     onBack: () -> Unit,
     onStartMock: () -> Unit
 ) {
-    MockChromeScaffold(onBack = onBack) {
+    LightShell {
+        BackPill(onBack)
+        Spacer(modifier = Modifier.height(36.dp))
         OldSourceYkiMockLanding(
             onStartExam = onStartMock,
             onOpenMockCycle = onStartMock,
