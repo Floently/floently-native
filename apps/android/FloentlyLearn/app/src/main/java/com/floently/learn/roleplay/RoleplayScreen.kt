@@ -95,7 +95,7 @@ fun RoleplayScreen(
                     style = MaterialTheme.typography.titleMedium
                 )
 
-                RoleplayRouteHeader(palette = palette)
+                OldSourceRoleplayRouteHeader(palette = palette)
                 RoleplayLevelStrip(
                     selectedLevel = selectedLevel,
                     palette = palette,
@@ -125,7 +125,7 @@ fun RoleplayScreen(
                     )
                 } else {
                     dashboard.scenarios.forEach { scenario ->
-                        RoleplayScenarioCard(
+                        OldSourceRoleplayScenarioCard(
                             scenario = scenario,
                             palette = palette,
                             actionLabel = if (scenario.locked) "Locked" else "Start roleplay",
@@ -186,14 +186,14 @@ private fun RoleplaySessionScreen(
                 style = MaterialTheme.typography.titleMedium
             )
 
-            RoleplaySessionProgressCard(
+            OldSourceRoleplaySessionProgressCard(
                 turns = session.learnerTurns,
                 repeatedCueCount = session.repeatedCueCount,
                 palette = palette
             )
 
             session.messages.forEach { message ->
-                RoleplayTranscriptBubble(
+                OldSourceRoleplayTranscriptBubble(
                     message = message,
                     palette = palette
                 )
@@ -351,7 +351,7 @@ private fun RoleplayLevelStrip(
 }
 
 @Composable
-private fun RoleplayScenarioCard(
+private fun OldSourceRoleplayScenarioCard(
     scenario: RoleplayScenario,
     palette: FloentlyPalette,
     actionLabel: String,
@@ -444,7 +444,7 @@ private fun RoleplayStatusCard(
 }
 
 @Composable
-private fun RoleplaySessionProgressCard(
+private fun OldSourceRoleplaySessionProgressCard(
     turns: Int,
     repeatedCueCount: Int,
     palette: FloentlyPalette
@@ -491,7 +491,7 @@ private fun RoleplayMetricBox(
 }
 
 @Composable
-private fun RoleplayTranscriptBubble(
+private fun OldSourceRoleplayTranscriptBubble(
     message: RoleplayMessage,
     palette: FloentlyPalette
 ) {
