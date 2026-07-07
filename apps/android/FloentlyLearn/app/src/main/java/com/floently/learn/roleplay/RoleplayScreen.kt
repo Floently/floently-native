@@ -351,7 +351,7 @@ private fun RoleplayLevelStrip(
 }
 
 @Composable
-private fun OldSourceRoleplayScenarioCard(
+private fun LegacyRoleplayScenarioCard(
     scenario: RoleplayScenario,
     palette: FloentlyPalette,
     actionLabel: String,
@@ -444,7 +444,7 @@ private fun RoleplayStatusCard(
 }
 
 @Composable
-private fun OldSourceRoleplaySessionProgressCard(
+private fun LegacyRoleplaySessionProgressCard(
     turns: Int,
     repeatedCueCount: Int,
     palette: FloentlyPalette
@@ -491,7 +491,7 @@ private fun RoleplayMetricBox(
 }
 
 @Composable
-private fun OldSourceRoleplayTranscriptBubble(
+private fun LegacyRoleplayTranscriptBubble(
     message: RoleplayMessage,
     palette: FloentlyPalette
 ) {

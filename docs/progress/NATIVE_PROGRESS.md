@@ -211,3 +211,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M26-E recorded the proven native speed build method: old-source recovery, feature-pack batching, extract-and-delegate, runtime preservation, and debug/release gates before Android freeze and iOS port.
 
 - M27-A extracted Roleplay old-source visual components and delegated dashboard/session runtime to them while preserving Kotlin repository and AI flow.
+
+- M27-B fixed Roleplay extraction integration by renaming legacy local components after extracted OldSource components became the active runtime call targets.
