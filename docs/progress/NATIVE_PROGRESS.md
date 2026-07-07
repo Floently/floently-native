@@ -219,3 +219,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M28-C fixed Everyday Speech recording route to use the real YkiPractice destination instead of a non-existent Yki enum.
 
 - M28-D started placeholder reachability gate after Everyday route fix passed debug/release.
+
+- M29-B started screenshot-based parity execution after device QA showed Android is not yet old-app parity; iOS remains blocked.
