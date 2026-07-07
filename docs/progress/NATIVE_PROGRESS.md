@@ -217,3 +217,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M28-A started Android production-freeze gap audit before iOS SwiftUI work begins.
 \n- M28-B removed reachable Everyday Finnish placeholder actions by routing Interview to Roleplay and Speech recording to YKI speaking/runtime flow for production-freeze readiness.\n
 - M28-C fixed Everyday Speech recording route to use the real YkiPractice destination instead of a non-existent Yki enum.
+
+- M28-D started placeholder reachability gate after Everyday route fix passed debug/release.
