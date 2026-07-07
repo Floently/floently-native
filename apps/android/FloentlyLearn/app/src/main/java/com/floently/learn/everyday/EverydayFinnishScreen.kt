@@ -89,7 +89,7 @@ fun EverydayFinnishScreen(
                 body = "Practise spoken answers through the YKI speaking and roleplay flows.",
                 accent = palette.warning,
                 palette = palette,
-                onClick = { onDestinationSelected(LearnFeatureDestination.Yki) }
+                onClick = { onDestinationSelected(LearnFeatureDestination.YkiPractice) }
             )
 
             FloentlyPrimaryButton(
