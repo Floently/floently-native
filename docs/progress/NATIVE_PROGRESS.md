@@ -203,3 +203,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M25-A wired YKI Mock landing to dedicated old-source Compose module while preserving existing mock runtime.
 
 - M26-A started all-screen parity acceleration map after Home, YKI Practice landing, and YKI Mock landing verified debug/release.
+
+- M26-C moving into remaining parity implementation packs: Cards, Roleplay/Speaking, Professional, Progress, Settings, Auth/Billing.
