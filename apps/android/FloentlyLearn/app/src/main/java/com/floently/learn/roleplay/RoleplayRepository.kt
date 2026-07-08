@@ -72,14 +72,10 @@ class PreviewRoleplayConversationEngine : RoleplayConversationEngine {
             partnerMessage = RoleplayMessage(
                 id = "partner-${session.learnerTurns + 1}",
                 speaker = RoleplaySpeaker.Partner,
-                text = partnerText
+                text = partnerText,
+                coachingNote = "$safeCue ${session.scenario.coachingMode.turnHint()}"
             ),
-            coachMessage = RoleplayMessage(
-                id = "coach-${session.learnerTurns + 1}",
-                speaker = RoleplaySpeaker.Coach,
-                text = "$safeCue ${session.scenario.coachingMode.turnHint()}",
-                coachingNote = session.scenario.coachingMode.practiceNote()
-            ),
+            coachMessage = null,
             repeatedCuePrevented = repeatedPrevented || normalized.isNotBlank()
         )
     }
@@ -100,7 +96,7 @@ class PreviewRoleplayRepository(
             beginnerSafe = true,
             locked = false,
             coachingMode = RoleplayCoachingMode.BeginnerSafe,
-            materialSource = "Generated fallback",
+            materialSource = "Generated material",
             recommended = true
         ),
         RoleplayScenario(
@@ -114,7 +110,7 @@ class PreviewRoleplayRepository(
             beginnerSafe = true,
             locked = false,
             coachingMode = RoleplayCoachingMode.BeginnerSafe,
-            materialSource = "Generated fallback"
+            materialSource = "Generated material"
         ),
         RoleplayScenario(
             id = "roleplay-a1a2-health",
@@ -127,7 +123,7 @@ class PreviewRoleplayRepository(
             beginnerSafe = true,
             locked = false,
             coachingMode = RoleplayCoachingMode.BeginnerSafe,
-            materialSource = "Generated fallback"
+            materialSource = "Generated material"
         ),
         RoleplayScenario(
             id = "roleplay-b1b2-interview",
@@ -140,7 +136,7 @@ class PreviewRoleplayRepository(
             beginnerSafe = false,
             locked = false,
             coachingMode = RoleplayCoachingMode.Professional,
-            materialSource = "Generated fallback",
+            materialSource = "Generated material",
             recommended = true
         ),
         RoleplayScenario(
@@ -154,7 +150,7 @@ class PreviewRoleplayRepository(
             beginnerSafe = false,
             locked = false,
             coachingMode = RoleplayCoachingMode.Natural,
-            materialSource = "Generated fallback"
+            materialSource = "Generated material"
         ),
         RoleplayScenario(
             id = "roleplay-b1b2-professional-phone",
@@ -167,7 +163,7 @@ class PreviewRoleplayRepository(
             beginnerSafe = false,
             locked = false,
             coachingMode = RoleplayCoachingMode.Professional,
-            materialSource = "Generated fallback"
+            materialSource = "Generated material"
         ),
         RoleplayScenario(
             id = "roleplay-c1c2-work-negotiation",
@@ -180,7 +176,7 @@ class PreviewRoleplayRepository(
             beginnerSafe = false,
             locked = false,
             coachingMode = RoleplayCoachingMode.ExamStyle,
-            materialSource = "Generated fallback",
+            materialSource = "Generated material",
             recommended = true
         ),
         RoleplayScenario(
@@ -194,7 +190,7 @@ class PreviewRoleplayRepository(
             beginnerSafe = false,
             locked = false,
             coachingMode = RoleplayCoachingMode.ExamStyle,
-            materialSource = "Generated fallback"
+            materialSource = "Generated material"
         ),
         RoleplayScenario(
             id = "roleplay-c1c2-exam-opinion",
@@ -207,7 +203,7 @@ class PreviewRoleplayRepository(
             beginnerSafe = false,
             locked = false,
             coachingMode = RoleplayCoachingMode.ExamStyle,
-            materialSource = "Generated fallback"
+            materialSource = "Generated material"
         )
     )
 
@@ -235,18 +231,13 @@ class PreviewRoleplayRepository(
                     RoleplayMessage(
                         id = "opening-$scenarioId",
                         speaker = RoleplaySpeaker.Partner,
-                        text = scenario.openingLine
-                    ),
-                    RoleplayMessage(
-                        id = "coach-opening-$scenarioId",
-                        speaker = RoleplaySpeaker.Coach,
-                        text = scenario.coachingMode.openingCue(),
-                        coachingNote = scenario.coachingMode.practiceNote()
+                        text = scenario.openingLine,
+                        coachingNote = "${scenario.coachingMode.openingCue()} ${scenario.coachingMode.practiceNote()}"
                     )
                 ),
                 learnerTurns = 0,
                 repeatedCueCount = 0,
-                releaseGate = "Roleplay uses backend/generated material when available and a generated safety fallback when offline."
+                releaseGate = "Roleplay uses backend/generated topics first and generated material safety content when offline."
             )
         )
     }
