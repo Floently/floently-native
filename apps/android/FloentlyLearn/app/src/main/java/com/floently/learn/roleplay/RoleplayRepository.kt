@@ -1,5 +1,7 @@
 package com.floently.learn.roleplay
 
+private const val RoleplayTargetTurns = 5
+
 interface RoleplayRepository {
     suspend fun dashboard(selectedLevel: RoleplayLevel): RoleplayDashboardState
     suspend fun startSession(scenarioId: String): RoleplaySessionResult
@@ -29,6 +31,9 @@ class ServiceRoleplayRepository(
     }
 
     override suspend fun sendLearnerMessage(session: RoleplaySession, text: String): RoleplaySessionResult {
+        if (session.learnerTurns >= RoleplayTargetTurns) {
+            return RoleplaySessionResult.Blocked("This roleplay is complete. Download the conversation or start another topic.")
+        }
         return runCatching { service.sendLearnerMessage(session, text) }.getOrElse {
             fallback.sendLearnerMessage(session, text)
         }
@@ -49,20 +54,28 @@ class PreviewRoleplayConversationEngine : RoleplayConversationEngine {
 
     override fun next(session: RoleplaySession, learnerText: String): RoleplayCoachResponse {
         val normalized = learnerText.trim()
+        val nextTurn = session.learnerTurns + 1
+        val isConclusion = nextTurn >= RoleplayTargetTurns
         val cueIndex = (session.learnerTurns + session.scenario.id.length) % safeCues.size
         val cue = safeCues[cueIndex]
         val repeatedPrevented = session.messages.takeLast(4).any { it.text == cue }
 
-        val partnerText = when (session.scenario.type) {
-            RoleplayScenarioType.Work -> "Kiitos. Voisitko kertoa vielä, milloin tämä sopii sinulle?"
-            RoleplayScenarioType.Healthcare -> "Selvä. Tarvitsetko apua tai lisätietoja?"
-            RoleplayScenarioType.Interview -> "Hyvä. Miksi olet kiinnostunut tästä tehtävästä?"
-            RoleplayScenarioType.PhoneCall -> "Ymmärrän. Voitko toistaa nimesi ja asiasi lyhyesti?"
-            RoleplayScenarioType.Service -> "Kiitos tiedosta. Miten voin auttaa seuraavaksi?"
-            RoleplayScenarioType.Everyday -> "Kiva kuulla. Mitä haluaisit tehdä seuraavaksi?"
+        val partnerText = if (isConclusion) {
+            "Kiitos keskustelusta. Harjoitus on valmis. Puhuit viisi vastausta, ja voit nyt ladata keskustelun tai aloittaa uuden aiheen."
+        } else {
+            when (session.scenario.type) {
+                RoleplayScenarioType.Work -> "Kiitos. Voisitko kertoa vielä, milloin tämä sopii sinulle?"
+                RoleplayScenarioType.Healthcare -> "Selvä. Tarvitsetko apua tai lisätietoja?"
+                RoleplayScenarioType.Interview -> "Hyvä. Miksi olet kiinnostunut tästä tehtävästä?"
+                RoleplayScenarioType.PhoneCall -> "Ymmärrän. Voitko toistaa nimesi ja asiasi lyhyesti?"
+                RoleplayScenarioType.Service -> "Kiitos tiedosta. Miten voin auttaa seuraavaksi?"
+                RoleplayScenarioType.Everyday -> "Kiva kuulla. Mitä haluaisit tehdä seuraavaksi?"
+            }
         }
 
-        val safeCue = if (repeatedPrevented) {
+        val safeCue = if (isConclusion) {
+            "Valmis: keskustelu päättyi luonnolliseen loppuvastaukseen."
+        } else if (repeatedPrevented) {
             "Hyvä. Kokeile nyt erilaista vastausta kuin aiemmin."
         } else {
             cue
@@ -70,7 +83,7 @@ class PreviewRoleplayConversationEngine : RoleplayConversationEngine {
 
         return RoleplayCoachResponse(
             partnerMessage = RoleplayMessage(
-                id = "partner-${session.learnerTurns + 1}",
+                id = if (isConclusion) "conclusion-$nextTurn" else "partner-$nextTurn",
                 speaker = RoleplaySpeaker.Partner,
                 text = partnerText,
                 coachingNote = "$safeCue ${session.scenario.coachingMode.turnHint()}"
@@ -246,6 +259,9 @@ class PreviewRoleplayRepository(
         val cleanText = text.trim()
         if (cleanText.isBlank()) {
             return RoleplaySessionResult.Error("Write a reply before sending.")
+        }
+        if (session.learnerTurns >= RoleplayTargetTurns) {
+            return RoleplaySessionResult.Blocked("This roleplay is complete. Download the conversation or start another topic.")
         }
 
         val learnerMessage = RoleplayMessage(
