@@ -40,7 +40,7 @@ internal fun RoleplayLevelStrip(
                     .clickable { onSelect(level) }
             ) {
                 Text(
-                    text = level.name,
+                    text = level.displayName,
                     color = if (active) palette.primary else palette.muted,
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Black,
