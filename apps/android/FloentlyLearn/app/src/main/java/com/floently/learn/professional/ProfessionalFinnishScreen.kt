@@ -339,7 +339,7 @@ private fun ProfessionalPracticeHub(
         ProfessionalHubAction(
             label = "SPEECH",
             title = "Phone and speech flow",
-            body = "Open call-opening and customer-service modules that prepare the speech path without placeholders.",
+            body = "Open call-opening and customer-service modules that support guided speech practice.",
             accent = palette.warning,
             palette = palette,
             onClick = onSpeech
