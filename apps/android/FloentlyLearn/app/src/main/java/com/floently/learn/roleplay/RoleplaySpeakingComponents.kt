@@ -104,19 +104,21 @@ internal fun OldSourceRoleplayMicPanel(
     phase: RoleplaySpeechPhase,
     recordedText: String,
     speechAvailable: Boolean,
+    concluded: Boolean,
     palette: FloentlyPalette,
     onStart: () -> Unit,
     onStop: () -> Unit,
     onClear: () -> Unit
 ) {
     val isListening = phase == RoleplaySpeechPhase.Listening
-    val status = when (phase) {
-        RoleplaySpeechPhase.Idle -> "Tap the mic and answer in Finnish."
-        RoleplaySpeechPhase.Listening -> "Listening now… speak one clear answer."
-        RoleplaySpeechPhase.Processing -> "Preparing transcript…"
-        RoleplaySpeechPhase.Ready -> "Recorded response ready for review."
-        RoleplaySpeechPhase.Error -> "Try again or type your response."
-        RoleplaySpeechPhase.Unavailable -> "Speech recognition is unavailable on this device."
+    val status = when {
+        concluded -> "Conversation complete. Download the PDF or Word document/book."
+        phase == RoleplaySpeechPhase.Idle -> "Tap the mic and answer in Finnish. Tap again to stop and send."
+        phase == RoleplaySpeechPhase.Listening -> "Listening now… tap the mic again to stop and send."
+        phase == RoleplaySpeechPhase.Processing -> "Transcribing and sending…"
+        phase == RoleplaySpeechPhase.Ready -> "Transcription ready and sending."
+        phase == RoleplaySpeechPhase.Error -> "Try again or type your response."
+        else -> "Speech recognition is unavailable on this device."
     }
 
     Surface(
@@ -131,7 +133,7 @@ internal fun OldSourceRoleplayMicPanel(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
-                text = "SPEAKING PRACTICE",
+                text = if (concluded) "ROLEPLAY COMPLETE" else "SPEAKING PRACTICE",
                 color = palette.primary,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Black,
@@ -149,16 +151,24 @@ internal fun OldSourceRoleplayMicPanel(
                     modifier = Modifier.size(118.dp)
                 ) {}
                 Surface(
-                    color = if (isListening) palette.accent else palette.primary,
+                    color = when {
+                        concluded -> palette.soft
+                        isListening -> palette.accent
+                        else -> palette.primary
+                    },
                     shape = CircleShape,
                     border = BorderStroke(2.dp, Color.White.copy(alpha = 0.18f)),
                     modifier = Modifier
                         .size(84.dp)
-                        .clickable { if (isListening) onStop() else onStart() }
+                        .clickable(enabled = speechAvailable && !concluded) { if (isListening) onStop() else onStart() }
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
-                            text = if (isListening) "STOP" else "MIC",
+                            text = when {
+                                concluded -> "DONE"
+                                isListening -> "STOP"
+                                else -> "MIC"
+                            },
                             color = Color.White,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Black,
@@ -170,7 +180,7 @@ internal fun OldSourceRoleplayMicPanel(
 
             OldSourceWaveform(active = isListening, palette = palette)
             Text(
-                text = if (speechAvailable) status else "Speech recognition is unavailable on this device. Type your answer below.",
+                text = if (speechAvailable || concluded) status else "Speech recognition is unavailable on this device. Type your answer below.",
                 color = palette.muted,
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center
@@ -182,28 +192,6 @@ internal fun OldSourceRoleplayMicPanel(
                     color = palette.text,
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                OldSourceSpeakingAction(
-                    label = if (isListening) "Stop speaking" else "Start speaking",
-                    palette = palette,
-                    filled = true,
-                    enabled = speechAvailable,
-                    onClick = { if (isListening) onStop() else onStart() },
-                    modifier = Modifier.weight(1f)
-                )
-                OldSourceSpeakingAction(
-                    label = "Clear",
-                    palette = palette,
-                    filled = false,
-                    enabled = recordedText.isNotBlank() || isListening,
-                    onClick = onClear,
-                    modifier = Modifier.weight(1f)
                 )
             }
         }
@@ -227,7 +215,7 @@ internal fun OldSourceRecordedResponseCard(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = "Recorded response",
+                text = "Transcription",
                 color = palette.text,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Black
@@ -238,7 +226,7 @@ internal fun OldSourceRecordedResponseCard(
                 style = MaterialTheme.typography.bodyMedium
             )
             OldSourceSpeakingAction(
-                label = "Use this response",
+                label = "Use this text",
                 palette = palette,
                 filled = true,
                 enabled = recordedText.isNotBlank(),
