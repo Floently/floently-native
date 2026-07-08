@@ -38,7 +38,8 @@ data class RoleplayScenario(
     val openingLine: String,
     val targetPhrases: List<String> = emptyList(),
     val beginnerSafe: Boolean,
-    val locked: Boolean
+    val locked: Boolean,
+    val coachingMode: RoleplayCoachingMode = RoleplayCoachingMode.Natural
 )
 
 data class RoleplayMessage(
