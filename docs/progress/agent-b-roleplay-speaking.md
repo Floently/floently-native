@@ -3,7 +3,31 @@
 Branch: `m01/production-native-foundation`
 Repo: `galapoto/floently-native`
 
-## Latest verified state
+## M31 active blocker pass
+
+M31 device QA recorded active Roleplay/Speaking blockers:
+
+- Roleplay showed `request failed with status 404`.
+- Roleplay needed level bands `A1-A2`, `B1-B2`, and `C1-C2`.
+- Topic list was too limited/hardcoded.
+- Roleplay should use backend/generated topics where available.
+- Flow should start more automatically while still giving user control.
+- Coach and conversation partner should feel integrated.
+
+Completed in this M31 pass:
+
+- Changed roleplay level model from separate `A1`, `A2`, `B1`, `B2` entries to the required level bands:
+  - `A1-A2`
+  - `B1-B2`
+  - `C1-C2`
+- Added backend route fallbacks for dashboard/topics/session/message calls so native Roleplay tries several likely backend route shapes before falling back.
+- Stopped surfacing backend 404 as the visible Roleplay dashboard state; if backend is unavailable, the repository falls back without showing `request failed with status 404` to the user.
+- Replaced the tiny old fallback list with broader generated fallback topics across all three M31 level bands.
+- Added recommended topic metadata and a `Start recommended ... roleplay` button so users can start faster while still keeping manual topic control.
+- Updated dashboard cards and session header to display level-band labels instead of raw enum names.
+- Kept all changes inside Agent B-owned Roleplay/Speaking/progress scope.
+
+## Latest verified state before M31 pass
 
 User pulled through `ef1e50d` and confirmed:
 
@@ -83,21 +107,24 @@ Completed in the previous Agent B pass:
 
 ## Build status
 
-Verified locally by user through `ef1e50d`:
+Verified locally by user through `ef1e50d` before the M31 pass:
 
 ```text
 BUILD SUCCESSFUL in 12s
 ```
 
+The M31 pass still needs local verification.
+
 ## QA focus for device pass
 
-- Open Roleplay dashboard and confirm level tabs render.
-- Confirm A1/A2/B1/B2 each show multiple practical scenarios where expected.
-- Confirm scenario cards show level/type and coaching mode chips.
-- Start an unlocked scenario.
+- Open Roleplay and confirm no visible `request failed with status 404` message appears.
+- Confirm level bands are `A1-A2`, `B1-B2`, and `C1-C2`.
+- Confirm recommended start button appears for a ready topic.
+- Confirm cards show level band, type, mode, and material source.
+- Start an unlocked scenario from the recommended button and from a card.
 - Confirm conversation transcript bubbles still render and partner messages still expose TTS.
 - Confirm coach note text changes appropriately by beginner, natural, professional, and exam-style mode.
 - Tap mic, grant permission, speak a short Finnish answer, confirm transcript appears.
 - Confirm recorded response card appears.
-- Send the response and confirm AI/backend flow continues.
+- Send the response and confirm backend or fallback flow continues.
 - Confirm typed fallback still works if speech recognition is unavailable.
