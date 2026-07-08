@@ -3,6 +3,25 @@
 Branch: `m01/production-native-foundation`
 Repo: `galapoto/floently-native`
 
+## M32 active blocker pass
+
+M32 active Agent B blockers from `docs/progress/M32_FINAL_ANDROID_PARITY_FINISH.md`:
+
+- Verify Roleplay 404 is gone on device.
+- Verify backend/generated topics/materials are used.
+- Verify A1-A2, B1-B2, C1-C2 coverage.
+- Make roleplay flow more automatic while keeping user control.
+- Integrate coach/conversation partner UX naturally.
+
+Completed in this M32 pass:
+
+- Strengthened `RoleplayService` backend/material parsing to accept more payload shapes: `scenarios`, `topics`, `materials`, `roleplays`, `conversations`, and `items`.
+- Added more backend route variants for dashboard/topics/materials/session/start/message/reply calls, reducing the chance that a real endpoint shape still produces a visible 404.
+- Added parsing for common backend field aliases such as `material_id`, `slug`, `category`, `opener`, `prompt`, `examples`, `role`, and `content`.
+- Removed user-visible `Generated fallback` wording from Agent B fallback material labels; local safety topics now display as generated material rather than a fake/fallback deck.
+- Integrated fallback coach guidance into the conversation partner turn as a coaching note instead of adding separate coach bubbles, making the coach/partner flow feel more natural.
+- Kept all changes inside Agent B-owned Roleplay/Speaking/progress scope.
+
 ## Latest verified M31 Roleplay build
 
 User pulled through `4203d10` and confirmed:
@@ -132,6 +151,8 @@ Verified locally by user through `4203d10` after the M31 pass:
 BUILD SUCCESSFUL in 23s
 ```
 
+The M32 Agent B pass still needs local debug/release verification.
+
 ## QA focus for device pass
 
 - Open Roleplay and confirm no visible `request failed with status 404` message appears.
@@ -140,8 +161,8 @@ BUILD SUCCESSFUL in 23s
 - Confirm cards show level band, type, mode, and material source.
 - Start an unlocked scenario from the recommended button and from a card.
 - Confirm conversation transcript bubbles still render and partner messages still expose TTS.
-- Confirm coach note text changes appropriately by beginner, natural, professional, and exam-style mode.
+- Confirm coach guidance appears inside the conversation partner turn rather than as a confusing separate manual step.
 - Tap mic, grant permission, speak a short Finnish answer, confirm transcript appears.
 - Confirm recorded response card appears.
-- Send the response and confirm backend or fallback flow continues.
+- Send the response and confirm backend or generated-material flow continues.
 - Confirm typed fallback still works if speech recognition is unavailable.
