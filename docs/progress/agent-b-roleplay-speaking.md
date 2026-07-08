@@ -3,6 +3,23 @@
 Branch: `m01/production-native-foundation`
 Repo: `galapoto/floently-native`
 
+## Latest verified M31 Roleplay build
+
+User pulled through `4203d10` and confirmed:
+
+```bash
+ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn
+```
+
+Result:
+
+```text
+BUILD SUCCESSFUL in 23s
+54 actionable tasks: 4 executed, 50 up-to-date
+```
+
+Roleplay/Speaking compiled successfully after the M31 level-band and AI boundary updates. Remaining warnings are in YKI files, outside Agent B ownership.
+
 ## M31 active blocker pass
 
 M31 device QA recorded active Roleplay/Speaking blockers:
@@ -78,7 +95,7 @@ Completed in the previous Agent B pass:
 - Added target phrase lists for fallback scenarios so the scenario header/recorded response flow has real learner support content.
 - Unlocked the B2 professional phone call because native speech capture now exists; no placeholder locked speaking path remains in the fallback dataset.
 - Preserved `RoleplayRepository`, `RoleplayService`, and existing AI/backend handoff behavior.
-- Kept all changes inside Agent B-owned Roleplay/progress scope.
+- Kept all changes inside Agent B-owned Roleplay/Speaking/progress scope.
 
 ## Earlier completed work
 
@@ -109,13 +126,11 @@ Completed in the previous Agent B pass:
 
 ## Build status
 
-Verified locally by user through `ef1e50d` before the M31 pass:
+Verified locally by user through `4203d10` after the M31 pass:
 
 ```text
-BUILD SUCCESSFUL in 12s
+BUILD SUCCESSFUL in 23s
 ```
-
-The M31 pass still needs local verification after `53ad3ab`.
 
 ## QA focus for device pass
 
