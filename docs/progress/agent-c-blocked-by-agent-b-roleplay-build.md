@@ -2,7 +2,7 @@
 
 ## Status
 
-Still blocked after pulling `origin/m01/production-native-foundation` at `f1e6b1c`.
+Still blocked after pulling `origin/m01/production-native-foundation` at `c18f584`.
 
 ## Local verification result
 
@@ -10,10 +10,14 @@ Vitus reran:
 
 ```bash
 cd /home/vitus/floently-native
+git stash push -u -m "agent-d-m31-blocker-doc-before-roleplay-build-check" -- docs/progress/agent-d-blocked-by-shared-m31-build.md
 ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn
 git status --short
 git log --oneline --decorate -8
+git stash list | head -5
 ```
+
+The Agent D blocker doc was safely stashed before the build check.
 
 Build failed in `:FloentlyLearn:app:compileDebugKotlin`.
 
