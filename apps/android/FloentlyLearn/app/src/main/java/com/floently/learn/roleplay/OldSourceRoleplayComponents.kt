@@ -58,13 +58,13 @@ internal fun OldSourceRoleplayRouteHeader(
                 fontWeight = FontWeight.Black
             )
             Text(
-                text = "Short turns, clear repair, and less pressure.",
+                text = "Choose a level band, start the recommended topic, speak or type, then continue with one integrated coach and partner flow.",
                 color = palette.muted,
                 style = MaterialTheme.typography.bodyMedium
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OldSourceRoleplayTinyPill("Step 1", "Listen", palette.primary, palette)
-                OldSourceRoleplayTinyPill("Step 2", "Reply", palette.accent, palette)
+                OldSourceRoleplayTinyPill("Step 1", "Topic", palette.primary, palette)
+                OldSourceRoleplayTinyPill("Step 2", "Speak", palette.accent, palette)
             }
         }
     }
@@ -120,7 +120,7 @@ internal fun OldSourceRoleplayScenarioCard(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = if (scenario.locked) "LOCKED" else "READY",
+                    text = if (scenario.locked) "LOCKED" else if (scenario.recommended) "RECOMMENDED" else "READY",
                     color = if (scenario.locked) palette.soft else palette.primary,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Black,
@@ -129,7 +129,7 @@ internal fun OldSourceRoleplayScenarioCard(
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OldSourceRoleplayTinyPill(scenario.level.name, scenario.type.name, palette.primary, palette)
+                OldSourceRoleplayTinyPill(scenario.level.displayName, scenario.type.name, palette.primary, palette)
                 OldSourceRoleplayTinyPill("Mode", scenario.coachingMode.oldSourceLabel(), palette.accent, palette)
             }
 
@@ -271,7 +271,7 @@ internal fun OldSourceRoleplayTranscriptBubble(
 
 private fun RoleplayScenario.oldSourceHelperText(): String {
     val safety = if (beginnerSafe) "Beginner-friendly" else "More demanding"
-    return "$safety ${coachingMode.oldSourceLabel().lowercase()} conversation: ${type.name.lowercase()}."
+    return "$safety ${coachingMode.oldSourceLabel().lowercase()} conversation: ${type.name.lowercase()} · $materialSource."
 }
 
 private fun RoleplayCoachingMode.oldSourceLabel(): String = when (this) {
