@@ -29,10 +29,9 @@ class PreviewRoleplayAiClient : RoleplayAiClient {
 
         return RoleplayAiResponse(
             assistantText = when (request.scenario.level) {
-                RoleplayLevel.A1 -> "Hyvä. Vastaan lyhyesti: voitko kertoa vielä yhden asian?"
-                RoleplayLevel.A2 -> "Ymmärrän. Voitko selittää tilanteen vähän tarkemmin?"
-                RoleplayLevel.B1 -> "Kiitos. Se kuulostaa selkeältä. Miten jatkaisit keskustelua?"
-                RoleplayLevel.B2 -> "Hyvä perustelu. Voitko tarkentaa näkökulmaasi yhdellä esimerkillä?"
+                RoleplayLevel.A1_A2 -> "Hyvä. Vastaa lyhyesti: voitko kertoa vielä yhden asian?"
+                RoleplayLevel.B1_B2 -> "Kiitos. Se kuulostaa selkeältä. Miten jatkaisit keskustelua?"
+                RoleplayLevel.C1_C2 -> "Hyvä perustelu. Voitko tarkentaa näkökulmaasi yhdellä esimerkillä?"
             },
             coachingNote = "Preview roleplay reply. Production must call the OpenAI-backed conversation service with anti-repetition and beginner-safe checks.$repetitionHint",
             suggestedPhrase = phraseHint
