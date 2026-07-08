@@ -227,3 +227,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M29-D started global i18n implementation by wiring Everyday Finnish to LearnCopy and making A1-A2/B1-B2/C1-C2 selectable.
 
 - E: added multi-agent Android parity handover and copy-paste prompts.
+
+- M31 device QA found release blockers: Cards backend/card-bank behavior, Roleplay 404/backend/topics/A1-C2 flow, YKI Mock A1-C2 levels, global theme toggle, and full 21-language i18n catalog wiring.
