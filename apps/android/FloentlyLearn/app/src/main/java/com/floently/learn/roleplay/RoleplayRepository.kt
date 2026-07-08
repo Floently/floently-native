@@ -80,8 +80,8 @@ class PreviewRoleplayConversationEngine : RoleplayConversationEngine {
             coachMessage = RoleplayMessage(
                 id = "coach-${session.learnerTurns + 1}",
                 speaker = RoleplaySpeaker.Coach,
-                text = safeCue,
-                coachingNote = "Practice tip: keep your answer short, clear, and natural."
+                text = "$safeCue ${session.scenario.coachingMode.turnHint()}",
+                coachingNote = session.scenario.coachingMode.practiceNote()
             ),
             repeatedCuePrevented = repeatedPrevented || normalized.isNotBlank()
         )
@@ -101,7 +101,8 @@ class PreviewRoleplayRepository(
             openingLine = "Hei! Miten voin auttaa?",
             targetPhrases = listOf("Haluaisin tämän.", "Paljonko tämä maksaa?", "Kiitos, se sopii."),
             beginnerSafe = true,
-            locked = false
+            locked = false,
+            coachingMode = RoleplayCoachingMode.BeginnerSafe
         ),
         RoleplayScenario(
             id = "roleplay-a1-cafe",
@@ -112,7 +113,8 @@ class PreviewRoleplayRepository(
             openingLine = "Hei! Mitä saisi olla?",
             targetPhrases = listOf("Yksi kahvi, kiitos.", "Pieni koko, kiitos.", "Voinko maksaa kortilla?"),
             beginnerSafe = true,
-            locked = false
+            locked = false,
+            coachingMode = RoleplayCoachingMode.BeginnerSafe
         ),
         RoleplayScenario(
             id = "roleplay-a1-meeting-friend",
@@ -123,7 +125,8 @@ class PreviewRoleplayRepository(
             openingLine = "Hei! Mitä kuuluu?",
             targetPhrases = listOf("Hyvää kuuluu.", "Entä sinulle?", "Mennäänkö kävelylle?"),
             beginnerSafe = true,
-            locked = false
+            locked = false,
+            coachingMode = RoleplayCoachingMode.BeginnerSafe
         ),
         RoleplayScenario(
             id = "roleplay-a2-work-schedule",
@@ -134,7 +137,8 @@ class PreviewRoleplayRepository(
             openingLine = "Hei, sopiiko sinulle työvuoro maanantaina?",
             targetPhrases = listOf("Mihin aikaan vuoro alkaa?", "Se sopii minulle.", "Voinko vaihtaa vuoroa?"),
             beginnerSafe = true,
-            locked = false
+            locked = false,
+            coachingMode = RoleplayCoachingMode.BeginnerSafe
         ),
         RoleplayScenario(
             id = "roleplay-a2-doctor-appointment",
@@ -145,7 +149,8 @@ class PreviewRoleplayRepository(
             openingLine = "Hei, mikä sinulla on vaivana?",
             targetPhrases = listOf("Minulla on päänsärky.", "Se alkoi eilen.", "Mitä minun pitäisi tehdä?"),
             beginnerSafe = true,
-            locked = false
+            locked = false,
+            coachingMode = RoleplayCoachingMode.BeginnerSafe
         ),
         RoleplayScenario(
             id = "roleplay-a2-phone-time",
@@ -156,7 +161,8 @@ class PreviewRoleplayRepository(
             openingLine = "Hyvää päivää, miten voin auttaa?",
             targetPhrases = listOf("Tässä on...", "Soitan ajan takia.", "Voisitteko toistaa?"),
             beginnerSafe = true,
-            locked = false
+            locked = false,
+            coachingMode = RoleplayCoachingMode.Natural
         ),
         RoleplayScenario(
             id = "roleplay-b1-interview",
@@ -167,7 +173,8 @@ class PreviewRoleplayRepository(
             openingLine = "Tervetuloa haastatteluun. Kerro lyhyesti itsestäsi.",
             targetPhrases = listOf("Minulla on kokemusta...", "Olen kiinnostunut tehtävästä, koska...", "Vahvuuteni on..."),
             beginnerSafe = false,
-            locked = false
+            locked = false,
+            coachingMode = RoleplayCoachingMode.Professional
         ),
         RoleplayScenario(
             id = "roleplay-b1-service-problem",
@@ -178,7 +185,8 @@ class PreviewRoleplayRepository(
             openingLine = "Hei, kerro miten voin auttaa tässä tilanteessa.",
             targetPhrases = listOf("Ongelma on se, että...", "Tarvitsisin ratkaisun tänään.", "Voisimmeko sopia näin?"),
             beginnerSafe = false,
-            locked = false
+            locked = false,
+            coachingMode = RoleplayCoachingMode.Natural
         ),
         RoleplayScenario(
             id = "roleplay-b2-professional-phone",
@@ -189,7 +197,8 @@ class PreviewRoleplayRepository(
             openingLine = "Hyvää päivää, miten voin auttaa?",
             targetPhrases = listOf("Soitan koskien asiaa...", "Voisin tarkentaa vielä...", "Sopiiko, että palaan asiaan?"),
             beginnerSafe = false,
-            locked = false
+            locked = false,
+            coachingMode = RoleplayCoachingMode.Professional
         ),
         RoleplayScenario(
             id = "roleplay-b2-work-negotiation",
@@ -200,7 +209,8 @@ class PreviewRoleplayRepository(
             openingLine = "Meidän pitäisi sopia tästä aikataulusta tänään.",
             targetPhrases = listOf("Ymmärrän tilanteen.", "Minun näkökulmastani...", "Voisimmeko tehdä kompromissin?"),
             beginnerSafe = false,
-            locked = false
+            locked = false,
+            coachingMode = RoleplayCoachingMode.ExamStyle
         )
     )
 
@@ -233,12 +243,8 @@ class PreviewRoleplayRepository(
                     RoleplayMessage(
                         id = "coach-opening-$scenarioId",
                         speaker = RoleplaySpeaker.Coach,
-                        text = if (scenario.beginnerSafe) {
-                            "Vastaa lyhyesti. Yksi helppo lause riittää."
-                        } else {
-                            "Respond naturally. Keep it clear and professional."
-                        },
-                        coachingNote = "Use the target phrases if they fit the situation."
+                        text = scenario.coachingMode.openingCue(),
+                        coachingNote = scenario.coachingMode.practiceNote()
                     )
                 ),
                 learnerTurns = 0,
@@ -275,4 +281,25 @@ class PreviewRoleplayRepository(
             )
         )
     }
+}
+
+private fun RoleplayCoachingMode.openingCue(): String = when (this) {
+    RoleplayCoachingMode.BeginnerSafe -> "Vastaa lyhyesti. Yksi helppo lause riittää."
+    RoleplayCoachingMode.Natural -> "Respond naturally. Keep the answer short and useful."
+    RoleplayCoachingMode.Professional -> "Respond clearly and professionally. Add one useful detail."
+    RoleplayCoachingMode.ExamStyle -> "Answer like an oral exam: clear reason, complete sentence, polite tone."
+}
+
+private fun RoleplayCoachingMode.turnHint(): String = when (this) {
+    RoleplayCoachingMode.BeginnerSafe -> "Yksi lyhyt lause riittää."
+    RoleplayCoachingMode.Natural -> "Make it sound natural and conversational."
+    RoleplayCoachingMode.Professional -> "Keep the tone professional and specific."
+    RoleplayCoachingMode.ExamStyle -> "Use a complete sentence and explain your reason."
+}
+
+private fun RoleplayCoachingMode.practiceNote(): String = when (this) {
+    RoleplayCoachingMode.BeginnerSafe -> "Beginner-safe mode: short, simple Finnish is enough."
+    RoleplayCoachingMode.Natural -> "Natural mode: answer like a real conversation, not a translation exercise."
+    RoleplayCoachingMode.Professional -> "Professional mode: stay polite, direct, and work-ready."
+    RoleplayCoachingMode.ExamStyle -> "Exam-style mode: answer fully enough for spoken Finnish assessment practice."
 }
