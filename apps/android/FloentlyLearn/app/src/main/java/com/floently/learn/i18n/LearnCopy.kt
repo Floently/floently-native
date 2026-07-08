@@ -164,7 +164,17 @@ object LearnTranslations {
             languageSaved = "Spara",
             privacySupportTitle = "Hjälp och support",
             privacySupportBody = "Support och kontakt",
-            backToLearn = "Tillbaka Lärande"
+            backToLearn = "Tillbaka Lärande",
+            everydayTitle = "Vocabulary & roleplay",
+            everydaySubtitle = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+            everydayHeroEyebrow = "EVERYDAY FINNISH",
+            everydayHeroTitle = "Build daily Finnish in two ways",
+            everydayHeroBody = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+            everydayLevelEyebrow = "FULL FINNISH PATH",
+            everydayChoosePractice = "CHOOSE PRACTICE",
+            everydayCardsBody = "Practise useful Finnish words and sentences with quick recall cards.",
+            everydayRoleplayBody = "Practise short real-life conversations with guided coaching and repair.",
+            everydayOpenTemplate = "Open {title} →"
         ),
         LearnLanguage.RU to LearnCopy(
             appTitle = "Floently Learn",
@@ -210,7 +220,17 @@ object LearnTranslations {
             languageSaved = "Сохранить",
             privacySupportTitle = "Помощь и поддержка",
             privacySupportBody = "Поддержка и контакты",
-            backToLearn = "Назад Учиться"
+            backToLearn = "Назад Учиться",
+            everydayTitle = "Vocabulary & roleplay",
+            everydaySubtitle = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+            everydayHeroEyebrow = "EVERYDAY FINNISH",
+            everydayHeroTitle = "Build daily Finnish in two ways",
+            everydayHeroBody = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+            everydayLevelEyebrow = "FULL FINNISH PATH",
+            everydayChoosePractice = "CHOOSE PRACTICE",
+            everydayCardsBody = "Practise useful Finnish words and sentences with quick recall cards.",
+            everydayRoleplayBody = "Practise short real-life conversations with guided coaching and repair.",
+            everydayOpenTemplate = "Open {title} →"
         ),
         LearnLanguage.ET to LearnCopy(
             appTitle = "Floently Learn",
@@ -256,7 +276,17 @@ object LearnTranslations {
             languageSaved = "Salvesta",
             privacySupportTitle = "Abi ja tugi",
             privacySupportBody = "Tugi ja kontakt",
-            backToLearn = "Tagasi Õpi"
+            backToLearn = "Tagasi Õpi",
+            everydayTitle = "Vocabulary & roleplay",
+            everydaySubtitle = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+            everydayHeroEyebrow = "EVERYDAY FINNISH",
+            everydayHeroTitle = "Build daily Finnish in two ways",
+            everydayHeroBody = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+            everydayLevelEyebrow = "FULL FINNISH PATH",
+            everydayChoosePractice = "CHOOSE PRACTICE",
+            everydayCardsBody = "Practise useful Finnish words and sentences with quick recall cards.",
+            everydayRoleplayBody = "Practise short real-life conversations with guided coaching and repair.",
+            everydayOpenTemplate = "Open {title} →"
         ),
         LearnLanguage.UK to LearnCopy(
             appTitle = "Floently Learn",
@@ -302,7 +332,17 @@ object LearnTranslations {
             languageSaved = "Зберегти",
             privacySupportTitle = "Допомога та підтримка",
             privacySupportBody = "Підтримка та контакт",
-            backToLearn = "Назад вчитися"
+            backToLearn = "Назад вчитися",
+            everydayTitle = "Vocabulary & roleplay",
+            everydaySubtitle = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+            everydayHeroEyebrow = "EVERYDAY FINNISH",
+            everydayHeroTitle = "Build daily Finnish in two ways",
+            everydayHeroBody = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+            everydayLevelEyebrow = "FULL FINNISH PATH",
+            everydayChoosePractice = "CHOOSE PRACTICE",
+            everydayCardsBody = "Practise useful Finnish words and sentences with quick recall cards.",
+            everydayRoleplayBody = "Practise short real-life conversations with guided coaching and repair.",
+            everydayOpenTemplate = "Open {title} →"
         ),
         LearnLanguage.AR to LearnCopy(
             appTitle = "Floently Learn",
@@ -348,7 +388,17 @@ object LearnTranslations {
             languageSaved = "حفظ",
             privacySupportTitle = "المساعدة والدعم",
             privacySupportBody = "الدعم والاتصال",
-            backToLearn = "رجوع يتعلم"
+            backToLearn = "رجوع يتعلم",
+            everydayTitle = "Vocabulary & roleplay",
+            everydaySubtitle = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+            everydayHeroEyebrow = "EVERYDAY FINNISH",
+            everydayHeroTitle = "Build daily Finnish in two ways",
+            everydayHeroBody = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+            everydayLevelEyebrow = "FULL FINNISH PATH",
+            everydayChoosePractice = "CHOOSE PRACTICE",
+            everydayCardsBody = "Practise useful Finnish words and sentences with quick recall cards.",
+            everydayRoleplayBody = "Practise short real-life conversations with guided coaching and repair.",
+            everydayOpenTemplate = "Open {title} →"
         ),
         LearnLanguage.EN to LearnCopy(
             appTitle = "Floently Learn",
@@ -394,7 +444,17 @@ object LearnTranslations {
             languageSaved = "Save",
             privacySupportTitle = "Help and support",
             privacySupportBody = "Support and contact",
-            backToLearn = "Back Learn"
+            backToLearn = "Back Learn",
+            everydayTitle = "Vocabulary & roleplay",
+            everydaySubtitle = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+            everydayHeroEyebrow = "EVERYDAY FINNISH",
+            everydayHeroTitle = "Build daily Finnish in two ways",
+            everydayHeroBody = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+            everydayLevelEyebrow = "FULL FINNISH PATH",
+            everydayChoosePractice = "CHOOSE PRACTICE",
+            everydayCardsBody = "Practise useful Finnish words and sentences with quick recall cards.",
+            everydayRoleplayBody = "Practise short real-life conversations with guided coaching and repair.",
+            everydayOpenTemplate = "Open {title} →"
         ),
         LearnLanguage.SO to LearnCopy(
             appTitle = "Floently Learn",
@@ -440,7 +500,17 @@ object LearnTranslations {
             languageSaved = "Kaydi",
             privacySupportTitle = "Caawin iyo taageero",
             privacySupportBody = "Taageero iyo xiriir",
-            backToLearn = "Dib u noqo Baro"
+            backToLearn = "Dib u noqo Baro",
+            everydayTitle = "Vocabulary & roleplay",
+            everydaySubtitle = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+            everydayHeroEyebrow = "EVERYDAY FINNISH",
+            everydayHeroTitle = "Build daily Finnish in two ways",
+            everydayHeroBody = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+            everydayLevelEyebrow = "FULL FINNISH PATH",
+            everydayChoosePractice = "CHOOSE PRACTICE",
+            everydayCardsBody = "Practise useful Finnish words and sentences with quick recall cards.",
+            everydayRoleplayBody = "Practise short real-life conversations with guided coaching and repair.",
+            everydayOpenTemplate = "Open {title} →"
         ),
         LearnLanguage.FA to LearnCopy(
             appTitle = "Floently Learn",
@@ -486,7 +556,17 @@ object LearnTranslations {
             languageSaved = "ذخیره",
             privacySupportTitle = "کمک و پشتیبانی",
             privacySupportBody = "پشتیبانی و تماس",
-            backToLearn = "بازگشت یاد بگیرید"
+            backToLearn = "بازگشت یاد بگیرید",
+            everydayTitle = "Vocabulary & roleplay",
+            everydaySubtitle = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+            everydayHeroEyebrow = "EVERYDAY FINNISH",
+            everydayHeroTitle = "Build daily Finnish in two ways",
+            everydayHeroBody = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+            everydayLevelEyebrow = "FULL FINNISH PATH",
+            everydayChoosePractice = "CHOOSE PRACTICE",
+            everydayCardsBody = "Practise useful Finnish words and sentences with quick recall cards.",
+            everydayRoleplayBody = "Practise short real-life conversations with guided coaching and repair.",
+            everydayOpenTemplate = "Open {title} →"
         ),
         LearnLanguage.ZH to LearnCopy(
             appTitle = "Floently Learn",
@@ -532,7 +612,17 @@ object LearnTranslations {
             languageSaved = "保存",
             privacySupportTitle = "帮助和支持",
             privacySupportBody = "支持与联系",
-            backToLearn = "返回 学习"
+            backToLearn = "返回 学习",
+            everydayTitle = "Vocabulary & roleplay",
+            everydaySubtitle = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+            everydayHeroEyebrow = "EVERYDAY FINNISH",
+            everydayHeroTitle = "Build daily Finnish in two ways",
+            everydayHeroBody = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+            everydayLevelEyebrow = "FULL FINNISH PATH",
+            everydayChoosePractice = "CHOOSE PRACTICE",
+            everydayCardsBody = "Practise useful Finnish words and sentences with quick recall cards.",
+            everydayRoleplayBody = "Practise short real-life conversations with guided coaching and repair.",
+            everydayOpenTemplate = "Open {title} →"
         ),
         LearnLanguage.SQ to LearnCopy(
             appTitle = "Floently Learn",
@@ -578,7 +668,17 @@ object LearnTranslations {
             languageSaved = "Ruaj",
             privacySupportTitle = "Ndihmë dhe mbështetje",
             privacySupportBody = "Mbështetje dhe kontakt",
-            backToLearn = "Mbrapa Mësoni"
+            backToLearn = "Mbrapa Mësoni",
+            everydayTitle = "Vocabulary & roleplay",
+            everydaySubtitle = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+            everydayHeroEyebrow = "EVERYDAY FINNISH",
+            everydayHeroTitle = "Build daily Finnish in two ways",
+            everydayHeroBody = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+            everydayLevelEyebrow = "FULL FINNISH PATH",
+            everydayChoosePractice = "CHOOSE PRACTICE",
+            everydayCardsBody = "Practise useful Finnish words and sentences with quick recall cards.",
+            everydayRoleplayBody = "Practise short real-life conversations with guided coaching and repair.",
+            everydayOpenTemplate = "Open {title} →"
         ),
         LearnLanguage.KU to LearnCopy(
             appTitle = "Floently Learn",
@@ -624,7 +724,17 @@ object LearnTranslations {
             languageSaved = "Tomar bike",
             privacySupportTitle = "Alîkarî û piştgirî",
             privacySupportBody = "Piştgirî û têkilî",
-            backToLearn = "Veger Fêrbûn"
+            backToLearn = "Veger Fêrbûn",
+            everydayTitle = "Vocabulary & roleplay",
+            everydaySubtitle = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+            everydayHeroEyebrow = "EVERYDAY FINNISH",
+            everydayHeroTitle = "Build daily Finnish in two ways",
+            everydayHeroBody = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+            everydayLevelEyebrow = "FULL FINNISH PATH",
+            everydayChoosePractice = "CHOOSE PRACTICE",
+            everydayCardsBody = "Practise useful Finnish words and sentences with quick recall cards.",
+            everydayRoleplayBody = "Practise short real-life conversations with guided coaching and repair.",
+            everydayOpenTemplate = "Open {title} →"
         ),
         LearnLanguage.VI to LearnCopy(
             appTitle = "Floently Learn",
@@ -670,7 +780,17 @@ object LearnTranslations {
             languageSaved = "Lưu",
             privacySupportTitle = "Trợ giúp và hỗ trợ",
             privacySupportBody = "Hỗ trợ và liên hệ",
-            backToLearn = "Quay lại Học hỏi"
+            backToLearn = "Quay lại Học hỏi",
+            everydayTitle = "Vocabulary & roleplay",
+            everydaySubtitle = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+            everydayHeroEyebrow = "EVERYDAY FINNISH",
+            everydayHeroTitle = "Build daily Finnish in two ways",
+            everydayHeroBody = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+            everydayLevelEyebrow = "FULL FINNISH PATH",
+            everydayChoosePractice = "CHOOSE PRACTICE",
+            everydayCardsBody = "Practise useful Finnish words and sentences with quick recall cards.",
+            everydayRoleplayBody = "Practise short real-life conversations with guided coaching and repair.",
+            everydayOpenTemplate = "Open {title} →"
         ),
         LearnLanguage.BN to LearnCopy(
             appTitle = "Floently Learn",
@@ -716,7 +836,17 @@ object LearnTranslations {
             languageSaved = "সংরক্ষণ করুন",
             privacySupportTitle = "সাহায্য এবং সমর্থন",
             privacySupportBody = "সমর্থন এবং যোগাযোগ",
-            backToLearn = "ফিরে যান শিখুন"
+            backToLearn = "ফিরে যান শিখুন",
+            everydayTitle = "Vocabulary & roleplay",
+            everydaySubtitle = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+            everydayHeroEyebrow = "EVERYDAY FINNISH",
+            everydayHeroTitle = "Build daily Finnish in two ways",
+            everydayHeroBody = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+            everydayLevelEyebrow = "FULL FINNISH PATH",
+            everydayChoosePractice = "CHOOSE PRACTICE",
+            everydayCardsBody = "Practise useful Finnish words and sentences with quick recall cards.",
+            everydayRoleplayBody = "Practise short real-life conversations with guided coaching and repair.",
+            everydayOpenTemplate = "Open {title} →"
         ),
         LearnLanguage.TR to LearnCopy(
             appTitle = "Floently Learn",
@@ -762,7 +892,17 @@ object LearnTranslations {
             languageSaved = "Kaydet",
             privacySupportTitle = "Yardım ve destek",
             privacySupportBody = "Destek ve iletişim",
-            backToLearn = "Geri Öğrenmek"
+            backToLearn = "Geri Öğrenmek",
+            everydayTitle = "Vocabulary & roleplay",
+            everydaySubtitle = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+            everydayHeroEyebrow = "EVERYDAY FINNISH",
+            everydayHeroTitle = "Build daily Finnish in two ways",
+            everydayHeroBody = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+            everydayLevelEyebrow = "FULL FINNISH PATH",
+            everydayChoosePractice = "CHOOSE PRACTICE",
+            everydayCardsBody = "Practise useful Finnish words and sentences with quick recall cards.",
+            everydayRoleplayBody = "Practise short real-life conversations with guided coaching and repair.",
+            everydayOpenTemplate = "Open {title} →"
         ),
         LearnLanguage.TL to LearnCopy(
             appTitle = "Floently Learn",
@@ -808,7 +948,17 @@ object LearnTranslations {
             languageSaved = "I-save",
             privacySupportTitle = "Tulong at suporta",
             privacySupportBody = "Suporta at makipag-ugnayan",
-            backToLearn = "Bumalik Matuto"
+            backToLearn = "Bumalik Matuto",
+            everydayTitle = "Vocabulary & roleplay",
+            everydaySubtitle = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+            everydayHeroEyebrow = "EVERYDAY FINNISH",
+            everydayHeroTitle = "Build daily Finnish in two ways",
+            everydayHeroBody = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+            everydayLevelEyebrow = "FULL FINNISH PATH",
+            everydayChoosePractice = "CHOOSE PRACTICE",
+            everydayCardsBody = "Practise useful Finnish words and sentences with quick recall cards.",
+            everydayRoleplayBody = "Practise short real-life conversations with guided coaching and repair.",
+            everydayOpenTemplate = "Open {title} →"
         ),
         LearnLanguage.TH to LearnCopy(
             appTitle = "Floently Learn",
@@ -854,7 +1004,17 @@ object LearnTranslations {
             languageSaved = "บันทึก",
             privacySupportTitle = "ช่วยเหลือและสนับสนุน",
             privacySupportBody = "การสนับสนุนและการติดต่อ",
-            backToLearn = "กลับ เรียนรู้"
+            backToLearn = "กลับ เรียนรู้",
+            everydayTitle = "Vocabulary & roleplay",
+            everydaySubtitle = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+            everydayHeroEyebrow = "EVERYDAY FINNISH",
+            everydayHeroTitle = "Build daily Finnish in two ways",
+            everydayHeroBody = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+            everydayLevelEyebrow = "FULL FINNISH PATH",
+            everydayChoosePractice = "CHOOSE PRACTICE",
+            everydayCardsBody = "Practise useful Finnish words and sentences with quick recall cards.",
+            everydayRoleplayBody = "Practise short real-life conversations with guided coaching and repair.",
+            everydayOpenTemplate = "Open {title} →"
         ),
         LearnLanguage.NE to LearnCopy(
             appTitle = "Floently Learn",
@@ -900,7 +1060,17 @@ object LearnTranslations {
             languageSaved = "सुरक्षित गर्नुहोस्",
             privacySupportTitle = "मद्दत र समर्थन",
             privacySupportBody = "समर्थन र सम्पर्क गर्नुहोस्",
-            backToLearn = "फिर्ता सिक्नुहोस्"
+            backToLearn = "फिर्ता सिक्नुहोस्",
+            everydayTitle = "Vocabulary & roleplay",
+            everydaySubtitle = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+            everydayHeroEyebrow = "EVERYDAY FINNISH",
+            everydayHeroTitle = "Build daily Finnish in two ways",
+            everydayHeroBody = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+            everydayLevelEyebrow = "FULL FINNISH PATH",
+            everydayChoosePractice = "CHOOSE PRACTICE",
+            everydayCardsBody = "Practise useful Finnish words and sentences with quick recall cards.",
+            everydayRoleplayBody = "Practise short real-life conversations with guided coaching and repair.",
+            everydayOpenTemplate = "Open {title} →"
         ),
         LearnLanguage.ES to LearnCopy(
             appTitle = "Floently Learn",
@@ -946,7 +1116,17 @@ object LearnTranslations {
             languageSaved = "Guardar",
             privacySupportTitle = "Ayuda y soporte",
             privacySupportBody = "Soporte y contacto",
-            backToLearn = "Atrás Aprender"
+            backToLearn = "Atrás Aprender",
+            everydayTitle = "Vocabulary & roleplay",
+            everydaySubtitle = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+            everydayHeroEyebrow = "EVERYDAY FINNISH",
+            everydayHeroTitle = "Build daily Finnish in two ways",
+            everydayHeroBody = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+            everydayLevelEyebrow = "FULL FINNISH PATH",
+            everydayChoosePractice = "CHOOSE PRACTICE",
+            everydayCardsBody = "Practise useful Finnish words and sentences with quick recall cards.",
+            everydayRoleplayBody = "Practise short real-life conversations with guided coaching and repair.",
+            everydayOpenTemplate = "Open {title} →"
         ),
         LearnLanguage.UR to LearnCopy(
             appTitle = "Floently Learn",
@@ -992,7 +1172,17 @@ object LearnTranslations {
             languageSaved = "محفوظ کریں",
             privacySupportTitle = "مدد اور حمایت",
             privacySupportBody = "سپورٹ اور رابطہ کریں۔",
-            backToLearn = "واپس سیکھیں۔"
+            backToLearn = "واپس سیکھیں۔",
+            everydayTitle = "Vocabulary & roleplay",
+            everydaySubtitle = "Choose cards for fast recall or guided roleplay for everyday conversations.",
+            everydayHeroEyebrow = "EVERYDAY FINNISH",
+            everydayHeroTitle = "Build daily Finnish in two ways",
+            everydayHeroBody = "Start with cards when you need vocabulary support. Switch to roleplay when you want spoken practice.",
+            everydayLevelEyebrow = "FULL FINNISH PATH",
+            everydayChoosePractice = "CHOOSE PRACTICE",
+            everydayCardsBody = "Practise useful Finnish words and sentences with quick recall cards.",
+            everydayRoleplayBody = "Practise short real-life conversations with guided coaching and repair.",
+            everydayOpenTemplate = "Open {title} →"
         )
     )
 }
