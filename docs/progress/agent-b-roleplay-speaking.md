@@ -3,7 +3,19 @@
 Branch: `m01/production-native-foundation`
 Repo: `galapoto/floently-native`
 
-## Completed in this pass
+## Latest update after shared i18n fix
+
+Agent E fixed the shared Everyday i18n build blocker and pushed `b0e26f4`. Agent B then continued inside owned Roleplay/Speaking files.
+
+Completed in the latest Agent B pass:
+
+- Expanded fallback Roleplay scenario coverage from sparse one-card coverage to multiple practical scenarios across A1, A2, B1, and B2.
+- Added target phrase lists for fallback scenarios so the scenario header/recorded response flow has real learner support content.
+- Unlocked the B2 professional phone call because native speech capture now exists; no placeholder locked speaking path remains in the fallback dataset.
+- Preserved `RoleplayRepository`, `RoleplayService`, and existing AI/backend handoff behavior.
+- Kept all changes inside Agent B-owned Roleplay/progress scope.
+
+## Earlier completed work
 
 - Updated `RoleplayScreen.kt` to preserve the existing repository/service AI flow while adding a native Android speech-recognition path for speaking practice.
 - Added real microphone permission handling through the existing Android `RECORD_AUDIO` permission and Compose permission launcher.
@@ -21,7 +33,10 @@ Repo: `galapoto/floently-native`
 - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/roleplay/RoleplayScreen.kt`
 - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/roleplay/RoleplaySpeakingComponents.kt`
 - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/roleplay/RoleplayDashboardComponents.kt`
+- `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/roleplay/RoleplayRepository.kt`
 - `docs/progress/agent-b-i18n-requests.md`
+- `docs/progress/agent-b-roleplay-speaking.md`
+- `docs/progress/agent-b-blocked-by-shared-i18n.md`
 
 ## Build status
 
@@ -36,6 +51,7 @@ ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./script
 ## QA focus for device pass
 
 - Open Roleplay dashboard and confirm level tabs render.
+- Confirm A1/A2/B1/B2 each show multiple practical scenarios where expected.
 - Start an unlocked scenario.
 - Confirm conversation transcript bubbles still render and partner messages still expose TTS.
 - Tap mic, grant permission, speak a short Finnish answer, confirm transcript appears.
