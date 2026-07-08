@@ -229,3 +229,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - E: added multi-agent Android parity handover and copy-paste prompts.
 
 - M31 device QA found release blockers: Cards backend/card-bank behavior, Roleplay 404/backend/topics/A1-C2 flow, YKI Mock A1-C2 levels, global theme toggle, and full 21-language i18n catalog wiring.
+
+- M32 started final Android parity finish after M31 debug/release integration gate passed; remaining blockers are Cards backend behavior, Roleplay backend/topics/flow, YKI level/material parity, Professional polish, theme, and full i18n.
