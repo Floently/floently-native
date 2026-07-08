@@ -9,6 +9,15 @@ enum class ProfessionalFinnishDomain {
     SmallTalk
 }
 
+enum class ProfessionalFinnishLevel {
+    A1,
+    A2,
+    B1,
+    B2,
+    C1,
+    C2
+}
+
 enum class ProfessionalFinnishScenarioType {
     PhrasePractice,
     DialoguePractice,
@@ -23,6 +32,7 @@ data class ProfessionalFinnishModule(
     val domain: ProfessionalFinnishDomain,
     val description: String,
     val estimatedMinutes: Int,
+    val cefrLevel: ProfessionalFinnishLevel,
     val locked: Boolean
 )
 
