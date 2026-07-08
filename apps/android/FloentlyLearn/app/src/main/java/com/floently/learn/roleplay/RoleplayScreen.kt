@@ -1,19 +1,21 @@
 package com.floently.learn.roleplay
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.speech.tts.TextToSpeech
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +41,8 @@ import com.floently.shared.design.FloentlyScreen
 import java.util.Locale
 import kotlinx.coroutines.launch
 
+private const val RoleplayUiTargetTurns = 5
+
 internal enum class RoleplaySpeechPhase {
     Idle,
     Listening,
@@ -59,6 +63,7 @@ fun RoleplayScreen(
     var dashboardState by remember { mutableStateOf<RoleplayDashboardState?>(null) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var activeSession by remember { mutableStateOf<RoleplaySession?>(null) }
+    var autoStartedLevel by remember { mutableStateOf<RoleplayLevel?>(null) }
 
     fun startScenario(scenario: RoleplayScenario) {
         if (scenario.locked) {
@@ -88,9 +93,22 @@ fun RoleplayScreen(
         )
     } else {
         LaunchedEffect(repository, selectedLevel) {
+            autoStartedLevel = null
             val dashboard = repository.dashboard(selectedLevel)
             dashboardState = dashboard
             statusMessage = dashboard.errorMessage
+        }
+
+        LaunchedEffect(dashboardState, selectedLevel, activeSession) {
+            val dashboard = dashboardState ?: return@LaunchedEffect
+            if (activeSession == null && autoStartedLevel != selectedLevel) {
+                val scenario = dashboard.scenarios.firstOrNull { !it.locked && it.recommended }
+                    ?: dashboard.scenarios.firstOrNull { !it.locked }
+                if (scenario != null) {
+                    autoStartedLevel = selectedLevel
+                    startScenario(scenario)
+                }
+            }
         }
 
         FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
@@ -107,7 +125,7 @@ fun RoleplayScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Practice realistic Finnish conversations with backend/generated topics, speech capture, transcript review, and integrated coaching.",
+                    text = "Opening Roleplay starts a generated Finnish conversation automatically. Listen, tap the mic, answer five times, then download the conversation.",
                     color = palette.muted,
                     style = MaterialTheme.typography.titleMedium
                 )
@@ -131,7 +149,7 @@ fun RoleplayScreen(
                 if (dashboard == null || dashboard.isLoading) {
                     RoleplayStatusCard(
                         title = "Loading conversations…",
-                        body = "Loading ${selectedLevel.displayName} practice topics.",
+                        body = "Loading ${selectedLevel.displayName} generated speaking topics.",
                         palette = palette
                     )
                 } else if (dashboard.scenarios.isEmpty()) {
@@ -145,7 +163,7 @@ fun RoleplayScreen(
                         ?: dashboard.scenarios.firstOrNull { !it.locked }
                     recommended?.let { scenario ->
                         FloentlyPrimaryButton(
-                            title = "Start recommended ${dashboard.selectedLevel.displayName} roleplay",
+                            title = "Restart recommended ${dashboard.selectedLevel.displayName} roleplay",
                             product = FloentlyProduct.Learn,
                             onClick = { startScenario(scenario) }
                         )
@@ -181,12 +199,54 @@ private fun RoleplaySessionScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val concluded = session.learnerTurns >= RoleplayUiTargetTurns
     var reply by remember(session.id, session.learnerTurns) { mutableStateOf("") }
     var recordedText by remember(session.id, session.learnerTurns) { mutableStateOf("") }
     var statusMessage by remember(session.id, session.learnerTurns) { mutableStateOf<String?>(null) }
     var speechPhase by remember(session.id, session.learnerTurns) { mutableStateOf(RoleplaySpeechPhase.Idle) }
     var hasAudioPermission by remember {
         mutableStateOf(context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
+    }
+    var spokenMessageId by remember(session.id) { mutableStateOf<String?>(null) }
+    var ttsReady by remember { mutableStateOf(false) }
+    var ttsEngine by remember { mutableStateOf<TextToSpeech?>(null) }
+
+    val pdfExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri: Uri? ->
+        uri?.let {
+            writeRoleplayExport(context, it, roleplayPdfBytes(session))
+            statusMessage = "PDF conversation download saved."
+        }
+    }
+    val wordExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/msword")) { uri: Uri? ->
+        uri?.let {
+            writeRoleplayExport(context, it, roleplayWordBytes(session))
+            statusMessage = "Word conversation download saved."
+        }
+    }
+
+    DisposableEffect(context) {
+        val engine = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                ttsReady = true
+                ttsEngine?.language = Locale.forLanguageTag("fi-FI")
+            }
+        }
+        ttsEngine = engine
+        onDispose {
+            engine.stop()
+            engine.shutdown()
+            ttsEngine = null
+        }
+    }
+
+    LaunchedEffect(ttsReady, session.id, session.messages.size) {
+        if (ttsReady) {
+            val aiMessage = session.messages.lastOrNull { it.speaker == RoleplaySpeaker.Partner || it.speaker == RoleplaySpeaker.Coach }
+            if (aiMessage != null && aiMessage.id != spokenMessageId) {
+                spokenMessageId = aiMessage.id
+                ttsEngine?.speak(aiMessage.text, TextToSpeech.QUEUE_FLUSH, null, aiMessage.id)
+            }
+        }
     }
 
     val speechAvailable = remember(context) { SpeechRecognizer.isRecognitionAvailable(context) }
@@ -202,12 +262,50 @@ private fun RoleplaySessionScreen(
         }
     }
 
+    fun submitReply(rawText: String) {
+        val cleanReply = rawText.trim()
+        if (cleanReply.isBlank()) {
+            statusMessage = "Speak or write a short Finnish answer before sending."
+            return
+        }
+        if (concluded) {
+            statusMessage = "Conversation complete. Download the PDF or Word document/book."
+            return
+        }
+        speechPhase = RoleplaySpeechPhase.Processing
+        statusMessage = "Sending transcription to the conversation…"
+        scope.launch {
+            when (val result = repository.sendLearnerMessage(session, cleanReply)) {
+                is RoleplaySessionResult.Ready -> {
+                    reply = ""
+                    recordedText = ""
+                    speechPhase = RoleplaySpeechPhase.Idle
+                    statusMessage = if (result.session.learnerTurns >= RoleplayUiTargetTurns) {
+                        "Conversation complete. Final AI response is ready. Download PDF or Word."
+                    } else {
+                        null
+                    }
+                    onSessionChange(result.session)
+                }
+                is RoleplaySessionResult.Blocked -> {
+                    speechPhase = RoleplaySpeechPhase.Ready
+                    statusMessage = result.reason
+                }
+                is RoleplaySessionResult.Error -> {
+                    speechPhase = RoleplaySpeechPhase.Error
+                    statusMessage = result.message
+                }
+            }
+        }
+    }
+
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         hasAudioPermission = granted
-        if (granted && speechRecognizer != null) {
+        if (granted && speechRecognizer != null && !concluded) {
             recordedText = ""
             speechPhase = RoleplaySpeechPhase.Listening
             statusMessage = null
+            ttsEngine?.stop()
             speechRecognizer.startListening(speechIntent)
         } else if (!granted) {
             speechPhase = RoleplaySpeechPhase.Error
@@ -215,11 +313,11 @@ private fun RoleplaySessionScreen(
         }
     }
 
-    DisposableEffect(speechRecognizer) {
+    DisposableEffect(speechRecognizer, session.id, session.learnerTurns) {
         val listener = object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) {
                 speechPhase = RoleplaySpeechPhase.Listening
-                statusMessage = "Listening… speak one clear Finnish answer."
+                statusMessage = "Listening… press the mic again to stop and send."
             }
 
             override fun onBeginningOfSpeech() {
@@ -231,7 +329,7 @@ private fun RoleplaySessionScreen(
 
             override fun onEndOfSpeech() {
                 speechPhase = RoleplaySpeechPhase.Processing
-                statusMessage = "Preparing your recorded answer…"
+                statusMessage = "Preparing transcription…"
             }
 
             override fun onError(error: Int) {
@@ -248,7 +346,8 @@ private fun RoleplaySessionScreen(
                     recordedText = transcript
                     reply = transcript
                     speechPhase = RoleplaySpeechPhase.Ready
-                    statusMessage = "Recorded response captured. Review it, edit if needed, then send."
+                    statusMessage = "Transcribed and sending…"
+                    submitReply(transcript)
                 }
             }
 
@@ -269,6 +368,10 @@ private fun RoleplaySessionScreen(
     }
 
     fun startSpeech() {
+        if (concluded) {
+            statusMessage = "Conversation complete. Download the PDF or Word document/book."
+            return
+        }
         if (speechRecognizer == null) {
             speechPhase = RoleplaySpeechPhase.Unavailable
             statusMessage = "Speech recognition is not available on this device. Type your response instead."
@@ -281,6 +384,7 @@ private fun RoleplaySessionScreen(
         recordedText = ""
         speechPhase = RoleplaySpeechPhase.Listening
         statusMessage = null
+        ttsEngine?.stop()
         speechRecognizer.cancel()
         speechRecognizer.startListening(speechIntent)
     }
@@ -288,7 +392,7 @@ private fun RoleplaySessionScreen(
     fun stopSpeech() {
         speechRecognizer?.stopListening()
         speechPhase = RoleplaySpeechPhase.Processing
-        statusMessage = "Preparing your recorded answer…"
+        statusMessage = "Stopping recording and sending transcription…"
     }
 
     fun clearSpeech() {
@@ -314,7 +418,7 @@ private fun RoleplaySessionScreen(
             )
 
             OldSourceRoleplaySessionProgressCard(
-                turns = session.learnerTurns,
+                turns = minOf(session.learnerTurns, RoleplayUiTargetTurns),
                 repeatedCueCount = session.repeatedCueCount,
                 palette = palette
             )
@@ -329,14 +433,15 @@ private fun RoleplaySessionScreen(
             OldSourceRoleplayMicPanel(
                 phase = speechPhase,
                 recordedText = recordedText,
-                speechAvailable = speechAvailable,
+                speechAvailable = speechAvailable && !concluded,
+                concluded = concluded,
                 palette = palette,
                 onStart = ::startSpeech,
                 onStop = ::stopSpeech,
                 onClear = ::clearSpeech
             )
 
-            if (recordedText.isNotBlank()) {
+            if (recordedText.isNotBlank() && !concluded) {
                 OldSourceRecordedResponseCard(
                     recordedText = recordedText,
                     palette = palette,
@@ -346,50 +451,48 @@ private fun RoleplaySessionScreen(
 
             FloentlyCard(product = FloentlyProduct.Learn) {
                 Text(
-                    text = "Your response",
+                    text = if (concluded) "Conversation complete" else "Your response",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                OutlinedTextField(
-                    value = reply,
-                    onValueChange = { reply = it },
-                    label = { Text("Speak or write in Finnish") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Text(
-                    text = "Tip: one clear sentence is enough. Example: Kiitos, se sopii hyvin.",
-                    style = MaterialTheme.typography.bodySmall
-                )
+                if (concluded) {
+                    Text(
+                        text = "You completed ${RoleplayUiTargetTurns} user responses. The final AI response concludes the interaction. Download a PDF or Word document/book below.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    FloentlyPrimaryButton(
+                        title = "Download PDF",
+                        product = FloentlyProduct.Learn,
+                        onClick = { pdfExportLauncher.launch("floently-roleplay-${session.id}.pdf") }
+                    )
+                    FloentlyPrimaryButton(
+                        title = "Download Word document",
+                        product = FloentlyProduct.Learn,
+                        onClick = { wordExportLauncher.launch("floently-roleplay-${session.id}.doc") }
+                    )
+                } else {
+                    OutlinedTextField(
+                        value = reply,
+                        onValueChange = { reply = it },
+                        label = { Text("Speech transcription / typed fallback") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        text = "Old flow: AI speaks automatically, tap mic to speak, tap mic again to stop and send.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    FloentlyPrimaryButton(
+                        title = "Send typed fallback",
+                        product = FloentlyProduct.Learn,
+                        onClick = { submitReply(reply) }
+                    )
+                }
                 statusMessage?.let { message ->
                     Text(
                         text = message,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
-                FloentlyPrimaryButton(
-                    title = "Send response",
-                    product = FloentlyProduct.Learn,
-                    onClick = {
-                        val cleanReply = reply.trim()
-                        if (cleanReply.isBlank()) {
-                            statusMessage = "Speak or write a short Finnish answer before sending."
-                        } else {
-                            scope.launch {
-                                when (val result = repository.sendLearnerMessage(session, cleanReply)) {
-                                    is RoleplaySessionResult.Ready -> {
-                                        reply = ""
-                                        recordedText = ""
-                                        speechPhase = RoleplaySpeechPhase.Idle
-                                        statusMessage = null
-                                        onSessionChange(result.session)
-                                    }
-                                    is RoleplaySessionResult.Blocked -> statusMessage = result.reason
-                                    is RoleplaySessionResult.Error -> statusMessage = result.message
-                                }
-                            }
-                        }
-                    }
-                )
             }
         }
     }
@@ -412,4 +515,99 @@ private fun roleplaySpeechErrorMessage(error: Int): String = when (error) {
     SpeechRecognizer.ERROR_SERVER -> "Speech recognition service is temporarily unavailable. Type your answer for now."
     SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech was detected. Tap the mic and answer with one clear Finnish sentence."
     else -> "Speech recognition stopped. Try again or type your answer."
+}
+
+private fun writeRoleplayExport(context: Context, uri: Uri, bytes: ByteArray) {
+    context.contentResolver.openOutputStream(uri)?.use { output ->
+        output.write(bytes)
+    }
+}
+
+private fun roleplayExportLines(session: RoleplaySession): List<String> = buildList {
+    add("Floently Roleplay Conversation")
+    add("Topic: ${session.scenario.title}")
+    add("Level: ${session.scenario.level.displayName}")
+    add("Turns: ${session.learnerTurns}/$RoleplayUiTargetTurns")
+    add("")
+    session.messages.forEach { message ->
+        val speaker = when (message.speaker) {
+            RoleplaySpeaker.Learner -> "User"
+            RoleplaySpeaker.Partner -> "AI speaker"
+            RoleplaySpeaker.Coach -> "Coach"
+        }
+        add("$speaker: ${message.text}")
+        message.coachingNote?.takeIf { it.isNotBlank() }?.let { note -> add("Coach note: $note") }
+        add("")
+    }
+    add("Conclusion: conversation completed after five user responses.")
+}
+
+private fun roleplayWordBytes(session: RoleplaySession): ByteArray {
+    val body = roleplayExportLines(session).joinToString("\\par\n") { it.rtfEscaped() }
+    return "{\\rtf1\\ansi\\deff0{\\fonttbl{\\f0 Arial;}}\\fs24 $body}".toByteArray(Charsets.UTF_8)
+}
+
+private fun roleplayPdfBytes(session: RoleplaySession): ByteArray {
+    val lines = roleplayExportLines(session).flatMap { it.wrapForPdf(82) }.take(52)
+    val textCommands = buildString {
+        append("BT /F1 10 Tf 40 790 Td 13 TL\n")
+        lines.forEach { line -> append("(${line.pdfEscaped()}) Tj T*\n") }
+        append("ET")
+    }
+    val objects = listOf(
+        "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
+        "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
+        "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n",
+        "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
+        "5 0 obj\n<< /Length ${textCommands.toByteArray(Charsets.ISO_8859_1).size} >>\nstream\n$textCommands\nendstream\nendobj\n"
+    )
+    val header = "%PDF-1.4\n"
+    val body = StringBuilder(header)
+    val offsets = mutableListOf(0)
+    objects.forEach { obj ->
+        offsets.add(body.toString().toByteArray(Charsets.ISO_8859_1).size)
+        body.append(obj)
+    }
+    val xrefStart = body.toString().toByteArray(Charsets.ISO_8859_1).size
+    body.append("xref\n0 ${objects.size + 1}\n")
+    body.append("0000000000 65535 f \n")
+    offsets.drop(1).forEach { offset -> body.append(offset.toString().padStart(10, '0')).append(" 00000 n \n") }
+    body.append("trailer\n<< /Size ${objects.size + 1} /Root 1 0 R >>\nstartxref\n$xrefStart\n%%EOF")
+    return body.toString().toByteArray(Charsets.ISO_8859_1)
+}
+
+private fun String.wrapForPdf(width: Int): List<String> {
+    if (length <= width) return listOf(this)
+    val words = split(" ")
+    val lines = mutableListOf<String>()
+    var current = ""
+    words.forEach { word ->
+        current = if (current.isBlank()) {
+            word
+        } else if (current.length + word.length + 1 <= width) {
+            "$current $word"
+        } else {
+            lines.add(current)
+            word
+        }
+    }
+    if (current.isNotBlank()) lines.add(current)
+    return lines
+}
+
+private fun String.pdfEscaped(): String = replace("\\", "\\\\")
+    .replace("(", "\\(")
+    .replace(")", "\\)")
+    .replace(Regex("\\s+"), " ")
+
+private fun String.rtfEscaped(): String = buildString {
+    this@rtfEscaped.forEach { ch ->
+        when (ch) {
+            '\\' -> append("\\\\")
+            '{' -> append("\\{")
+            '}' -> append("\\}")
+            '\n' -> append("\\par ")
+            else -> if (ch.code < 128) append(ch) else append("\\u${ch.code}?")
+        }
+    }
 }
