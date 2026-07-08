@@ -394,7 +394,7 @@ private fun StrictPracticeSession(
             modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            StrictRecallButton("↶ Recall", palette, onClick = {})
+            StrictRecallButton("↶ Recall", palette, onClick = { showBack = false })
             Spacer(modifier = Modifier.weight(1f))
             Text(
                 text = header,
@@ -403,7 +403,7 @@ private fun StrictPracticeSession(
                 fontWeight = FontWeight.Black
             )
             Spacer(modifier = Modifier.weight(1f))
-            StrictRecallButton("Recall ↷", palette, onClick = {})
+            StrictRecallButton("Recall ↷", palette, onClick = { showBack = true })
         }
 
         Box(
@@ -519,7 +519,7 @@ private fun StrictPracticeSession(
                             )
                             Spacer(modifier = Modifier.weight(1f))
                             StrictPrimaryCardAction(
-                                text = if (showBack) "Check" else "↻",
+                                text = if (showBack) "Show question" else "Show answer",
                                 palette = palette,
                                 active = true,
                                 onClick = { showBack = !showBack }

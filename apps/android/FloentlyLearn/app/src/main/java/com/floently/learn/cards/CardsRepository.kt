@@ -21,10 +21,11 @@ class ServiceCardsRepository(
     override suspend fun dashboard(selectedDeckType: CardsDeckType): CardsDashboardState {
         return runCatching {
             val dashboard = service.dashboard(selectedDeckType)
+            val realMaterialAvailable = dashboard.hasRealBackendMaterial()
             dashboard.copy(
                 selectedDeckType = selectedDeckType,
                 errorMessage = dashboard.errorMessage?.takeIf { it.isNotBlank() }
-                    ?: if (dashboard.decks.isEmpty()) {
+                    ?: if (!realMaterialAvailable) {
                         "Cards backend returned no real card-bank material for ${selectedDeckType.name}."
                     } else {
                         null
@@ -48,7 +49,12 @@ class ServiceCardsRepository(
 
     override suspend fun startSession(deckId: String, mode: CardsPracticeMode): CardsSessionResult {
         return runCatching {
-            CardsSessionResult.Ready(service.startSession(deckId, mode))
+            val session = service.startSession(deckId, mode)
+            if (session.cards.isEmpty()) {
+                CardsSessionResult.Error("Cards backend returned no question/answer material for this real card-bank session.")
+            } else {
+                CardsSessionResult.Ready(session)
+            }
         }.getOrElse { error ->
             CardsSessionResult.Error(
                 backendError(
@@ -125,6 +131,19 @@ class ServiceCardsRepository(
                 "Strong recall. Keep this deck in spaced review."
             }
         )
+    }
+
+    private fun CardsDashboardState.hasRealBackendMaterial(): Boolean {
+        val hasDeckMaterial = decks.any { deck ->
+            !deck.locked && (deck.totalCards > 0 || deck.dueCards > 0)
+        }
+        val hasBankMaterial = banks.any { bank ->
+            bank.deckCount > 0 || bank.dueCards > 0
+        }
+        val hasBucketMaterial =
+            buckets.difficult.isNotEmpty() || buckets.learned.isNotEmpty() || buckets.learning.isNotEmpty()
+
+        return hasDeckMaterial || hasBankMaterial || hasBucketMaterial
     }
 
     private fun backendError(prefix: String, error: Throwable): String {
