@@ -26,6 +26,11 @@ internal data class YkiPracticeBankTask(
     val bankSource: String = "native-yki-practice-bank"
 )
 internal object YkiPracticeBank {
+    const val authority: String = "screenshot_locked_yki_practice_bank"
+    const val sourceId: String = "native_yki_practice_bank_img_0409_0431"
+    const val materialLayer: String = "old_source_screenshot_locked_practice_material"
+    const val lockedTaskCount: Int = 19
+
     fun practiceTasks(): List<YkiPracticeBankTask> = listOf(
     YkiPracticeBankTask(
         screenshot = "IMG_0410-IMG_0411",
