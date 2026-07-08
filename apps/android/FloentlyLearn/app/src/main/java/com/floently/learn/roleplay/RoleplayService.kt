@@ -58,16 +58,18 @@ class RoleplayService(private val api: FloentlyApiClient) {
     }
 
     private fun scenarioFromJson(json: JSONObject, fallbackLevel: RoleplayLevel): RoleplayScenario {
+        val level = levelFromApi(json.optString("level"), fallbackLevel)
         return RoleplayScenario(
             id = json.optString("id").ifBlank { "roleplay-scenario" },
             title = json.optString("title").ifBlank { "Roleplay" },
-            level = levelFromApi(json.optString("level"), fallbackLevel),
+            level = level,
             type = scenarioTypeFromApi(json.optString("type")),
             description = json.optString("description").ifBlank { "Practice Finnish conversation." },
             openingLine = json.optString("opening_line").ifBlank { json.optString("openingLine").ifBlank { "Hei!" } },
             targetPhrases = stringList(json.optJSONArray("target_phrases")),
-            beginnerSafe = json.optBoolean("beginner_safe", fallbackLevel == RoleplayLevel.A1 || fallbackLevel == RoleplayLevel.A2),
-            locked = json.optBoolean("locked", false)
+            beginnerSafe = json.optBoolean("beginner_safe", level == RoleplayLevel.A1 || level == RoleplayLevel.A2),
+            locked = json.optBoolean("locked", false),
+            coachingMode = coachingModeFromApi(json.optString("coaching_mode"), level)
         )
     }
 
@@ -95,6 +97,19 @@ class RoleplayService(private val api: FloentlyApiClient) {
         "phone_call", "phonecall", "phone" -> RoleplayScenarioType.PhoneCall
         "service" -> RoleplayScenarioType.Service
         else -> RoleplayScenarioType.Everyday
+    }
+
+    private fun coachingModeFromApi(value: String?, fallbackLevel: RoleplayLevel): RoleplayCoachingMode = when (value?.trim()?.lowercase()) {
+        "beginner_safe", "beginnersafe", "beginner" -> RoleplayCoachingMode.BeginnerSafe
+        "professional", "work" -> RoleplayCoachingMode.Professional
+        "exam_style", "examstyle", "exam" -> RoleplayCoachingMode.ExamStyle
+        "natural" -> RoleplayCoachingMode.Natural
+        else -> when (fallbackLevel) {
+            RoleplayLevel.A1,
+            RoleplayLevel.A2 -> RoleplayCoachingMode.BeginnerSafe
+            RoleplayLevel.B1 -> RoleplayCoachingMode.Natural
+            RoleplayLevel.B2 -> RoleplayCoachingMode.Professional
+        }
     }
 
     private fun speakerFromApi(value: String?): RoleplaySpeaker = when (value?.trim()?.lowercase()) {
