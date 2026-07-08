@@ -42,7 +42,6 @@ import androidx.compose.ui.unit.sp
 import com.floently.learn.i18n.LearnCopy
 import com.floently.learn.navigation.LearnFeatureDestination
 import com.floently.shared.design.FloentlyPalette
-import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
 import com.floently.shared.design.FloentlyScreen
@@ -57,6 +56,7 @@ fun ProfessionalFinnishScreen(
 ) {
     val scope = rememberCoroutineScope()
     var selectedDomain by remember { mutableStateOf(ProfessionalFinnishDomain.Healthcare) }
+    var selectedLevel by remember { mutableStateOf<ProfessionalFinnishLevel?>(null) }
     var dashboardState by remember { mutableStateOf<ProfessionalFinnishDashboardState?>(null) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var activeSession by remember { mutableStateOf<ProfessionalFinnishSession?>(null) }
@@ -96,21 +96,35 @@ fun ProfessionalFinnishScreen(
                 )
 
                 ProfessionalRouteHeader(palette = palette)
-                ProfessionalLevelPathStrip(palette = palette)
+                ProfessionalLevelPathStrip(
+                    selectedLevel = selectedLevel,
+                    palette = palette,
+                    onSelect = { level ->
+                        selectedLevel = level
+                        statusMessage = if (level == null) {
+                            "Showing every level in ${selectedDomain.displayName()}."
+                        } else {
+                            "Showing ${level.name} ${level.shortDescription()} modules in ${selectedDomain.displayName()}."
+                        }
+                    }
+                )
                 ProfessionalPracticeHub(
                     palette = palette,
                     onRoleplay = { onDestinationSelected(LearnFeatureDestination.Roleplay) },
                     onCards = { onDestinationSelected(LearnFeatureDestination.Cards) },
                     onInterview = {
                         selectedDomain = ProfessionalFinnishDomain.JobSearch
+                        selectedLevel = ProfessionalFinnishLevel.B1
                         statusMessage = "Interview practice opened. Choose a job-search module below."
                     },
                     onSpeech = {
                         selectedDomain = ProfessionalFinnishDomain.CustomerService
+                        selectedLevel = ProfessionalFinnishLevel.A2
                         statusMessage = "Speech and phone-call practice opened. Choose a phone or customer-service module below."
                     },
                     onReport = {
                         selectedDomain = ProfessionalFinnishDomain.Office
+                        selectedLevel = ProfessionalFinnishLevel.B2
                         statusMessage = "Report writing opened. Choose an office/report module below."
                     }
                 )
@@ -123,6 +137,23 @@ fun ProfessionalFinnishScreen(
                     }
                 )
 
+                val dashboard = dashboardState
+                if (dashboard != null && !dashboard.isLoading) {
+                    val visibleModules = dashboard.modules.filter { module ->
+                        selectedLevel == null || module.cefrLevel == selectedLevel
+                    }
+                    val visibleScenarioCount = visibleModules.sumOf { module ->
+                        dashboard.progress.firstOrNull { it.moduleId == module.id }?.totalScenarios ?: 0
+                    }
+                    ProfessionalPathSummaryCard(
+                        domain = selectedDomain,
+                        selectedLevel = selectedLevel,
+                        moduleCount = visibleModules.size,
+                        scenarioCount = visibleScenarioCount,
+                        palette = palette
+                    )
+                }
+
                 statusMessage?.let { message ->
                     ProfessionalStatusCard(
                         title = "Notice",
@@ -131,40 +162,50 @@ fun ProfessionalFinnishScreen(
                     )
                 }
 
-                val dashboard = dashboardState
                 if (dashboard == null || dashboard.isLoading) {
                     ProfessionalStatusCard(
                         title = "Loading workplace Finnish…",
                         body = "Loading ${selectedDomain.displayName()} exercises.",
                         palette = palette
                     )
-                } else if (dashboard.modules.isEmpty()) {
-                    ProfessionalStatusCard(
-                        title = "No modules yet",
-                        body = "Choose another workplace area or come back later when new exercises have been added.",
-                        palette = palette
-                    )
                 } else {
-                    dashboard.modules.forEach { module ->
-                        val progress = dashboard.progress.firstOrNull { it.moduleId == module.id }
-                        ProfessionalModuleCard(
-                            module = module,
-                            progress = progress,
-                            palette = palette,
-                            actionLabel = if (module.locked) "Locked" else "Open ${module.cefrLevel.name} practice",
-                            onClick = {
-                                scope.launch {
-                                    when (val result = repository.startSession(module.id)) {
-                                        is ProfessionalFinnishSessionResult.Ready -> {
-                                            statusMessage = null
-                                            activeSession = result.session
+                    val visibleModules = dashboard.modules.filter { module ->
+                        selectedLevel == null || module.cefrLevel == selectedLevel
+                    }
+                    when {
+                        dashboard.modules.isEmpty() -> ProfessionalStatusCard(
+                            title = "No modules yet",
+                            body = "Choose another workplace area or come back later when new exercises have been added.",
+                            palette = palette
+                        )
+
+                        visibleModules.isEmpty() -> ProfessionalStatusCard(
+                            title = "No ${selectedLevel?.name ?: "level"} module in this area yet",
+                            body = "Use All levels or choose another workplace area. The full A1-C2 path is still visible above.",
+                            palette = palette
+                        )
+
+                        else -> visibleModules.forEach { module ->
+                            val progress = dashboard.progress.firstOrNull { it.moduleId == module.id }
+                            ProfessionalModuleCard(
+                                module = module,
+                                progress = progress,
+                                palette = palette,
+                                actionLabel = if (module.locked) "Locked" else "Open ${module.cefrLevel.name} practice",
+                                onClick = {
+                                    scope.launch {
+                                        when (val result = repository.startSession(module.id)) {
+                                            is ProfessionalFinnishSessionResult.Ready -> {
+                                                statusMessage = null
+                                                activeSession = result.session
+                                            }
+                                            is ProfessionalFinnishSessionResult.Blocked -> statusMessage = result.reason
+                                            is ProfessionalFinnishSessionResult.Error -> statusMessage = result.message
                                         }
-                                        is ProfessionalFinnishSessionResult.Blocked -> statusMessage = result.reason
-                                        is ProfessionalFinnishSessionResult.Error -> statusMessage = result.message
                                     }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
 
@@ -698,7 +739,9 @@ private fun ProfessionalTinyPill(
 
 @Composable
 private fun ProfessionalLevelPathStrip(
-    palette: FloentlyPalette
+    selectedLevel: ProfessionalFinnishLevel?,
+    palette: FloentlyPalette,
+    onSelect: (ProfessionalFinnishLevel?) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -708,14 +751,43 @@ private fun ProfessionalLevelPathStrip(
             fontWeight = FontWeight.Black,
             letterSpacing = 2.sp
         )
-        ProfessionalFinnishLevel.entries.chunked(3).forEach { row ->
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            ProfessionalLevelChip(
+                label = "All",
+                description = "A1-C2",
+                color = palette.warning,
+                active = selectedLevel == null,
+                palette = palette,
+                modifier = Modifier.weight(1f),
+                onClick = { onSelect(null) }
+            )
+            ProfessionalFinnishLevel.entries.take(2).forEach { level ->
+                ProfessionalLevelChip(
+                    label = level.name,
+                    description = level.shortDescription(),
+                    color = level.levelColor(palette),
+                    active = selectedLevel == level,
+                    palette = palette,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onSelect(level) }
+                )
+            }
+        }
+        ProfessionalFinnishLevel.entries.drop(2).chunked(3).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 row.forEach { level ->
                     ProfessionalLevelChip(
-                        level = level,
+                        label = level.name,
+                        description = level.shortDescription(),
+                        color = level.levelColor(palette),
+                        active = selectedLevel == level,
                         palette = palette,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        onClick = { onSelect(level) }
                     )
+                }
+                repeat(3 - row.size) {
+                    Spacer(modifier = Modifier.weight(1f))
                 }
             }
         }
@@ -724,15 +796,19 @@ private fun ProfessionalLevelPathStrip(
 
 @Composable
 private fun ProfessionalLevelChip(
-    level: ProfessionalFinnishLevel,
+    label: String,
+    description: String,
+    color: Color,
+    active: Boolean,
     palette: FloentlyPalette,
-    modifier: Modifier
+    modifier: Modifier,
+    onClick: () -> Unit
 ) {
     Surface(
-        color = palette.cardMuted,
+        color = if (active) color.copy(alpha = 0.18f) else palette.cardMuted,
         shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(1.dp, palette.border),
-        modifier = modifier
+        border = BorderStroke(1.dp, if (active) color else palette.border),
+        modifier = modifier.clickable(onClick = onClick)
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
@@ -740,13 +816,13 @@ private fun ProfessionalLevelChip(
             verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
             Text(
-                text = level.name,
-                color = level.levelColor(palette),
+                text = label,
+                color = if (active) color else palette.muted,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Black
             )
             Text(
-                text = level.shortDescription(),
+                text = description,
                 color = palette.muted,
                 fontSize = 10.sp,
                 textAlign = TextAlign.Center,
@@ -802,6 +878,43 @@ private fun ProfessionalDomainStrip(
                 repeat(3 - row.size) {
                     Spacer(modifier = Modifier.weight(1f))
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfessionalPathSummaryCard(
+    domain: ProfessionalFinnishDomain,
+    selectedLevel: ProfessionalFinnishLevel?,
+    moduleCount: Int,
+    scenarioCount: Int,
+    palette: FloentlyPalette
+) {
+    Surface(
+        color = palette.card,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "CURRENT PATH",
+                color = palette.accent,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 2.sp
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                ProfessionalMetricBox("Area", domain.displayName(), domain.domainColor(palette), palette, Modifier.weight(1f))
+                ProfessionalMetricBox("Level", selectedLevel?.name ?: "All", selectedLevel?.levelColor(palette) ?: palette.warning, palette, Modifier.weight(1f))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                ProfessionalMetricBox("Modules", moduleCount.toString(), palette.primary, palette, Modifier.weight(1f))
+                ProfessionalMetricBox("Scenarios", scenarioCount.toString(), palette.accent, palette, Modifier.weight(1f))
             }
         }
     }
@@ -951,7 +1064,9 @@ private fun ProfessionalMetricBox(
                 color = palette.text,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Black,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = label.uppercase(),
