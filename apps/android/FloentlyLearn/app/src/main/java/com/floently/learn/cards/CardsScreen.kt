@@ -172,30 +172,47 @@ private fun StrictCardsBackBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 6.dp, start = 8.dp, end = 8.dp),
+            .padding(top = 2.dp, start = 4.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
             color = Color.Transparent,
             shape = RoundedCornerShape(999.dp),
-            border = BorderStroke(2.dp, Color(0xFFDDE6FF)),
+            border = BorderStroke(1.dp, Color(0xFF40527A)),
             modifier = Modifier
-                .height(54.dp)
+                .height(34.dp)
                 .clickable(onClick = onBack)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
                     text = "Back",
-                    color = Color(0xFF7FA1FF),
-                    fontSize = 17.sp,
+                    color = Color(0xFFB9C8EC),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 13.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        Surface(
+            color = Color(0xFF5E83FF),
+            shape = RoundedCornerShape(999.dp),
+            border = BorderStroke(1.dp, Color(0xFF7DA0FF))
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = "☰ Menu",
+                    color = Color.White,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Black,
-                    modifier = Modifier.padding(horizontal = 25.dp)
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
                 )
             }
         }
     }
 }
-
 
 @Composable
 private fun StrictCardModeTabs(
@@ -206,12 +223,14 @@ private fun StrictCardModeTabs(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 28.dp),
+            .padding(top = 18.dp, bottom = 2.dp),
         horizontalArrangement = Arrangement.Center
     ) {
         StrictModePill("Vocabulary", CardsDeckType.Vocabulary, selected, palette, onChange)
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(8.dp))
         StrictModePill("Sentences", CardsDeckType.Phrases, selected, palette, onChange)
+        Spacer(modifier = Modifier.width(8.dp))
+        StrictModePill("Grammar", CardsDeckType.Grammar, selected, palette, onChange)
     }
 }
 
@@ -226,20 +245,20 @@ private fun StrictModePill(
 ) {
     val active = value == selected
     Surface(
-        color = if (active) Color(0x332F68FF) else Color.Transparent,
+        color = if (active) Color(0xFFEAF0FF).copy(alpha = 0.16f) else Color(0x1AFFFFFF),
         shape = RoundedCornerShape(999.dp),
-        border = BorderStroke(1.dp, if (active) Color(0xFF6288FF) else Color(0xFF273A63)),
+        border = BorderStroke(1.dp, if (active) Color(0xFF8EACE7) else Color(0xFF31476B)),
         modifier = Modifier
-            .height(40.dp)
+            .height(32.dp)
             .clickable { onChange(value) }
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = label,
-                color = if (active) Color(0xFF7897F6) else Color(0xFFA4B0C8),
-                fontSize = 14.sp,
+                color = if (active) Color(0xFF9DB7FF) else Color(0xFF8799BA),
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 22.dp)
+                modifier = Modifier.padding(horizontal = 12.dp)
             )
         }
     }
@@ -372,7 +391,7 @@ private fun StrictPracticeSession(
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             StrictRecallButton("↶ Recall", palette, onClick = {})
@@ -380,7 +399,7 @@ private fun StrictPracticeSession(
             Text(
                 text = header,
                 color = palette.soft,
-                fontSize = 35.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Black
             )
             Spacer(modifier = Modifier.weight(1f))
@@ -390,15 +409,15 @@ private fun StrictPracticeSession(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 66.dp)
-                .height(5.dp)
+                .padding(horizontal = 70.dp)
+                .height(3.dp)
                 .clip(RoundedCornerShape(999.dp))
                 .background(palette.border.copy(alpha = 0.55f))
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth(progressRatio)
-                    .height(4.dp)
+                    .height(3.dp)
                     .clip(RoundedCornerShape(999.dp))
                     .background(palette.primary)
             )
@@ -739,23 +758,28 @@ private fun AdaptiveCardCopy(
     val length = text.trim().length
     val size = when (variant) {
         AdaptiveVariant.Front -> when {
-            sentence && length > 160 -> 25
-            sentence && length > 100 -> 28
-            sentence && length > 60 -> 32
-            sentence -> 36
-            length > 160 -> 26
-            length > 100 -> 30
-            length > 60 -> 40
-            else -> 52
+            sentence && length > 220 -> 22
+            sentence && length > 160 -> 24
+            sentence && length > 100 -> 26
+            sentence && length > 60 -> 30
+            sentence -> 34
+            length > 160 -> 22
+            length > 100 -> 26
+            length > 60 -> 32
+            else -> 40
         }
-        AdaptiveVariant.Prompt -> if (sentence) 18 else 18
+        AdaptiveVariant.Prompt -> when {
+            sentence && length > 220 -> 15
+            sentence && length > 140 -> 16
+            else -> 18
+        }
         AdaptiveVariant.Context -> 14
-        AdaptiveVariant.Option -> 15
+        AdaptiveVariant.Option -> if (length > 110) 13 else 15
         AdaptiveVariant.Hint -> 13
     }
     val lineHeight = when (variant) {
         AdaptiveVariant.Front -> size + 8
-        AdaptiveVariant.Prompt -> 24
+        AdaptiveVariant.Prompt -> if (sentence && length > 140) size + 7 else 24
         AdaptiveVariant.Context -> 20
         AdaptiveVariant.Option -> 20
         AdaptiveVariant.Hint -> 18
@@ -769,11 +793,11 @@ private fun AdaptiveCardCopy(
         fontSize = size.sp,
         lineHeight = lineHeight.sp,
         maxLines = when (variant) {
-            AdaptiveVariant.Front -> if (sentence) 6 else 4
-            AdaptiveVariant.Prompt -> if (sentence) 7 else 5
-            AdaptiveVariant.Context -> 5
-            AdaptiveVariant.Option -> 3
-            AdaptiveVariant.Hint -> 4
+            AdaptiveVariant.Front -> if (sentence) 8 else 6
+            AdaptiveVariant.Prompt -> if (sentence) 8 else 6
+            AdaptiveVariant.Context -> 6
+            AdaptiveVariant.Option -> 4
+            AdaptiveVariant.Hint -> 5
         },
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.fillMaxWidth()
@@ -809,19 +833,19 @@ private fun StrictRecallButton(
 ) {
     Surface(
         color = Color(0xFF25376F),
-        shape = RoundedCornerShape(26.dp),
+        shape = RoundedCornerShape(999.dp),
         border = BorderStroke(1.dp, Color(0xFF31487F)),
         modifier = Modifier
-            .height(54.dp)
+            .height(30.dp)
             .clickable(onClick = onClick)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = text,
                 color = Color(0xFFB8C6E7),
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Black,
-                modifier = Modifier.padding(horizontal = 20.dp)
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 10.dp)
             )
         }
     }
@@ -836,26 +860,25 @@ private fun StrictIconActionButton(
     onClick: () -> Unit
 ) {
     Surface(
-        color = Color(0xFF2A3E79),
-        shape = RoundedCornerShape(28.dp),
-        border = BorderStroke(1.dp, Color(0xFF334B88)),
-        shadowElevation = 6.dp,
+        color = Color(0xFF25376F),
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, Color(0xFF31487F)),
+        shadowElevation = 4.dp,
         modifier = modifier
-            .width(72.dp)
-            .height(62.dp)
+            .height(32.dp)
             .clickable(onClick = onClick)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = text,
                 color = Color(0xFFBAC6E3),
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Black
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.padding(horizontal = 12.dp)
             )
         }
     }
 }
-
 
 @Composable
 private fun StrictFooterGhostButton(
@@ -926,16 +949,16 @@ private fun StrictSmallChip(
         border = BorderStroke(1.dp, Color(0xFF31487F)),
         shadowElevation = 4.dp,
         modifier = Modifier
-            .height(52.dp)
+            .height(34.dp)
             .clickable(onClick = onClick)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = text,
                 color = Color(0xFFC0CBE2),
-                fontSize = 17.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Black,
-                modifier = Modifier.padding(horizontal = 26.dp)
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
         }
     }
@@ -954,15 +977,15 @@ private fun StrictEndSessionButton(
         border = BorderStroke(1.dp, Color(0xFF31487F)),
         shadowElevation = 5.dp,
         modifier = Modifier
-            .fillMaxWidth(0.56f)
-            .height(72.dp)
+            .fillMaxWidth(0.52f)
+            .height(46.dp)
             .clickable(onClick = onClick)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = text,
                 color = Color(0xFFC0CBE2),
-                fontSize = 24.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Black
             )
         }

@@ -127,6 +127,19 @@ class PreviewCardsRepository : CardsRepository {
             overlayLanguageCodes = allOverlayCodes
         ),
         CardsDeck(
+            id = "cards-grammar-a2",
+            title = "A2 grammar patterns",
+            type = CardsDeckType.Grammar,
+            description = "Reusable grammar cards for everyday sentence building.",
+            totalCards = 3,
+            dueCards = 3,
+            locked = false,
+            bankId = "daily-core",
+            bankTitle = "Daily Finnish banks",
+            cefrLevel = "A2-B1",
+            overlayLanguageCodes = allOverlayCodes
+        ),
+        CardsDeck(
             id = "cards-work-finnish",
             title = "Work Finnish cards",
             type = CardsDeckType.Work,
@@ -177,6 +190,11 @@ class PreviewCardsRepository : CardsRepository {
             StudyCard("phrase-card-1", "cards-phrases-a2", "Voisitko auttaa minua?", "Could you help me?", "Anteeksi, voisitko auttaa minua?", "Polite help request.", listOf("A2", "service"), overlays("Could you help me?", "Anteeksi, voisitko auttaa minua?", "Polite help request."), "Review again this week."),
             StudyCard("phrase-card-2", "cards-phrases-a2", "En ymmärtänyt.", "I did not understand.", "Anteeksi, en ymmärtänyt.", "Use when you need repetition.", listOf("A2", "clarification"), overlays("I did not understand.", "Anteeksi, en ymmärtänyt.", "Use when you need repetition."), "Review again this week."),
             StudyCard("phrase-card-3", "cards-phrases-a2", "Voisitko sanoa sen uudelleen?", "Could you say that again?", "Voisitko sanoa sen uudelleen, kiitos?", "Polite repetition request.", listOf("A2", "clarification"), overlays("Could you say that again?", "Voisitko sanoa sen uudelleen, kiitos?", "Polite repetition request."), "Review again this week.")
+        ),
+        "cards-grammar-a2" to listOf(
+            StudyCard("grammar-card-1", "cards-grammar-a2", "Minun täytyy + perusmuoto", "I have to + basic form", "Minun täytyy lähteä nyt.", "Use täytyy with the basic form of the next verb.", listOf("A2", "grammar"), overlays("I have to + basic form", "Minun täytyy lähteä nyt.", "Use täytyy with the basic form of the next verb."), "Review again this week."),
+            StudyCard("grammar-card-2", "cards-grammar-a2", "Pidän + mistä?", "I like + elative case", "Pidän suomalaisesta kahvista.", "The thing you like often takes the -sta/-stä ending.", listOf("A2", "case"), overlays("I like + elative case", "Pidän suomalaisesta kahvista.", "The thing you like often takes the -sta/-stä ending."), "Review again this week."),
+            StudyCard("grammar-card-3", "cards-grammar-a2", "Olen ollut Suomessa", "I have been in Finland", "Olen ollut Suomessa monta vuotta.", "Use olen ollut for an experience or state that started before now.", listOf("B1", "perfect"), overlays("I have been in Finland", "Olen ollut Suomessa monta vuotta.", "Use olen ollut for an experience or state that started before now."), "Review again this week.")
         ),
         "cards-work-finnish" to listOf(
             StudyCard("work-card-1", "cards-work-finnish", "Olen käytettävissä ensi viikolla.", "I am available next week.", "Kiitos viestistä. Olen käytettävissä ensi viikolla.", "Useful for interviews and scheduling.", listOf("work", "job-search"), overlays("I am available next week.", "Kiitos viestistä. Olen käytettävissä ensi viikolla.", "Useful for interviews and scheduling."), "Review before interview practice."),

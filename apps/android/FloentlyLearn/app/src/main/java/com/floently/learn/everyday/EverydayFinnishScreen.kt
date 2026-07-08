@@ -36,9 +36,17 @@ import androidx.compose.ui.unit.sp
 import com.floently.learn.i18n.LearnCopy
 import com.floently.learn.navigation.LearnFeatureDestination
 import com.floently.shared.design.FloentlyPalette
-import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
 import com.floently.shared.design.FloentlyScreen
+
+private data class EverydayEntry(
+    val title: String,
+    val body: String,
+    val sourceChip: String,
+    val action: String,
+    val accent: Color,
+    val destination: LearnFeatureDestination
+)
 
 @Composable
 fun EverydayFinnishScreen(
@@ -47,129 +55,134 @@ fun EverydayFinnishScreen(
     onDestinationSelected: (LearnFeatureDestination) -> Unit
 ) {
     FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
+        var selectedBand by remember { mutableStateOf("A1-A2") }
+        val entries = listOf(
+            EverydayEntry(
+                title = "Flashcards",
+                body = "Open the shared general-language flashcards for everyday Finnish, work readiness, and YKI-linked fluency.",
+                sourceChip = "General flashcards",
+                action = "Open flashcards",
+                accent = palette.primary,
+                destination = LearnFeatureDestination.Cards
+            ),
+            EverydayEntry(
+                title = "Daily roleplay",
+                body = "Open the shared general conversation route. This stays connected to the everyday or YKI flow, not the workplace-specific profession roleplay.",
+                sourceChip = "Everyday roleplay",
+                action = "Open roleplay",
+                accent = palette.accent,
+                destination = LearnFeatureDestination.Roleplay
+            )
+        )
+
         Column(
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
                 .animateContentSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            var selectedBand by remember { mutableStateOf("A1-A2") }
+            EverydayTopBar(onBack = onBack, palette = palette)
+
+            Text(
+                text = "EVERYDAY FINNISH",
+                color = palette.soft,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.6.sp,
+                modifier = Modifier.padding(top = 2.dp)
+            )
 
             Text(
                 text = copy.everydayTitle,
                 color = palette.text,
-                style = MaterialTheme.typography.displaySmall,
+                fontSize = 28.sp,
+                lineHeight = 33.sp,
                 fontWeight = FontWeight.Black
             )
+
             Text(
-                text = copy.everydaySubtitle,
+                text = "Choose the shared daily-language branch first, then open only the general flashcards or the YKI-linked daily roleplay from here.",
                 color = palette.muted,
-                style = MaterialTheme.typography.titleMedium
+                fontSize = 13.sp,
+                lineHeight = 19.sp
             )
 
-            EverydayOldSourceHero(copy = copy, palette = palette)
-
-            EverydayOldSourceLevelRail(selectedBand = selectedBand, onBandSelected = { selectedBand = it }, copy = copy, palette = palette)
-
-            EverydaySectionLabel(copy.everydayChoosePractice, palette)
-
-            EverydayOldSourceEntryCard(
-                label = "CARDS",
-                title = "Cards",
-                body = copy.everydayCardsBody,
-                accent = palette.primary,
-                palette = palette,
-                copy = copy,
-                onClick = { onDestinationSelected(LearnFeatureDestination.Cards) }
+            EverydayLevelSelector(
+                selectedBand = selectedBand,
+                onBandSelected = { selectedBand = it },
+                palette = palette
             )
 
-            EverydayOldSourceEntryCard(
-                label = "ROLEPLAY",
-                title = "Roleplay",
-                body = copy.everydayRoleplayBody,
-                accent = palette.accent,
-                palette = palette,
-                copy = copy,
-                onClick = { onDestinationSelected(LearnFeatureDestination.Roleplay) }
-            )
-
-            FloentlyPrimaryButton(
-                title = "Back to Learn",
-                product = FloentlyProduct.Learn,
-                onClick = onBack
-            )
-        }
-    }
-}
-
-@Composable
-private fun EverydayOldSourceHero(
-    copy: LearnCopy,
-    palette: FloentlyPalette
-) {
-    Surface(
-        color = Color(0xFF13213F),
-        shape = RoundedCornerShape(30.dp),
-        border = BorderStroke(1.dp, Color(0xFF2A3E6E)),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(palette.primary.copy(alpha = 0.18f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(palette.primary)
-                    )
-                }
-                Spacer(modifier = Modifier.size(12.dp))
-                Text(
-                    text = copy.everydayHeroEyebrow,
-                    color = palette.primary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 2.2.sp
+            entries.forEach { entry ->
+                EverydayEntryCard(
+                    entry = entry,
+                    selectedBand = selectedBand,
+                    palette = palette,
+                    onClick = { onDestinationSelected(entry.destination) }
                 )
             }
+        }
+    }
+}
 
+@Composable
+private fun EverydayTopBar(
+    onBack: () -> Unit,
+    palette: FloentlyPalette
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            color = Color.Transparent,
+            shape = RoundedCornerShape(999.dp),
+            border = BorderStroke(1.dp, Color(0xFF324777)),
+            modifier = Modifier
+                .height(34.dp)
+                .clickable(onClick = onBack)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = "Back",
+                    color = Color(0xFFB8C8F0),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 13.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        Surface(
+            color = Color(0xFF223763),
+            shape = RoundedCornerShape(999.dp),
+            border = BorderStroke(1.dp, Color(0xFF324C82))
+        ) {
             Text(
-                text = copy.everydayHeroTitle,
-                color = palette.text,
-                fontSize = 27.sp,
-                lineHeight = 32.sp,
-                fontWeight = FontWeight.Black
-            )
-            Text(
-                text = copy.everydayHeroBody,
-                color = palette.muted,
-                fontSize = 15.sp,
-                lineHeight = 22.sp
+                text = "Everyday Finnish",
+                color = palette.primary,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
             )
         }
     }
 }
 
 @Composable
-private fun EverydayOldSourceLevelRail(
+private fun EverydayLevelSelector(
     selectedBand: String,
     onBandSelected: (String) -> Unit,
-    copy: LearnCopy,
     palette: FloentlyPalette
 ) {
     Surface(
-        color = Color(0xFF0F1B33),
+        color = Color(0xFF111E39),
         shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, Color(0xFF22365F)),
+        border = BorderStroke(1.dp, Color(0xFF263B68)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -177,105 +190,132 @@ private fun EverydayOldSourceLevelRail(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = copy.everydayLevelEyebrow,
+                text = "LEVEL",
                 color = palette.soft,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Black,
-                letterSpacing = 1.8.sp
+                letterSpacing = 1.7.sp
             )
             Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 listOf("A1-A2", "B1-B2", "C1-C2").forEach { level ->
+                    val active = level == selectedBand
                     Surface(
-                        color = if (level == selectedBand) palette.primary.copy(alpha = 0.22f) else palette.cardMuted,
+                        color = if (active) Color(0xFF8D64FF) else Color(0xFF1A2A4A),
                         shape = RoundedCornerShape(999.dp),
-                        border = BorderStroke(1.dp, if (level == selectedBand) palette.primary else palette.border),
-                        modifier = Modifier.weight(1f).clickable { onBandSelected(level) }
+                        border = BorderStroke(1.dp, if (active) Color(0xFFA98BFF) else Color(0xFF304669)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onBandSelected(level) }
                     ) {
                         Text(
                             text = level,
-                            color = if (level == selectedBand) palette.primary else palette.muted,
+                            color = if (active) Color.White else Color(0xFF9FAECC),
                             textAlign = TextAlign.Center,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Black,
-                            modifier = Modifier.padding(vertical = 8.dp)
+                            modifier = Modifier.padding(vertical = 9.dp)
                         )
                     }
                 }
+            }
+            Text(
+                text = "$selectedBand daily Finnish path selected.",
+                color = palette.muted,
+                fontSize = 12.sp,
+                lineHeight = 16.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun EverydayEntryCard(
+    entry: EverydayEntry,
+    selectedBand: String,
+    palette: FloentlyPalette,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = Color(0xFF13213F),
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, Color(0xFF263D6C)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(entry.accent.copy(alpha = 0.18f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(entry.accent)
+                    )
+                }
+                Spacer(modifier = Modifier.size(10.dp))
+                Text(
+                    text = entry.title,
+                    color = palette.text,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black
+                )
+            }
+
+            Text(
+                text = entry.body,
+                color = palette.muted,
+                fontSize = 13.sp,
+                lineHeight = 19.sp
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                EverydayChip(text = entry.sourceChip, color = entry.accent)
+                EverydayChip(text = selectedBand, color = palette.primary)
+            }
+
+            Surface(
+                color = entry.accent.copy(alpha = 0.18f),
+                shape = RoundedCornerShape(999.dp),
+                border = BorderStroke(1.dp, entry.accent.copy(alpha = 0.55f))
+            ) {
+                Text(
+                    text = entry.action,
+                    color = entry.accent,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                )
             }
         }
     }
 }
 
 @Composable
-private fun EverydaySectionLabel(
+private fun EverydayChip(
     text: String,
-    palette: FloentlyPalette
-) {
-    Text(
-        text = text,
-        color = palette.soft,
-        fontSize = 11.sp,
-        fontWeight = FontWeight.Black,
-        letterSpacing = 2.4.sp,
-        modifier = Modifier.padding(top = 2.dp)
-    )
-}
-
-@Composable
-private fun EverydayOldSourceEntryCard(
-    label: String,
-    title: String,
-    body: String,
-    accent: Color,
-    palette: FloentlyPalette,
-    copy: LearnCopy,
-    onClick: () -> Unit
+    color: Color
 ) {
     Surface(
-        color = Color(0xFF13213F),
-        shape = RoundedCornerShape(26.dp),
-        border = BorderStroke(1.dp, Color(0xFF2A3E6E)),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
+        color = color.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, color.copy(alpha = 0.35f))
     ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(11.dp)
-        ) {
-            Surface(
-                color = accent.copy(alpha = 0.16f),
-                shape = RoundedCornerShape(999.dp),
-                border = BorderStroke(1.dp, accent.copy(alpha = 0.48f))
-            ) {
-                Text(
-                    text = label,
-                    color = accent,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.6.sp,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
-                )
-            }
-
-            Text(
-                text = title,
-                color = palette.text,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Black
-            )
-            Text(
-                text = body,
-                color = palette.muted,
-                fontSize = 15.sp,
-                lineHeight = 22.sp
-            )
-            Text(
-                text = copy.everydayOpenTemplate.replace("{title}", title),
-                color = accent,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Black
-            )
-        }
+        Text(
+            text = text,
+            color = color,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Black,
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+        )
     }
 }
