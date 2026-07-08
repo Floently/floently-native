@@ -3,6 +3,36 @@
 Branch: `m01/production-native-foundation`
 Repo: `galapoto/floently-native`
 
+## M33 active blocker pass
+
+M33 hard blockers from `docs/progress/M33_DEVICE_QA_HARD_BLOCKERS.md` for Agent B:
+
+- Opening roleplay starts conversation automatically.
+- AI speaker starts speaking immediately.
+- User presses mic to speak.
+- Pressing mic again stops recording and sends speech.
+- User speech is transcribed to text.
+- AI replies automatically with spoken audio and transcript.
+- Conversation continues for 5 user responses.
+- Final AI response must conclude the interaction.
+- No separate listen button; AI speech is automatic.
+- Mic should visually animate/waveform while user speaks.
+- Topics should vary dynamically each session, from backend/generated materials.
+- UI must match old app roleplay UI.
+- After conversation, user can download a PDF or Word document/book about the conversation.
+
+Completed in this M33 pass:
+
+- Added a five-user-turn guard and final AI conclusion response in the Roleplay repository layer.
+- Auto-starts the first ready/recommended generated roleplay when the Roleplay screen opens.
+- Added automatic Finnish TextToSpeech playback for the latest AI partner/coach message, removing the need for a separate listen action.
+- Changed the mic flow so tap starts listening, tap again stops recording, recognition results are transcribed, and the transcript is sent automatically.
+- Kept typed response as fallback only for devices where speech recognition fails or is unavailable.
+- Preserved animated waveform during listening.
+- Added completed-session export actions for PDF and Word-compatible document/book downloads using Android document creation.
+- Updated the old-source mic panel wording/state to match the automatic old flow.
+- Kept changes inside Agent B-owned Roleplay/Speaking/progress scope.
+
 ## Latest verified M32 Roleplay build
 
 User pulled through integrated M32 head `399340f` and confirmed:
@@ -168,16 +198,15 @@ Verified locally by user through integrated M32 head `399340f`:
 BUILD SUCCESSFUL in 6s
 ```
 
+The M33 Agent B pass still needs local debug build verification.
+
 ## QA focus for device pass
 
-- Open Roleplay and confirm no visible `request failed with status 404` message appears.
-- Confirm level bands are `A1-A2`, `B1-B2`, and `C1-C2`.
-- Confirm recommended start button appears for a ready topic.
-- Confirm cards show level band, type, mode, and material source.
-- Start an unlocked scenario from the recommended button and from a card.
-- Confirm conversation transcript bubbles still render and partner messages still expose TTS.
-- Confirm coach guidance appears inside the conversation partner turn rather than as a confusing separate manual step.
-- Tap mic, grant permission, speak a short Finnish answer, confirm transcript appears.
-- Confirm recorded response card appears.
-- Send the response and confirm backend or generated-material flow continues.
+- Open Roleplay and confirm it auto-starts a ready generated topic.
+- Confirm the AI partner speaks automatically without a separate listen button.
+- Tap mic once, speak, tap mic again, and confirm the transcript sends automatically.
+- Confirm waveform animates while listening.
+- Complete five user responses.
+- Confirm the final AI response concludes the interaction.
+- Confirm PDF and Word document/book download actions appear after completion.
 - Confirm typed fallback still works if speech recognition is unavailable.
