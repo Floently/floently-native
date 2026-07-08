@@ -3,11 +3,21 @@
 Branch: `m01/production-native-foundation`
 Repo: `galapoto/floently-native`
 
-## Latest update after clean Android baseline
+## Latest update after local build verification
+
+User pulled through `4f30f9d` and confirmed `./scripts/nativectl build android-learn` passed. The only warning was a deprecated Java `Locale(String, String)` constructor in Agent B-owned `RoleplayScreen.kt`.
+
+Completed after that verification:
+
+- Replaced deprecated `Locale("fi", "FI")` usage with `Locale.forLanguageTag("fi-FI")` in the Finnish speech-recognition intent.
+- Kept the same Finnish speech-recognition behavior while removing the warning source.
+- Kept all changes inside Agent B-owned Roleplay/progress scope.
+
+## Previous update after clean Android baseline
 
 User confirmed local branch was clean, equal to remote, and `./scripts/nativectl build android-learn` passed before this pass.
 
-Completed in the latest Agent B pass:
+Completed in the previous Agent B pass:
 
 - Added `coachingMode` to `RoleplayScenario` using the existing `RoleplayCoachingMode` enum.
 - Parsed `coaching_mode` from the roleplay service boundary with safe level-based defaults.
@@ -56,7 +66,7 @@ Completed in the previous Agent B pass:
 
 ## Build status
 
-Not run after the latest connector-side commits. The required local command still needs to be run on the machine that has `/home/vitus/floently-native` mounted:
+Not run after the latest connector-side warning cleanup commit. The required local command still needs to be run on the machine that has `/home/vitus/floently-native` mounted:
 
 ```bash
 cd /home/vitus/floently-native
