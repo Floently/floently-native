@@ -50,7 +50,7 @@ internal fun OldSourceRoleplayScenarioHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OldSourceSpeakingPill(scenario.level.name, scenario.type.name, palette.primary)
+                OldSourceSpeakingPill(scenario.level.displayName, scenario.type.name, palette.primary)
                 Surface(
                     color = palette.cardMuted,
                     shape = RoundedCornerShape(999.dp),
