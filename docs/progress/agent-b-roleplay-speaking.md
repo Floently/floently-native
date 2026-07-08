@@ -3,6 +3,23 @@
 Branch: `m01/production-native-foundation`
 Repo: `galapoto/floently-native`
 
+## Latest verified M32 Roleplay build
+
+User pulled through integrated M32 head `399340f` and confirmed:
+
+```bash
+ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn
+```
+
+Result:
+
+```text
+BUILD SUCCESSFUL in 6s
+54 actionable tasks: 54 up-to-date
+```
+
+Agent B Roleplay/Speaking changes from the M32 pass are included in this successful integrated Android build.
+
 ## M32 active blocker pass
 
 M32 active Agent B blockers from `docs/progress/M32_FINAL_ANDROID_PARITY_FINISH.md`:
@@ -145,13 +162,11 @@ Completed in the previous Agent B pass:
 
 ## Build status
 
-Verified locally by user through `4203d10` after the M31 pass:
+Verified locally by user through integrated M32 head `399340f`:
 
 ```text
-BUILD SUCCESSFUL in 23s
+BUILD SUCCESSFUL in 6s
 ```
-
-The M32 Agent B pass still needs local debug/release verification.
 
 ## QA focus for device pass
 
