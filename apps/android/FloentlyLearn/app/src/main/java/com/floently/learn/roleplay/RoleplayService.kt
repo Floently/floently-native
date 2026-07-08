@@ -7,15 +7,19 @@ import org.json.JSONObject
 class RoleplayService(private val api: FloentlyApiClient) {
     suspend fun dashboard(selectedLevel: RoleplayLevel): RoleplayDashboardState {
         val response = firstGet(dashboardPaths(selectedLevel))
-        val scenariosJson = response.optJSONArray("scenarios")
-            ?: response.optJSONArray("topics")
-            ?: response.optJSONArray("items")
+        val payload = response.optJSONObject("data") ?: response
+        val scenariosJson = payload.optJSONArray("scenarios")
+            ?: payload.optJSONArray("topics")
+            ?: payload.optJSONArray("materials")
+            ?: payload.optJSONArray("roleplays")
+            ?: payload.optJSONArray("conversations")
+            ?: payload.optJSONArray("items")
             ?: JSONArray()
         return RoleplayDashboardState(
             scenarios = List(scenariosJson.length()) { index -> scenarioFromJson(scenariosJson.getJSONObject(index), selectedLevel) },
             selectedLevel = selectedLevel,
             isLoading = false,
-            errorMessage = response.optString("error_message").takeIf { it.isNotBlank() }
+            errorMessage = payload.optString("error_message").takeIf { it.isNotBlank() }
         )
     }
 
@@ -23,19 +27,25 @@ class RoleplayService(private val api: FloentlyApiClient) {
         val body = JSONObject()
             .put("scenario_id", scenarioId)
             .put("topic_id", scenarioId)
+            .put("material_id", scenarioId)
+            .put("source", "android_native")
         val response = firstPost(sessionPaths(), body)
-        val sessionJson = response.optJSONObject("session") ?: response
+        val payload = response.optJSONObject("data") ?: response
+        val sessionJson = payload.optJSONObject("session") ?: payload
         return RoleplaySessionResult.Ready(sessionFromJson(sessionJson))
     }
 
     suspend fun sendLearnerMessage(session: RoleplaySession, text: String): RoleplaySessionResult {
         val body = JSONObject()
             .put("text", text)
+            .put("message", text)
             .put("scenario_id", session.scenario.id)
             .put("topic_id", session.scenario.id)
+            .put("material_id", session.scenario.id)
             .put("learner_turns", session.learnerTurns)
         val response = firstPost(messagePaths(session.id), body)
-        val sessionJson = response.optJSONObject("session") ?: response
+        val payload = response.optJSONObject("data") ?: response
+        val sessionJson = payload.optJSONObject("session") ?: payload
         return RoleplaySessionResult.Ready(sessionFromJson(sessionJson, fallbackSession = session))
     }
 
@@ -62,30 +72,49 @@ class RoleplayService(private val api: FloentlyApiClient) {
     private fun dashboardPaths(level: RoleplayLevel): List<String> = listOf(
         "/api/v1/learn/roleplay/dashboard?level=${level.apiValue}",
         "/api/v1/learn/roleplay/topics?level=${level.apiValue}",
+        "/api/v1/learn/roleplay/materials?level=${level.apiValue}",
+        "/api/v1/learn/roleplay?level=${level.apiValue}",
         "/api/v1/roleplay/dashboard?level=${level.apiValue}",
         "/api/v1/roleplay/topics?level=${level.apiValue}",
+        "/api/v1/roleplay/materials?level=${level.apiValue}",
+        "/api/v1/roleplay?level=${level.apiValue}",
         "/api/learn/roleplay/dashboard?level=${level.apiValue}",
         "/api/learn/roleplay/topics?level=${level.apiValue}",
+        "/api/learn/roleplay/materials?level=${level.apiValue}",
+        "/api/learn/roleplay?level=${level.apiValue}",
         "/api/roleplay/dashboard?level=${level.apiValue}",
-        "/api/roleplay/topics?level=${level.apiValue}"
+        "/api/roleplay/topics?level=${level.apiValue}",
+        "/api/roleplay/materials?level=${level.apiValue}",
+        "/api/roleplay?level=${level.apiValue}"
     )
 
     private fun sessionPaths(): List<String> = listOf(
         "/api/v1/learn/roleplay/sessions",
+        "/api/v1/learn/roleplay/start",
         "/api/v1/roleplay/sessions",
+        "/api/v1/roleplay/start",
         "/api/learn/roleplay/sessions",
-        "/api/roleplay/sessions"
+        "/api/learn/roleplay/start",
+        "/api/roleplay/sessions",
+        "/api/roleplay/start"
     )
 
     private fun messagePaths(sessionId: String): List<String> = listOf(
         "/api/v1/learn/roleplay/sessions/$sessionId/messages",
+        "/api/v1/learn/roleplay/sessions/$sessionId/reply",
         "/api/v1/roleplay/sessions/$sessionId/messages",
+        "/api/v1/roleplay/sessions/$sessionId/reply",
         "/api/learn/roleplay/sessions/$sessionId/messages",
-        "/api/roleplay/sessions/$sessionId/messages"
+        "/api/learn/roleplay/sessions/$sessionId/reply",
+        "/api/roleplay/sessions/$sessionId/messages",
+        "/api/roleplay/sessions/$sessionId/reply"
     )
 
     private fun sessionFromJson(json: JSONObject, fallbackSession: RoleplaySession? = null): RoleplaySession {
-        val scenario = json.optJSONObject("scenario")?.let { scenarioFromJson(it, fallbackSession?.scenario?.level ?: RoleplayLevel.A1_A2) }
+        val scenario = json.optJSONObject("scenario")
+            ?.let { scenarioFromJson(it, fallbackSession?.scenario?.level ?: RoleplayLevel.A1_A2) }
+            ?: json.optJSONObject("topic")
+                ?.let { scenarioFromJson(it, fallbackSession?.scenario?.level ?: RoleplayLevel.A1_A2) }
             ?: fallbackSession?.scenario
             ?: scenarioFromJson(JSONObject().put("id", json.optString("scenario_id")), RoleplayLevel.A1_A2)
         val messagesJson = json.optJSONArray("messages") ?: JSONArray()
@@ -95,7 +124,7 @@ class RoleplayService(private val api: FloentlyApiClient) {
             fallbackSession?.messages.orEmpty()
         }
         return RoleplaySession(
-            id = json.optString("id").ifBlank { fallbackSession?.id ?: "roleplay-session" },
+            id = json.optString("id").ifBlank { json.optString("session_id").ifBlank { fallbackSession?.id ?: "roleplay-session" } },
             scenario = scenario,
             messages = messages,
             learnerTurns = json.optInt("learner_turns", fallbackSession?.learnerTurns ?: messages.count { it.speaker == RoleplaySpeaker.Learner }),
@@ -107,26 +136,29 @@ class RoleplayService(private val api: FloentlyApiClient) {
     private fun scenarioFromJson(json: JSONObject, fallbackLevel: RoleplayLevel): RoleplayScenario {
         val level = levelFromApi(json.optString("level"), fallbackLevel)
         return RoleplayScenario(
-            id = json.optString("id").ifBlank { json.optString("topic_id").ifBlank { "roleplay-scenario" } },
+            id = json.optString("id").ifBlank { json.optString("topic_id").ifBlank { json.optString("material_id").ifBlank { json.optString("slug").ifBlank { "roleplay-scenario" } } } },
             title = json.optString("title").ifBlank { json.optString("name").ifBlank { "Roleplay" } },
             level = level,
-            type = scenarioTypeFromApi(json.optString("type")),
+            type = scenarioTypeFromApi(json.optString("type").ifBlank { json.optString("category") }),
             description = json.optString("description").ifBlank { json.optString("summary").ifBlank { "Practice Finnish conversation." } },
-            openingLine = json.optString("opening_line").ifBlank { json.optString("openingLine").ifBlank { "Hei!" } },
-            targetPhrases = stringList(json.optJSONArray("target_phrases") ?: json.optJSONArray("phrases")),
+            openingLine = json.optString("opening_line").ifBlank { json.optString("openingLine").ifBlank { json.optString("opener").ifBlank { json.optString("prompt").ifBlank { "Hei!" } } } },
+            targetPhrases = stringList(json.optJSONArray("target_phrases") ?: json.optJSONArray("phrases") ?: json.optJSONArray("examples")),
             beginnerSafe = json.optBoolean("beginner_safe", level == RoleplayLevel.A1_A2),
             locked = json.optBoolean("locked", false),
             coachingMode = coachingModeFromApi(json.optString("coaching_mode"), level),
-            materialSource = json.optString("material_source").ifBlank { "Backend/generated" },
-            recommended = json.optBoolean("recommended", false)
+            materialSource = json.optString("material_source")
+                .ifBlank { json.optString("materialSource") }
+                .ifBlank { json.optString("source") }
+                .ifBlank { "Backend/generated topic" },
+            recommended = json.optBoolean("recommended", json.optBoolean("is_recommended", false))
         )
     }
 
     private fun messageFromJson(json: JSONObject): RoleplayMessage = RoleplayMessage(
         id = json.optString("id").ifBlank { "message" },
-        speaker = speakerFromApi(json.optString("speaker")),
-        text = json.optString("text"),
-        coachingNote = json.optString("coaching_note").takeIf { it.isNotBlank() }
+        speaker = speakerFromApi(json.optString("speaker").ifBlank { json.optString("role") }),
+        text = json.optString("text").ifBlank { json.optString("content") },
+        coachingNote = json.optString("coaching_note").ifBlank { json.optString("coach_note") }.takeIf { it.isNotBlank() }
     )
 
     private fun stringList(array: JSONArray?): List<String> = if (array == null) emptyList() else List(array.length()) { index -> array.optString(index) }
@@ -140,10 +172,10 @@ class RoleplayService(private val api: FloentlyApiClient) {
 
     private fun scenarioTypeFromApi(value: String?): RoleplayScenarioType = when (value?.trim()?.lowercase()) {
         "work" -> RoleplayScenarioType.Work
-        "healthcare" -> RoleplayScenarioType.Healthcare
+        "healthcare", "health" -> RoleplayScenarioType.Healthcare
         "interview" -> RoleplayScenarioType.Interview
         "phone_call", "phonecall", "phone" -> RoleplayScenarioType.PhoneCall
-        "service" -> RoleplayScenarioType.Service
+        "service", "customer_service" -> RoleplayScenarioType.Service
         else -> RoleplayScenarioType.Everyday
     }
 
