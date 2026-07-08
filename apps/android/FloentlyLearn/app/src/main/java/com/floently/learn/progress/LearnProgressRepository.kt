@@ -12,7 +12,7 @@ class ServiceLearnProgressRepository(
         return runCatching { service.dashboard() }.getOrElse { error ->
             fallback.dashboard().copy(
                 errorMessage = error.message?.takeIf { it.isNotBlank() }
-                    ?: "Learn progress service is not available from the existing backend yet."
+                    ?: "Learn progress service is not available yet."
             )
         }
     }
@@ -23,84 +23,47 @@ class PreviewLearnProgressRepository : LearnProgressRepository {
         val summaries = listOf(
             LearnProgressSummary(
                 area = LearnProgressArea.Yki,
-                title = "YKI practice",
-                completedUnits = 1,
-                totalUnits = 4,
-                streakDays = 1,
-                lastActivity = "Native task flow verified",
-                releaseGate = "Real scoring and durable progress remain service-gated.",
-                syncStatus = LearnProgressSyncStatus.ReadyToSync
+                title = "YKI readiness",
+                completedUnits = 0,
+                totalUnits = 0,
+                streakDays = 0,
+                lastActivity = "No saved YKI progress has been returned yet.",
+                releaseGate = "This fallback does not count as completed YKI progress.",
+                syncStatus = LearnProgressSyncStatus.ServicePending
             ),
             LearnProgressSummary(
                 area = LearnProgressArea.ProfessionalFinnish,
-                title = "Professional Finnish",
-                completedUnits = 1,
-                totalUnits = 3,
-                streakDays = 1,
-                lastActivity = "Scenario flow verified",
-                releaseGate = "Feedback and saved progress remain service-gated.",
-                syncStatus = LearnProgressSyncStatus.ReadyToSync
-            ),
-            LearnProgressSummary(
-                area = LearnProgressArea.Roleplay,
-                title = "Roleplay",
-                completedUnits = 1,
-                totalUnits = 4,
-                streakDays = 1,
-                lastActivity = "Conversation flow verified",
-                releaseGate = "Dynamic generation and saved progress remain service-gated.",
-                syncStatus = LearnProgressSyncStatus.LocalPreview
+                title = "Workplace communication",
+                completedUnits = 0,
+                totalUnits = 0,
+                streakDays = 0,
+                lastActivity = "No saved workplace communication progress has been returned yet.",
+                releaseGate = "This fallback does not count as completed workplace progress.",
+                syncStatus = LearnProgressSyncStatus.ServicePending
             ),
             LearnProgressSummary(
                 area = LearnProgressArea.Cards,
-                title = "Cards",
-                completedUnits = 1,
-                totalUnits = 4,
-                streakDays = 1,
-                lastActivity = "Deck flow verified",
-                releaseGate = "Review scheduling and saved progress remain service-gated.",
-                syncStatus = LearnProgressSyncStatus.LocalPreview
-            )
-        )
-
-        val timeline = listOf(
-            LearnProgressTimelineItem(
-                id = "timeline-yki-native",
-                area = LearnProgressArea.Yki,
-                title = "YKI native session completed",
-                detail = "Answer capture, evaluation summary, and progress boundary are available.",
-                whenText = "Preview milestone",
-                durable = false
-            ),
-            LearnProgressTimelineItem(
-                id = "timeline-roleplay-native",
-                area = LearnProgressArea.Roleplay,
-                title = "Roleplay native session started",
-                detail = "Conversation, coaching, and anti-repetition state are available.",
-                whenText = "Preview milestone",
-                durable = false
-            ),
-            LearnProgressTimelineItem(
-                id = "timeline-cards-native",
-                area = LearnProgressArea.Cards,
-                title = "Cards native deck opened",
-                detail = "Deck data and start-session boundary are available.",
-                whenText = "Preview milestone",
-                durable = false
+                title = "Profession vocabulary",
+                completedUnits = 0,
+                totalUnits = 0,
+                streakDays = 0,
+                lastActivity = "No saved vocabulary progress has been returned yet.",
+                releaseGate = "This fallback does not count as completed vocabulary progress.",
+                syncStatus = LearnProgressSyncStatus.ServicePending
             )
         )
 
         return LearnProgressDashboardState(
             summaries = summaries,
-            timeline = timeline,
+            timeline = emptyList(),
             syncBoundary = LearnProgressSyncBoundary(
                 status = LearnProgressSyncStatus.ServicePending,
-                pendingEvents = timeline.count { !it.durable },
-                lastSyncText = "Server progress sync is not connected yet.",
-                releaseGate = "Durable progress needs authenticated server write/read, offline queue, and merge handling before release."
+                pendingEvents = 0,
+                lastSyncText = "Progress service has not returned saved learning activity yet.",
+                releaseGate = "Only verified service data is shown as completed progress."
             ),
-            totalCompletedUnits = summaries.sumOf { it.completedUnits },
-            activeStreakDays = summaries.maxOf { it.streakDays },
+            totalCompletedUnits = 0,
+            activeStreakDays = 0,
             isLoading = false,
             errorMessage = null
         )
