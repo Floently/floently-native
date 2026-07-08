@@ -1,10 +1,12 @@
 package com.floently.learn.roleplay
 
-enum class RoleplayLevel {
-    A1,
-    A2,
-    B1,
-    B2
+enum class RoleplayLevel(
+    val displayName: String,
+    val apiValue: String
+) {
+    A1_A2("A1-A2", "a1-a2"),
+    B1_B2("B1-B2", "b1-b2"),
+    C1_C2("C1-C2", "c1-c2")
 }
 
 enum class RoleplayScenarioType {
@@ -39,7 +41,9 @@ data class RoleplayScenario(
     val targetPhrases: List<String> = emptyList(),
     val beginnerSafe: Boolean,
     val locked: Boolean,
-    val coachingMode: RoleplayCoachingMode = RoleplayCoachingMode.Natural
+    val coachingMode: RoleplayCoachingMode = RoleplayCoachingMode.Natural,
+    val materialSource: String = "Backend/generated",
+    val recommended: Boolean = false
 )
 
 data class RoleplayMessage(
