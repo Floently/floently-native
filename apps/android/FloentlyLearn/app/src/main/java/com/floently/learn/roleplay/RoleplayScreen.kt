@@ -55,10 +55,27 @@ fun RoleplayScreen(
     onBack: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    var selectedLevel by remember { mutableStateOf(RoleplayLevel.A1) }
+    var selectedLevel by remember { mutableStateOf(RoleplayLevel.A1_A2) }
     var dashboardState by remember { mutableStateOf<RoleplayDashboardState?>(null) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var activeSession by remember { mutableStateOf<RoleplaySession?>(null) }
+
+    fun startScenario(scenario: RoleplayScenario) {
+        if (scenario.locked) {
+            statusMessage = "This roleplay is locked. Choose a ready topic."
+            return
+        }
+        scope.launch {
+            when (val result = repository.startSession(scenario.id)) {
+                is RoleplaySessionResult.Ready -> {
+                    statusMessage = null
+                    activeSession = result.session
+                }
+                is RoleplaySessionResult.Blocked -> statusMessage = result.reason
+                is RoleplaySessionResult.Error -> statusMessage = result.message
+            }
+        }
+    }
 
     val session = activeSession
     if (session != null) {
@@ -90,7 +107,7 @@ fun RoleplayScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Practice short, realistic Finnish conversations with speech, transcript review, and AI-backed coaching.",
+                    text = "Practice realistic Finnish conversations with backend/generated topics, speech capture, transcript review, and integrated coaching.",
                     color = palette.muted,
                     style = MaterialTheme.typography.titleMedium
                 )
@@ -114,33 +131,32 @@ fun RoleplayScreen(
                 if (dashboard == null || dashboard.isLoading) {
                     RoleplayStatusCard(
                         title = "Loading conversations…",
-                        body = "Loading ${selectedLevel.name} practice scenarios.",
+                        body = "Loading ${selectedLevel.displayName} practice topics.",
                         palette = palette
                     )
                 } else if (dashboard.scenarios.isEmpty()) {
                     RoleplayStatusCard(
-                        title = "No conversations yet for ${dashboard.selectedLevel.name}",
-                        body = "Choose another level or come back later when new scenarios have been added.",
+                        title = "No conversations yet for ${dashboard.selectedLevel.displayName}",
+                        body = "Choose another level band or come back later when generated topics have been added.",
                         palette = palette
                     )
                 } else {
+                    val recommended = dashboard.scenarios.firstOrNull { !it.locked && it.recommended }
+                        ?: dashboard.scenarios.firstOrNull { !it.locked }
+                    recommended?.let { scenario ->
+                        FloentlyPrimaryButton(
+                            title = "Start recommended ${dashboard.selectedLevel.displayName} roleplay",
+                            product = FloentlyProduct.Learn,
+                            onClick = { startScenario(scenario) }
+                        )
+                    }
+
                     dashboard.scenarios.forEach { scenario ->
                         OldSourceRoleplayScenarioCard(
                             scenario = scenario,
                             palette = palette,
                             actionLabel = if (scenario.locked) "Locked" else "Start roleplay",
-                            onClick = {
-                                scope.launch {
-                                    when (val result = repository.startSession(scenario.id)) {
-                                        is RoleplaySessionResult.Ready -> {
-                                            statusMessage = null
-                                            activeSession = result.session
-                                        }
-                                        is RoleplaySessionResult.Blocked -> statusMessage = result.reason
-                                        is RoleplaySessionResult.Error -> statusMessage = result.message
-                                    }
-                                }
-                            }
+                            onClick = { startScenario(scenario) }
                         )
                     }
                 }
