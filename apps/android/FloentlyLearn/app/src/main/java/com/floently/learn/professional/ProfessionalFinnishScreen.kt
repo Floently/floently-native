@@ -1,35 +1,27 @@
 package com.floently.learn.professional
 
-import androidx.compose.foundation.layout.height
-import com.floently.shared.design.FloentlyPalette
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.Alignment
-import androidx.compose.material3.Surface
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.background
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,11 +30,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.floently.learn.i18n.LearnCopy
 import com.floently.learn.navigation.LearnFeatureDestination
+import com.floently.shared.design.FloentlyPalette
 import com.floently.shared.design.FloentlyCard
 import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
@@ -85,27 +84,43 @@ fun ProfessionalFinnishScreen(
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 Text(
-                    text = "Doctor",
+                    text = "Professional Finnish",
                     color = palette.text,
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Keep this page profession-focused: flashcards, roleplay, and interview practice for the work context you paid for.",
+                    text = "Workplace Finnish for healthcare, office, customer service, interviews, safety, and small talk from A1 to C2.",
                     color = palette.muted,
                     style = MaterialTheme.typography.titleMedium
                 )
 
                 ProfessionalRouteHeader(palette = palette)
+                ProfessionalLevelPathStrip(palette = palette)
                 ProfessionalPracticeHub(
                     palette = palette,
                     onRoleplay = { onDestinationSelected(LearnFeatureDestination.Roleplay) },
-                    onCards = { onDestinationSelected(LearnFeatureDestination.Cards) }
+                    onCards = { onDestinationSelected(LearnFeatureDestination.Cards) },
+                    onInterview = {
+                        selectedDomain = ProfessionalFinnishDomain.JobSearch
+                        statusMessage = "Interview practice opened. Choose a job-search module below."
+                    },
+                    onSpeech = {
+                        selectedDomain = ProfessionalFinnishDomain.CustomerService
+                        statusMessage = "Speech and phone-call practice opened. Choose a phone or customer-service module below."
+                    },
+                    onReport = {
+                        selectedDomain = ProfessionalFinnishDomain.Office
+                        statusMessage = "Report writing opened. Choose an office/report module below."
+                    }
                 )
                 ProfessionalDomainStrip(
                     selectedDomain = selectedDomain,
                     palette = palette,
-                    onSelect = { selectedDomain = it }
+                    onSelect = {
+                        selectedDomain = it
+                        statusMessage = null
+                    }
                 )
 
                 statusMessage?.let { message ->
@@ -136,7 +151,7 @@ fun ProfessionalFinnishScreen(
                             module = module,
                             progress = progress,
                             palette = palette,
-                            actionLabel = if (module.locked) "Locked" else "Open practice",
+                            actionLabel = if (module.locked) "Locked" else "Open ${module.cefrLevel.name} practice",
                             onClick = {
                                 scope.launch {
                                     when (val result = repository.startSession(module.id)) {
@@ -180,6 +195,7 @@ private fun ProfessionalFinnishSessionScreen(
         targetValue = progressTarget.coerceIn(0f, 1f),
         label = "Professional Finnish progress"
     )
+    val currentStep = if (session.scenarios.isEmpty()) 0 else minOf(session.currentScenarioIndex + 1, session.scenarios.size)
 
     FloentlyScreen(product = FloentlyProduct.Learn) { palette ->
         Column(
@@ -195,14 +211,15 @@ private fun ProfessionalFinnishSessionScreen(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Keep this page profession-focused: flashcards, roleplay, and interview practice for the work context you paid for.",
-                color = palette.muted,
-                style = MaterialTheme.typography.titleMedium
+                text = "${session.module.cefrLevel.name} · ${session.module.domain.displayName()} · ${session.module.estimatedMinutes} min",
+                color = session.module.domain.domainColor(palette),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold
             )
 
             ProfessionalSessionProgressCard(
                 progress = animatedProgress,
-                current = session.currentScenarioIndex + 1,
+                current = currentStep,
                 total = session.scenarios.size,
                 responses = session.responses.size,
                 palette = palette
@@ -244,18 +261,20 @@ private fun ProfessionalFinnishSessionScreen(
     }
 }
 
-
 @Composable
 private fun ProfessionalPracticeHub(
     palette: FloentlyPalette,
     onRoleplay: () -> Unit,
-    onCards: () -> Unit
+    onCards: () -> Unit,
+    onInterview: () -> Unit,
+    onSpeech: () -> Unit,
+    onReport: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ProfessionalHubAction(
             label = "ROLEPLAY",
             title = "Professional roleplay",
-            body = "Practise the workplace conversation flow inside your profession.",
+            body = "Practise workplace conversation flow inside the profession path you selected.",
             accent = palette.accent,
             palette = palette,
             onClick = onRoleplay
@@ -263,34 +282,34 @@ private fun ProfessionalPracticeHub(
         ProfessionalHubAction(
             label = "CARDS",
             title = "Professional cards",
-            body = "Profession-specific vocabulary and phrase recall.",
+            body = "Profession-specific vocabulary, phrase recall, and quick revision.",
             accent = palette.primary,
             palette = palette,
             onClick = onCards
         )
         ProfessionalHubAction(
             label = "INTERVIEW",
-            title = "Interview",
-            body = "Interview preparation is represented here and will be connected after the screen is visually accepted.",
+            title = "Interview practice",
+            body = "Open job-search modules for background, strengths, availability, and specialist value answers.",
             accent = Color(0xFF9D7CFF),
             palette = palette,
-            onClick = {}
+            onClick = onInterview
         )
         ProfessionalHubAction(
             label = "SPEECH",
-            title = "Speech recording",
-            body = "Speech recording belongs in this hub and must match the old app flow.",
+            title = "Phone and speech flow",
+            body = "Open call-opening and customer-service modules that prepare the speech path without placeholders.",
             accent = palette.warning,
             palette = palette,
-            onClick = {}
+            onClick = onSpeech
         )
         ProfessionalHubAction(
             label = "REPORT",
             title = "Report writing",
-            body = "Work report writing belongs to Professional Finnish only.",
+            body = "Open office and report-writing modules for blockers, updates, and professional summaries.",
             accent = Color(0xFF3EC5A8),
             palette = palette,
-            onClick = {}
+            onClick = onReport
         )
     }
 }
@@ -338,6 +357,7 @@ private fun ProfessionalHubAction(
         }
     }
 }
+
 @Composable
 private fun ProfessionalSessionProgressCard(
     progress: Float,
@@ -605,14 +625,13 @@ private fun ProfessionalCompletionCard(
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
-                text = "Seuraava askel: kokeile toista työtilannetta tai harjoittele roolipelissä.",
+                text = "Seuraava askel: kokeile toista työtilannetta, roolipeliä tai ammatillisia kortteja.",
                 color = palette.soft,
                 style = MaterialTheme.typography.bodySmall
             )
         }
     }
 }
-
 
 @Composable
 private fun ProfessionalRouteHeader(
@@ -636,19 +655,19 @@ private fun ProfessionalRouteHeader(
                 letterSpacing = 3.sp
             )
             Text(
-                text = "Doctor",
+                text = "Professional Finnish",
                 color = palette.text,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Black
             )
             Text(
-                text = "Harjoittele hoitotyötä, asiakaspalvelua, toimistoa, työturvallisuutta ja työnhakua eri polkuina.",
+                text = "Doctor, nurse, practical nurse, office, customer service, interviews, reports, safety, and everyday workplace communication.",
                 color = palette.muted,
                 style = MaterialTheme.typography.bodyMedium
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ProfessionalTinyPill("Tilanne", "Ammatillinen", palette.warning)
-                ProfessionalTinyPill("Tavoite", "Selkeä puhe", palette.accent)
+                ProfessionalTinyPill("Path", "A1-C2", palette.warning)
+                ProfessionalTinyPill("Mode", "Work scenarios", palette.accent)
             }
         }
     }
@@ -678,6 +697,67 @@ private fun ProfessionalTinyPill(
 }
 
 @Composable
+private fun ProfessionalLevelPathStrip(
+    palette: FloentlyPalette
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "LEVEL PATH",
+            color = palette.accent,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 2.sp
+        )
+        ProfessionalFinnishLevel.entries.chunked(3).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                row.forEach { level ->
+                    ProfessionalLevelChip(
+                        level = level,
+                        palette = palette,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfessionalLevelChip(
+    level: ProfessionalFinnishLevel,
+    palette: FloentlyPalette,
+    modifier: Modifier
+) {
+    Surface(
+        color = palette.cardMuted,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, palette.border),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            Text(
+                text = level.name,
+                color = level.levelColor(palette),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Black
+            )
+            Text(
+                text = level.shortDescription(),
+                color = palette.muted,
+                fontSize = 10.sp,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
 private fun ProfessionalDomainStrip(
     selectedDomain: ProfessionalFinnishDomain,
     palette: FloentlyPalette,
@@ -685,6 +765,13 @@ private fun ProfessionalDomainStrip(
 ) {
     val rows = ProfessionalFinnishDomain.entries.chunked(3)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "WORKPLACE AREA",
+            color = palette.accent,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 2.sp
+        )
         rows.forEach { row ->
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -759,6 +846,20 @@ private fun ProfessionalModuleCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                Spacer(modifier = Modifier.weight(1f))
+                Surface(
+                    color = module.cefrLevel.levelColor(palette).copy(alpha = 0.16f),
+                    shape = RoundedCornerShape(999.dp),
+                    border = BorderStroke(1.dp, module.cefrLevel.levelColor(palette).copy(alpha = 0.5f))
+                ) {
+                    Text(
+                        text = module.cefrLevel.name,
+                        color = module.cefrLevel.levelColor(palette),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+                    )
+                }
             }
 
             Text(
@@ -781,6 +882,13 @@ private fun ProfessionalModuleCard(
                     label = "Tilanteet",
                     value = "${progress?.completedScenarios ?: 0}/${progress?.totalScenarios ?: 0}",
                     color = accent,
+                    palette = palette,
+                    modifier = Modifier.weight(1f)
+                )
+                ProfessionalMetricBox(
+                    label = "Taso",
+                    value = module.cefrLevel.name,
+                    color = module.cefrLevel.levelColor(palette),
                     palette = palette,
                     modifier = Modifier.weight(1f)
                 )
@@ -887,13 +995,30 @@ private fun ProfessionalFinnishDomain.domainColor(palette: FloentlyPalette): Col
     ProfessionalFinnishDomain.SmallTalk -> Color(0xFF3EC5A8)
 }
 
+private fun ProfessionalFinnishLevel.levelColor(palette: FloentlyPalette): Color = when (this) {
+    ProfessionalFinnishLevel.A1 -> palette.accent
+    ProfessionalFinnishLevel.A2 -> palette.primary
+    ProfessionalFinnishLevel.B1 -> palette.warning
+    ProfessionalFinnishLevel.B2 -> Color(0xFFFF7A7A)
+    ProfessionalFinnishLevel.C1 -> Color(0xFF9D7CFF)
+    ProfessionalFinnishLevel.C2 -> Color(0xFF3EC5A8)
+}
+
+private fun ProfessionalFinnishLevel.shortDescription(): String = when (this) {
+    ProfessionalFinnishLevel.A1 -> "basics"
+    ProfessionalFinnishLevel.A2 -> "routine"
+    ProfessionalFinnishLevel.B1 -> "independent"
+    ProfessionalFinnishLevel.B2 -> "fluent work"
+    ProfessionalFinnishLevel.C1 -> "specialist"
+    ProfessionalFinnishLevel.C2 -> "expert"
+}
 
 private fun ProfessionalFinnishDomain.displayName(): String = when (this) {
-    ProfessionalFinnishDomain.Healthcare -> "Nurse"
-    ProfessionalFinnishDomain.Office -> "Doctor"
-    ProfessionalFinnishDomain.CustomerService -> "Practical Nurse"
-    ProfessionalFinnishDomain.JobSearch -> "Työnhaku"
-    ProfessionalFinnishDomain.Safety -> "Turvallisuus"
+    ProfessionalFinnishDomain.Healthcare -> "Healthcare"
+    ProfessionalFinnishDomain.Office -> "Office"
+    ProfessionalFinnishDomain.CustomerService -> "Customer service"
+    ProfessionalFinnishDomain.JobSearch -> "Job search"
+    ProfessionalFinnishDomain.Safety -> "Safety"
     ProfessionalFinnishDomain.SmallTalk -> "Small talk"
 }
 
