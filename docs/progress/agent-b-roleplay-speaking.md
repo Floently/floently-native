@@ -3,6 +3,23 @@
 Branch: `m01/production-native-foundation`
 Repo: `galapoto/floently-native`
 
+## Latest verified M33 Roleplay build
+
+User pulled through `fac30e4` and confirmed:
+
+```bash
+ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn
+```
+
+Result:
+
+```text
+BUILD SUCCESSFUL in 24s
+54 actionable tasks: 4 executed, 50 up-to-date
+```
+
+Agent B Roleplay/Speaking M33 old-flow changes compiled successfully. Remaining warnings are in YKI files, outside Agent B ownership.
+
 ## M33 active blocker pass
 
 M33 hard blockers from `docs/progress/M33_DEVICE_QA_HARD_BLOCKERS.md` for Agent B:
@@ -192,13 +209,11 @@ Completed in the previous Agent B pass:
 
 ## Build status
 
-Verified locally by user through integrated M32 head `399340f`:
+Verified locally by user through M33 Agent B head `fac30e4`:
 
 ```text
-BUILD SUCCESSFUL in 6s
+BUILD SUCCESSFUL in 24s
 ```
-
-The M33 Agent B pass still needs local debug build verification.
 
 ## QA focus for device pass
 
