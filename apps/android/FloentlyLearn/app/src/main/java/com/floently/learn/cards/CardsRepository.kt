@@ -16,20 +16,21 @@ sealed interface CardsSessionResult {
 }
 
 class ServiceCardsRepository(
-    private val service: CardsService,
-    @Suppress("unused") private val fallback: CardsRepository = PreviewCardsRepository()
+    private val service: CardsService
 ) : CardsRepository {
-    private val serviceDeckIds = mutableSetOf<String>()
-
     override suspend fun dashboard(selectedDeckType: CardsDeckType): CardsDashboardState {
         return runCatching {
             val dashboard = service.dashboard(selectedDeckType)
-            serviceDeckIds.addAll(dashboard.decks.map { it.id })
             dashboard.copy(
+                selectedDeckType = selectedDeckType,
                 errorMessage = dashboard.errorMessage?.takeIf { it.isNotBlank() }
+                    ?: if (dashboard.decks.isEmpty()) {
+                        "Cards backend returned no real card-bank material for ${selectedDeckType.name}."
+                    } else {
+                        null
+                    }
             )
         }.getOrElse { error ->
-            serviceDeckIds.clear()
             CardsDashboardState(
                 decks = emptyList(),
                 progress = emptyList(),
@@ -58,7 +59,11 @@ class ServiceCardsRepository(
         }
     }
 
-    override suspend fun reviewCard(session: CardsPracticeSession, cardId: String, rating: CardsReviewRating): CardsSessionResult {
+    override suspend fun reviewCard(
+        session: CardsPracticeSession,
+        cardId: String,
+        rating: CardsReviewRating
+    ): CardsSessionResult {
         return runCatching {
             CardsSessionResult.Ready(service.reviewCard(session, cardId, rating))
         }.getOrElse { error ->
@@ -92,7 +97,35 @@ class ServiceCardsRepository(
         }
     }
 
-    override fun summarize(session: CardsPracticeSession): CardsSessionSummary = PreviewCardsRepository().summarize(session)
+    override fun summarize(session: CardsPracticeSession): CardsSessionSummary {
+        val ratings = session.answers.values
+        val again = ratings.count { it == CardsReviewRating.Again }
+        val hard = ratings.count { it == CardsReviewRating.Hard }
+        val good = ratings.count { it == CardsReviewRating.Good }
+        val easy = ratings.count { it == CardsReviewRating.Easy }
+        val accuracy = if (ratings.isEmpty()) {
+            null
+        } else {
+            (((good + easy).toDouble() / ratings.size.toDouble()) * 100).toInt()
+        }
+
+        return CardsSessionSummary(
+            sessionId = session.id,
+            reviewedCards = session.reviewedCount,
+            totalCards = session.cards.size,
+            againCount = again,
+            hardCount = hard,
+            goodCount = good,
+            easyCount = easy,
+            accuracyPreviewPercent = accuracy,
+            durable = true,
+            nextReviewText = if (again > 0 || hard > 0) {
+                "Review difficult cards again soon."
+            } else {
+                "Strong recall. Keep this deck in spaced review."
+            }
+        )
+    }
 
     private fun backendError(prefix: String, error: Throwable): String {
         val detail = error.message?.trim().orEmpty()

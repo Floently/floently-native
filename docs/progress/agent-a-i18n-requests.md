@@ -29,3 +29,8 @@ Agent A did not edit shared i18n. Future centralized keys should cover these Car
 - cardsBackendStartFailed
 - cardsBackendReviewSaveFailed
 - cardsBackendNextCardFailed
+
+## M32 Cards final backend material copy
+
+Agent A did not edit shared i18n. Future centralized key needed:
+- cardsBackendNoRealMaterial = Cards backend returned no real card-bank material for this mode.
