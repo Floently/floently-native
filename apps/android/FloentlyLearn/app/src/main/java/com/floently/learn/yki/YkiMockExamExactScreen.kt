@@ -100,7 +100,8 @@ private enum class MockSpeakingStage {
 fun YkiMockExamExactScreen(
     onBack: () -> Unit
 ) {
-    val tasks = remember { YkiMockExamBank.tasks() }
+    var selectedLevel by remember { mutableStateOf(YkiMockLevelBand.B1_B2) }
+    val tasks = remember(selectedLevel) { YkiMockExamBank.tasks(selectedLevel) }
     var routeStage by remember { mutableStateOf(MockRouteStage.Landing) }
     var currentIndex by remember { mutableIntStateOf(0) }
 
@@ -111,8 +112,27 @@ fun YkiMockExamExactScreen(
     val speakingFiles = remember { mutableStateMapOf<Int, String>() }
     val listeningPlayed = remember { mutableStateMapOf<Int, Boolean>() }
 
+    fun resetMockAnswers() {
+        currentIndex = 0
+        selectedAnswers.clear()
+        writingAnswers.clear()
+        writingStates.clear()
+        speakingDurations.clear()
+        speakingFiles.clear()
+        listeningPlayed.clear()
+    }
+
+    fun selectMockLevel(level: YkiMockLevelBand) {
+        if (selectedLevel != level) {
+            selectedLevel = level
+            resetMockAnswers()
+        }
+    }
+
     when (routeStage) {
         MockRouteStage.Landing -> MockLandingScreen(
+            selectedLevel = selectedLevel,
+            onLevelSelected = ::selectMockLevel,
             onBack = onBack,
             onStartMock = {
                 routeStage = MockRouteStage.Summary
@@ -120,6 +140,8 @@ fun YkiMockExamExactScreen(
         )
 
         MockRouteStage.Summary -> MockExamSummaryScreen(
+            selectedLevel = selectedLevel,
+            onLevelSelected = ::selectMockLevel,
             onBack = {
                 routeStage = MockRouteStage.Landing
             },
@@ -187,13 +209,7 @@ fun YkiMockExamExactScreen(
                 currentIndex = tasks.lastIndex
             },
             onRestart = {
-                currentIndex = 0
-                selectedAnswers.clear()
-                writingAnswers.clear()
-                writingStates.clear()
-                speakingDurations.clear()
-                speakingFiles.clear()
-                listeningPlayed.clear()
+                resetMockAnswers()
                 routeStage = MockRouteStage.Landing
             }
         )
@@ -202,12 +218,17 @@ fun YkiMockExamExactScreen(
 
 @Composable
 private fun MockLandingScreen(
+    selectedLevel: YkiMockLevelBand,
+    onLevelSelected: (YkiMockLevelBand) -> Unit,
     onBack: () -> Unit,
     onStartMock: () -> Unit
 ) {
     LightShell {
         BackPill(onBack)
-        Spacer(modifier = Modifier.height(36.dp))
+        Spacer(modifier = Modifier.height(18.dp))
+        MockLevelBandSelector(selectedLevel = selectedLevel, onLevelSelected = onLevelSelected)
+        MockLevelSourceCard(selectedLevel = selectedLevel)
+        Spacer(modifier = Modifier.height(12.dp))
         OldSourceYkiMockLanding(
             onStartExam = onStartMock,
             onOpenMockCycle = onStartMock,
@@ -219,15 +240,20 @@ private fun MockLandingScreen(
 
 @Composable
 private fun MockExamSummaryScreen(
+    selectedLevel: YkiMockLevelBand,
+    onLevelSelected: (YkiMockLevelBand) -> Unit,
     onBack: () -> Unit,
     onStart: () -> Unit
 ) {
     LightShell {
         BackPill(onBack)
-        Spacer(modifier = Modifier.height(36.dp))
+        Spacer(modifier = Modifier.height(18.dp))
+        MockLevelBandSelector(selectedLevel = selectedLevel, onLevelSelected = onLevelSelected)
+        MockLevelSourceCard(selectedLevel = selectedLevel)
+        Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "YKI B1-B2 exam",
+            text = selectedLevel.examTitle,
             color = mockText,
             fontSize = 43.sp,
             lineHeight = 48.sp,
@@ -235,7 +261,7 @@ private fun MockExamSummaryScreen(
         )
 
         Text(
-            text = "Practice exam with real-format questions at B1-B2 level.\nWork through each section in order.",
+            text = "Practice exam with real-format questions at ${selectedLevel.label} level.\nWork through each section in order.",
             color = Color(0xFF4B5563),
             fontSize = 22.sp,
             lineHeight = 32.sp
@@ -268,7 +294,79 @@ private fun MockExamSummaryScreen(
             }
         }
 
-        MockPrimaryButton("Start YKI exam", blue, onStart)
+        MockPrimaryButton("Start ${selectedLevel.label} YKI exam", blue, onStart)
+    }
+}
+
+@Composable
+private fun MockLevelBandSelector(
+    selectedLevel: YkiMockLevelBand,
+    onLevelSelected: (YkiMockLevelBand) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("Choose YKI level", color = mockText, fontSize = 18.sp, fontWeight = FontWeight.Black)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            YkiMockLevelBand.values().forEach { band ->
+                MockLevelPill(
+                    band = band,
+                    selected = selectedLevel == band,
+                    onClick = { onLevelSelected(band) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MockLevelPill(
+    band: YkiMockLevelBand,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        color = if (selected) blue else blueSoft,
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, if (selected) blue else border),
+        modifier = modifier.height(48.dp).clickable(onClick = onClick)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = band.label,
+                color = if (selected) white else blue,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun MockLevelSourceCard(selectedLevel: YkiMockLevelBand) {
+    Surface(
+        color = white,
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, border),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = selectedLevel.description,
+                color = mockText,
+                fontSize = 15.sp,
+                lineHeight = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "${YkiMockExamBank.certifiedTaskCount} certified tasks available. Authority: ${YkiMockExamBank.authority}.",
+                color = muted,
+                fontSize = 13.sp,
+                lineHeight = 18.sp
+            )
+        }
     }
 }
 
@@ -862,7 +960,7 @@ private fun MockDeepResultsScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(26.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text("B1-B2 exam summary", color = mockText, fontSize = 26.sp, fontWeight = FontWeight.Black)
+                Text("${tasks.firstOrNull()?.levelBand?.label ?: "B1-B2"} exam summary", color = mockText, fontSize = 26.sp, fontWeight = FontWeight.Black)
                 Text(report.scoreLine, color = Color(0xFF4B5563), fontSize = 21.sp)
                 Text(report.summary, color = Color(0xFF4B5563), fontSize = 20.sp, lineHeight = 29.sp)
             }
@@ -958,7 +1056,7 @@ private fun buildDeepMockReport(
     val created = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
 
     return YkiPracticeEvaluationReport(
-        title = "YKI B1-B2 Mock Exam Evaluation",
+        title = "YKI ${tasks.firstOrNull()?.levelBand?.label ?: "B1-B2"} Mock Exam Evaluation",
         createdAt = "Created: $created",
         scoreLine = "Objective score: $objectiveCorrect / $objectiveTotal. Readiness: $readiness.",
         summary = "Completed ${tasks.size} tasks: reading $readingCorrect/${reading.size}, listening $listeningCorrect/${listening.size}, writing submitted $writingSubmitted/${writing.size}, speaking recorded $speakingSubmitted/${speaking.size}.",

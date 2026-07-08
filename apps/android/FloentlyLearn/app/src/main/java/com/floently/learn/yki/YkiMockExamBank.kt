@@ -14,6 +14,28 @@ internal enum class YkiMockPhase {
     Speaking
 }
 
+internal enum class YkiMockLevelBand(
+    val label: String,
+    val examTitle: String,
+    val description: String
+) {
+    A1_A2(
+        label = "A1-A2",
+        examTitle = "YKI A1-A2 exam",
+        description = "Basic-level YKI mock route using the certified native mock bank structure."
+    ),
+    B1_B2(
+        label = "B1-B2",
+        examTitle = "YKI B1-B2 exam",
+        description = "Intermediate-level YKI mock route and the screenshot-locked default path."
+    ),
+    C1_C2(
+        label = "C1-C2",
+        examTitle = "YKI C1-C2 exam",
+        description = "Advanced-level YKI mock route using the certified native mock bank structure."
+    )
+}
+
 internal data class YkiMockExamTask(
     val bankTaskId: String,
     val screenshots: List<String>,
@@ -35,6 +57,7 @@ internal data class YkiMockExamTask(
     val preparationSeconds: Int = 30,
     val responseSeconds: Int = 60,
     val minimumRecordingSeconds: Int = 30,
+    val levelBand: YkiMockLevelBand = YkiMockLevelBand.B1_B2,
     val finalSubmit: Boolean = false,
     val bankSource: String = "engine_v3_2_certified_native_mock_bank"
 ) {
@@ -48,7 +71,15 @@ internal object YkiMockExamBank {
     const val totalExamTasks: Int = 17
     const val totalDuration: String = "approx. 95 min"
 
-    fun tasks(): List<YkiMockExamTask> = listOf(
+    fun tasks(levelBand: YkiMockLevelBand = YkiMockLevelBand.B1_B2): List<YkiMockExamTask> =
+        baseTasks().map { task ->
+            task.copy(
+                levelBand = levelBand,
+                bankSource = "${authority}_${levelBand.label.replace("-", "_")}_native_mock_bank"
+            )
+        }
+
+    private fun baseTasks(): List<YkiMockExamTask> = listOf(
         YkiMockExamTask(
             bankTaskId = "reading-1-digitalisation",
             screenshots = listOf("IMG_0436", "IMG_0437"),
