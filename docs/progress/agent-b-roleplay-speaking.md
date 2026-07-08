@@ -3,6 +3,23 @@
 Branch: `m01/production-native-foundation`
 Repo: `galapoto/floently-native`
 
+## Latest verified state
+
+User pulled through `ef1e50d` and confirmed:
+
+```bash
+ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn
+```
+
+Result:
+
+```text
+BUILD SUCCESSFUL in 12s
+54 actionable tasks: 4 executed, 50 up-to-date
+```
+
+No Roleplay/Speaking warnings remained after the locale cleanup.
+
 ## Latest update after local build verification
 
 User pulled through `4f30f9d` and confirmed `./scripts/nativectl build android-learn` passed. The only warning was a deprecated Java `Locale(String, String)` constructor in Agent B-owned `RoleplayScreen.kt`.
@@ -66,12 +83,10 @@ Completed in the previous Agent B pass:
 
 ## Build status
 
-Not run after the latest connector-side warning cleanup commit. The required local command still needs to be run on the machine that has `/home/vitus/floently-native` mounted:
+Verified locally by user through `ef1e50d`:
 
-```bash
-cd /home/vitus/floently-native
-git pull --rebase origin m01/production-native-foundation
-ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn
+```text
+BUILD SUCCESSFUL in 12s
 ```
 
 ## QA focus for device pass
