@@ -21,3 +21,11 @@ Requested future LearnCopy keys for Everyday Finnish:
 Requested future Cards keys:
 - cardsGrammarLabel = Grammar
 - cardsMenuLabel = Menu
+
+## M31 Cards backend status copy
+
+Agent A did not edit shared i18n. Future centralized keys should cover these Cards backend states:
+- cardsBackendUnavailable
+- cardsBackendStartFailed
+- cardsBackendReviewSaveFailed
+- cardsBackendNextCardFailed

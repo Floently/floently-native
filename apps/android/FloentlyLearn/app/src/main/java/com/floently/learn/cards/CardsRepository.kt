@@ -17,42 +17,91 @@ sealed interface CardsSessionResult {
 
 class ServiceCardsRepository(
     private val service: CardsService,
-    private val fallback: CardsRepository = PreviewCardsRepository()
+    @Suppress("unused") private val fallback: CardsRepository = PreviewCardsRepository()
 ) : CardsRepository {
+    private val serviceDeckIds = mutableSetOf<String>()
+
     override suspend fun dashboard(selectedDeckType: CardsDeckType): CardsDashboardState {
-        return runCatching { service.dashboard(selectedDeckType) }.getOrElse { error ->
-            fallback.dashboard(selectedDeckType).copy(
-                errorMessage = error.message?.takeIf { it.isNotBlank() }
-                    ?: "Cards are temporarily unavailable. Try again soon."
+        return runCatching {
+            val dashboard = service.dashboard(selectedDeckType)
+            serviceDeckIds.addAll(dashboard.decks.map { it.id })
+            dashboard.copy(
+                errorMessage = dashboard.errorMessage?.takeIf { it.isNotBlank() }
+            )
+        }.getOrElse { error ->
+            serviceDeckIds.clear()
+            CardsDashboardState(
+                decks = emptyList(),
+                progress = emptyList(),
+                selectedDeckType = selectedDeckType,
+                isLoading = false,
+                errorMessage = backendError(
+                    prefix = "Cards backend unavailable. Real card banks could not be loaded",
+                    error = error
+                ),
+                banks = emptyList(),
+                buckets = CardBankBuckets()
             )
         }
     }
 
     override suspend fun startSession(deckId: String, mode: CardsPracticeMode): CardsSessionResult {
-        return runCatching { CardsSessionResult.Ready(service.startSession(deckId, mode)) }.getOrElse {
-            fallback.startSession(deckId, mode)
+        return runCatching {
+            CardsSessionResult.Ready(service.startSession(deckId, mode))
+        }.getOrElse { error ->
+            CardsSessionResult.Error(
+                backendError(
+                    prefix = "Cards backend could not start this real card-bank session",
+                    error = error
+                )
+            )
         }
     }
 
     override suspend fun reviewCard(session: CardsPracticeSession, cardId: String, rating: CardsReviewRating): CardsSessionResult {
-        return runCatching { CardsSessionResult.Ready(service.reviewCard(session, cardId, rating)) }.getOrElse {
-            fallback.reviewCard(session, cardId, rating)
+        return runCatching {
+            CardsSessionResult.Ready(service.reviewCard(session, cardId, rating))
+        }.getOrElse { error ->
+            CardsSessionResult.Error(
+                backendError(
+                    prefix = "Cards backend could not save your review",
+                    error = error
+                )
+            )
         }
     }
 
     override suspend fun skipCard(session: CardsPracticeSession): CardsSessionResult {
-        return runCatching { CardsSessionResult.Ready(service.skipCard(session)) }.getOrElse {
-            fallback.skipCard(session)
+        return runCatching {
+            CardsSessionResult.Ready(service.skipCard(session))
+        }.getOrElse { error ->
+            CardsSessionResult.Error(
+                backendError(
+                    prefix = "Cards backend could not load the next real card",
+                    error = error
+                )
+            )
         }
     }
 
     override suspend fun flagCard(session: CardsPracticeSession, cardId: String, reason: String): Boolean {
-        return runCatching { service.flagCard(session, cardId, reason) }.getOrElse {
-            fallback.flagCard(session, cardId, reason)
+        return runCatching {
+            service.flagCard(session, cardId, reason)
+        }.getOrElse {
+            false
         }
     }
 
-    override fun summarize(session: CardsPracticeSession): CardsSessionSummary = fallback.summarize(session)
+    override fun summarize(session: CardsPracticeSession): CardsSessionSummary = PreviewCardsRepository().summarize(session)
+
+    private fun backendError(prefix: String, error: Throwable): String {
+        val detail = error.message?.trim().orEmpty()
+        return if (detail.isBlank()) {
+            "$prefix."
+        } else {
+            "$prefix: $detail"
+        }
+    }
 }
 
 class PreviewCardsRepository : CardsRepository {
