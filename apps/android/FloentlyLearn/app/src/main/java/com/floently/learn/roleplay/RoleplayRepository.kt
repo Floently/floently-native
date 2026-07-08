@@ -17,11 +17,8 @@ class ServiceRoleplayRepository(
     private val fallback: RoleplayRepository = PreviewRoleplayRepository()
 ) : RoleplayRepository {
     override suspend fun dashboard(selectedLevel: RoleplayLevel): RoleplayDashboardState {
-        return runCatching { service.dashboard(selectedLevel) }.getOrElse { error ->
-            fallback.dashboard(selectedLevel).copy(
-                errorMessage = error.message?.takeIf { it.isNotBlank() }
-                    ?: "Roleplay is temporarily unavailable. Try again soon."
-            )
+        return runCatching { service.dashboard(selectedLevel) }.getOrElse {
+            fallback.dashboard(selectedLevel)
         }
     }
 
@@ -93,124 +90,124 @@ class PreviewRoleplayRepository(
 ) : RoleplayRepository {
     private val scenarios = listOf(
         RoleplayScenario(
-            id = "roleplay-a1-shop",
+            id = "roleplay-a1a2-shop",
             title = "At the shop",
-            level = RoleplayLevel.A1,
+            level = RoleplayLevel.A1_A2,
             type = RoleplayScenarioType.Everyday,
             description = "Buy something simple, ask the price, and answer politely.",
             openingLine = "Hei! Miten voin auttaa?",
             targetPhrases = listOf("Haluaisin tämän.", "Paljonko tämä maksaa?", "Kiitos, se sopii."),
             beginnerSafe = true,
             locked = false,
-            coachingMode = RoleplayCoachingMode.BeginnerSafe
+            coachingMode = RoleplayCoachingMode.BeginnerSafe,
+            materialSource = "Generated fallback",
+            recommended = true
         ),
         RoleplayScenario(
-            id = "roleplay-a1-cafe",
+            id = "roleplay-a1a2-cafe",
             title = "At the cafe",
-            level = RoleplayLevel.A1,
+            level = RoleplayLevel.A1_A2,
             type = RoleplayScenarioType.Service,
             description = "Order a drink, confirm the size, and say thank you.",
             openingLine = "Hei! Mitä saisi olla?",
             targetPhrases = listOf("Yksi kahvi, kiitos.", "Pieni koko, kiitos.", "Voinko maksaa kortilla?"),
             beginnerSafe = true,
             locked = false,
-            coachingMode = RoleplayCoachingMode.BeginnerSafe
+            coachingMode = RoleplayCoachingMode.BeginnerSafe,
+            materialSource = "Generated fallback"
         ),
         RoleplayScenario(
-            id = "roleplay-a1-meeting-friend",
-            title = "Meeting a friend",
-            level = RoleplayLevel.A1,
-            type = RoleplayScenarioType.Everyday,
-            description = "Greet someone, say how you are, and suggest a simple plan.",
-            openingLine = "Hei! Mitä kuuluu?",
-            targetPhrases = listOf("Hyvää kuuluu.", "Entä sinulle?", "Mennäänkö kävelylle?"),
-            beginnerSafe = true,
-            locked = false,
-            coachingMode = RoleplayCoachingMode.BeginnerSafe
-        ),
-        RoleplayScenario(
-            id = "roleplay-a2-work-schedule",
-            title = "Work schedule",
-            level = RoleplayLevel.A2,
-            type = RoleplayScenarioType.Work,
-            description = "Practice asking about shifts, availability, and timing.",
-            openingLine = "Hei, sopiiko sinulle työvuoro maanantaina?",
-            targetPhrases = listOf("Mihin aikaan vuoro alkaa?", "Se sopii minulle.", "Voinko vaihtaa vuoroa?"),
-            beginnerSafe = true,
-            locked = false,
-            coachingMode = RoleplayCoachingMode.BeginnerSafe
-        ),
-        RoleplayScenario(
-            id = "roleplay-a2-doctor-appointment",
+            id = "roleplay-a1a2-health",
             title = "Doctor appointment",
-            level = RoleplayLevel.A2,
+            level = RoleplayLevel.A1_A2,
             type = RoleplayScenarioType.Healthcare,
             description = "Explain a simple symptom and ask what happens next.",
             openingLine = "Hei, mikä sinulla on vaivana?",
             targetPhrases = listOf("Minulla on päänsärky.", "Se alkoi eilen.", "Mitä minun pitäisi tehdä?"),
             beginnerSafe = true,
             locked = false,
-            coachingMode = RoleplayCoachingMode.BeginnerSafe
+            coachingMode = RoleplayCoachingMode.BeginnerSafe,
+            materialSource = "Generated fallback"
         ),
         RoleplayScenario(
-            id = "roleplay-a2-phone-time",
-            title = "Short phone call",
-            level = RoleplayLevel.A2,
-            type = RoleplayScenarioType.PhoneCall,
-            description = "Say who you are, why you call, and confirm a time.",
-            openingLine = "Hyvää päivää, miten voin auttaa?",
-            targetPhrases = listOf("Tässä on...", "Soitan ajan takia.", "Voisitteko toistaa?"),
-            beginnerSafe = true,
-            locked = false,
-            coachingMode = RoleplayCoachingMode.Natural
-        ),
-        RoleplayScenario(
-            id = "roleplay-b1-interview",
+            id = "roleplay-b1b2-interview",
             title = "Job interview",
-            level = RoleplayLevel.B1,
+            level = RoleplayLevel.B1_B2,
             type = RoleplayScenarioType.Interview,
             description = "Practice concise interview answers with coaching.",
             openingLine = "Tervetuloa haastatteluun. Kerro lyhyesti itsestäsi.",
             targetPhrases = listOf("Minulla on kokemusta...", "Olen kiinnostunut tehtävästä, koska...", "Vahvuuteni on..."),
             beginnerSafe = false,
             locked = false,
-            coachingMode = RoleplayCoachingMode.Professional
+            coachingMode = RoleplayCoachingMode.Professional,
+            materialSource = "Generated fallback",
+            recommended = true
         ),
         RoleplayScenario(
-            id = "roleplay-b1-service-problem",
+            id = "roleplay-b1b2-service-problem",
             title = "Service problem",
-            level = RoleplayLevel.B1,
+            level = RoleplayLevel.B1_B2,
             type = RoleplayScenarioType.Service,
             description = "Explain a problem clearly and ask for a practical solution.",
             openingLine = "Hei, kerro miten voin auttaa tässä tilanteessa.",
             targetPhrases = listOf("Ongelma on se, että...", "Tarvitsisin ratkaisun tänään.", "Voisimmeko sopia näin?"),
             beginnerSafe = false,
             locked = false,
-            coachingMode = RoleplayCoachingMode.Natural
+            coachingMode = RoleplayCoachingMode.Natural,
+            materialSource = "Generated fallback"
         ),
         RoleplayScenario(
-            id = "roleplay-b2-professional-phone",
+            id = "roleplay-b1b2-professional-phone",
             title = "Professional phone call",
-            level = RoleplayLevel.B2,
+            level = RoleplayLevel.B1_B2,
             type = RoleplayScenarioType.PhoneCall,
             description = "Practice a clear professional phone call with speech capture and transcript review.",
             openingLine = "Hyvää päivää, miten voin auttaa?",
             targetPhrases = listOf("Soitan koskien asiaa...", "Voisin tarkentaa vielä...", "Sopiiko, että palaan asiaan?"),
             beginnerSafe = false,
             locked = false,
-            coachingMode = RoleplayCoachingMode.Professional
+            coachingMode = RoleplayCoachingMode.Professional,
+            materialSource = "Generated fallback"
         ),
         RoleplayScenario(
-            id = "roleplay-b2-work-negotiation",
+            id = "roleplay-c1c2-work-negotiation",
             title = "Workplace negotiation",
-            level = RoleplayLevel.B2,
+            level = RoleplayLevel.C1_C2,
             type = RoleplayScenarioType.Work,
-            description = "Negotiate timing, explain constraints, and keep the tone professional.",
+            description = "Negotiate timing, explain constraints, and keep the tone precise.",
             openingLine = "Meidän pitäisi sopia tästä aikataulusta tänään.",
-            targetPhrases = listOf("Ymmärrän tilanteen.", "Minun näkökulmastani...", "Voisimmeko tehdä kompromissin?"),
+            targetPhrases = listOf("Ymmärrän tilanteen kokonaiskuvan.", "Minun näkökulmastani keskeistä on...", "Voisimmeko tehdä kompromissin?"),
             beginnerSafe = false,
             locked = false,
-            coachingMode = RoleplayCoachingMode.ExamStyle
+            coachingMode = RoleplayCoachingMode.ExamStyle,
+            materialSource = "Generated fallback",
+            recommended = true
+        ),
+        RoleplayScenario(
+            id = "roleplay-c1c2-policy-discussion",
+            title = "Policy discussion",
+            level = RoleplayLevel.C1_C2,
+            type = RoleplayScenarioType.Work,
+            description = "Defend a viewpoint, give reasons, and respond diplomatically.",
+            openingLine = "Miten perustelisit tämän muutoksen työyhteisölle?",
+            targetPhrases = listOf("Perusteluni on se, että...", "Toisaalta on huomioitava...", "Ehdotan, että etenemme vaiheittain."),
+            beginnerSafe = false,
+            locked = false,
+            coachingMode = RoleplayCoachingMode.ExamStyle,
+            materialSource = "Generated fallback"
+        ),
+        RoleplayScenario(
+            id = "roleplay-c1c2-exam-opinion",
+            title = "Advanced opinion task",
+            level = RoleplayLevel.C1_C2,
+            type = RoleplayScenarioType.Interview,
+            description = "Give a structured opinion with a clear reason and example.",
+            openingLine = "Mitä mieltä olet tästä väitteestä? Perustele vastauksesi.",
+            targetPhrases = listOf("Olen osittain samaa mieltä.", "Käytännön esimerkkinä voisi mainita...", "Johtopäätökseni on..."),
+            beginnerSafe = false,
+            locked = false,
+            coachingMode = RoleplayCoachingMode.ExamStyle,
+            materialSource = "Generated fallback"
         )
     )
 
@@ -249,7 +246,7 @@ class PreviewRoleplayRepository(
                 ),
                 learnerTurns = 0,
                 repeatedCueCount = 0,
-                releaseGate = "Conversation practice is ready for speech verification."
+                releaseGate = "Roleplay uses backend/generated material when available and a generated safety fallback when offline."
             )
         )
     }
