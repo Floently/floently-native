@@ -225,3 +225,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M29-C rebuilt Everyday Finnish as old-app style two-entry Vocabulary & Roleplay screen with A1-C2 level rail; removed generic four-card hub.
 
 - M29-D started global i18n implementation by wiring Everyday Finnish to LearnCopy and making A1-A2/B1-B2/C1-C2 selectable.
+
+- E: added multi-agent Android parity handover and copy-paste prompts.
