@@ -25,6 +25,7 @@ Completed in this M31 pass:
 - Replaced the tiny old fallback list with broader generated fallback topics across all three M31 level bands.
 - Added recommended topic metadata and a `Start recommended ... roleplay` button so users can start faster while still keeping manual topic control.
 - Updated dashboard cards and session header to display level-band labels instead of raw enum names.
+- Updated `RoleplayAiBoundary.kt` to use the new M31 level bands and remove old `A1`, `A2`, `B1`, `B2` enum references after Agent C recorded the remaining Roleplay build blocker.
 - Kept all changes inside Agent B-owned Roleplay/Speaking/progress scope.
 
 ## Latest verified state before M31 pass
@@ -100,6 +101,7 @@ Completed in the previous Agent B pass:
 - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/roleplay/RoleplayRepository.kt`
 - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/roleplay/RoleplayModels.kt`
 - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/roleplay/RoleplayService.kt`
+- `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/roleplay/RoleplayAiBoundary.kt`
 - `apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/roleplay/OldSourceRoleplayComponents.kt`
 - `docs/progress/agent-b-i18n-requests.md`
 - `docs/progress/agent-b-roleplay-speaking.md`
@@ -113,7 +115,7 @@ Verified locally by user through `ef1e50d` before the M31 pass:
 BUILD SUCCESSFUL in 12s
 ```
 
-The M31 pass still needs local verification.
+The M31 pass still needs local verification after `53ad3ab`.
 
 ## QA focus for device pass
 
