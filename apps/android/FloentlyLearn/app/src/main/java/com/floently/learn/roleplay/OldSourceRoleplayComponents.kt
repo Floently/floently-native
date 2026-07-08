@@ -128,6 +128,11 @@ internal fun OldSourceRoleplayScenarioCard(
                 )
             }
 
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OldSourceRoleplayTinyPill(scenario.level.name, scenario.type.name, palette.primary, palette)
+                OldSourceRoleplayTinyPill("Mode", scenario.coachingMode.oldSourceLabel(), palette.accent, palette)
+            }
+
             Text(
                 text = scenario.title,
                 color = palette.text,
@@ -266,7 +271,14 @@ internal fun OldSourceRoleplayTranscriptBubble(
 
 private fun RoleplayScenario.oldSourceHelperText(): String {
     val safety = if (beginnerSafe) "Beginner-friendly" else "More demanding"
-    return "$safety conversation: ${type.name.lowercase()}."
+    return "$safety ${coachingMode.oldSourceLabel().lowercase()} conversation: ${type.name.lowercase()}."
+}
+
+private fun RoleplayCoachingMode.oldSourceLabel(): String = when (this) {
+    RoleplayCoachingMode.BeginnerSafe -> "Beginner"
+    RoleplayCoachingMode.Natural -> "Natural"
+    RoleplayCoachingMode.Professional -> "Professional"
+    RoleplayCoachingMode.ExamStyle -> "Exam style"
 }
 
 private fun RoleplayMessage.oldSourceDisplayName(): String = when (speaker) {
