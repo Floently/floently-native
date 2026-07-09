@@ -53,19 +53,21 @@ class PreviewLearnProgressRepository : LearnProgressRepository {
             )
         )
 
-        return LearnProgressDashboardState(
-            summaries = summaries,
-            timeline = emptyList(),
-            syncBoundary = LearnProgressSyncBoundary(
-                status = LearnProgressSyncStatus.ServicePending,
-                pendingEvents = 0,
-                lastSyncText = "Progress service has not returned saved learning activity yet.",
-                releaseGate = "Only verified service data is shown as completed progress."
-            ),
-            totalCompletedUnits = 0,
-            activeStreakDays = 0,
-            isLoading = false,
-            errorMessage = null
+        return LearnProgressParityAudit.requireServicePendingFallbackOnly(
+            LearnProgressDashboardState(
+                summaries = summaries,
+                timeline = emptyList(),
+                syncBoundary = LearnProgressSyncBoundary(
+                    status = LearnProgressSyncStatus.ServicePending,
+                    pendingEvents = 0,
+                    lastSyncText = "Progress service has not returned saved learning activity yet.",
+                    releaseGate = "Only verified service data is shown as completed progress."
+                ),
+                totalCompletedUnits = 0,
+                activeStreakDays = 0,
+                isLoading = false,
+                errorMessage = null
+            )
         )
     }
 }

@@ -16,7 +16,7 @@ fun YkiFeatureScreen(
     mode: YkiScreenMode = YkiScreenMode.Practice,
     onBack: () -> Unit
 ) {
-    remember(mode) { YkiMaterialWiring.requireReady(mode) }
+    remember(mode) { YkiM35ParityContract.requireReady(mode) }
 
     YkiExactSectionScreen(
         mode = mode,
