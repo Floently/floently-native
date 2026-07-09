@@ -13,7 +13,7 @@ import com.floently.learn.app.LearnAppController
 import com.floently.learn.app.LearnAppState
 import com.floently.learn.app.LearnLoadingScreen
 import com.floently.learn.app.LearnSignedInShell
-import com.floently.learn.auth.LearnAuthScreen
+import com.floently.learn.webentry.M36PublicFlowRouter
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -36,21 +36,21 @@ class MainActivity : ComponentActivity() {
 
                 when (val state = controller.state) {
                     LearnAppState.Loading -> LearnLoadingScreen()
-                    LearnAppState.SignedOut -> LearnAuthScreen(
+                    LearnAppState.SignedOut -> M36PublicFlowRouter(
                         isBusy = false,
                         errorMessage = null,
                         onSubmit = { mode, email, credential, name ->
                             scope.launch { controller.submitAuth(mode, email, credential, name) }
                         }
                     )
-                    is LearnAppState.Authenticating -> LearnAuthScreen(
+                    is LearnAppState.Authenticating -> M36PublicFlowRouter(
                         isBusy = true,
                         errorMessage = null,
                         onSubmit = { mode, email, credential, name ->
                             scope.launch { controller.submitAuth(mode, email, credential, name) }
                         }
                     )
-                    is LearnAppState.AuthError -> LearnAuthScreen(
+                    is LearnAppState.AuthError -> M36PublicFlowRouter(
                         isBusy = false,
                         errorMessage = state.message,
                         onSubmit = { mode, email, credential, name ->
