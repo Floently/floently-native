@@ -235,3 +235,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M33 device QA hard blockers recorded: full i18n, theme/settings, backend connectivity, Cards backend, old Roleplay mic/audio/transcription flow, and YKI bank wiring.
 
 - M34 reopened Android parity after device QA: full language/theme still failing, roleplay UI/function not old-app parity, YKI roleplay missing, cards overlays need language/backend parity.
+
+- M35 started full web-to-native parity round: Floently.com landing, Learn landing, auth, placement, full i18n, theme, cards overlays, roleplay, YKI, settings, billing, animations, and device parity must be included before Android freeze.
