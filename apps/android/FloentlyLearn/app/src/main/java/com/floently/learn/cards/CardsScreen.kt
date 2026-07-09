@@ -369,6 +369,8 @@ private fun StrictPracticeSession(
     val card = session.currentCard
     var showBack by remember(session.id, session.currentCardIndex) { mutableStateOf(false) }
     var showHintPopup by remember(session.id, session.currentCardIndex) { mutableStateOf(false) }
+    var activeCardOverlay by remember(session.id, session.currentCardIndex, selectedOverlayCode) { mutableStateOf<String?>(null) }
+    var showReportOverlay by remember(session.id, session.currentCardIndex) { mutableStateOf(false) }
     val overlay = card?.overlayFor(selectedOverlayCode)
     val cardTone = toneColor(card)
     val progressRatio = if (session.cards.isEmpty()) 0f else min(1f, max(0.08f, (session.currentCardIndex + 1).toFloat() / session.cards.size.toFloat()))
@@ -539,6 +541,31 @@ private fun StrictPracticeSession(
             )
         }
 
+        activeCardOverlay?.let { overlayType ->
+            if (card != null) {
+                StrictCardInfoOverlay(
+                    title = cardOverlayTitle(overlayType),
+                    body = cardOverlayBody(overlayType, card, overlay, selectedLanguage.displayLabel),
+                    palette = palette,
+                    onDismiss = { activeCardOverlay = null }
+                )
+            }
+        }
+
+        if (showReportOverlay && card != null) {
+            StrictCardReportOverlay(
+                palette = palette,
+                selectedLanguageLabel = selectedLanguage.displayLabel,
+                onDismiss = { showReportOverlay = false },
+                onReport = { reason ->
+                    scope.launch {
+                        repository.flagCard(session, card.id, reason)
+                        showReportOverlay = false
+                    }
+                }
+            )
+        }
+
         if (showBack) {
             StrictRatingPanel(
                 palette = palette,
@@ -592,11 +619,20 @@ private fun StrictPracticeSession(
 
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             StrictSmallChip("Review banks", palette, onToggleBanks)
+            StrictSmallChip("Report problem", palette, onClick = { showReportOverlay = true })
             StrictOverlayLanguageStrip(
                 selectedOverlayCode = selectedOverlayCode,
                 selectedLanguage = selectedLanguage,
                 palette = palette,
                 onSelect = onOverlayLanguageSelected
+            )
+            StrictCardOverlayActionStrip(
+                palette = palette,
+                onTranslation = { activeCardOverlay = "translation" },
+                onExplanation = { activeCardOverlay = "explanation" },
+                onGrammar = { activeCardOverlay = "grammar" },
+                onExample = { activeCardOverlay = "example" },
+                onDifficult = { activeCardOverlay = "difficult" }
             )
             StrictEndSessionButton("End session", palette, onExit)
         }
@@ -663,6 +699,148 @@ private fun StrictHintPopup(
                         onClick = onDismiss
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun cardOverlayTitle(type: String): String = when (type) {
+    "translation" -> "Translation"
+    "explanation" -> "Explanation"
+    "grammar" -> "Grammar"
+    "example" -> "Example sentence"
+    "difficult" -> "Difficult-card review"
+    else -> "Card detail"
+}
+
+private fun cardOverlayBody(
+    type: String,
+    card: StudyCard,
+    overlay: CardI18nOverlay?,
+    selectedLanguageLabel: String
+): String = when (type) {
+    "translation" -> overlay?.meaning?.takeIf { it.isNotBlank() } ?: card.back
+    "explanation" -> overlay?.hint?.takeIf { it.isNotBlank() } ?: card.hint
+    "grammar" -> card.tags.joinToString(prefix = "Grammar/tags: ").takeIf { card.tags.isNotEmpty() }
+        ?: overlay?.hint?.takeIf { it.isNotBlank() }
+        ?: "No grammar note was returned for this backend card."
+    "example" -> overlay?.example?.takeIf { it.isNotBlank() } ?: card.example
+    "difficult" -> card.schedulingLabel() + "\n\nUse Again or Hard if this card should stay in the difficult review bank."
+    else -> overlay?.meaning?.takeIf { it.isNotBlank() } ?: card.back
+} + "\n\nOverlay language: $selectedLanguageLabel"
+
+@Composable
+private fun StrictCardOverlayActionStrip(
+    palette: FloentlyPalette,
+    onTranslation: () -> Unit,
+    onExplanation: () -> Unit,
+    onGrammar: () -> Unit,
+    onExample: () -> Unit,
+    onDifficult: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            StrictSmallChip("Translation", palette, onTranslation)
+            StrictSmallChip("Explanation", palette, onExplanation)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            StrictSmallChip("Grammar", palette, onGrammar)
+            StrictSmallChip("Example", palette, onExample)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            StrictSmallChip("Difficult cards", palette, onDifficult)
+        }
+    }
+}
+
+@Composable
+private fun StrictCardInfoOverlay(
+    title: String,
+    body: String,
+    palette: FloentlyPalette,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = palette.card,
+            border = BorderStroke(1.dp, palette.border),
+            tonalElevation = 8.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(text = title, color = palette.text, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+                Text(text = body, color = palette.muted, style = MaterialTheme.typography.bodyMedium)
+                StrictSmallChip("Close", palette, onDismiss)
+            }
+        }
+    }
+}
+
+private val CardProblemReasons = listOf(
+    "Wrong answer",
+    "Options do not match question",
+    "Duplicate options",
+    "Bad Finnish",
+    "Not a real Finnish idiom",
+    "Bad grammar explanation",
+    "Bad example sentence",
+    "Audio problem",
+    "Translation/language problem",
+    "Other problem"
+)
+
+@Composable
+private fun StrictCardReportOverlay(
+    palette: FloentlyPalette,
+    selectedLanguageLabel: String,
+    onDismiss: () -> Unit,
+    onReport: (String) -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = palette.card,
+            border = BorderStroke(1.dp, palette.border),
+            tonalElevation = 8.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Report card problem",
+                    color = palette.text,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Black
+                )
+                Text(
+                    text = "Choose the issue for this backend card. Overlay language: $selectedLanguageLabel.",
+                    color = palette.muted,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                CardProblemReasons.forEach { reason ->
+                    Surface(
+                        shape = RoundedCornerShape(18.dp),
+                        color = palette.card,
+                        border = BorderStroke(1.dp, palette.border),
+                        modifier = Modifier.fillMaxWidth().clickable { onReport(reason) }
+                    ) {
+                        Text(
+                            text = reason,
+                            color = palette.text,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                        )
+                    }
+                }
+                StrictSmallChip("Cancel", palette, onDismiss)
             }
         }
     }

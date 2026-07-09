@@ -34,3 +34,25 @@ Agent A did not edit shared i18n. Future centralized keys should cover these Car
 
 Agent A did not edit shared i18n. Future centralized key needed:
 - cardsBackendNoRealMaterial = Cards backend returned no real card-bank material for this mode.
+
+## M35 Cards overlay/report strings
+
+Agent A added Cards overlay/report UI but did not edit shared i18n. Agent E should wire these labels into the full 21-language catalog:
+- Translation
+- Explanation
+- Grammar
+- Example sentence
+- Difficult-card review
+- Report card problem
+- Wrong answer
+- Options do not match question
+- Duplicate options
+- Bad Finnish
+- Not a real Finnish idiom
+- Bad grammar explanation
+- Bad example sentence
+- Audio problem
+- Translation/language problem
+- Other problem
+- Overlay language
+- Choose the issue for this backend card.
