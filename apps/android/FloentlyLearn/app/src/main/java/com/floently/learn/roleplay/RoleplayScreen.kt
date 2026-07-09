@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.net.Uri
 import android.os.Bundle
 import android.speech.RecognitionListener
@@ -43,6 +45,12 @@ import kotlinx.coroutines.launch
 
 private const val RoleplayUiTargetTurns = 5
 
+enum class RoleplayRouteMode {
+    Everyday,
+    Yki,
+    Professional
+}
+
 internal enum class RoleplaySpeechPhase {
     Idle,
     Listening,
@@ -53,10 +61,25 @@ internal enum class RoleplaySpeechPhase {
 }
 
 @Composable
-fun RoleplayScreen(
+fun YkiRoleplayScreen(
     repository: RoleplayRepository,
     copy: LearnCopy,
     onBack: () -> Unit
+) {
+    RoleplayScreen(
+        repository = repository,
+        copy = copy,
+        onBack = onBack,
+        routeMode = RoleplayRouteMode.Yki
+    )
+}
+
+@Composable
+fun RoleplayScreen(
+    repository: RoleplayRepository,
+    copy: LearnCopy,
+    onBack: () -> Unit,
+    routeMode: RoleplayRouteMode = RoleplayRouteMode.Everyday
 ) {
     val scope = rememberCoroutineScope()
     var selectedLevel by remember { mutableStateOf(RoleplayLevel.A1_A2) }
@@ -88,22 +111,22 @@ fun RoleplayScreen(
             session = session,
             repository = repository,
             copy = copy,
+            routeMode = routeMode,
             onSessionChange = { activeSession = it },
             onExit = { activeSession = null }
         )
     } else {
-        LaunchedEffect(repository, selectedLevel) {
+        LaunchedEffect(repository, selectedLevel, routeMode) {
             autoStartedLevel = null
             val dashboard = repository.dashboard(selectedLevel)
             dashboardState = dashboard
             statusMessage = dashboard.errorMessage
         }
 
-        LaunchedEffect(dashboardState, selectedLevel, activeSession) {
+        LaunchedEffect(dashboardState, selectedLevel, activeSession, routeMode) {
             val dashboard = dashboardState ?: return@LaunchedEffect
             if (activeSession == null && autoStartedLevel != selectedLevel) {
-                val scenario = dashboard.scenarios.firstOrNull { !it.locked && it.recommended }
-                    ?: dashboard.scenarios.firstOrNull { !it.locked }
+                val scenario = dynamicAutoScenario(dashboard.scenarios)
                 if (scenario != null) {
                     autoStartedLevel = selectedLevel
                     startScenario(scenario)
@@ -119,13 +142,13 @@ fun RoleplayScreen(
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 Text(
-                    text = "Roleplay",
+                    text = routeMode.title(),
                     color = palette.text,
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Opening Roleplay starts a generated Finnish conversation automatically. Listen, tap the mic, answer five times, then download the conversation.",
+                    text = routeMode.subtitle(),
                     color = palette.muted,
                     style = MaterialTheme.typography.titleMedium
                 )
@@ -194,12 +217,14 @@ private fun RoleplaySessionScreen(
     session: RoleplaySession,
     repository: RoleplayRepository,
     copy: LearnCopy,
+    routeMode: RoleplayRouteMode,
     onSessionChange: (RoleplaySession) -> Unit,
     onExit: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val concluded = session.learnerTurns >= RoleplayUiTargetTurns
+    val toneGenerator = remember { ToneGenerator(AudioManager.STREAM_MUSIC, 80) }
     var reply by remember(session.id, session.learnerTurns) { mutableStateOf("") }
     var recordedText by remember(session.id, session.learnerTurns) { mutableStateOf("") }
     var statusMessage by remember(session.id, session.learnerTurns) { mutableStateOf<String?>(null) }
@@ -211,15 +236,27 @@ private fun RoleplaySessionScreen(
     var ttsReady by remember { mutableStateOf(false) }
     var ttsEngine by remember { mutableStateOf<TextToSpeech?>(null) }
 
+    DisposableEffect(toneGenerator) {
+        onDispose { toneGenerator.release() }
+    }
+
+    fun playStartMicSound() {
+        toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP, 90)
+    }
+
+    fun playStopMicSound() {
+        toneGenerator.startTone(ToneGenerator.TONE_PROP_ACK, 90)
+    }
+
     val pdfExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri: Uri? ->
         uri?.let {
-            writeRoleplayExport(context, it, roleplayPdfBytes(session))
+            writeRoleplayExport(context, it, roleplayPdfBytes(session, routeMode))
             statusMessage = "PDF conversation download saved."
         }
     }
     val wordExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/msword")) { uri: Uri? ->
         uri?.let {
-            writeRoleplayExport(context, it, roleplayWordBytes(session))
+            writeRoleplayExport(context, it, roleplayWordBytes(session, routeMode))
             statusMessage = "Word conversation download saved."
         }
     }
@@ -306,6 +343,7 @@ private fun RoleplaySessionScreen(
             speechPhase = RoleplaySpeechPhase.Listening
             statusMessage = null
             ttsEngine?.stop()
+            playStartMicSound()
             speechRecognizer.startListening(speechIntent)
         } else if (!granted) {
             speechPhase = RoleplaySpeechPhase.Error
@@ -355,6 +393,7 @@ private fun RoleplaySessionScreen(
                 partialResults.firstSpeechResult()?.let { partial ->
                     recordedText = partial
                     reply = partial
+                    statusMessage = "Live transcription: $partial"
                 }
             }
 
@@ -385,11 +424,13 @@ private fun RoleplaySessionScreen(
         speechPhase = RoleplaySpeechPhase.Listening
         statusMessage = null
         ttsEngine?.stop()
+        playStartMicSound()
         speechRecognizer.cancel()
         speechRecognizer.startListening(speechIntent)
     }
 
     fun stopSpeech() {
+        playStopMicSound()
         speechRecognizer?.stopListening()
         speechPhase = RoleplaySpeechPhase.Processing
         statusMessage = "Stopping recording and sending transcription…"
@@ -413,6 +454,7 @@ private fun RoleplaySessionScreen(
         ) {
             OldSourceRoleplayScenarioHeader(
                 scenario = session.scenario,
+                routeMode = routeMode,
                 palette = palette,
                 onExit = onExit
             )
@@ -463,22 +505,22 @@ private fun RoleplaySessionScreen(
                     FloentlyPrimaryButton(
                         title = "Download PDF",
                         product = FloentlyProduct.Learn,
-                        onClick = { pdfExportLauncher.launch("floently-roleplay-${session.id}.pdf") }
+                        onClick = { pdfExportLauncher.launch("floently-${routeMode.exportSlug()}-roleplay-${session.id}.pdf") }
                     )
                     FloentlyPrimaryButton(
                         title = "Download Word document",
                         product = FloentlyProduct.Learn,
-                        onClick = { wordExportLauncher.launch("floently-roleplay-${session.id}.doc") }
+                        onClick = { wordExportLauncher.launch("floently-${routeMode.exportSlug()}-roleplay-${session.id}.doc") }
                     )
                 } else {
                     OutlinedTextField(
                         value = reply,
                         onValueChange = { reply = it },
-                        label = { Text("Speech transcription / typed fallback") },
+                        label = { Text("Live transcription / typed fallback") },
                         modifier = Modifier.fillMaxWidth()
                     )
                     Text(
-                        text = "Old flow: AI speaks automatically, tap mic to speak, tap mic again to stop and send.",
+                        text = "Old flow: AI speaks automatically, tap mic to speak, tap mic again to stop and send. Start/stop sound feedback is enabled.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     FloentlyPrimaryButton(
@@ -496,6 +538,13 @@ private fun RoleplaySessionScreen(
             }
         }
     }
+}
+
+private fun dynamicAutoScenario(scenarios: List<RoleplayScenario>): RoleplayScenario? {
+    val ready = scenarios.filter { !it.locked }
+    if (ready.isEmpty()) return null
+    val index = ((System.currentTimeMillis() / 1000L) % ready.size).toInt()
+    return ready[index]
 }
 
 private fun Bundle?.firstSpeechResult(): String? = this
@@ -523,8 +572,8 @@ private fun writeRoleplayExport(context: Context, uri: Uri, bytes: ByteArray) {
     }
 }
 
-private fun roleplayExportLines(session: RoleplaySession): List<String> = buildList {
-    add("Floently Roleplay Conversation")
+private fun roleplayExportLines(session: RoleplaySession, routeMode: RoleplayRouteMode): List<String> = buildList {
+    add("Floently ${routeMode.exportTitle()} Conversation")
     add("Topic: ${session.scenario.title}")
     add("Level: ${session.scenario.level.displayName}")
     add("Turns: ${session.learnerTurns}/$RoleplayUiTargetTurns")
@@ -542,13 +591,13 @@ private fun roleplayExportLines(session: RoleplaySession): List<String> = buildL
     add("Conclusion: conversation completed after five user responses.")
 }
 
-private fun roleplayWordBytes(session: RoleplaySession): ByteArray {
-    val body = roleplayExportLines(session).joinToString("\\par\n") { it.rtfEscaped() }
+private fun roleplayWordBytes(session: RoleplaySession, routeMode: RoleplayRouteMode): ByteArray {
+    val body = roleplayExportLines(session, routeMode).joinToString("\\par\n") { it.rtfEscaped() }
     return "{\\rtf1\\ansi\\deff0{\\fonttbl{\\f0 Arial;}}\\fs24 $body}".toByteArray(Charsets.UTF_8)
 }
 
-private fun roleplayPdfBytes(session: RoleplaySession): ByteArray {
-    val lines = roleplayExportLines(session).flatMap { it.wrapForPdf(82) }.take(52)
+private fun roleplayPdfBytes(session: RoleplaySession, routeMode: RoleplayRouteMode): ByteArray {
+    val lines = roleplayExportLines(session, routeMode).flatMap { it.wrapForPdf(82) }.take(52)
     val textCommands = buildString {
         append("BT /F1 10 Tf 40 790 Td 13 TL\n")
         lines.forEach { line -> append("(${line.pdfEscaped()}) Tj T*\n") }
@@ -610,4 +659,34 @@ private fun String.rtfEscaped(): String = buildString {
             else -> if (ch.code < 128) append(ch) else append("\\u${ch.code}?")
         }
     }
+}
+
+private fun RoleplayRouteMode.title(): String = when (this) {
+    RoleplayRouteMode.Everyday -> "Roleplay"
+    RoleplayRouteMode.Yki -> "YKI Roleplay"
+    RoleplayRouteMode.Professional -> "Professional Roleplay"
+}
+
+private fun RoleplayRouteMode.subtitle(): String = when (this) {
+    RoleplayRouteMode.Everyday -> "Opening Roleplay starts a generated Finnish conversation automatically. Listen, tap the mic, answer five times, then download the conversation."
+    RoleplayRouteMode.Yki -> "YKI speaking route: AI examiner starts automatically, you answer with the mic, and the five-turn conversation concludes with an export."
+    RoleplayRouteMode.Professional -> "Professional speaking route: practice workplace Finnish with automatic AI speech, mic transcription, and a downloadable conversation record."
+}
+
+private fun RoleplayRouteMode.label(): String = when (this) {
+    RoleplayRouteMode.Everyday -> "Everyday roleplay"
+    RoleplayRouteMode.Yki -> "YKI roleplay"
+    RoleplayRouteMode.Professional -> "Professional roleplay"
+}
+
+private fun RoleplayRouteMode.exportTitle(): String = when (this) {
+    RoleplayRouteMode.Everyday -> "Roleplay"
+    RoleplayRouteMode.Yki -> "YKI Roleplay"
+    RoleplayRouteMode.Professional -> "Professional Roleplay"
+}
+
+private fun RoleplayRouteMode.exportSlug(): String = when (this) {
+    RoleplayRouteMode.Everyday -> "everyday"
+    RoleplayRouteMode.Yki -> "yki"
+    RoleplayRouteMode.Professional -> "professional"
 }
