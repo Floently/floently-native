@@ -109,7 +109,7 @@ class PreviewRoleplayRepository(
             beginnerSafe = true,
             locked = false,
             coachingMode = RoleplayCoachingMode.BeginnerSafe,
-            materialSource = "Generated material",
+            materialSource = "Offline generated-material fallback - backend unavailable",
             recommended = true
         ),
         RoleplayScenario(
@@ -123,7 +123,7 @@ class PreviewRoleplayRepository(
             beginnerSafe = true,
             locked = false,
             coachingMode = RoleplayCoachingMode.BeginnerSafe,
-            materialSource = "Generated material"
+            materialSource = "Offline generated-material fallback - backend unavailable"
         ),
         RoleplayScenario(
             id = "roleplay-a1a2-health",
@@ -136,7 +136,7 @@ class PreviewRoleplayRepository(
             beginnerSafe = true,
             locked = false,
             coachingMode = RoleplayCoachingMode.BeginnerSafe,
-            materialSource = "Generated material"
+            materialSource = "Offline generated-material fallback - backend unavailable"
         ),
         RoleplayScenario(
             id = "roleplay-b1b2-interview",
@@ -149,7 +149,7 @@ class PreviewRoleplayRepository(
             beginnerSafe = false,
             locked = false,
             coachingMode = RoleplayCoachingMode.Professional,
-            materialSource = "Generated material",
+            materialSource = "Offline generated-material fallback - backend unavailable",
             recommended = true
         ),
         RoleplayScenario(
@@ -163,7 +163,7 @@ class PreviewRoleplayRepository(
             beginnerSafe = false,
             locked = false,
             coachingMode = RoleplayCoachingMode.Natural,
-            materialSource = "Generated material"
+            materialSource = "Offline generated-material fallback - backend unavailable"
         ),
         RoleplayScenario(
             id = "roleplay-b1b2-professional-phone",
@@ -176,7 +176,7 @@ class PreviewRoleplayRepository(
             beginnerSafe = false,
             locked = false,
             coachingMode = RoleplayCoachingMode.Professional,
-            materialSource = "Generated material"
+            materialSource = "Offline generated-material fallback - backend unavailable"
         ),
         RoleplayScenario(
             id = "roleplay-c1c2-work-negotiation",
@@ -189,7 +189,7 @@ class PreviewRoleplayRepository(
             beginnerSafe = false,
             locked = false,
             coachingMode = RoleplayCoachingMode.ExamStyle,
-            materialSource = "Generated material",
+            materialSource = "Offline generated-material fallback - backend unavailable",
             recommended = true
         ),
         RoleplayScenario(
@@ -203,7 +203,7 @@ class PreviewRoleplayRepository(
             beginnerSafe = false,
             locked = false,
             coachingMode = RoleplayCoachingMode.ExamStyle,
-            materialSource = "Generated material"
+            materialSource = "Offline generated-material fallback - backend unavailable"
         ),
         RoleplayScenario(
             id = "roleplay-c1c2-exam-opinion",
@@ -216,7 +216,7 @@ class PreviewRoleplayRepository(
             beginnerSafe = false,
             locked = false,
             coachingMode = RoleplayCoachingMode.ExamStyle,
-            materialSource = "Generated material"
+            materialSource = "Offline generated-material fallback - backend unavailable"
         )
     )
 
@@ -250,7 +250,7 @@ class PreviewRoleplayRepository(
                 ),
                 learnerTurns = 0,
                 repeatedCueCount = 0,
-                releaseGate = "Roleplay uses backend/generated topics first and generated material safety content when offline."
+                releaseGate = "Roleplay uses backend/generated topics first. Offline generated-material fallback is labelled and must not be treated as production backend content."
             )
         )
     }

@@ -227,7 +227,6 @@ class CardsService(private val api: FloentlyApiClient) {
         }
 
         val cards = when {
-            directCards.isNotEmpty() && fallback != null -> mergeCards(fallback.cards, directCards)
             directCards.isNotEmpty() -> directCards
             else -> fallback?.cards.orEmpty()
         }

@@ -126,7 +126,7 @@ class ServiceCardsRepository(
             accuracyPreviewPercent = accuracy,
             durable = true,
             nextReviewText = if (again > 0 || hard > 0) {
-                "Review difficult cards again soon."
+                "Offline fallback review note. Backend review scheduling is required for production."
             } else {
                 "Strong recall. Keep this deck in spaced review."
             }
@@ -164,7 +164,7 @@ class PreviewCardsRepository : CardsRepository {
             description = "High-frequency words and phrases for everyday retention.",
             deckCount = 2,
             dueCards = 6,
-            source = "Native preview mirroring completed web card banks"
+            source = "Offline fallback - not backend verified"
         ),
         CardsDeckBank(
             id = "work-yki",
@@ -172,7 +172,7 @@ class PreviewCardsRepository : CardsRepository {
             description = "Professional Finnish and YKI review decks.",
             deckCount = 2,
             dueCards = 5,
-            source = "Native preview mirroring completed web card banks"
+            source = "Offline fallback - not backend verified"
         ),
         CardsDeckBank(
             id = "review-audio",
@@ -180,7 +180,7 @@ class PreviewCardsRepository : CardsRepository {
             description = "Review cards and future listening-style review.",
             deckCount = 1,
             dueCards = 0,
-            source = "Native preview mirroring completed web card banks"
+            source = "Offline fallback - not backend verified"
         )
     )
 
@@ -196,7 +196,7 @@ class PreviewCardsRepository : CardsRepository {
                 meaning = meaning,
                 example = example,
                 hint = hint,
-                source = "card-overlay-contract"
+                source = "Offline fallback overlay - backend overlay unavailable"
             )
         }
 
@@ -373,8 +373,8 @@ class PreviewCardsRepository : CardsRepository {
         val accuracy = if (ratings.isEmpty()) null else ((positive.toDouble() / ratings.size.toDouble()) * 100).toInt()
         val nextReview = when {
             ratings.any { it == CardsReviewRating.Again } -> "Review again soon: you marked at least one card Again."
-            ratings.any { it == CardsReviewRating.Hard } -> "Review hard cards again this week."
-            ratings.isNotEmpty() -> "Good session. Continue with the next card bank."
+            ratings.any { it == CardsReviewRating.Hard } -> "Offline fallback review note. Backend review scheduling is required for production."
+            ratings.isNotEmpty() -> "Offline fallback session complete. Backend progress must confirm production completion."
             else -> "Start a short review session when you are ready."
         }
         return CardsSessionSummary(
@@ -409,7 +409,7 @@ private fun nextState(card: StudyCard, rating: CardsReviewRating): CardsCardStat
 
 private fun nextReviewText(rating: CardsReviewRating): String = when (rating) {
     CardsReviewRating.Again -> "Review again soon."
-    CardsReviewRating.Hard -> "Review hard cards again this week."
+    CardsReviewRating.Hard -> "Offline fallback review note. Backend review scheduling is required for production."
     CardsReviewRating.Good -> "Good recall. Review later."
     CardsReviewRating.Easy -> "Strong recall. Keep moving."
 }

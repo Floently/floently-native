@@ -18,8 +18,8 @@ class LearnProgressService(private val api: FloentlyApiClient) {
             ?: LearnProgressSyncBoundary(
                 status = LearnProgressSyncStatus.ServicePending,
                 pendingEvents = timeline.count { !it.durable },
-                lastSyncText = json.optString("last_sync_text").ifBlank { "Progress sync boundary is waiting for the existing backend." },
-                releaseGate = json.optString("release_gate").ifBlank { "Durable progress sync must be verified before release." }
+                lastSyncText = json.optString("last_sync_text").ifBlank { "Progress backend boundary is waiting for verified service data." },
+                releaseGate = json.optString("release_gate").ifBlank { "Durable backend progress must be verified before release." }
             )
         return LearnProgressDashboardState(
             summaries = summaries,
@@ -39,7 +39,7 @@ class LearnProgressService(private val api: FloentlyApiClient) {
         totalUnits = json.optInt("total_units", json.optInt("totalUnits", 0)),
         streakDays = json.optInt("streak_days", json.optInt("streakDays", 0)),
         lastActivity = json.optString("last_activity").ifBlank { json.optString("lastActivity") },
-        releaseGate = json.optString("release_gate").ifBlank { "Progress service boundary." },
+        releaseGate = json.optString("release_gate").ifBlank { "Progress backend service boundary." },
         syncStatus = syncStatusFromApi(json.optString("sync_status"))
     )
 
@@ -56,7 +56,7 @@ class LearnProgressService(private val api: FloentlyApiClient) {
         status = syncStatusFromApi(json.optString("status")),
         pendingEvents = json.optInt("pending_events", json.optInt("pendingEvents", 0)),
         lastSyncText = json.optString("last_sync_text").ifBlank { json.optString("lastSyncText") },
-        releaseGate = json.optString("release_gate").ifBlank { "Progress sync service boundary." }
+        releaseGate = json.optString("release_gate").ifBlank { "Progress backend sync service boundary." }
     )
 
     private fun areaFromApi(value: String?): LearnProgressArea = when (value?.trim()?.lowercase()) {

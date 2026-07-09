@@ -41,17 +41,17 @@ class PreviewAccountRepository : AccountRepository {
             ),
             LearnBillingActionSnapshot(
                 title = "Start 3-day trial",
-                body = "Trial entry belongs to the billing surface. Android live purchases must use Google Play Billing when enabled.",
+                body = "Billing API status: trial entry is a boundary marker. Android live purchases must use Google Play Billing when enabled.",
                 statusText = "Store billing boundary"
             ),
             LearnBillingActionSnapshot(
                 title = "Manage subscription",
-                body = "Mobile-origin subscriptions are managed through the store account. Web portal and web checkout remain web-only.",
+                body = "Account API status: mobile-origin subscriptions are managed through the store account. Web portal and web checkout remain web-only until the billing route is verified.",
                 statusText = "Provider wiring pending"
             ),
             LearnBillingActionSnapshot(
                 title = "Start checkout",
-                body = "Checkout preparation is available through the shared billing boundary and must preserve separate Learn, Read, and Create access.",
+                body = "Checkout API status: shared billing boundary is represented, but production checkout must preserve separate Learn, Read, and Create access before release.",
                 statusText = "Checkout boundary ready"
             )
         ),

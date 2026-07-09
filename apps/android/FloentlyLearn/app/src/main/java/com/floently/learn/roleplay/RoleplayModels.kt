@@ -42,7 +42,7 @@ data class RoleplayScenario(
     val beginnerSafe: Boolean,
     val locked: Boolean,
     val coachingMode: RoleplayCoachingMode = RoleplayCoachingMode.Natural,
-    val materialSource: String = "Backend/generated",
+    val materialSource: String = "Backend material source pending",
     val recommended: Boolean = false
 )
 
