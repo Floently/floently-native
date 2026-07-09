@@ -40,6 +40,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.floently.learn.i18n.LearnLanguage
 import com.floently.learn.navigation.LearnFeatureDestination
+import com.floently.shared.design.FloentlyThemeMode
 
 private val DrawerBackdrop = Color(0xB0040A18)
 private val DrawerSurface = Color(0xFF111B30)
@@ -85,7 +86,9 @@ fun LearnUtilityDrawer(
     onClose: () -> Unit,
     onHome: () -> Unit,
     onDestinationSelected: (LearnFeatureDestination) -> Unit,
-    onSignOut: () -> Unit
+    onSignOut: () -> Unit,
+    themeMode: FloentlyThemeMode = FloentlyThemeMode.System,
+    onThemeModeChange: (FloentlyThemeMode) -> Unit = {}
 ) {
     if (!visible) return
 
@@ -205,7 +208,7 @@ fun LearnUtilityDrawer(
                             }
                         }
 
-                        DrawerBottomPanels(onSignOut = onSignOut)
+                        DrawerBottomPanels(themeMode = themeMode, onThemeModeChange = onThemeModeChange, onSignOut = onSignOut)
                         Spacer(modifier = Modifier.height(92.dp))
                     }
                 }
@@ -542,6 +545,8 @@ private fun drawerFlag(language: LearnLanguage): String = when (language) {
 
 @Composable
 private fun DrawerBottomPanels(
+    themeMode: FloentlyThemeMode,
+    onThemeModeChange: (FloentlyThemeMode) -> Unit,
     onSignOut: () -> Unit
 ) {
     Column(
@@ -555,6 +560,11 @@ private fun DrawerBottomPanels(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(82.dp)
+                .clickable {
+                    onThemeModeChange(
+                        if (themeMode == FloentlyThemeMode.Light) FloentlyThemeMode.Dark else FloentlyThemeMode.Light
+                    )
+                }
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 16.dp),
@@ -568,7 +578,7 @@ private fun DrawerBottomPanels(
                         fontWeight = FontWeight.Black
                     )
                     Text(
-                        text = "Dark mode",
+                        text = if (themeMode == FloentlyThemeMode.Light) "Light mode" else "Dark mode",
                         color = DrawerMuted,
                         fontSize = 14.sp
                     )
@@ -578,7 +588,7 @@ private fun DrawerBottomPanels(
                     shape = RoundedCornerShape(999.dp),
                     modifier = Modifier.size(width = 54.dp, height = 32.dp)
                 ) {
-                    Box(contentAlignment = Alignment.CenterEnd) {
+                    Box(contentAlignment = if (themeMode == FloentlyThemeMode.Light) Alignment.CenterStart else Alignment.CenterEnd) {
                         Surface(
                             color = Color.White,
                             shape = CircleShape,

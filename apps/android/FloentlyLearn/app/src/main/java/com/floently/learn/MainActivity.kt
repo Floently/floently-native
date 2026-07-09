@@ -13,6 +13,8 @@ import com.floently.learn.app.LearnAppState
 import com.floently.learn.app.LearnLoadingScreen
 import com.floently.learn.app.LearnSignedInShell
 import com.floently.learn.webentry.M36PublicFlowRouter
+import com.floently.learn.theme.rememberFloentlyThemeModeState
+import com.floently.learn.theme.persistFloentlyThemeMode
 import com.floently.shared.design.FloentlyTheme
 import kotlinx.coroutines.launch
 
@@ -20,7 +22,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            FloentlyTheme {
+            val themeModeState = rememberFloentlyThemeModeState(applicationContext)
+            FloentlyTheme(themeMode = themeModeState.value) {
                 val appContainer = remember { LearnAppContainer(applicationContext) }
                 val controller = remember {
                     LearnAppController(
@@ -77,7 +80,12 @@ class MainActivity : ComponentActivity() {
                         roleplayRepository = appContainer.roleplayRepository,
                         cardsRepository = appContainer.cardsRepository,
                         progressRepository = appContainer.progressRepository,
-                        onSignOut = { scope.launch { controller.signOut() } }
+                        onSignOut = { scope.launch { controller.signOut() } },
+                        themeMode = themeModeState.value,
+                        onThemeModeChange = { mode ->
+                            themeModeState.value = mode
+                            persistFloentlyThemeMode(applicationContext, mode)
+                        }
                     )
                 }
             }

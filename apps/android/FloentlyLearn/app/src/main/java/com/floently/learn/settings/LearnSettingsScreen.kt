@@ -36,6 +36,7 @@ import com.floently.shared.design.FloentlyPalette
 import com.floently.shared.design.FloentlyPrimaryButton
 import com.floently.shared.design.FloentlyProduct
 import com.floently.shared.design.FloentlyScreen
+import com.floently.shared.design.FloentlyThemeMode
 
 @Composable
 fun LearnSettingsScreen(
@@ -43,7 +44,9 @@ fun LearnSettingsScreen(
     selectedLanguage: LearnLanguage,
     onLanguageSelected: (LearnLanguage) -> Unit,
     onBack: () -> Unit,
-    onSignOut: () -> Unit
+    onSignOut: () -> Unit,
+    themeMode: FloentlyThemeMode = FloentlyThemeMode.System,
+    onThemeModeChange: (FloentlyThemeMode) -> Unit = {}
 ) {
     val uriHandler = LocalUriHandler.current
 

@@ -29,6 +29,7 @@ import com.floently.learn.yki.PreviewYkiRepository
 import com.floently.learn.yki.YkiFeatureScreen
 import com.floently.learn.yki.YkiScreenMode
 import com.floently.shared.auth.FloentlyAuthSession
+import com.floently.shared.design.FloentlyThemeMode
 import com.floently.learn.i18n.LearnLocalizationLayout
 
 @Composable
@@ -38,7 +39,9 @@ fun LearnSignedInShell(
     cardsRepository: CardsRepository,
     progressRepository: LearnProgressRepository,
     onSignOut: () -> Unit,
-    onBackToSuite: (() -> Unit)? = null
+    onBackToSuite: (() -> Unit)? = null,
+    themeMode: FloentlyThemeMode = FloentlyThemeMode.System,
+    onThemeModeChange: (FloentlyThemeMode) -> Unit = {}
 ) {
     val context = LocalContext.current
     val languageState = rememberLearnLanguageState()
@@ -146,6 +149,8 @@ fun LearnSignedInShell(
                     showShellDrawer = false
                     selectedDestination = nextDestination
                 },
+                themeMode = themeMode,
+                onThemeModeChange = onThemeModeChange,
                 onSignOut = {
                     showShellDrawer = false
                     onSignOut()
