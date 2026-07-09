@@ -237,3 +237,5 @@ Reinstall the debug APK on the real Android device and verify the shared native 
 - M34 reopened Android parity after device QA: full language/theme still failing, roleplay UI/function not old-app parity, YKI roleplay missing, cards overlays need language/backend parity.
 
 - M35 started full web-to-native parity round: Floently.com landing, Learn landing, auth, placement, full i18n, theme, cards overlays, roleplay, YKI, settings, billing, animations, and device parity must be included before Android freeze.
+
+- Agent E M35 expanded scope: missing native product gateway, landing, organization, auth, Read/Create entry pages, Floently logo parity, full 20-language old catalog wiring, RTL, and audio/mic animation parity.
