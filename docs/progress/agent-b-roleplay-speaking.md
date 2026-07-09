@@ -3,6 +3,23 @@
 Branch: `m01/production-native-foundation`
 Repo: `galapoto/floently-native`
 
+## Latest verified M35 integrated build
+
+User pulled through integrated M35 head `5a99872` and confirmed:
+
+```bash
+ANDROID_HOME=/usr/lib/android-sdk ANDROID_SDK_ROOT=/usr/lib/android-sdk ./scripts/nativectl build android-learn
+```
+
+Result:
+
+```text
+BUILD SUCCESSFUL in 5s
+54 actionable tasks: 54 up-to-date
+```
+
+Agent B Roleplay/Speaking M35 parity changes are included in this successful integrated build. The local working tree was clean after build output.
+
 ## M35 full web-to-native parity pass
 
 M35 Agent B scope from `docs/progress/M35_FULL_WEB_TO_NATIVE_PARITY_ROUND.md` and `docs/handover/m35/AGENT_B_M35_ROLEPLAY_SPEAKING.md`:
@@ -31,10 +48,6 @@ Completed in this M35 pass:
 - Updated export filenames/titles with route context, for example YKI roleplay exports.
 - Added `docs/progress/agent-b-navigation-requests.md` requesting Agent E/D navigation wiring for the new YKI roleplay route, because shared navigation is outside Agent B ownership.
 - Kept patches inside Agent B-owned Roleplay/Speaking/progress scope.
-
-Build status:
-
-- M35 Agent B pass still needs local Android build verification.
 
 ## Latest verified M33 Roleplay build
 
@@ -211,7 +224,7 @@ Completed in the previous Agent B pass:
 - Added target phrase lists for fallback scenarios so the scenario header/recorded response flow has real learner support content.
 - Unlocked the B2 professional phone call because native speech capture now exists; no placeholder locked speaking path remains in the fallback dataset.
 - Preserved `RoleplayRepository`, `RoleplayService`, and existing AI/backend handoff behavior.
-- Kept all changes inside Agent B-owned Roleplay/Speaking/progress scope.
+- Kept all changes inside Agent B-owned Roleplay/Speaking files/progress docs.
 
 ## Earlier completed work
 
@@ -243,13 +256,11 @@ Completed in the previous Agent B pass:
 
 ## Build status
 
-Verified locally by user through M33 Agent B head `fac30e4`:
+Verified locally by user through integrated M35 head `5a99872`:
 
 ```text
-BUILD SUCCESSFUL in 24s
+BUILD SUCCESSFUL in 5s
 ```
-
-M35 Agent B changes still need local build verification.
 
 ## QA focus for device pass
 
