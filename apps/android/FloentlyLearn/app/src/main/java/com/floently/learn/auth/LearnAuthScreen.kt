@@ -1,5 +1,6 @@
 package com.floently.learn.auth
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -34,9 +35,11 @@ import com.floently.shared.design.FloentlyScreen
 fun LearnAuthScreen(
     isBusy: Boolean,
     errorMessage: String?,
+    initialMode: LearnAuthMode = LearnAuthMode.SignIn,
+    onForgotPassword: (() -> Unit)? = null,
     onSubmit: (LearnAuthMode, String, String, String?) -> Unit
 ) {
-    var mode by remember { mutableStateOf(LearnAuthMode.SignIn) }
+    var mode by remember(initialMode) { mutableStateOf(initialMode) }
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var credential by remember { mutableStateOf("") }
@@ -102,6 +105,17 @@ fun LearnAuthScreen(
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation()
                 )
+
+                if (mode == LearnAuthMode.SignIn) {
+                    onForgotPassword?.let { forgot ->
+                        Text(
+                            text = "Forgot password?",
+                            color = palette.primary,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clickable(onClick = forgot)
+                        )
+                    }
+                }
 
                 if (!errorMessage.isNullOrBlank()) {
                     Text(text = errorMessage, color = androidx.compose.ui.graphics.Color.Red)
