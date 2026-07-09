@@ -3,6 +3,39 @@
 Branch: `m01/production-native-foundation`
 Repo: `galapoto/floently-native`
 
+## M35 full web-to-native parity pass
+
+M35 Agent B scope from `docs/progress/M35_FULL_WEB_TO_NATIVE_PARITY_ROUND.md` and `docs/handover/m35/AGENT_B_M35_ROLEPLAY_SPEAKING.md`:
+
+- Old roleplay UI/function parity.
+- Automatic AI start and speech.
+- Mic tap start/stop.
+- Start/end mic sound feedback.
+- Waveform animation.
+- Live transcription.
+- AI auto speech.
+- Exactly five user turns.
+- Conclusive final AI response.
+- PDF/Word export.
+- YKI roleplay route.
+
+Completed in this M35 pass:
+
+- Added start and stop mic sound feedback using Android `ToneGenerator` inside the Roleplay-owned screen.
+- Kept the old mic tap flow: tap starts recording, tap again stops and submits transcription.
+- Promoted partial recognition text into visible live transcription status while the learner speaks.
+- Added route context support for Everyday, YKI, and Professional roleplay so the UI does not confuse those routes.
+- Added `YkiRoleplayScreen(...)` as a Roleplay-owned YKI entry composable.
+- Updated the roleplay header pill to show route context, for example `YKI roleplay`.
+- Rotated auto-start topic selection across ready generated topics instead of always starting the same first recommended item.
+- Updated export filenames/titles with route context, for example YKI roleplay exports.
+- Added `docs/progress/agent-b-navigation-requests.md` requesting Agent E/D navigation wiring for the new YKI roleplay route, because shared navigation is outside Agent B ownership.
+- Kept patches inside Agent B-owned Roleplay/Speaking/progress scope.
+
+Build status:
+
+- M35 Agent B pass still needs local Android build verification.
+
 ## Latest verified M33 Roleplay build
 
 User pulled through `fac30e4` and confirmed:
@@ -206,6 +239,7 @@ Completed in the previous Agent B pass:
 - `docs/progress/agent-b-i18n-requests.md`
 - `docs/progress/agent-b-roleplay-speaking.md`
 - `docs/progress/agent-b-blocked-by-shared-i18n.md`
+- `docs/progress/agent-b-navigation-requests.md`
 
 ## Build status
 
@@ -215,13 +249,18 @@ Verified locally by user through M33 Agent B head `fac30e4`:
 BUILD SUCCESSFUL in 24s
 ```
 
+M35 Agent B changes still need local build verification.
+
 ## QA focus for device pass
 
-- Open Roleplay and confirm it auto-starts a ready generated topic.
+- Open Everyday Roleplay and confirm it auto-starts a ready generated topic.
 - Confirm the AI partner speaks automatically without a separate listen button.
-- Tap mic once, speak, tap mic again, and confirm the transcript sends automatically.
+- Tap mic once and confirm start sound feedback plays.
+- Speak and confirm live transcription text appears.
+- Tap mic again and confirm stop sound feedback plays and transcript sends automatically.
 - Confirm waveform animates while listening.
 - Complete five user responses.
 - Confirm the final AI response concludes the interaction.
 - Confirm PDF and Word document/book download actions appear after completion.
+- Confirm YKI Roleplay route uses the YKI label and export names after Agent E/D navigation wiring.
 - Confirm typed fallback still works if speech recognition is unavailable.
