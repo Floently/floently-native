@@ -3,7 +3,6 @@ package com.floently.learn
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -14,13 +13,14 @@ import com.floently.learn.app.LearnAppState
 import com.floently.learn.app.LearnLoadingScreen
 import com.floently.learn.app.LearnSignedInShell
 import com.floently.learn.webentry.M36PublicFlowRouter
+import com.floently.shared.design.FloentlyTheme
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
+            FloentlyTheme {
                 val appContainer = remember { LearnAppContainer(applicationContext) }
                 val controller = remember {
                     LearnAppController(
