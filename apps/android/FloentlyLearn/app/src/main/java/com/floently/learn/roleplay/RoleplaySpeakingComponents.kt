@@ -32,9 +32,16 @@ import com.floently.shared.design.FloentlyPalette
 @Composable
 internal fun OldSourceRoleplayScenarioHeader(
     scenario: RoleplayScenario,
+    routeMode: RoleplayRouteMode = RoleplayRouteMode.Everyday,
     palette: FloentlyPalette,
     onExit: () -> Unit
 ) {
+    val routeLabel = when (routeMode) {
+        RoleplayRouteMode.Everyday -> "Everyday roleplay"
+        RoleplayRouteMode.Yki -> "YKI roleplay"
+        RoleplayRouteMode.Professional -> "Professional roleplay"
+    }
+
     Surface(
         color = palette.card,
         shape = RoundedCornerShape(28.dp),
@@ -50,7 +57,7 @@ internal fun OldSourceRoleplayScenarioHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OldSourceSpeakingPill(scenario.level.displayName, scenario.type.name, palette.primary)
+                OldSourceSpeakingPill(scenario.level.displayName, routeLabel, palette.primary)
                 Surface(
                     color = palette.cardMuted,
                     shape = RoundedCornerShape(999.dp),
