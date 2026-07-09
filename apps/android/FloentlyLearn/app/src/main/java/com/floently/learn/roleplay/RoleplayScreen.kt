@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -276,6 +277,12 @@ private fun RoleplaySessionScreen(
         }
     }
 
+    LaunchedEffect(ttsReady, ttsEngine) {
+        if (ttsReady) {
+            ttsEngine?.language = Locale.forLanguageTag("fi-FI")
+        }
+    }
+
     LaunchedEffect(ttsReady, session.id, session.messages.size) {
         if (ttsReady) {
             val aiMessage = session.messages.lastOrNull { it.speaker == RoleplaySpeaker.Partner || it.speaker == RoleplaySpeaker.Coach }
@@ -336,6 +343,9 @@ private fun RoleplaySessionScreen(
         }
     }
 
+    val currentSubmitReply by rememberUpdatedState(newValue = { text: String -> submitReply(text) })
+    val currentSpeechAvailable by rememberUpdatedState(newValue = speechAvailable)
+
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         hasAudioPermission = granted
         if (granted && speechRecognizer != null && !concluded) {
@@ -351,7 +361,7 @@ private fun RoleplaySessionScreen(
         }
     }
 
-    DisposableEffect(speechRecognizer, session.id, session.learnerTurns) {
+    DisposableEffect(speechRecognizer) {
         val listener = object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) {
                 speechPhase = RoleplaySpeechPhase.Listening
@@ -371,7 +381,7 @@ private fun RoleplaySessionScreen(
             }
 
             override fun onError(error: Int) {
-                speechPhase = if (speechAvailable) RoleplaySpeechPhase.Error else RoleplaySpeechPhase.Unavailable
+                speechPhase = if (currentSpeechAvailable) RoleplaySpeechPhase.Error else RoleplaySpeechPhase.Unavailable
                 statusMessage = roleplaySpeechErrorMessage(error)
             }
 
@@ -385,7 +395,7 @@ private fun RoleplaySessionScreen(
                     reply = transcript
                     speechPhase = RoleplaySpeechPhase.Ready
                     statusMessage = "Transcribed and sending…"
-                    submitReply(transcript)
+                    currentSubmitReply(transcript)
                 }
             }
 
