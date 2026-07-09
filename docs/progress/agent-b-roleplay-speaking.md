@@ -3,6 +3,34 @@
 Branch: `m01/production-native-foundation`
 Repo: `galapoto/floently-native`
 
+## M36 Audio/Speech/Roleplay runtime pass
+
+M36 Agent B scope from `docs/progress/M36_FASTEST_PATH_CROSS_CUTTING_PARITY.md` and `docs/handover/m36/AGENT_B_AUDIO_ROLEPLAY_RUNTIME.md`:
+
+- microphone start/stop
+- sound effects
+- waveform/ring animation
+- SpeechRecognizer
+- TextToSpeech
+- AI auto-start/auto-reply
+- live transcription
+- PDF/Word export
+- Roleplay/YKI roleplay runtime
+
+Completed in this M36 pass:
+
+- Stabilized the Android `SpeechRecognizer` runtime so it is not destroyed and reused incorrectly after every learner turn.
+- Moved the recognition listener lifecycle to the remembered recognizer instead of tying destruction to `session.learnerTurns`.
+- Added `rememberUpdatedState` for transcript submission so the same recognizer listener always submits against the latest active session/turn.
+- Preserved the old flow: tap mic to start, tap again to stop/send, AI replies automatically, and the five-turn conversation continues.
+- Added a separate TextToSpeech language stabilization effect so Finnish voice setup is applied once the TTS engine is ready.
+- Kept start/stop sound feedback, waveform, live transcription, PDF/Word export, and route labels from M35.
+- Kept changes inside Agent B-owned Roleplay/Speaking/progress scope.
+
+Build status:
+
+- M36 Agent B runtime pass still needs local Android build verification.
+
 ## Latest verified M35 integrated build
 
 User pulled through integrated M35 head `5a99872` and confirmed:
@@ -80,7 +108,7 @@ M33 hard blockers from `docs/progress/M33_DEVICE_QA_HARD_BLOCKERS.md` for Agent 
 - Final AI response must conclude the interaction.
 - No separate listen button; AI speech is automatic.
 - Mic should visually animate/waveform while user speaks.
-- Topics should vary dynamically each session, from backend/generated materials.
+- Topics should vary dynamically from backend/generated materials.
 - UI must match old app roleplay UI.
 - After conversation, user can download a PDF or Word document/book about the conversation.
 
@@ -262,12 +290,15 @@ Verified locally by user through integrated M35 head `5a99872`:
 BUILD SUCCESSFUL in 5s
 ```
 
+M36 Agent B changes still need local build verification.
+
 ## QA focus for device pass
 
 - Open Everyday Roleplay and confirm it auto-starts a ready generated topic.
 - Confirm the AI partner speaks automatically without a separate listen button.
 - Tap mic once and confirm start sound feedback plays.
-- Speak and confirm live transcription text appears.
+- Speak five user turns and confirm later turns still keep the recognizer active.
+- Confirm live transcription text appears on every turn.
 - Tap mic again and confirm stop sound feedback plays and transcript sends automatically.
 - Confirm waveform animates while listening.
 - Complete five user responses.
