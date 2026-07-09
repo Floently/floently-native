@@ -29,6 +29,7 @@ import com.floently.learn.yki.PreviewYkiRepository
 import com.floently.learn.yki.YkiFeatureScreen
 import com.floently.learn.yki.YkiScreenMode
 import com.floently.shared.auth.FloentlyAuthSession
+import com.floently.learn.i18n.LearnLocalizationLayout
 
 @Composable
 fun LearnSignedInShell(
@@ -42,6 +43,7 @@ fun LearnSignedInShell(
     val context = LocalContext.current
     val languageState = rememberLearnLanguageState()
     val copy = LearnTranslations.copy(languageState.value)
+    LearnLocalizationLayout(languageState.value) {
     var selectedDestination by remember { mutableStateOf<LearnFeatureDestination?>(null) }
     var showShellDrawer by remember(session.user.email) { mutableStateOf(false) }
     val ykiRepository = remember { PreviewYkiRepository() }
@@ -150,5 +152,6 @@ fun LearnSignedInShell(
                 }
             )
         }
+    }
     }
 }

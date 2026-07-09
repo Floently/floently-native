@@ -42,7 +42,6 @@ enum class LearnLanguage(
 
     val displayLabel: String
         get() = "$nativeLabel ($label)"
-
     companion object {
         val enabledLanguages: List<LearnLanguage>
             get() = entries.filter { it.enabled }
