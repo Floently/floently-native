@@ -42,6 +42,37 @@ Build shared structure for:
 - Offline/cache conventions
 - Backend endpoint map
 
+### UI design freeze gate — required before screen implementation
+
+UI is designed before it is coded.
+
+For Iloadi/Floently native product work, implementation of a new or materially changed screen is blocked until the corresponding design contract is defined and frozen under `docs/design/`.
+
+The design contract must define, as applicable:
+
+- screen/navigation structure;
+- exact layout measurements;
+- typography tokens;
+- color tokens;
+- component mapping;
+- button/control dimensions and placement;
+- spacing and alignment;
+- loading, empty, disabled, success, error and offline states;
+- safe-area/adaptive behaviour;
+- accessibility behaviour;
+- motion behaviour.
+
+UI implementation must use the shared component/token system instead of locally invented styles.
+
+Source of truth:
+
+- `docs/design/README.md`
+- `docs/design/ILOADI_UI_CONSTITUTION.md`
+- `docs/design/ILOADI_DESIGN_TOKENS.md`
+- `docs/design/ILOADI_COMPONENT_SPEC.md`
+- `docs/design/ILOADI_SCREEN_BLUEPRINTS.md`
+- `docs/design/ILOADI_DESIGN_CHANGE_GATE.md`
+
 ### Phase 3: Native Learn
 
 Goal:
