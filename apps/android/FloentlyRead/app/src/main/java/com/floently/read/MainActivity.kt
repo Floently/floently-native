@@ -47,6 +47,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -107,6 +108,11 @@ private fun ReadBrowserScreen(
 ) {
     val context = LocalContext.current
     val palette = floentlyPalette(FloentlyProduct.Read)
+    val speech = remember { ReadSpeechController(context) }
+
+    DisposableEffect(speech) {
+        onDispose { speech.shutdown() }
+    }
 
     var webView by remember { mutableStateOf<WebView?>(null) }
     var currentUrl by remember { mutableStateOf<String?>(initialUrl) }
@@ -182,6 +188,7 @@ private fun ReadBrowserScreen(
         resetRendererRecovery()
         addressText = target
         currentUrl = target
+        speech.stop()
         extractedText = ""
         selectedText = ""
         readingStatus = "Loading…"
@@ -476,6 +483,12 @@ private fun ReadBrowserScreen(
                         accent = palette.accent,
                         surface = palette.backgroundBottom,
                         textColor = palette.text,
+                        playEnabled = speech.isReady && (selectedText.isNotBlank() || extractedText.isNotBlank()),
+                        isSpeaking = speech.isSpeaking && !speech.isPaused,
+                        onPlayPause = {
+                            val text = selectedText.ifBlank { extractedText }
+                            if (text.isNotBlank()) speech.toggle(text)
+                        },
                         onReadPage = {
                             val view = webView
                             val url = view?.url
@@ -593,6 +606,9 @@ private fun ReadStrip(
     accent: Color,
     surface: Color,
     textColor: Color,
+    playEnabled: Boolean,
+    isSpeaking: Boolean,
+    onPlayPause: () -> Unit,
     onReadPage: () -> Unit,
     onReadSelection: () -> Unit,
     modifier: Modifier = Modifier
@@ -616,6 +632,15 @@ private fun ReadStrip(
                 modifier = Modifier.height(48.dp)
             ) {
                 Text("Read page", fontWeight = FontWeight.SemiBold)
+            }
+
+            Button(
+                onClick = onPlayPause,
+                enabled = playEnabled,
+                colors = ButtonDefaults.buttonColors(containerColor = surface),
+                modifier = Modifier.height(48.dp)
+            ) {
+                Text(if (isSpeaking) "Pause" else "Play")
             }
 
             Button(
