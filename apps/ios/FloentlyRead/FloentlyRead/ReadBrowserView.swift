@@ -4,6 +4,7 @@ import FloentlyShared
 struct ReadBrowserView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var controller = ReadBrowserController()
+    @StateObject private var speech = ReadSpeechController()
     let initialURL: URL?
 
     private let palette = FloentlyPalette.read
@@ -38,6 +39,9 @@ struct ReadBrowserView: View {
             if let initialURL, controller.currentURL == nil {
                 controller.open(url: initialURL)
             }
+        }
+        .onDisappear {
+            speech.stop()
         }
     }
 
@@ -121,7 +125,7 @@ struct ReadBrowserView: View {
             Button {
                 controller.readPage()
             } label: {
-                Label("Read page", systemImage: "play.fill")
+                Label("Read page", systemImage: "doc.text.magnifyingglass")
                     .font(.headline.weight(.semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 16)
@@ -144,6 +148,24 @@ struct ReadBrowserView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Read selected text")
+
+            Button {
+                let selection = controller.selectionText.trimmingCharacters(in: .whitespacesAndNewlines)
+                let page = controller.extractedText.trimmingCharacters(in: .whitespacesAndNewlines)
+                speech.toggle(text: selection.isEmpty ? page : selection)
+            } label: {
+                Image(systemName: speech.isSpeaking && !speech.isPaused ? "pause.fill" : "play.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(palette.text)
+                    .frame(width: 48, height: 48)
+                    .background(palette.elevated)
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .disabled(controller.extractedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+                      controller.selectionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .accessibilityLabel(speech.isSpeaking && !speech.isPaused ? "Pause reading" : "Play reading")
+            .accessibilityHint("Speaks the selected text when available, otherwise the extracted page text")
 
             Text(controller.readingStatus)
                 .font(.footnote.weight(.medium))
