@@ -64,6 +64,13 @@ jobs:
       - name: Build Floently Read Android debug APK
         working-directory: apps/android
         run: gradle :FloentlyRead:app:assembleDebug --no-daemon --stacktrace
+      - name: Upload installable Android debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: FloentlyRead-Android-debug-${{ github.sha }}
+          path: apps/android/FloentlyRead/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
 
   ios-read:
     runs-on: macos-15
