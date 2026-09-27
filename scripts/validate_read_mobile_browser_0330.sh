@@ -22,7 +22,9 @@ for file in \
   "$IOS/ReadBrowserModel.swift" \
   "$IOS/ReadWebView.swift" \
   "$IOS/ReadBrowserView.swift" \
+  "$IOS/ReadSpeechController.swift" \
   "$ANDROID/java/com/floently/read/MainActivity.kt" \
+  "$ANDROID/java/com/floently/read/ReadSpeechController.kt" \
   "$ANDROID/java/com/floently/read/ReadBrowserPolicy.kt"; do
   test -f "$file" || fail "missing $file"
 done
@@ -34,6 +36,9 @@ require_text "$IOS/ReadBrowserModel.swift" "accounts.google.com"
 require_text "$IOS/ReadBrowserModel.swift" "elementsFromPoint"
 require_text "$IOS/ReadBrowserModel.swift" "floentlyread"
 require_text "$IOS/ReadBrowserModel.swift" "/mobile/open"
+require_text "$IOS/ReadSpeechController.swift" "AVSpeechSynthesizer"
+require_text "$IOS/ReadSpeechController.swift" "NLLanguageRecognizer"
+require_text "$IOS/ReadBrowserView.swift" "speech.toggle(text:"
 require_text "$ROOT/apps/ios/FloentlyRead/project.yml" "floentlyread"
 require_text "$ROOT/apps/ios/FloentlyRead/FloentlyRead/FloentlyRead.entitlements" "applinks:read.floently.com"
 
@@ -52,6 +57,9 @@ require_text "$ANDROID_ACTIVITY" "settings.allowFileAccess = false"
 require_text "$ANDROID_ACTIVITY" "settings.safeBrowsingEnabled = true"
 require_text "$ANDROID_ACTIVITY" "onRenderProcessGone"
 require_text "$ANDROID_ACTIVITY" "onCreateWindow"
+require_text "$ANDROID/java/com/floently/read/ReadSpeechController.kt" "TextToSpeech"
+require_text "$ANDROID/java/com/floently/read/ReadSpeechController.kt" "onRangeStart"
+require_text "$ANDROID_ACTIVITY" "speech.toggle(text)"
 require_text "$ANDROID_ACTIVITY" "onReceivedSslError"
 require_text "$ANDROID_POLICY" "accounts.google.com"
 require_text "$ANDROID_POLICY" "FLOENTLY_LIVE_READER_0330"
