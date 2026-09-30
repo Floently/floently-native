@@ -12,11 +12,13 @@ import type {
   ReadCoreRequest,
   ReadCoreResponse,
   ReadingManifestSummary,
+  ReadingSegmentDescriptor,
   ReadingSegmentSummary,
 } from "./readCore.types";
 
 interface CoreSegment {
   id: string;
+  text: string;
   index: number;
   scalarStart: number;
   scalarEnd: number;
@@ -79,6 +81,13 @@ function summarizeSegment(segment: CoreSegment): ReadingSegmentSummary {
     estimatedSourceDurationMs: segment.estimatedSourceDurationMs,
     logicalStartMs: segment.logicalStartMs,
     logicalEndMs: segment.logicalEndMs,
+  };
+}
+
+function describeSegment(segment: CoreSegment): ReadingSegmentDescriptor {
+  return {
+    ...summarizeSegment(segment),
+    text: segment.text,
   };
 }
 
@@ -161,6 +170,23 @@ async function dispatch(request: ReadCoreRequest): Promise<ReadCoreResponse> {
           ),
         );
         return { id: request.id, ok: true, result };
+      }
+
+      case "getSegment": {
+        const manifestJson = requireManifest(request.payload.handle);
+        const manifest = JSON.parse(manifestJson) as CoreManifest;
+        const index = Math.max(0, Math.round(request.payload.index));
+        const segment = manifest.segments[index];
+
+        if (!segment || segment.index !== index) {
+          throw new Error(`ReadingManifest segment ${index} is unavailable`);
+        }
+
+        return {
+          id: request.id,
+          ok: true,
+          result: describeSegment(segment),
+        };
       }
 
       case "dropManifest": {
