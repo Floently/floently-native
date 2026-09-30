@@ -1,0 +1,456 @@
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import type {
+  LogicalTimePosition,
+  ReadingManifestSummary,
+  ReadingSegmentDescriptor,
+} from "../readCore.types";
+import type {
+  ReadTtsAsset,
+  ReadTtsInput,
+  ReadTtsProvider,
+} from "../tts/readTtsProvider";
+import type {
+  BrowserAudioEngineCallbacks,
+  ReadAudioEngine,
+} from "./browserAudioEngine";
+import type {
+  PlayableAudioAsset,
+  ReadAudioCachePort,
+} from "./readAudioCache";
+import {
+  WebPlaybackSession,
+  type ReadPlaybackCore,
+} from "./webPlaybackSession";
+
+const SEGMENT_DURATION_MS = 10_000;
+
+function makeSegments(): ReadingSegmentDescriptor[] {
+  return [0, 1, 2].map((index) => ({
+    id: `segment-${index}`,
+    index,
+    text: `Hidden text for segment ${index}.`,
+    scalarStart: index * 100,
+    scalarEnd: (index + 1) * 100,
+    wordStart: index * 10,
+    wordEnd: (index + 1) * 10,
+    wordCount: 10,
+    estimatedSourceDurationMs: SEGMENT_DURATION_MS,
+    logicalStartMs: index * SEGMENT_DURATION_MS,
+    logicalEndMs: (index + 1) * SEGMENT_DURATION_MS,
+  }));
+}
+
+function makeManifest(): ReadingManifestSummary {
+  const segments = makeSegments();
+
+  return {
+    handle: "doc:rev",
+    schemaVersion: 1,
+    documentId: "doc",
+    revisionId: "rev",
+    title: "Thirty second test book",
+    language: "en",
+    wordCount: 30,
+    textScalarLength: 300,
+    estimatedSourceDurationMs: 30_000,
+    segmentCount: 3,
+    firstSegments: segments,
+    buildMs: 1,
+  };
+}
+
+class FakeCore implements ReadPlaybackCore {
+  readonly segments = makeSegments();
+  prefetchResult: number[] = [];
+
+  async segmentForLogicalTime(
+    _handle: string,
+    elapsedMs: number,
+  ): Promise<LogicalTimePosition | null> {
+    const bounded = Math.min(29_999, Math.max(0, elapsedMs));
+    const index = Math.floor(bounded / SEGMENT_DURATION_MS);
+
+    return {
+      index,
+      localOffsetMs: bounded - index * SEGMENT_DURATION_MS,
+    };
+  }
+
+  async getSegment(
+    _handle: string,
+    index: number,
+  ): Promise<ReadingSegmentDescriptor> {
+    const segment = this.segments[index];
+    if (!segment) {
+      throw new Error(`Missing fake segment ${index}`);
+    }
+    return segment;
+  }
+
+  async prefetchIndexes(): Promise<number[]> {
+    return [...this.prefetchResult];
+  }
+}
+
+class FakeTts implements ReadTtsProvider {
+  readonly id = "fake-tts";
+  readonly calls: ReadTtsInput[] = [];
+  readonly failures = new Set<string>();
+
+  async synthesize(input: ReadTtsInput): Promise<ReadTtsAsset> {
+    this.calls.push({ ...input });
+
+    if (this.failures.has(input.segmentId)) {
+      throw new Error(`Synthetic TTS failure for ${input.segmentId}`);
+    }
+
+    return {
+      audioUrl: `https://audio.invalid/${input.segmentId}.mp3`,
+      cacheKey: `cache:${input.voiceId}:${input.segmentId}`,
+      contentHash: `hash:${input.voiceId}:${input.segmentId}`,
+      cacheHit: false,
+      voiceId: input.voiceId,
+      durationMs: SEGMENT_DURATION_MS,
+      rawWordTimings: [],
+    };
+  }
+}
+
+class FakeCache implements ReadAudioCachePort {
+  readonly released: string[] = [];
+
+  async resolve(asset: ReadTtsAsset): Promise<PlayableAudioAsset> {
+    return {
+      url: asset.audioUrl,
+      cacheKey: asset.cacheKey,
+      contentHash: asset.contentHash,
+      fromBrowserCache: false,
+      release: () => {
+        this.released.push(asset.cacheKey);
+      },
+    };
+  }
+
+  dispose(): void {
+    // Nothing to dispose in the deterministic fake.
+  }
+}
+
+class FakeEngine implements ReadAudioEngine {
+  paused = true;
+  readonly loads: Array<{
+    url: string;
+    localOffsetMs: number;
+    playbackRate: number;
+  }> = [];
+  readonly rates: number[] = [];
+  readonly primed: string[][] = [];
+  destroyed = false;
+
+  constructor(
+    private readonly callbacks: BrowserAudioEngineCallbacks,
+  ) {}
+
+  async load(
+    url: string,
+    localOffsetMs: number,
+    playbackRate: number,
+  ): Promise<number> {
+    this.loads.push({
+      url,
+      localOffsetMs,
+      playbackRate,
+    });
+    this.rates.push(playbackRate);
+    return SEGMENT_DURATION_MS;
+  }
+
+  async play(): Promise<void> {
+    this.paused = false;
+    this.callbacks.onPlaying();
+  }
+
+  pause(): void {
+    this.paused = true;
+  }
+
+  setRate(rate: number): void {
+    this.rates.push(rate);
+  }
+
+  prime(urls: string[]): void {
+    this.primed.push([...urls]);
+  }
+
+  destroy(): void {
+    this.destroyed = true;
+    this.paused = true;
+  }
+
+  emitTime(
+    currentTimeMs: number,
+    physicalDurationMs = SEGMENT_DURATION_MS,
+  ): void {
+    this.callbacks.onTime(currentTimeMs, physicalDurationMs);
+  }
+
+  emitEnded(): void {
+    this.paused = true;
+    this.callbacks.onEnded();
+  }
+}
+
+interface Harness {
+  session: WebPlaybackSession;
+  core: FakeCore;
+  tts: FakeTts;
+  cache: FakeCache;
+  engine: FakeEngine;
+}
+
+function createHarness(): Harness {
+  const core = new FakeCore();
+  const tts = new FakeTts();
+  const cache = new FakeCache();
+  let engine: FakeEngine | null = null;
+
+  const session = new WebPlaybackSession({
+    core,
+    tts,
+    cache,
+    engineFactory: (callbacks) => {
+      engine = new FakeEngine(callbacks);
+      return engine;
+    },
+  });
+
+  if (!engine) {
+    throw new Error("Fake audio engine was not created.");
+  }
+
+  return {
+    session,
+    core,
+    tts,
+    cache,
+    engine,
+  };
+}
+
+const originalNavigatorDescriptor =
+  Object.getOwnPropertyDescriptor(globalThis, "navigator");
+
+beforeEach(() => {
+  vi.restoreAllMocks();
+
+  if (originalNavigatorDescriptor) {
+    Object.defineProperty(
+      globalThis,
+      "navigator",
+      originalNavigatorDescriptor,
+    );
+  } else {
+    Reflect.deleteProperty(globalThis, "navigator");
+  }
+});
+
+afterEach(() => {
+  if (originalNavigatorDescriptor) {
+    Object.defineProperty(
+      globalThis,
+      "navigator",
+      originalNavigatorDescriptor,
+    );
+  } else {
+    Reflect.deleteProperty(globalThis, "navigator");
+  }
+});
+
+describe("WebPlaybackSession document-wide contract", () => {
+  it("publishes the whole document duration before any TTS exists", () => {
+    const { session, tts } = createHarness();
+
+    session.loadDocument(makeManifest());
+
+    expect(session.getSnapshot()).toMatchObject({
+      documentId: "doc",
+      revisionId: "rev",
+      durationMs: 30_000,
+      elapsedMs: 0,
+      status: "ready",
+    });
+    expect(tts.calls).toHaveLength(0);
+
+    session.destroy();
+  });
+
+  it("plays a hidden segment without changing public document identity", async () => {
+    const { session, tts, engine } = createHarness();
+
+    session.loadDocument(makeManifest());
+    await session.play();
+
+    expect(tts.calls[0]).toMatchObject({
+      segmentId: "segment-0",
+    });
+    expect(engine.loads.at(-1)).toMatchObject({
+      url: "https://audio.invalid/segment-0.mp3",
+      localOffsetMs: 0,
+      playbackRate: 1,
+    });
+    expect(session.getSnapshot()).toMatchObject({
+      documentId: "doc",
+      title: "Thirty second test book",
+      durationMs: 30_000,
+      status: "playing",
+    });
+
+    session.destroy();
+  });
+
+  it("maps a long document seek to hidden segment and local media time", async () => {
+    const { session, tts, engine } = createHarness();
+
+    session.loadDocument(makeManifest());
+    await session.seek(25_000);
+
+    expect(tts.calls.at(-1)).toMatchObject({
+      segmentId: "segment-2",
+    });
+    expect(engine.loads.at(-1)).toMatchObject({
+      url: "https://audio.invalid/segment-2.mp3",
+      localOffsetMs: 5_000,
+    });
+    expect(session.getSnapshot()).toMatchObject({
+      elapsedMs: 25_000,
+      durationMs: 30_000,
+      status: "paused",
+    });
+
+    session.destroy();
+  });
+
+  it("keeps speed across hidden segment transitions", async () => {
+    const { session, tts, engine } = createHarness();
+
+    session.loadDocument(makeManifest());
+    session.setSpeed(2);
+    await session.play();
+
+    expect(session.getSnapshot().speed).toBe(2);
+    engine.emitEnded();
+
+    await vi.waitFor(() => {
+      expect(
+        tts.calls.some((call) => call.segmentId === "segment-1"),
+      ).toBe(true);
+      expect(engine.loads.at(-1)?.url).toContain("segment-1.mp3");
+    });
+
+    expect(engine.loads.at(-1)?.playbackRate).toBe(2);
+    expect(session.getSnapshot().speed).toBe(2);
+
+    session.destroy();
+  });
+
+  it("invalidates old-voice audio while preserving the logical cursor", async () => {
+    const { session, tts, cache } = createHarness();
+
+    session.loadDocument(makeManifest());
+    await session.seek(15_000);
+
+    const beforeVoiceChange = session.getSnapshot().elapsedMs;
+    const oldCacheKey = tts.calls.at(-1)?.voiceId
+      ? `cache:${tts.calls.at(-1)?.voiceId}:segment-1`
+      : "";
+
+    await session.setVoice("voice:new");
+
+    expect(session.getSnapshot()).toMatchObject({
+      elapsedMs: beforeVoiceChange,
+      voiceId: "voice:new",
+      status: "paused",
+    });
+    expect(cache.released).toContain(oldCacheKey);
+
+    await session.play();
+
+    expect(tts.calls.at(-1)).toMatchObject({
+      segmentId: "segment-1",
+      voiceId: "voice:new",
+    });
+    expect(session.getSnapshot().elapsedMs).toBe(beforeVoiceChange);
+
+    session.destroy();
+  });
+
+  it("keeps current playback healthy when speculative prefetch fails", async () => {
+    const { session, core, tts } = createHarness();
+
+    core.prefetchResult = [1];
+    tts.failures.add("segment-1");
+
+    session.loadDocument(makeManifest());
+    await session.play();
+
+    await vi.waitFor(() => {
+      expect(
+        tts.calls.some((call) => call.segmentId === "segment-1"),
+      ).toBe(true);
+    });
+
+    expect(session.getSnapshot()).toMatchObject({
+      status: "playing",
+      error: null,
+      durationMs: 30_000,
+    });
+
+    session.destroy();
+  });
+
+  it("publishes document time to Media Session instead of clip duration", async () => {
+    const positionStates: Array<{
+      duration: number;
+      playbackRate: number;
+      position: number;
+    }> = [];
+
+    const fakeMediaSession = {
+      metadata: null,
+      playbackState: "none",
+      setActionHandler: vi.fn(),
+      setPositionState: vi.fn((value) => {
+        positionStates.push({ ...value });
+      }),
+    };
+
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: {
+        mediaSession: fakeMediaSession,
+      },
+    });
+
+    const { session, engine } = createHarness();
+
+    session.loadDocument(makeManifest());
+    await session.play();
+    engine.emitTime(5_000, 10_000);
+
+    expect(positionStates.at(-1)).toEqual({
+      duration: 30,
+      playbackRate: 1,
+      position: 5,
+    });
+    expect(positionStates.at(-1)?.duration).not.toBe(10);
+
+    session.destroy();
+  });
+});
