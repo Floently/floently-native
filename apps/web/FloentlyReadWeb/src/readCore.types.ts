@@ -15,6 +15,14 @@ export interface ReadingSegmentDescriptor extends ReadingSegmentSummary {
   text: string;
 }
 
+export interface ReadingSegmentWindow {
+  centerIndex: number;
+  startIndex: number;
+  endIndexExclusive: number;
+  totalSegments: number;
+  segments: ReadingSegmentDescriptor[];
+}
+
 export interface ReadingManifestSummary {
   handle: string;
   schemaVersion: number;
@@ -89,6 +97,15 @@ export type ReadCoreRequest =
     }
   | {
       id: number;
+      type: "getSegmentWindow";
+      payload: {
+        handle: string;
+        centerIndex: number;
+        radius: number;
+      };
+    }
+  | {
+      id: number;
       type: "dropManifest";
       payload: {
         handle: string;
@@ -105,6 +122,7 @@ export type ReadCoreRequestWithoutId =
 export type ReadCoreSuccess =
   | ReadingManifestSummary
   | ReadingSegmentDescriptor
+  | ReadingSegmentWindow
   | SegmentPosition
   | LogicalTimePosition
   | number[]
