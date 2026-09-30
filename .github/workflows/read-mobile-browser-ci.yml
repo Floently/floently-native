@@ -48,7 +48,7 @@ jobs:
       - name: Show Rust toolchain
         run: rustc --version && cargo --version
       - name: Test shared Floently Read core
-        run: cargo test --manifest-path shared/read-core-rust/Cargo.toml --locked
+        run: cargo test --manifest-path shared/read-core-rust/Cargo.toml
 
   browser-contract:
     runs-on: ubuntu-latest
