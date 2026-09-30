@@ -71,21 +71,25 @@ export default function App() {
 
     let cancelled = false;
 
-    Promise.all([
-      client.positionForProgress(manifest.handle, progress),
-      client.positionForProgress(manifest.handle, progress).then((mapped) =>
-        client.prefetchIndexes(manifest.handle, mapped.index),
-      ),
-    ])
-      .then(([mapped, indexes]) => {
+    void (async () => {
+      try {
+        const mapped = await client.positionForProgress(
+          manifest.handle,
+          progress,
+        );
+        const indexes = await client.prefetchIndexes(
+          manifest.handle,
+          mapped.index,
+        );
+
         if (cancelled) return;
         setPosition(mapped);
         setPrefetch(indexes);
-      })
-      .catch((reason: unknown) => {
+      } catch (reason) {
         if (cancelled) return;
         setError(reason instanceof Error ? reason.message : String(reason));
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;
