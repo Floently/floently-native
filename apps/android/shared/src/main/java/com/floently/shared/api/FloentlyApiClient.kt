@@ -17,50 +17,101 @@ class FloentlyApiClient(
     private val baseUrl: String = "https://learn.floently.com",
     private val tokenProvider: () -> String? = { null }
 ) {
-    suspend fun get(path: String): JSONObject = request(path = path, method = "GET", body = null)
+    suspend fun get(path: String): JSONObject =
+        request(path = path, method = "GET", body = null)
 
-    suspend fun post(path: String, body: JSONObject): JSONObject = request(path = path, method = "POST", body = body)
+    suspend fun post(path: String, body: JSONObject): JSONObject =
+        request(path = path, method = "POST", body = body)
 
-    private suspend fun request(path: String, method: String, body: JSONObject?): JSONObject = withContext(Dispatchers.IO) {
-        val normalizedPath = if (path.startsWith("/")) path else "/"
-        val connection = URL(baseUrl.trimEnd('/') + normalizedPath).openConnection() as HttpURLConnection
+    private suspend fun request(
+        path: String,
+        method: String,
+        body: JSONObject?
+    ): JSONObject = withContext(Dispatchers.IO) {
+        val normalizedPath = if (path.startsWith("/")) path else "/$path"
+        val url = URL(baseUrl.trimEnd('/') + normalizedPath)
+        val connection = url.openConnection() as HttpURLConnection
 
-        connection.requestMethod = method
-        connection.setRequestProperty("Accept", "application/json")
-        tokenProvider()?.takeIf { it.isNotBlank() }?.let {
-            connection.setRequestProperty("Authorization", "Bearer ")
-        }
+        try {
+            connection.requestMethod = method
+            connection.connectTimeout = 15_000
+            connection.readTimeout = 60_000
+            connection.setRequestProperty("Accept", "application/json")
 
-        if (body != null) {
-            connection.doOutput = true
-            connection.setRequestProperty("Content-Type", "application/json")
-            OutputStreamWriter(connection.outputStream).use { it.write(body.toString()) }
-        }
+            tokenProvider()
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?.let { token ->
+                    connection.setRequestProperty(
+                        "Authorization",
+                        "Bearer $token"
+                    )
+                }
 
-        val status = connection.responseCode
-        val raw = try {
-            connection.inputStream.bufferedReader().use { it.readText() }
-        } catch (_: Exception) {
-            connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
-        }
-
-        val json = if (raw.isBlank()) JSONObject() else JSONObject(raw)
-
-        if (json.has("ok")) {
-            if (json.optBoolean("ok")) {
-                return@withContext json.optJSONObject("data") ?: JSONObject()
+            if (body != null) {
+                connection.doOutput = true
+                connection.setRequestProperty(
+                    "Content-Type",
+                    "application/json"
+                )
+                OutputStreamWriter(
+                    connection.outputStream,
+                    Charsets.UTF_8
+                ).use { writer ->
+                    writer.write(body.toString())
+                }
             }
 
-            val error = json.optJSONObject("error")
+            val status = connection.responseCode
+            val raw = try {
+                connection.inputStream
+                    .bufferedReader(Charsets.UTF_8)
+                    .use { it.readText() }
+            } catch (_: Exception) {
+                connection.errorStream
+                    ?.bufferedReader(Charsets.UTF_8)
+                    ?.use { it.readText() }
+                    .orEmpty()
+            }
+
+            val json = if (raw.isBlank()) JSONObject() else JSONObject(raw)
+
+            if (json.has("ok")) {
+                if (json.optBoolean("ok")) {
+                    return@withContext json.optJSONObject("data")
+                        ?: JSONObject()
+                }
+
+                val error = json.optJSONObject("error")
+                throw FloentlyApiError(
+                    code = error
+                        ?.optString("code")
+                        ?.takeIf { it.isNotBlank() }
+                        ?: "API_ERROR",
+                    message = error
+                        ?.optString("message")
+                        ?.takeIf { it.isNotBlank() }
+                        ?: "Request failed.",
+                    retryable = error?.optBoolean("retryable") ?: false
+                )
+            }
+
+            if (status in 200..299) {
+                return@withContext json
+            }
+
+            val detail = json.optString("detail")
+                .takeIf { it.isNotBlank() }
+                ?: json.optString("message")
+                    .takeIf { it.isNotBlank() }
+                ?: "Request failed with status $status."
+
             throw FloentlyApiError(
-                code = error?.optString("code")?.takeIf { it.isNotBlank() } ?: "API_ERROR",
-                message = error?.optString("message")?.takeIf { it.isNotBlank() } ?: "Request failed.",
-                retryable = error?.optBoolean("retryable") ?: false
+                code = "HTTP_$status",
+                message = detail
             )
+        } finally {
+            connection.disconnect()
         }
-
-        if (status in 200..299) return@withContext json
-
-        throw FloentlyApiError(code = "HTTP_", message = "Request failed with status .")
     }
 }
