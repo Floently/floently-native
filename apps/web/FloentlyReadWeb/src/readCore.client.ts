@@ -4,6 +4,7 @@ import type {
   ReadCoreRequestWithoutId,
   ReadCoreResponse,
   ReadingManifestSummary,
+  ReadingSegmentDescriptor,
   SegmentPosition,
 } from "./readCore.types";
 
@@ -78,6 +79,16 @@ export class ReadCoreWorkerClient {
     return this.request<LogicalTimePosition | null>({
       type: "segmentForLogicalTime",
       payload: { handle, elapsedMs },
+    });
+  }
+
+  getSegment(
+    handle: string,
+    index: number,
+  ): Promise<ReadingSegmentDescriptor> {
+    return this.request<ReadingSegmentDescriptor>({
+      type: "getSegment",
+      payload: { handle, index },
     });
   }
 
