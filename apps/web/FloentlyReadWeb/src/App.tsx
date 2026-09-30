@@ -1,4 +1,5 @@
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ChangeEvent } from "react";
 import { ReadCoreWorkerClient } from "./readCore.client";
 import type {
   ReadingManifestSummary,
@@ -46,9 +47,16 @@ export default function App() {
   const [status, setStatus] = useState("Ready to index");
   const [error, setError] = useState<string | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
+  const activeManifestHandle = useRef<string | null>(null);
 
   useEffect(() => {
-    return () => client.terminate();
+    return () => {
+      const handle = activeManifestHandle.current;
+      if (handle) {
+        void client.dropManifest(handle);
+      }
+      client.terminate();
+    };
   }, [client]);
 
   useEffect(() => {
@@ -91,7 +99,7 @@ export default function App() {
     setError(null);
     setStatus("Indexing in Rust/WASM worker…");
 
-    const previousHandle = manifest?.handle;
+    const previousHandle = activeManifestHandle.current;
 
     try {
       const result = await client.buildManifest({
@@ -102,10 +110,11 @@ export default function App() {
         text,
       });
 
-      if (previousHandle) {
+      if (previousHandle && previousHandle !== result.handle) {
         void client.dropManifest(previousHandle);
       }
 
+      activeManifestHandle.current = result.handle;
       setManifest(result);
       setProgress(0);
       setStatus(
@@ -125,6 +134,12 @@ export default function App() {
 
     try {
       const value = await file.text();
+      const handle = activeManifestHandle.current;
+      if (handle) {
+        void client.dropManifest(handle);
+        activeManifestHandle.current = null;
+      }
+
       setText(value);
       setTitle(file.name.replace(/\.[^.]+$/, "") || file.name);
       setManifest(null);
@@ -202,6 +217,12 @@ export default function App() {
             className="document-input"
             value={text}
             onChange={(event) => {
+              const handle = activeManifestHandle.current;
+              if (handle) {
+                void client.dropManifest(handle);
+                activeManifestHandle.current = null;
+              }
+
               setText(event.target.value);
               setManifest(null);
               setStatus("Text changed. Re-index to refresh the manifest.");
