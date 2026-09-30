@@ -8,6 +8,11 @@ export interface PlayableAudioAsset {
   release: () => void;
 }
 
+export interface ReadAudioCachePort {
+  resolve(asset: ReadTtsAsset): Promise<PlayableAudioAsset>;
+  dispose(): void;
+}
+
 interface AudioCacheMetadata {
   cacheKey: string;
   contentHash: string;
@@ -102,7 +107,7 @@ async function deleteMetadata(cacheKey: string): Promise<void> {
   db.close();
 }
 
-export class ReadAudioCache {
+export class ReadAudioCache implements ReadAudioCachePort {
   private readonly objectUrls = new Set<string>();
 
   async resolve(asset: ReadTtsAsset): Promise<PlayableAudioAsset> {
