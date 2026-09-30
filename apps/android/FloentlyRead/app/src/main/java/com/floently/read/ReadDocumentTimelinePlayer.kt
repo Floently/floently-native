@@ -128,7 +128,9 @@ class ReadDocumentTimelinePlayer(
             .setPlaylist(listOf(logicalItem))
             .setCurrentMediaItemIndex(0)
             .setContentPositionMs(logicalPosition)
-            .setContentBufferedPositionMs(logicalBuffered)
+            .setContentBufferedPositionMs(
+                SimpleBasePlayer.PositionSupplier.getConstant(logicalBuffered)
+            )
             .build()
     }
 
