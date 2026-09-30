@@ -8,12 +8,15 @@ import initReadCore, {
   segment_for_logical_time_json,
 } from "./generated/read-core-wasm/floently_read_core_wasm.js";
 
+import { boundedReaderWindowRange } from "./reader/readerWindow";
+
 import type {
   ReadCoreRequest,
   ReadCoreResponse,
   ReadingManifestSummary,
   ReadingSegmentDescriptor,
   ReadingSegmentSummary,
+  ReadingSegmentWindow,
 } from "./readCore.types";
 
 interface CoreSegment {
@@ -186,6 +189,32 @@ async function dispatch(request: ReadCoreRequest): Promise<ReadCoreResponse> {
           id: request.id,
           ok: true,
           result: describeSegment(segment),
+        };
+      }
+
+      case "getSegmentWindow": {
+        const manifestJson = requireManifest(request.payload.handle);
+        const manifest = JSON.parse(manifestJson) as CoreManifest;
+        const range = boundedReaderWindowRange(
+          manifest.segments.length,
+          request.payload.centerIndex,
+          request.payload.radius,
+        );
+
+        const result: ReadingSegmentWindow = {
+          centerIndex: range.centerIndex,
+          startIndex: range.startIndex,
+          endIndexExclusive: range.endIndexExclusive,
+          totalSegments: manifest.segments.length,
+          segments: manifest.segments
+            .slice(range.startIndex, range.endIndexExclusive)
+            .map(describeSegment),
+        };
+
+        return {
+          id: request.id,
+          ok: true,
+          result,
         };
       }
 
