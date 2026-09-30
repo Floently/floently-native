@@ -45,7 +45,7 @@ final class ReadPlaybackSession: ObservableObject {
     @Published private(set) var activeSegmentIndex: Int?
     @Published var playbackRate: Float = 1.0 {
         didSet {
-            playbackRate = min(2.0, max(0.5, playbackRate))
+            playbackRate = min(3.0, max(0.5, playbackRate))
             if state == .playing {
                 player.rate = playbackRate
             }
