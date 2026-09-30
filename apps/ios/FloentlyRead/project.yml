@@ -28,7 +28,9 @@ targets:
       path: FloentlyRead/Info.plist
       properties:
         CFBundleDisplayName: Floently Read
-        UILaunchScreen: {}\n        UIBackgroundModes:\n          - audio
+        UILaunchScreen: {}
+        UIBackgroundModes:
+          - audio
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
