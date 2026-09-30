@@ -1,10 +1,15 @@
 package com.floently.read
 
+import android.os.Bundle
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 
 /**
  * Application-level owner for Floently Read media playback.
@@ -31,7 +36,96 @@ class ReadPlaybackService : MediaSessionService() {
 
         physicalPlayer = exoPlayer
         documentPlayer = virtualPlayer
-        mediaSession = MediaSession.Builder(this, virtualPlayer).build()
+        mediaSession = MediaSession.Builder(this, virtualPlayer)
+            .setCallback(
+                object : MediaSession.Callback {
+                    override fun onConnect(
+                        session: MediaSession,
+                        controller: MediaSession.ControllerInfo
+                    ): MediaSession.ConnectionResult {
+                        val defaults =
+                            MediaSession.ConnectionResult.AcceptedResultBuilder(
+                                session,
+                                controller
+                            ).build()
+
+                        val commandsBuilder = defaults
+                            .availableSessionCommands
+                            .buildUpon()
+
+                        if (controller.packageName == packageName) {
+                            commandsBuilder.add(
+                                ReadPlaybackCommandContract.loadDocumentCommand
+                            )
+                        }
+
+                        return MediaSession.ConnectionResult
+                            .AcceptedResultBuilder(
+                                session,
+                                controller
+                            )
+                            .setAvailableSessionCommands(
+                                commandsBuilder.build()
+                            )
+                            .build()
+                    }
+
+                    override fun onCustomCommand(
+                        session: MediaSession,
+                        controller: MediaSession.ControllerInfo,
+                        customCommand: SessionCommand,
+                        args: Bundle
+                    ): ListenableFuture<SessionResult> {
+                        if (controller.packageName != packageName) {
+                            return Futures.immediateFuture(
+                                SessionResult(
+                                    SessionResult.RESULT_ERROR_PERMISSION_DENIED
+                                )
+                            )
+                        }
+
+                        if (
+                            customCommand.customAction
+                            != ReadPlaybackCommandContract.ACTION_LOAD_DOCUMENT
+                        ) {
+                            return Futures.immediateFuture(
+                                SessionResult(
+                                    SessionResult.RESULT_ERROR_NOT_SUPPORTED
+                                )
+                            )
+                        }
+
+                        val decoded =
+                            ReadPlaybackCommandContract
+                                .decodeLoadDocument(args)
+                                ?: return Futures.immediateFuture(
+                                    SessionResult(
+                                        SessionResult.RESULT_ERROR_BAD_VALUE
+                                    )
+                                )
+
+                        val player = documentPlayer
+                            ?: return Futures.immediateFuture(
+                                SessionResult(
+                                    SessionResult.RESULT_ERROR_INVALID_STATE
+                                )
+                            )
+
+                        val (document, autoplay) = decoded
+                        player.loadDocument(
+                            value = document,
+                            autoplay = autoplay
+                        )
+
+                        return Futures.immediateFuture(
+                            SessionResult(
+                                SessionResult.RESULT_SUCCESS
+                            )
+                        )
+                    }
+                }
+            )
+            .build()
     }
 
     override fun onGetSession(

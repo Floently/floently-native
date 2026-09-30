@@ -11,6 +11,7 @@ class ReadProgressiveAudioCoordinator(
         manifest: ReadingManifestV1,
         startingAt: Int,
         voiceId: String,
+        accessToken: String? = null,
         horizonMs: Long = 120_000L,
         maxSegments: Int = 4
     ): List<ReadPlaybackSegment> {
@@ -40,7 +41,8 @@ class ReadProgressiveAudioCoordinator(
             val asset = tts.synthesize(
                 text = segment.text,
                 language = manifest.language,
-                voiceId = voiceId
+                voiceId = voiceId,
+                accessToken = accessToken
             )
             val local = cache.localFile(asset)
 

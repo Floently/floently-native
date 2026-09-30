@@ -11,6 +11,7 @@ import androidx.media3.common.C
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import androidx.media3.session.SessionResult
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import java.util.concurrent.Executor
@@ -50,6 +51,8 @@ class ReadPlaybackController(
             .buildAsync()
 
     private var controller: MediaController? = null
+    private var pendingDocumentLoad:
+        Pair<ReadPlayableDocument, Boolean>? = null
 
     private val listener = object : Player.Listener {
         override fun onEvents(
@@ -68,6 +71,15 @@ class ReadPlaybackController(
                         controller = value
                         value.addListener(listener)
                         publish(value)
+
+                        pendingDocumentLoad?.let { (document, autoplay) ->
+                            pendingDocumentLoad = null
+                            sendDocumentLoad(
+                                value,
+                                document,
+                                autoplay
+                            )
+                        }
                     }
                     .onFailure {
                         snapshot = ReadPlayerUiSnapshot(
@@ -76,6 +88,26 @@ class ReadPlaybackController(
                     }
             },
             mainExecutor
+        )
+    }
+
+    fun loadDocument(
+        document: ReadPlayableDocument,
+        autoplay: Boolean = false
+    ) {
+        val player = controller
+        if (player == null) {
+            pendingDocumentLoad = document to autoplay
+            snapshot = snapshot.copy(
+                status = "Connecting player"
+            )
+            return
+        }
+
+        sendDocumentLoad(
+            player,
+            document,
+            autoplay
         )
     }
 
@@ -113,6 +145,7 @@ class ReadPlaybackController(
     }
 
     fun release() {
+        pendingDocumentLoad = null
         val value = controller
         if (value != null) {
             value.removeListener(listener)
@@ -121,6 +154,48 @@ class ReadPlaybackController(
         } else {
             MediaController.releaseFuture(future)
         }
+    }
+
+    private fun sendDocumentLoad(
+        player: MediaController,
+        document: ReadPlayableDocument,
+        autoplay: Boolean
+    ) {
+        snapshot = snapshot.copy(
+            status = "Loading document"
+        )
+
+        val request = player.sendCustomCommand(
+            ReadPlaybackCommandContract.loadDocumentCommand,
+            ReadPlaybackCommandContract.encodeLoadDocument(
+                document = document,
+                autoplay = autoplay
+            )
+        )
+
+        request.addListener(
+            {
+                runCatching { request.get() }
+                    .onSuccess { result ->
+                        if (
+                            result.resultCode
+                            != SessionResult.RESULT_SUCCESS
+                        ) {
+                            snapshot = snapshot.copy(
+                                status = "Document load failed"
+                            )
+                        } else {
+                            publish(player)
+                        }
+                    }
+                    .onFailure {
+                        snapshot = snapshot.copy(
+                            status = "Document load failed"
+                        )
+                    }
+            },
+            mainExecutor
+        )
     }
 
     private fun publish(player: Player) {

@@ -1,0 +1,152 @@
+package com.floently.read
+
+import android.os.Bundle
+import androidx.media3.session.SessionCommand
+import org.json.JSONArray
+import org.json.JSONObject
+
+object ReadPlaybackCommandContract {
+    const val ACTION_LOAD_DOCUMENT =
+        "com.floently.read.command.LOAD_DOCUMENT"
+    const val EXTRA_DOCUMENT_JSON = "document_json"
+    const val EXTRA_AUTOPLAY = "autoplay"
+
+    val loadDocumentCommand: SessionCommand
+        get() = SessionCommand(
+            ACTION_LOAD_DOCUMENT,
+            Bundle.EMPTY
+        )
+
+    fun encodeLoadDocument(
+        document: ReadPlayableDocument,
+        autoplay: Boolean
+    ): Bundle = Bundle().apply {
+        putString(
+            EXTRA_DOCUMENT_JSON,
+            encodeDocument(document).toString()
+        )
+        putBoolean(EXTRA_AUTOPLAY, autoplay)
+    }
+
+    fun decodeLoadDocument(
+        args: Bundle
+    ): Pair<ReadPlayableDocument, Boolean>? {
+        val raw = args.getString(EXTRA_DOCUMENT_JSON)
+            ?.takeIf { it.isNotBlank() }
+            ?: return null
+
+        val document = runCatching {
+            decodeDocument(JSONObject(raw))
+        }.getOrNull() ?: return null
+
+        return document to args.getBoolean(
+            EXTRA_AUTOPLAY,
+            false
+        )
+    }
+
+    private fun encodeDocument(
+        document: ReadPlayableDocument
+    ): JSONObject {
+        val segments = JSONArray()
+
+        document.segments.forEach { segment ->
+            segments.put(
+                JSONObject()
+                    .put("id", segment.id)
+                    .put("index", segment.index)
+                    .put("logical_start_ms", segment.logicalStartMs)
+                    .put("logical_end_ms", segment.logicalEndMs)
+                    .put("audio_uri", segment.audioUri)
+                    .put("actual_duration_ms", segment.actualDurationMs)
+            )
+        }
+
+        return JSONObject()
+            .put("id", document.id)
+            .put("revision_id", document.revisionId)
+            .put("title", document.title)
+            .put("author", document.author)
+            .put(
+                "estimated_duration_ms",
+                document.estimatedDurationMs
+            )
+            .put("segments", segments)
+    }
+
+    private fun decodeDocument(
+        json: JSONObject
+    ): ReadPlayableDocument {
+        val segmentsJson = json.optJSONArray("segments")
+            ?: JSONArray()
+
+        val segments = buildList {
+            for (index in 0 until segmentsJson.length()) {
+                val item = segmentsJson.optJSONObject(index)
+                    ?: continue
+
+                add(
+                    ReadPlaybackSegment(
+                        id = item.getString("id"),
+                        index = item.getInt("index"),
+                        logicalStartMs = item.getLong(
+                            "logical_start_ms"
+                        ),
+                        logicalEndMs = item.getLong(
+                            "logical_end_ms"
+                        ),
+                        audioUri = if (
+                            item.has("audio_uri")
+                            && !item.isNull("audio_uri")
+                        ) {
+                            item.optString("audio_uri")
+                                .takeIf { it.isNotBlank() }
+                        } else {
+                            null
+                        },
+                        actualDurationMs = if (
+                            item.has("actual_duration_ms")
+                            && !item.isNull("actual_duration_ms")
+                        ) {
+                            item.getLong("actual_duration_ms")
+                        } else {
+                            null
+                        }
+                    )
+                )
+            }
+        }.sortedBy { it.index }
+
+        require(
+            segments.all {
+                it.logicalEndMs >= it.logicalStartMs
+                    && !it.audioUri.isNullOrBlank()
+            }
+        )
+        require(
+            segments.zipWithNext().all { (left, right) ->
+                right.index > left.index
+                    && right.logicalStartMs >= left.logicalStartMs
+            }
+        )
+
+        return ReadPlayableDocument(
+            id = json.getString("id"),
+            revisionId = json.getString("revision_id"),
+            title = json.getString("title"),
+            author = if (
+                json.has("author")
+                && !json.isNull("author")
+            ) {
+                json.optString("author")
+                    .takeIf { it.isNotBlank() }
+            } else {
+                null
+            },
+            estimatedDurationMs = json.getLong(
+                "estimated_duration_ms"
+            ).coerceAtLeast(0L),
+            segments = segments
+        )
+    }
+}
