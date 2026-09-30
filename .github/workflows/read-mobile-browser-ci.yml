@@ -79,7 +79,7 @@ jobs:
       - name: Install WebAssembly Rust target
         run: rustup target add wasm32-unknown-unknown
       - name: Install wasm-pack
-        run: cargo install wasm-pack --locked --version 0.13.1
+        run: cargo install wasm-pack --locked --version 0.15.0
       - name: Build Rust/WASM + React Read web
         run: bash scripts/build_read_web_wasm.sh
       - name: Upload Read web production bundle
