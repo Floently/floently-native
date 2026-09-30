@@ -95,9 +95,15 @@ object ReadPlaybackCommandContract {
                         logicalEndMs = item.getLong(
                             "logical_end_ms"
                         ),
-                        audioUri = item.optString(
-                            "audio_uri"
-                        ).takeIf { it.isNotBlank() },
+                        audioUri = if (
+                            item.has("audio_uri")
+                            && !item.isNull("audio_uri")
+                        ) {
+                            item.optString("audio_uri")
+                                .takeIf { it.isNotBlank() }
+                        } else {
+                            null
+                        },
                         actualDurationMs = if (
                             item.has("actual_duration_ms")
                             && !item.isNull("actual_duration_ms")
@@ -111,7 +117,12 @@ object ReadPlaybackCommandContract {
             }
         }.sortedBy { it.index }
 
-        require(segments.all { it.logicalEndMs >= it.logicalStartMs })
+        require(
+            segments.all {
+                it.logicalEndMs >= it.logicalStartMs
+                    && !it.audioUri.isNullOrBlank()
+            }
+        )
         require(
             segments.zipWithNext().all { (left, right) ->
                 right.index > left.index
@@ -123,8 +134,15 @@ object ReadPlaybackCommandContract {
             id = json.getString("id"),
             revisionId = json.getString("revision_id"),
             title = json.getString("title"),
-            author = json.optString("author")
-                .takeIf { it.isNotBlank() },
+            author = if (
+                json.has("author")
+                && !json.isNull("author")
+            ) {
+                json.optString("author")
+                    .takeIf { it.isNotBlank() }
+            } else {
+                null
+            },
             estimatedDurationMs = json.getLong(
                 "estimated_duration_ms"
             ).coerceAtLeast(0L),
