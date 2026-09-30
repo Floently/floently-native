@@ -9,8 +9,8 @@ pub struct ReadingSegment {
     pub id: String,
     pub index: usize,
     pub text: String,
-    pub char_start: usize,
-    pub char_end: usize,
+    pub scalar_start: usize,
+    pub scalar_end: usize,
     pub word_start: usize,
     pub word_end: usize,
     pub word_count: usize,
@@ -27,7 +27,7 @@ pub struct ReadingManifest {
     pub title: String,
     pub language: String,
     pub word_count: usize,
-    pub text_length: usize,
+    pub text_scalar_length: usize,
     pub estimated_source_duration_ms: u64,
     pub segments: Vec<ReadingSegment>,
 }
@@ -38,6 +38,13 @@ pub struct SegmentPosition {
     pub fraction: f64,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+struct SegmentSlice {
+    text: String,
+    scalar_start: usize,
+    scalar_end: usize,
+}
+
 const DEFAULT_WORDS_PER_MINUTE: f64 = 170.0;
 
 pub fn build_manifest(
@@ -46,34 +53,31 @@ pub fn build_manifest(
     title: impl Into<String>,
     language: impl Into<String>,
     text: &str,
-    max_chars: usize,
+    max_scalars: usize,
 ) -> ReadingManifest {
-    let normalized = text.replace("\r\n", "\n").trim().to_string();
-    let pieces = split_segments(&normalized, max_chars.max(600));
+    let normalized = normalize_text(text);
+    let text_scalar_length = normalized.chars().count();
+    let pieces = split_segments(&normalized, max_scalars.max(600));
 
-    let mut char_cursor = 0usize;
     let mut word_cursor = 0usize;
     let mut logical_cursor_ms = 0u64;
     let mut segments = Vec::with_capacity(pieces.len());
 
-    for (index, segment_text) in pieces.into_iter().enumerate() {
-        let word_count = count_words(&segment_text);
+    for (index, slice) in pieces.into_iter().enumerate() {
+        let word_count = count_words(&slice.text);
         let duration_ms = estimate_duration_ms(word_count);
-        let char_start = char_cursor;
         let word_start = word_cursor;
 
-        char_cursor += segment_text.chars().count();
         word_cursor += word_count;
-
         let logical_start_ms = logical_cursor_ms;
         logical_cursor_ms = logical_cursor_ms.saturating_add(duration_ms);
 
         segments.push(ReadingSegment {
             id: format!("segment-{index}"),
             index,
-            text: segment_text,
-            char_start,
-            char_end: char_cursor,
+            text: slice.text,
+            scalar_start: slice.scalar_start,
+            scalar_end: slice.scalar_end,
             word_start,
             word_end: word_cursor,
             word_count,
@@ -90,24 +94,30 @@ pub fn build_manifest(
         title: title.into(),
         language: language.into(),
         word_count: word_cursor,
-        text_length: char_cursor,
+        text_scalar_length,
         estimated_source_duration_ms: logical_cursor_ms,
         segments,
     }
 }
 
 pub fn position_for_progress(manifest: &ReadingManifest, progress: f64) -> SegmentPosition {
-    if manifest.segments.is_empty() || manifest.text_length == 0 {
-        return SegmentPosition { index: 0, fraction: 0.0 };
+    if manifest.segments.is_empty() || manifest.text_scalar_length == 0 {
+        return SegmentPosition {
+            index: 0,
+            fraction: 0.0,
+        };
     }
 
     let bounded = progress.clamp(0.0, 1.0);
-    let target = bounded * manifest.text_length as f64;
+    let target = bounded * manifest.text_scalar_length as f64;
 
     for segment in &manifest.segments {
-        let length = segment.char_end.saturating_sub(segment.char_start).max(1);
-        if target < segment.char_end as f64 || segment.index + 1 == manifest.segments.len() {
-            let local = (target - segment.char_start as f64) / length as f64;
+        let length = segment.scalar_end.saturating_sub(segment.scalar_start).max(1);
+
+        if target < segment.scalar_end as f64
+            || segment.index + 1 == manifest.segments.len()
+        {
+            let local = (target - segment.scalar_start as f64) / length as f64;
             return SegmentPosition {
                 index: segment.index,
                 fraction: local.clamp(0.0, 1.0),
@@ -126,15 +136,19 @@ pub fn progress_for_position(
     index: usize,
     fraction: f64,
 ) -> f64 {
-    if manifest.text_length == 0 {
+    if manifest.text_scalar_length == 0 {
         return 0.0;
     }
+
     let Some(segment) = manifest.segments.get(index) else {
         return 0.0;
     };
-    let length = segment.char_end.saturating_sub(segment.char_start).max(1) as f64;
-    let logical_chars = segment.char_start as f64 + length * fraction.clamp(0.0, 1.0);
-    (logical_chars / manifest.text_length as f64).clamp(0.0, 1.0)
+
+    let length = segment.scalar_end.saturating_sub(segment.scalar_start).max(1) as f64;
+    let logical_scalars =
+        segment.scalar_start as f64 + length * fraction.clamp(0.0, 1.0);
+
+    (logical_scalars / manifest.text_scalar_length as f64).clamp(0.0, 1.0)
 }
 
 pub fn segment_for_logical_time(
@@ -146,14 +160,18 @@ pub fn segment_for_logical_time(
     }
 
     let target = elapsed_ms.min(manifest.estimated_source_duration_ms);
+
     for segment in &manifest.segments {
-        if target < segment.logical_end_ms || segment.index + 1 == manifest.segments.len() {
+        if target < segment.logical_end_ms
+            || segment.index + 1 == manifest.segments.len()
+        {
             return Some((
                 segment.index,
                 target.saturating_sub(segment.logical_start_ms),
             ));
         }
     }
+
     None
 }
 
@@ -172,15 +190,22 @@ pub fn prefetch_indexes(
         if indexes.len() >= limit {
             break;
         }
+
         indexes.push(index);
         buffered_ms = buffered_ms.saturating_add(
             manifest.segments[index].estimated_source_duration_ms,
         );
+
         if buffered_ms >= horizon {
             break;
         }
     }
+
     indexes
+}
+
+fn normalize_text(text: &str) -> String {
+    text.replace("\r\n", "\n").replace('\r', "\n").trim().to_string()
 }
 
 fn estimate_duration_ms(word_count: usize) -> u64 {
@@ -196,87 +221,82 @@ fn count_words(text: &str) -> usize {
         .count()
 }
 
-fn split_segments(text: &str, max_chars: usize) -> Vec<String> {
+fn split_segments(text: &str, max_scalars: usize) -> Vec<SegmentSlice> {
     if text.is_empty() {
         return Vec::new();
     }
 
-    let mut units = Vec::<String>::new();
-    let mut current = String::new();
-
-    for ch in text.chars() {
-        current.push(ch);
-        let sentence_boundary = matches!(ch, '.' | '!' | '?' | '\n');
-        if sentence_boundary {
-            let value = current.trim().to_string();
-            if !value.is_empty() {
-                units.push(value);
-            }
-            current.clear();
-        }
-    }
-
-    let tail = current.trim();
-    if !tail.is_empty() {
-        units.push(tail.to_string());
-    }
-
+    let chars: Vec<char> = text.chars().collect();
     let mut segments = Vec::new();
-    let mut pending = String::new();
+    let mut cursor = 0usize;
 
-    for mut unit in units {
-        while unit.chars().count() > max_chars {
-            flush_pending(&mut pending, &mut segments);
-            let (head, tail) = split_at_char_boundary(&unit, max_chars);
-            segments.push(head.trim().to_string());
-            unit = tail.trim().to_string();
+    while cursor < chars.len() {
+        while cursor < chars.len() && chars[cursor].is_whitespace() {
+            cursor += 1;
         }
 
-        if unit.is_empty() {
-            continue;
+        if cursor >= chars.len() {
+            break;
         }
 
-        let candidate_len = pending.chars().count()
-            + if pending.is_empty() { 0 } else { 1 }
-            + unit.chars().count();
+        let max_end = cursor.saturating_add(max_scalars).min(chars.len());
+        let mut end = choose_segment_end(&chars, cursor, max_end, max_scalars);
 
-        if candidate_len > max_chars {
-            flush_pending(&mut pending, &mut segments);
+        while end > cursor && chars[end - 1].is_whitespace() {
+            end -= 1;
         }
 
-        if !pending.is_empty() {
-            pending.push(' ');
+        if end <= cursor {
+            end = max_end.max(cursor + 1).min(chars.len());
         }
-        pending.push_str(&unit);
+
+        let segment_text: String = chars[cursor..end].iter().collect();
+
+        segments.push(SegmentSlice {
+            text: segment_text,
+            scalar_start: cursor,
+            scalar_end: end,
+        });
+
+        cursor = end;
     }
 
-    flush_pending(&mut pending, &mut segments);
     segments
 }
 
-fn flush_pending(pending: &mut String, segments: &mut Vec<String>) {
-    let value = pending.trim();
-    if !value.is_empty() {
-        segments.push(value.to_string());
+fn choose_segment_end(
+    chars: &[char],
+    start: usize,
+    max_end: usize,
+    max_scalars: usize,
+) -> usize {
+    if max_end >= chars.len() {
+        return chars.len();
     }
-    pending.clear();
-}
 
-fn split_at_char_boundary(value: &str, max_chars: usize) -> (String, String) {
-    let chars: Vec<char> = value.chars().collect();
-    let mut cut = max_chars.min(chars.len());
+    let minimum_preferred =
+        start + (max_scalars.saturating_mul(3) / 5).min(max_end.saturating_sub(start));
 
-    let floor = max_chars.saturating_mul(3) / 5;
-    for i in (floor..cut).rev() {
-        if chars[i].is_whitespace() {
-            cut = i;
-            break;
+    let mut sentence_boundary = None;
+    let mut whitespace_boundary = None;
+
+    for index in start..max_end {
+        let ch = chars[index];
+
+        if index + 1 >= minimum_preferred {
+            if matches!(ch, '.' | '!' | '?' | '\n') {
+                sentence_boundary = Some(index + 1);
+            }
+
+            if ch.is_whitespace() {
+                whitespace_boundary = Some(index);
+            }
         }
     }
 
-    let head: String = chars[..cut].iter().collect();
-    let tail: String = chars[cut..].iter().collect();
-    (head, tail)
+    sentence_boundary
+        .or(whitespace_boundary)
+        .unwrap_or(max_end)
 }
 
 #[cfg(test)]
@@ -290,6 +310,10 @@ mod tests {
 
         assert_eq!(manifest.schema_version, 1);
         assert_eq!(manifest.word_count, 10);
+        assert_eq!(
+            manifest.text_scalar_length,
+            normalize_text(text).chars().count()
+        );
         assert_eq!(manifest.segments.first().unwrap().logical_start_ms, 0);
         assert_eq!(
             manifest.segments.last().unwrap().logical_end_ms,
@@ -298,32 +322,83 @@ mod tests {
     }
 
     #[test]
-    fn maps_progress_to_segment_and_back() {
-        let text = (0..2000).map(|_| "word").collect::<Vec<_>>().join(" ");
+    fn segment_ranges_match_the_canonical_document() {
+        let text = (0..900)
+            .map(|index| format!("w{index}"))
+            .collect::<Vec<_>>()
+            .join(" ");
+        let canonical = normalize_text(&text);
+        let canonical_chars: Vec<char> = canonical.chars().collect();
         let manifest = build_manifest("d1", "r1", "Book", "en", &text, 600);
+
+        assert!(manifest.segments.len() > 1);
+
+        for segment in &manifest.segments {
+            let slice: String = canonical_chars[segment.scalar_start..segment.scalar_end]
+                .iter()
+                .collect();
+            assert_eq!(slice, segment.text);
+        }
+    }
+
+    #[test]
+    fn maps_progress_to_segment_and_back() {
+        let text = (0..2000)
+            .map(|_| "word")
+            .collect::<Vec<_>>()
+            .join(" ");
+        let manifest = build_manifest("d1", "r1", "Book", "en", &text, 600);
+
         assert!(manifest.segments.len() > 1);
 
         let position = position_for_progress(&manifest, 0.63);
-        let roundtrip = progress_for_position(&manifest, position.index, position.fraction);
+        let roundtrip =
+            progress_for_position(&manifest, position.index, position.fraction);
+
         assert!((roundtrip - 0.63).abs() < 0.01);
     }
 
     #[test]
     fn maps_document_time_without_exposing_segment_time() {
-        let text = (0..3000).map(|_| "word").collect::<Vec<_>>().join(" ");
+        let text = (0..3000)
+            .map(|_| "word")
+            .collect::<Vec<_>>()
+            .join(" ");
         let manifest = build_manifest("d1", "r1", "Book", "en", &text, 600);
         let target = manifest.estimated_source_duration_ms / 2;
         let (_, local) = segment_for_logical_time(&manifest, target).unwrap();
+
         assert!(local <= target);
     }
 
     #[test]
     fn prefetches_by_time_horizon() {
-        let text = (0..5000).map(|_| "word").collect::<Vec<_>>().join(" ");
+        let text = (0..5000)
+            .map(|_| "word")
+            .collect::<Vec<_>>()
+            .join(" ");
         let manifest = build_manifest("d1", "r1", "Book", "en", &text, 600);
         let indexes = prefetch_indexes(&manifest, 0, 120_000, 4);
+
         assert!(!indexes.is_empty());
         assert!(indexes.len() <= 4);
         assert_eq!(indexes[0], 1);
+    }
+
+    #[test]
+    fn normalizes_line_endings_before_indexing() {
+        let manifest = build_manifest(
+            "d1",
+            "r1",
+            "Book",
+            "en",
+            " First line.\r\nSecond line.\rThird line. ",
+            600,
+        );
+
+        assert_eq!(
+            manifest.text_scalar_length,
+            "First line.\nSecond line.\nThird line.".chars().count()
+        );
     }
 }
