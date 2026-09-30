@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { ReadCoreWorkerClient } from "./readCore.client";
 import type {
@@ -37,7 +37,7 @@ function createRevisionId(): string {
 }
 
 export default function App() {
-  const client = useMemo(() => new ReadCoreWorkerClient(), []);
+  const [client, setClient] = useState<ReadCoreWorkerClient | null>(null);
   const [text, setText] = useState(SAMPLE_TEXT);
   const [title, setTitle] = useState("Floently Read sample");
   const [manifest, setManifest] = useState<ReadingManifestSummary | null>(null);
@@ -50,17 +50,20 @@ export default function App() {
   const activeManifestHandle = useRef<string | null>(null);
 
   useEffect(() => {
+    const nextClient = new ReadCoreWorkerClient();
+    setClient(nextClient);
+
     return () => {
       const handle = activeManifestHandle.current;
       if (handle) {
-        void client.dropManifest(handle);
+        void nextClient.dropManifest(handle);
       }
-      client.terminate();
+      nextClient.terminate();
     };
-  }, [client]);
+  }, []);
 
   useEffect(() => {
-    if (!manifest) {
+    if (!client || !manifest) {
       setPosition(null);
       setPrefetch([]);
       return;
@@ -90,6 +93,11 @@ export default function App() {
   }, [client, manifest, progress]);
 
   async function buildManifest(): Promise<void> {
+    if (!client) {
+      setError("Read Core is still initializing.");
+      return;
+    }
+
     if (!text.trim()) {
       setError("Add text before indexing the document.");
       return;
@@ -135,7 +143,7 @@ export default function App() {
     try {
       const value = await file.text();
       const handle = activeManifestHandle.current;
-      if (handle) {
+      if (handle && client) {
         void client.dropManifest(handle);
         activeManifestHandle.current = null;
       }
@@ -218,7 +226,7 @@ export default function App() {
             value={text}
             onChange={(event) => {
               const handle = activeManifestHandle.current;
-              if (handle) {
+              if (handle && client) {
                 void client.dropManifest(handle);
                 activeManifestHandle.current = null;
               }
@@ -233,7 +241,7 @@ export default function App() {
             <span>{text.length.toLocaleString()} browser characters</span>
             <button
               className="primary-button"
-              disabled={isBuilding}
+              disabled={isBuilding || !client}
               onClick={() => void buildManifest()}
             >
               {isBuilding ? "Indexing…" : "Build ReadingManifest"}
