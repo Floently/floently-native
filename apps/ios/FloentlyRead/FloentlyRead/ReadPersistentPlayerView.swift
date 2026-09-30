@@ -1,4 +1,6 @@
+import Foundation
 import SwiftUI
+import FloentlyShared
 
 struct ReadPersistentPlayerView: View {
     @EnvironmentObject private var playback: ReadPlaybackSession
