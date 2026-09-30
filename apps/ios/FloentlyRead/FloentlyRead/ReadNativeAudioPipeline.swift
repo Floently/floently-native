@@ -20,22 +20,20 @@ struct ReadNativeTtsRequest: Encodable {
 actor ReadNativeTtsClient {
     private let baseURL: URL
     private let session: URLSession
-    private let tokenProvider: @Sendable () -> String?
 
     init(
         baseURL: URL = URL(string: "https://flowreader-api.onrender.com")!,
-        session: URLSession = .shared,
-        tokenProvider: @escaping @Sendable () -> String? = { nil }
+        session: URLSession = .shared
     ) {
         self.baseURL = baseURL
         self.session = session
-        self.tokenProvider = tokenProvider
     }
 
     func synthesize(
         text: String,
         language: String,
-        voiceId: String
+        voiceId: String,
+        accessToken: String? = nil
     ) async throws -> ReadNativeTtsAsset {
         let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else {
@@ -49,7 +47,7 @@ actor ReadNativeTtsClient {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        if let token = tokenProvider()?.trimmingCharacters(in: .whitespacesAndNewlines),
+        if let token = accessToken?.trimmingCharacters(in: .whitespacesAndNewlines),
            !token.isEmpty {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
