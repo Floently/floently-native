@@ -1,10 +1,21 @@
-import { useEffect, useRef, useState } from "react";
-import type { ChangeEvent } from "react";
-import { ReadCoreWorkerClient } from "./readCore.client";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type KeyboardEvent,
+  type PointerEvent,
+} from "react";
 import type {
   ReadingManifestSummary,
   SegmentPosition,
 } from "./readCore.types";
+import { useWebPlaybackSnapshot } from "./playback/useWebPlaybackSnapshot";
+import type {
+  WebPlaybackSession,
+  WebPlaybackSnapshot,
+} from "./playback/webPlaybackSession";
+import { useReadRuntime } from "./runtime/ReadRuntimeContext";
 import "./styles.css";
 
 const SAMPLE_TEXT = `Floently Read is being rebuilt around one logical document timeline.
@@ -37,7 +48,9 @@ function createRevisionId(): string {
 }
 
 export default function App() {
-  const [client, setClient] = useState<ReadCoreWorkerClient | null>(null);
+  const runtime = useReadRuntime();
+  const playback = useWebPlaybackSnapshot(runtime?.playback);
+
   const [text, setText] = useState(SAMPLE_TEXT);
   const [title, setTitle] = useState("Floently Read sample");
   const [manifest, setManifest] = useState<ReadingManifestSummary | null>(null);
@@ -50,20 +63,18 @@ export default function App() {
   const activeManifestHandle = useRef<string | null>(null);
 
   useEffect(() => {
-    const nextClient = new ReadCoreWorkerClient();
-    setClient(nextClient);
-
     return () => {
       const handle = activeManifestHandle.current;
-      if (handle) {
-        void nextClient.dropManifest(handle);
-      }
-      nextClient.terminate();
+      if (!runtime || !handle) return;
+
+      runtime.playback.clear();
+      void runtime.core.dropManifest(handle);
+      activeManifestHandle.current = null;
     };
-  }, []);
+  }, [runtime]);
 
   useEffect(() => {
-    if (!client || !manifest) {
+    if (!runtime || !manifest) {
       setPosition(null);
       setPrefetch([]);
       return;
@@ -73,11 +84,11 @@ export default function App() {
 
     void (async () => {
       try {
-        const mapped = await client.positionForProgress(
+        const mapped = await runtime.core.positionForProgress(
           manifest.handle,
           progress,
         );
-        const indexes = await client.prefetchIndexes(
+        const indexes = await runtime.core.prefetchIndexes(
           manifest.handle,
           mapped.index,
         );
@@ -94,10 +105,26 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [client, manifest, progress]);
+  }, [runtime, manifest, progress]);
+
+  function releaseCurrentDocument(): void {
+    const handle = activeManifestHandle.current;
+
+    if (runtime) {
+      runtime.playback.clear();
+      if (handle) {
+        void runtime.core.dropManifest(handle);
+      }
+    }
+
+    activeManifestHandle.current = null;
+    setManifest(null);
+    setPosition(null);
+    setPrefetch([]);
+  }
 
   async function buildManifest(): Promise<void> {
-    if (!client) {
+    if (!runtime) {
       setError("Read Core is still initializing.");
       return;
     }
@@ -114,7 +141,7 @@ export default function App() {
     const previousHandle = activeManifestHandle.current;
 
     try {
-      const result = await client.buildManifest({
+      const result = await runtime.core.buildManifest({
         documentId: "read-web-local",
         revisionId: createRevisionId(),
         title: title.trim() || "Untitled document",
@@ -123,12 +150,14 @@ export default function App() {
       });
 
       if (previousHandle && previousHandle !== result.handle) {
-        void client.dropManifest(previousHandle);
+        void runtime.core.dropManifest(previousHandle);
       }
 
       activeManifestHandle.current = result.handle;
       setManifest(result);
       setProgress(0);
+      runtime.playback.loadDocument(result);
+
       setStatus(
         `Indexed ${result.wordCount.toLocaleString()} words in ${result.buildMs.toFixed(1)} ms`,
       );
@@ -146,15 +175,9 @@ export default function App() {
 
     try {
       const value = await file.text();
-      const handle = activeManifestHandle.current;
-      if (handle && client) {
-        void client.dropManifest(handle);
-        activeManifestHandle.current = null;
-      }
-
+      releaseCurrentDocument();
       setText(value);
       setTitle(file.name.replace(/\.[^.]+$/, "") || file.name);
-      setManifest(null);
       setStatus(`Loaded ${file.name}. Ready to index.`);
       setError(null);
     } catch (reason) {
@@ -181,16 +204,16 @@ export default function App() {
 
         <p className="hero-copy">
           React renders the interface. A Web Worker runs the shared Rust Read
-          Core through WebAssembly, so long-document indexing does not block the
-          page.
+          Core through WebAssembly. A durable browser PlaybackSession now owns
+          media state above the screen tree.
         </p>
 
         <div className="engine-strip" aria-label="Current web architecture">
           <span>React + TypeScript</span>
           <span className="engine-arrow">→</span>
-          <span>Web Worker</span>
+          <span>PlaybackSession + Worker</span>
           <span className="engine-arrow">→</span>
-          <span>Rust/WASM Read Core</span>
+          <span>Rust/WASM + browser media</span>
         </div>
       </section>
 
@@ -229,14 +252,8 @@ export default function App() {
             className="document-input"
             value={text}
             onChange={(event) => {
-              const handle = activeManifestHandle.current;
-              if (handle && client) {
-                void client.dropManifest(handle);
-                activeManifestHandle.current = null;
-              }
-
+              releaseCurrentDocument();
               setText(event.target.value);
-              setManifest(null);
               setStatus("Text changed. Re-index to refresh the manifest.");
             }}
           />
@@ -245,7 +262,7 @@ export default function App() {
             <span>{text.length.toLocaleString()} browser characters</span>
             <button
               className="primary-button"
-              disabled={isBuilding || !client}
+              disabled={isBuilding || !runtime}
               onClick={() => void buildManifest()}
             >
               {isBuilding ? "Indexing…" : "Build ReadingManifest"}
@@ -305,15 +322,16 @@ export default function App() {
 
               <div className="mapping-card">
                 <p>
-                  Rust maps that public position to hidden segment{" "}
-                  <strong>{position?.index ?? "…"}</strong>
-                  {position
-                    ? ` at ${Math.round(position.fraction * 100)}% inside the segment`
-                    : ""}
-                  .
+                  Rust maps that public position to hidden transport data
+                  without changing the public media identity.
                 </p>
                 <p>
-                  120-second prefetch plan:{" "}
+                  Diagnostic mapping: segment{" "}
+                  <strong>{position?.index ?? "…"}</strong>
+                  {position
+                    ? ` at ${Math.round(position.fraction * 100)}%`
+                    : ""}
+                  . Prefetch:{" "}
                   <strong>
                     {prefetch.length > 0
                       ? prefetch.map((index) => `#${index}`).join(", ")
@@ -325,7 +343,7 @@ export default function App() {
               <div className="segment-list">
                 <div className="segment-list-header">
                   <span>First hidden transport units</span>
-                  <span>not user-visible media items</span>
+                  <span>diagnostics only</span>
                 </div>
                 {manifest.firstSegments.map((segment) => (
                   <div className="segment-row" key={segment.id}>
@@ -349,8 +367,153 @@ export default function App() {
           )}
         </aside>
       </section>
+
+      {runtime && manifest ? (
+        <PlaybackDock
+          session={runtime.playback}
+          snapshot={playback}
+        />
+      ) : null}
     </main>
   );
+}
+
+function PlaybackDock({
+  session,
+  snapshot,
+}: {
+  session: WebPlaybackSession;
+  snapshot: WebPlaybackSnapshot;
+}) {
+  const [seekDraftMs, setSeekDraftMs] = useState<number | null>(null);
+  const displayedPositionMs = seekDraftMs ?? snapshot.elapsedMs;
+  const isTransportActive = [
+    "preparing",
+    "buffering",
+    "playing",
+  ].includes(snapshot.status);
+
+  function commitSeek(): void {
+    if (seekDraftMs === null) return;
+    const target = seekDraftMs;
+    setSeekDraftMs(null);
+    void session.seek(target);
+  }
+
+  function onSliderPointerUp(
+    _event: PointerEvent<HTMLInputElement>,
+  ): void {
+    commitSeek();
+  }
+
+  function onSliderKeyUp(
+    event: KeyboardEvent<HTMLInputElement>,
+  ): void {
+    if (
+      event.key.startsWith("Arrow")
+      || event.key === "Home"
+      || event.key === "End"
+      || event.key === "PageUp"
+      || event.key === "PageDown"
+    ) {
+      commitSeek();
+    }
+  }
+
+  return (
+    <section
+      className="player-dock"
+      aria-label="Floently Read document player"
+    >
+      <div className="player-document">
+        <p className="panel-kicker">Document playback</p>
+        <strong>{snapshot.title ?? "Floently Read"}</strong>
+        <span>
+          {snapshot.status}
+          {" · "}
+          {snapshot.voiceId}
+          {snapshot.bufferedAheadMs > 0
+            ? ` · ${formatDuration(snapshot.bufferedAheadMs)} ready ahead`
+            : ""}
+        </span>
+      </div>
+
+      <div className="player-center">
+        <div className="transport-row">
+          <button
+            className="transport-button secondary"
+            onClick={() => void session.seekBy(-15_000)}
+            aria-label="Back 15 seconds"
+          >
+            −15
+          </button>
+          <button
+            className="transport-button primary"
+            onClick={() => void session.togglePlayPause()}
+            aria-label={isTransportActive ? "Pause" : "Play"}
+          >
+            {isTransportActive ? "Pause" : "Play"}
+          </button>
+          <button
+            className="transport-button secondary"
+            onClick={() => void session.seekBy(15_000)}
+            aria-label="Forward 15 seconds"
+          >
+            +15
+          </button>
+        </div>
+
+        <div className="player-timeline">
+          <span>{formatDuration(displayedPositionMs)}</span>
+          <input
+            className="player-slider"
+            type="range"
+            min="0"
+            max={Math.max(1, snapshot.durationMs)}
+            step="1000"
+            value={clampForInput(
+              displayedPositionMs,
+              snapshot.durationMs,
+            )}
+            onChange={(event) =>
+              setSeekDraftMs(Number(event.target.value))
+            }
+            onPointerUp={onSliderPointerUp}
+            onKeyUp={onSliderKeyUp}
+            onBlur={commitSeek}
+            aria-label="Document position"
+          />
+          <span>{formatDuration(snapshot.durationMs)}</span>
+        </div>
+      </div>
+
+      <div className="player-options">
+        <label htmlFor="playback-speed">Speed</label>
+        <select
+          id="playback-speed"
+          value={snapshot.speed}
+          onChange={(event) =>
+            session.setSpeed(Number(event.target.value))
+          }
+        >
+          {[0.75, 1, 1.25, 1.5, 2, 2.5, 3].map((speed) => (
+            <option value={speed} key={speed}>
+              {speed}×
+            </option>
+          ))}
+        </select>
+        {snapshot.error ? (
+          <span className="player-error" title={snapshot.error}>
+            Playback error
+          </span>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function clampForInput(value: number, maximum: number): number {
+  return Math.min(Math.max(0, value), Math.max(1, maximum));
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
