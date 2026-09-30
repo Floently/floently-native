@@ -1,5 +1,7 @@
 package com.floently.read
 
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -12,8 +14,10 @@ import androidx.media3.session.MediaSessionService
  * document-timeline adapter in front of ExoPlayer so MediaSession exposes one
  * logical document duration/position while hidden TTS segments remain private.
  */
+@OptIn(UnstableApi::class)
 class ReadPlaybackService : MediaSessionService() {
-    private var player: ExoPlayer? = null
+    private var physicalPlayer: ExoPlayer? = null
+    private var documentPlayer: ReadDocumentTimelinePlayer? = null
     private var mediaSession: MediaSession? = null
 
     override fun onCreate() {
@@ -23,8 +27,11 @@ class ReadPlaybackService : MediaSessionService() {
             .setHandleAudioBecomingNoisy(true)
             .build()
 
-        player = exoPlayer
-        mediaSession = MediaSession.Builder(this, exoPlayer).build()
+        val virtualPlayer = ReadDocumentTimelinePlayer(exoPlayer)
+
+        physicalPlayer = exoPlayer
+        documentPlayer = virtualPlayer
+        mediaSession = MediaSession.Builder(this, virtualPlayer).build()
     }
 
     override fun onGetSession(
@@ -35,8 +42,11 @@ class ReadPlaybackService : MediaSessionService() {
         mediaSession?.release()
         mediaSession = null
 
-        player?.release()
-        player = null
+        documentPlayer?.release()
+        documentPlayer = null
+
+        physicalPlayer?.release()
+        physicalPlayer = null
 
         super.onDestroy()
     }

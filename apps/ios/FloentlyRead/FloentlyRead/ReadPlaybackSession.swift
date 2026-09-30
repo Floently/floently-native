@@ -9,6 +9,7 @@ struct ReadPlayableSegment: Identifiable, Equatable {
     let url: URL
     let logicalStartTime: TimeInterval
     let logicalEndTime: TimeInterval
+    let physicalDuration: TimeInterval?
 
     var logicalDuration: TimeInterval {
         max(0, logicalEndTime - logicalStartTime)
@@ -80,6 +81,57 @@ final class ReadPlaybackSession: ObservableObject {
         if autoplay {
             play()
         }
+    }
+
+    func refresh(_ updated: ReadPlayableDocument) {
+        guard let current = document else {
+            load(updated)
+            return
+        }
+
+        guard
+            current.id == updated.id,
+            current.revisionId == updated.revisionId
+        else {
+            load(updated)
+            return
+        }
+
+        let resume = state == .playing
+        let cursor = elapsedTime
+        document = updated
+        duration = max(
+            updated.estimatedDuration,
+            updated.segments.last?.logicalEndTime ?? 0
+        )
+
+        guard !updated.segments.isEmpty else {
+            player.pause()
+            player.removeAllItems()
+            segmentByItemId.removeAll()
+            bufferedAhead = 0
+            activeSegmentIndex = nil
+            state = .preparing
+            publishNowPlaying()
+            return
+        }
+
+        guard let target = segmentAndOffset(for: cursor, in: updated) else {
+            return
+        }
+
+        rebuildQueue(
+            startingAt: target.segment.index,
+            localOffset: target.offset
+        )
+        elapsedTime = min(cursor, duration)
+        state = resume ? .playing : .paused
+
+        if resume {
+            activateAudioSession()
+            player.playImmediately(atRate: playbackRate)
+        }
+        publishNowPlaying()
     }
 
     func clear() {
@@ -182,7 +234,20 @@ final class ReadPlaybackSession: ObservableObject {
             return
         }
 
-        let target = CMTime(seconds: localOffset, preferredTimescale: 600)
+        guard
+            let currentItem = player.currentItem,
+            let segment = segmentByItemId[ObjectIdentifier(currentItem)]
+        else {
+            updateCurrentLogicalTime()
+            return
+        }
+
+        let physicalOffset = physicalOffset(
+            forLogicalOffset: localOffset,
+            in: segment,
+            item: currentItem
+        )
+        let target = CMTime(seconds: physicalOffset, preferredTimescale: 600)
         player.seek(to: target, toleranceBefore: .zero, toleranceAfter: .zero)
         updateCurrentLogicalTime()
     }
@@ -210,8 +275,16 @@ final class ReadPlaybackSession: ObservableObject {
                 self.updateCurrentLogicalTime()
 
                 if self.player.items().isEmpty {
-                    self.elapsedTime = self.duration
-                    self.state = .ended
+                    let readyEnd = self.document?.segments.last?.logicalEndTime ?? 0
+                    if readyEnd + 0.001 < self.duration {
+                        self.elapsedTime = min(readyEnd, self.duration)
+                        self.bufferedAhead = 0
+                        self.activeSegmentIndex = nil
+                        self.state = .preparing
+                    } else {
+                        self.elapsedTime = self.duration
+                        self.state = .ended
+                    }
                     self.publishNowPlaying()
                 }
             }
@@ -232,16 +305,21 @@ final class ReadPlaybackSession: ObservableObject {
         }
 
         activeSegmentIndex = segment.index
-        let local = max(0, currentItem.currentTime().seconds.isFinite
+        let physicalLocal = max(0, currentItem.currentTime().seconds.isFinite
             ? currentItem.currentTime().seconds
             : 0)
-        elapsedTime = min(duration, segment.logicalStartTime + local)
+        let logicalLocal = logicalOffset(
+            forPhysicalOffset: physicalLocal,
+            in: segment,
+            item: currentItem
+        )
+        elapsedTime = min(duration, segment.logicalStartTime + logicalLocal)
 
         var ahead: TimeInterval = 0
         for item in player.items() {
             guard let queuedSegment = segmentByItemId[ObjectIdentifier(item)] else { continue }
             if queuedSegment.index == segment.index {
-                ahead += max(0, queuedSegment.logicalDuration - local)
+                ahead += max(0, queuedSegment.logicalDuration - logicalLocal)
             } else if queuedSegment.index > segment.index {
                 ahead += queuedSegment.logicalDuration
             }
@@ -271,6 +349,58 @@ final class ReadPlaybackSession: ObservableObject {
 
         guard let last = document.segments.last else { return nil }
         return (last, last.logicalDuration)
+    }
+
+    private func physicalDuration(
+        for segment: ReadPlayableSegment,
+        item: AVPlayerItem
+    ) -> TimeInterval? {
+        if let duration = segment.physicalDuration,
+           duration.isFinite,
+           duration > 0 {
+            return duration
+        }
+
+        let itemDuration = item.duration.seconds
+        if itemDuration.isFinite, itemDuration > 0 {
+            return itemDuration
+        }
+
+        return nil
+    }
+
+    private func logicalOffset(
+        forPhysicalOffset physicalOffset: TimeInterval,
+        in segment: ReadPlayableSegment,
+        item: AVPlayerItem
+    ) -> TimeInterval {
+        guard
+            let physicalDuration = physicalDuration(for: segment, item: item),
+            physicalDuration > 0,
+            segment.logicalDuration > 0
+        else {
+            return min(segment.logicalDuration, max(0, physicalOffset))
+        }
+
+        let fraction = min(1, max(0, physicalOffset / physicalDuration))
+        return fraction * segment.logicalDuration
+    }
+
+    private func physicalOffset(
+        forLogicalOffset logicalOffset: TimeInterval,
+        in segment: ReadPlayableSegment,
+        item: AVPlayerItem
+    ) -> TimeInterval {
+        guard
+            let physicalDuration = physicalDuration(for: segment, item: item),
+            physicalDuration > 0,
+            segment.logicalDuration > 0
+        else {
+            return min(max(0, logicalOffset), segment.logicalDuration)
+        }
+
+        let fraction = min(1, max(0, logicalOffset / segment.logicalDuration))
+        return fraction * physicalDuration
     }
 
     private func installRemoteCommands() {
