@@ -3,12 +3,14 @@ import FloentlyShared
 
 @main
 struct FloentlyReadApp: App {
-    @StateObject private var browserRouter = ReadBrowserRouter()\n    @StateObject private var playbackSession = ReadPlaybackSession()
+    @StateObject private var browserRouter = ReadBrowserRouter()
+    @StateObject private var playbackSession = ReadPlaybackSession()
 
     var body: some Scene {
         WindowGroup {
             ReadRootView()
-                .environmentObject(browserRouter)\n                .environmentObject(playbackSession)
+                .environmentObject(browserRouter)
+                .environmentObject(playbackSession)
                 .onOpenURL { incomingURL in
                     browserRouter.openIncomingURL(incomingURL)
                 }
