@@ -208,5 +208,5 @@ object ReadingManifestV1Codec {
     }
 
     fun decode(value: String): ReadingManifestV1 =
-        json.decodeFromString<ReadingManifestV1>(value).validate()
+        json.decodeFromString(ReadingManifestV1.serializer(), value).validate()
 }
