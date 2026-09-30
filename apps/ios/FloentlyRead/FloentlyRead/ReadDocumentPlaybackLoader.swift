@@ -39,6 +39,18 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         }
 
         let accessToken = sessionStore.session?.token
+        let resumeSeconds = playback.storedResumeTime(
+            documentId: manifest.documentId,
+            revisionId: manifest.revisionId
+        )
+        let resumeMilliseconds = Int64(
+            max(0, resumeSeconds * 1_000)
+        )
+        let resumeIndex = manifest.segments.first(where: {
+            resumeMilliseconds < $0.logicalEndMs
+        })?.index ?? manifest.segments.last?.index ?? 0
+        let effectiveStart = max(index, resumeIndex)
+
         state = .preparing
 
         task = Task { [weak self] in
@@ -47,7 +59,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
             do {
                 let segments = try await coordinator.prepare(
                     manifest: manifest,
-                    startingAt: index,
+                    startingAt: effectiveStart,
                     voiceId: voiceId,
                     accessToken: accessToken
                 )
