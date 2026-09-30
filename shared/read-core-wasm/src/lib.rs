@@ -173,9 +173,10 @@ pub fn position_for_progress_json(
 #[wasm_bindgen]
 pub fn segment_for_logical_time_json(
     manifest_json: &str,
-    elapsed_ms: u64,
+    elapsed_ms: f64,
 ) -> Result<String, JsValue> {
     let manifest = decode_manifest(manifest_json)?;
+    let elapsed_ms = elapsed_ms.max(0.0).round() as u64;
     let Some((index, local_offset_ms)) = segment_for_logical_time(&manifest, elapsed_ms) else {
         return Ok("null".to_string());
     };
@@ -189,10 +190,11 @@ pub fn segment_for_logical_time_json(
 pub fn prefetch_indexes_json(
     manifest_json: &str,
     active_index: usize,
-    horizon_ms: u64,
+    horizon_ms: f64,
     max_segments: usize,
 ) -> Result<String, JsValue> {
     let manifest = decode_manifest(manifest_json)?;
+    let horizon_ms = horizon_ms.max(0.0).round() as u64;
     encode(&prefetch_indexes(
         &manifest,
         active_index,
