@@ -49,32 +49,70 @@ final class ReadPlaybackSession: ObservableObject {
             if state == .playing {
                 player.rate = playbackRate
             }
+            persistResume(force: true)
             publishNowPlaying()
         }
     }
 
+    private struct ResumeSnapshot: Codable {
+        let elapsedTime: TimeInterval
+        let playbackRate: Float
+    }
+
     private let player = AVQueuePlayer()
+    private let defaults = UserDefaults.standard
     private var segmentByItemId: [ObjectIdentifier: ReadPlayableSegment] = [:]
     private var timeObserver: Any?
     private var itemEndObserver: NSObjectProtocol?
+    private var audioSessionObservers: [NSObjectProtocol] = []
     private var remoteCommandTargets: [(MPRemoteCommand, Any)] = []
+    private var resumeAfterInterruption = false
+    private var lastResumePersistedAt = Date.distantPast
 
     init() {
         configureAudioSession()
         installTimeObserver()
         installItemEndObserver()
+        installAudioSessionObservers()
         installRemoteCommands()
     }
 
     func load(_ document: ReadPlayableDocument, autoplay: Bool = false) {
         self.document = document
         state = .preparing
-        elapsedTime = 0
         duration = max(
             document.estimatedDuration,
             document.segments.last?.logicalEndTime ?? 0
         )
-        rebuildQueue(startingAt: 0, localOffset: 0)
+
+        let resume = restoreResume(for: document)
+        if let storedRate = resume?.playbackRate {
+            playbackRate = storedRate
+        }
+
+        let requestedTime = min(
+            max(0, resume?.elapsedTime ?? 0),
+            duration
+        )
+
+        guard
+            !document.segments.isEmpty,
+            let target = segmentAndOffset(
+                for: requestedTime,
+                in: document
+            )
+        else {
+            elapsedTime = requestedTime
+            state = .preparing
+            publishNowPlaying()
+            return
+        }
+
+        rebuildQueue(
+            startingAt: target.segment.index,
+            localOffset: target.offset
+        )
+        elapsedTime = requestedTime
         state = .ready
         publishNowPlaying()
 
@@ -131,6 +169,7 @@ final class ReadPlaybackSession: ObservableObject {
             activateAudioSession()
             player.playImmediately(atRate: playbackRate)
         }
+        persistResume(force: true)
         publishNowPlaying()
     }
 
@@ -165,6 +204,7 @@ final class ReadPlaybackSession: ObservableObject {
         if document != nil {
             state = .paused
         }
+        persistResume(force: true)
         publishNowPlaying()
     }
 
@@ -188,6 +228,7 @@ final class ReadPlaybackSession: ObservableObject {
             activateAudioSession()
             player.playImmediately(atRate: playbackRate)
         }
+        persistResume(force: true)
         publishNowPlaying()
     }
 
@@ -329,6 +370,7 @@ final class ReadPlaybackSession: ObservableObject {
         if state != .paused && player.rate > 0 {
             state = .playing
         }
+        persistResume(force: false)
         publishNowPlaying()
     }
 
@@ -401,6 +443,219 @@ final class ReadPlaybackSession: ObservableObject {
 
         let fraction = min(1, max(0, logicalOffset / segment.logicalDuration))
         return fraction * physicalDuration
+    }
+
+    func storedResumeTime(
+        documentId: String,
+        revisionId: String
+    ) -> TimeInterval {
+        let key = resumeKey(
+            documentId: documentId,
+            revisionId: revisionId
+        )
+
+        guard
+            let data = defaults.data(forKey: key),
+            let snapshot = try? JSONDecoder().decode(
+                ResumeSnapshot.self,
+                from: data
+            )
+        else {
+            return 0
+        }
+
+        return max(0, snapshot.elapsedTime)
+    }
+
+    private func resumeKey(
+        documentId: String,
+        revisionId: String
+    ) -> String {
+        "floently.read.resume.v1.\(documentId).\(revisionId)"
+    }
+
+    private func restoreResume(
+        for document: ReadPlayableDocument
+    ) -> ResumeSnapshot? {
+        let key = resumeKey(
+            documentId: document.id,
+            revisionId: document.revisionId
+        )
+        guard let data = defaults.data(forKey: key) else {
+            return nil
+        }
+        return try? JSONDecoder().decode(
+            ResumeSnapshot.self,
+            from: data
+        )
+    }
+
+    private func persistResume(force: Bool) {
+        guard let document else { return }
+
+        let now = Date()
+        if !force,
+           now.timeIntervalSince(lastResumePersistedAt) < 1 {
+            return
+        }
+        lastResumePersistedAt = now
+
+        let snapshot = ResumeSnapshot(
+            elapsedTime: min(max(0, elapsedTime), max(0, duration)),
+            playbackRate: playbackRate
+        )
+
+        guard let data = try? JSONEncoder().encode(snapshot) else {
+            return
+        }
+
+        defaults.set(
+            data,
+            forKey: resumeKey(
+                documentId: document.id,
+                revisionId: document.revisionId
+            )
+        )
+    }
+
+    private func installAudioSessionObservers() {
+        let center = NotificationCenter.default
+        let session = AVAudioSession.sharedInstance()
+
+        audioSessionObservers.append(
+            center.addObserver(
+                forName: AVAudioSession.interruptionNotification,
+                object: session,
+                queue: .main
+            ) { [weak self] notification in
+                Task { @MainActor in
+                    self?.handleAudioInterruption(notification)
+                }
+            }
+        )
+
+        audioSessionObservers.append(
+            center.addObserver(
+                forName: AVAudioSession.routeChangeNotification,
+                object: session,
+                queue: .main
+            ) { [weak self] notification in
+                Task { @MainActor in
+                    self?.handleRouteChange(notification)
+                }
+            }
+        )
+
+        audioSessionObservers.append(
+            center.addObserver(
+                forName: AVAudioSession.mediaServicesWereResetNotification,
+                object: session,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.handleMediaServicesReset()
+                }
+            }
+        )
+    }
+
+    private func handleAudioInterruption(
+        _ notification: Notification
+    ) {
+        guard
+            let rawType = notification.userInfo?[
+                AVAudioSessionInterruptionTypeKey
+            ] as? UInt,
+            let type = AVAudioSession.InterruptionType(
+                rawValue: rawType
+            )
+        else {
+            return
+        }
+
+        switch type {
+        case .began:
+            resumeAfterInterruption = state == .playing
+            player.pause()
+            if document != nil {
+                state = .paused
+            }
+            persistResume(force: true)
+            publishNowPlaying()
+
+        case .ended:
+            let rawOptions = notification.userInfo?[
+                AVAudioSessionInterruptionOptionKey
+            ] as? UInt ?? 0
+            let options = AVAudioSession.InterruptionOptions(
+                rawValue: rawOptions
+            )
+            let shouldResume =
+                resumeAfterInterruption
+                && options.contains(.shouldResume)
+            resumeAfterInterruption = false
+
+            if shouldResume {
+                play()
+            }
+
+        @unknown default:
+            resumeAfterInterruption = false
+        }
+    }
+
+    private func handleRouteChange(
+        _ notification: Notification
+    ) {
+        guard
+            let rawReason = notification.userInfo?[
+                AVAudioSessionRouteChangeReasonKey
+            ] as? UInt,
+            let reason = AVAudioSession.RouteChangeReason(
+                rawValue: rawReason
+            )
+        else {
+            return
+        }
+
+        if reason == .oldDeviceUnavailable,
+           state == .playing {
+            resumeAfterInterruption = false
+            pause()
+        }
+    }
+
+    private func handleMediaServicesReset() {
+        let wasPlaying = state == .playing
+        let cursor = elapsedTime
+
+        configureAudioSession()
+
+        guard
+            let document,
+            let target = segmentAndOffset(
+                for: cursor,
+                in: document
+            )
+        else {
+            return
+        }
+
+        rebuildQueue(
+            startingAt: target.segment.index,
+            localOffset: target.offset
+        )
+        elapsedTime = cursor
+
+        if wasPlaying {
+            activateAudioSession()
+            player.playImmediately(atRate: playbackRate)
+            state = .playing
+        } else {
+            state = .paused
+        }
+
+        publishNowPlaying()
     }
 
     private func installRemoteCommands() {
