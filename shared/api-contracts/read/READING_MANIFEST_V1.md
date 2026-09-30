@@ -8,6 +8,14 @@ The document is the public media item. Segments are hidden transport units.
 
 No iOS/Android UI, lock-screen surface, system media session, resume API, or analytics event may expose a segment as though it were the document.
 
+## Canonical text and offsets
+
+Before indexing, text is normalized to LF line endings and trimmed at the outer document boundary. `textScalarLength`, `scalarStart`, and `scalarEnd` are counts of Unicode scalar values in that canonical normalized text. They are not UTF-8 byte offsets, Java/Kotlin UTF-16 code-unit offsets, or Swift grapheme-cluster indexes.
+
+Every platform adapter is responsible for converting its native string indexes to/from these scalar offsets. This removes ambiguity across Swift, Kotlin, Rust, Python, Go, and TypeScript.
+
+Segment text must correspond to the canonical source range represented by `scalarStart..<scalarEnd`; segmentation may skip inter-segment whitespace, but it may not silently rewrite the source coordinates.
+
 ## Required mappings
 
 Every implementation must support:
