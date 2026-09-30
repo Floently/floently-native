@@ -11,6 +11,10 @@ export interface ReadingSegmentSummary {
   logicalEndMs: number;
 }
 
+export interface ReadingSegmentDescriptor extends ReadingSegmentSummary {
+  text: string;
+}
+
 export interface ReadingManifestSummary {
   handle: string;
   schemaVersion: number;
@@ -77,6 +81,14 @@ export type ReadCoreRequest =
     }
   | {
       id: number;
+      type: "getSegment";
+      payload: {
+        handle: string;
+        index: number;
+      };
+    }
+  | {
+      id: number;
       type: "dropManifest";
       payload: {
         handle: string;
@@ -92,6 +104,7 @@ export type ReadCoreRequestWithoutId =
 
 export type ReadCoreSuccess =
   | ReadingManifestSummary
+  | ReadingSegmentDescriptor
   | SegmentPosition
   | LogicalTimePosition
   | number[]
