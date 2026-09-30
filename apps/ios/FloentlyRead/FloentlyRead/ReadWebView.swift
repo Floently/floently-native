@@ -33,7 +33,8 @@ struct ReadWebView: UIViewRepresentable {
         controller.refreshNavigationState(from: webView)
     }
 
-    @MainActor\n    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+    @MainActor
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         private weak var controller: ReadBrowserController?
         private var observations: [NSKeyValueObservation] = []
         private var lastTerminatedURL: URL?
