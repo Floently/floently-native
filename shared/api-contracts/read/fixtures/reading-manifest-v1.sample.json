@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "documentId": "fixture-document",
+  "revisionId": "fixture-revision-1",
+  "title": "ReadingManifest v1 fixture",
+  "language": "en",
+  "wordCount": 8,
+  "textScalarLength": 46,
+  "estimatedSourceDurationMs": 2824,
+  "segments": [
+    {
+      "id": "segment-0",
+      "index": 0,
+      "text": "Hello world.",
+      "scalarStart": 0,
+      "scalarEnd": 12,
+      "wordStart": 0,
+      "wordEnd": 2,
+      "wordCount": 2,
+      "estimatedSourceDurationMs": 706,
+      "logicalStartMs": 0,
+      "logicalEndMs": 706,
+      "synthesis": {
+        "status": "ready",
+        "requestKey": "fixture:segment-0:voice-demo",
+        "voiceId": "voice-demo",
+        "provider": "fixture",
+        "model": "fixture-model"
+      },
+      "audio": {
+        "uri": "https://example.invalid/audio/segment-0.m4a",
+        "durationMs": 706,
+        "contentHash": "sha256:fixture-segment-0",
+        "cacheKey": "tts/sha256/fixture-segment-0",
+        "voiceId": "voice-demo",
+        "provider": "fixture",
+        "model": "fixture-model",
+        "format": "audio/mp4"
+      },
+      "timings": [
+        {
+          "scalarStart": 0,
+          "scalarEnd": 5,
+          "startMs": 0,
+          "endMs": 330
+        },
+        {
+          "scalarStart": 6,
+          "scalarEnd": 12,
+          "startMs": 330,
+          "endMs": 706
+        }
+      ]
+    },
+    {
+      "id": "segment-1",
+      "index": 1,
+      "text": "This is a longer second sentence.",
+      "scalarStart": 13,
+      "scalarEnd": 46,
+      "wordStart": 2,
+      "wordEnd": 8,
+      "wordCount": 6,
+      "estimatedSourceDurationMs": 2118,
+      "logicalStartMs": 706,
+      "logicalEndMs": 2824,
+      "synthesis": {
+        "status": "pending",
+        "requestKey": "fixture:segment-1:voice-demo",
+        "voiceId": "voice-demo",
+        "provider": "fixture",
+        "model": "fixture-model"
+      }
+    }
+  ]
+}

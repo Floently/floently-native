@@ -58,7 +58,29 @@
         "estimatedSourceDurationMs": { "type": "integer", "minimum": 0 },
         "logicalStartMs": { "type": "integer", "minimum": 0 },
         "logicalEndMs": { "type": "integer", "minimum": 0 },
-        "audio": { "$ref": "#/$defs/audio" }
+        "synthesis": { "$ref": "#/$defs/synthesis" },
+        "audio": { "$ref": "#/$defs/audio" },
+        "timings": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/timing" }
+        }
+      }
+    },
+    "synthesis": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pending", "generating", "ready", "failed"]
+        },
+        "requestKey": { "type": "string" },
+        "voiceId": { "type": "string" },
+        "provider": { "type": "string" },
+        "model": { "type": "string" },
+        "errorCode": { "type": "string" },
+        "errorMessage": { "type": "string" }
       }
     },
     "audio": {
@@ -69,7 +91,22 @@
         "uri": { "type": "string", "minLength": 1 },
         "durationMs": { "type": "integer", "minimum": 0 },
         "contentHash": { "type": "string" },
-        "voiceId": { "type": "string" }
+        "cacheKey": { "type": "string" },
+        "voiceId": { "type": "string" },
+        "provider": { "type": "string" },
+        "model": { "type": "string" },
+        "format": { "type": "string" }
+      }
+    },
+    "timing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scalarStart", "scalarEnd", "startMs", "endMs"],
+      "properties": {
+        "scalarStart": { "type": "integer", "minimum": 0 },
+        "scalarEnd": { "type": "integer", "minimum": 0 },
+        "startMs": { "type": "integer", "minimum": 0 },
+        "endMs": { "type": "integer", "minimum": 0 }
       }
     }
   }
