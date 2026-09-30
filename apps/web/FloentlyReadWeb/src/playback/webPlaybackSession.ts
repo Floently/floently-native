@@ -219,7 +219,7 @@ export class WebPlaybackSession {
       bufferedAheadMs: 0,
       error: null,
     });
-    this.clearMediaSession();
+    this.clearMediaSession(false);
   }
 
   async play(): Promise<void> {
@@ -319,7 +319,7 @@ export class WebPlaybackSession {
     this.releaseRuntimeAudio();
     this.engine.destroy();
     this.cache.dispose();
-    this.clearMediaSession();
+    this.clearMediaSession(true);
     this.listeners.clear();
   }
 
@@ -865,7 +865,7 @@ export class WebPlaybackSession {
     }
   }
 
-  private clearMediaSession(): void {
+  private clearMediaSession(removeHandlers: boolean): void {
     if (
       typeof navigator === "undefined"
       || !("mediaSession" in navigator)
@@ -876,6 +876,8 @@ export class WebPlaybackSession {
     const session = navigator.mediaSession;
     session.metadata = null;
     session.playbackState = "none";
+
+    if (!removeHandlers) return;
 
     for (
       const action of [
