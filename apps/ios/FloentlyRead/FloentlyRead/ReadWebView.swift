@@ -37,8 +37,6 @@ struct ReadWebView: UIViewRepresentable {
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         private weak var controller: ReadBrowserController?
         private var observations: [NSKeyValueObservation] = []
-        private var lastTerminatedURL: URL?
-        private var consecutiveProcessTerminations = 0
 
         init(controller: ReadBrowserController) {
             self.controller = controller
@@ -78,9 +76,8 @@ struct ReadWebView: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            lastTerminatedURL = nil
-            consecutiveProcessTerminations = 0
             Task { @MainActor [weak self] in
+                self?.controller?.markPageHealthy()
                 self?.controller?.readingStatus = "Ready"
                 self?.controller?.refreshNavigationState(from: webView)
             }
@@ -96,25 +93,10 @@ struct ReadWebView: UIViewRepresentable {
 
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
             let terminatedURL = webView.url
-            if terminatedURL != nil && terminatedURL == lastTerminatedURL {
-                consecutiveProcessTerminations += 1
-            } else {
-                lastTerminatedURL = terminatedURL
-                consecutiveProcessTerminations = 1
-            }
-
-            if consecutiveProcessTerminations >= 2 {
-                Task { @MainActor [weak self] in
-                    self?.controller?.readingStatus = "This page repeatedly stopped the web renderer. Automatic reload was paused; use Reload to try again."
-                    self?.controller?.refreshNavigationState(from: webView)
-                }
-                return
-            }
-
             Task { @MainActor [weak self] in
-                self?.controller?.readingStatus = "The page renderer restarted. Restoring the page…"
+                self?.controller?.refreshNavigationState(from: webView)
+                self?.controller?.recoverFromWebContentTermination(url: terminatedURL)
             }
-            webView.reload()
         }
 
         private func publishFailure(_ error: Error, webView: WKWebView) {
