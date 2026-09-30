@@ -36,6 +36,7 @@ final class ReadBrowserRouter: ObservableObject {
 
 struct ReadRootView: View {
     @EnvironmentObject private var browserRouter: ReadBrowserRouter
+    @EnvironmentObject private var playbackSession: ReadPlaybackSession
 
     var body: some View {
         NavigationStack {
@@ -44,6 +45,12 @@ struct ReadRootView: View {
             }
             .navigationDestination(isPresented: $browserRouter.isBrowserPresented) {
                 ReadBrowserView(initialURL: browserRouter.browserURL)
+            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if playbackSession.document != nil {
+                ReadPersistentPlayerView()
+                    .environmentObject(playbackSession)
             }
         }
     }
