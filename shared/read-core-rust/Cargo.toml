@@ -1,0 +1,10 @@
+[package]
+name = "floently-read-core"
+version = "0.1.0"
+edition = "2021"
+license = "UNLICENSED"
+publish = false
+
+[lib]
+name = "floently_read_core"
+path = "src/lib.rs"

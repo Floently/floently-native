@@ -21,7 +21,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.vitusidi.floently.read.native.dev
         PRODUCT_NAME: FloentlyRead
-        SWIFT_VERSION: 5.9
+        SWIFT_VERSION: 6.0
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_ENTITLEMENTS: FloentlyRead/FloentlyRead.entitlements
     info:
@@ -29,6 +29,8 @@ targets:
       properties:
         CFBundleDisplayName: Floently Read
         UILaunchScreen: {}
+        UIBackgroundModes:
+          - audio
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft

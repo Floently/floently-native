@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://floently.com/contracts/read/reading-manifest-v1.schema.json",
+  "title": "Floently ReadingManifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "documentId",
+    "revisionId",
+    "title",
+    "language",
+    "wordCount",
+    "textScalarLength",
+    "estimatedSourceDurationMs",
+    "segments"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "documentId": { "type": "string", "minLength": 1 },
+    "revisionId": { "type": "string", "minLength": 1 },
+    "title": { "type": "string" },
+    "language": { "type": "string" },
+    "wordCount": { "type": "integer", "minimum": 0 },
+    "textScalarLength": { "type": "integer", "minimum": 0 },
+    "estimatedSourceDurationMs": { "type": "integer", "minimum": 0 },
+    "segments": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/segment" }
+    }
+  },
+  "$defs": {
+    "segment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "index",
+        "text",
+        "scalarStart",
+        "scalarEnd",
+        "wordStart",
+        "wordEnd",
+        "wordCount",
+        "estimatedSourceDurationMs",
+        "logicalStartMs",
+        "logicalEndMs"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "index": { "type": "integer", "minimum": 0 },
+        "text": { "type": "string" },
+        "scalarStart": { "type": "integer", "minimum": 0 },
+        "scalarEnd": { "type": "integer", "minimum": 0 },
+        "wordStart": { "type": "integer", "minimum": 0 },
+        "wordEnd": { "type": "integer", "minimum": 0 },
+        "wordCount": { "type": "integer", "minimum": 0 },
+        "estimatedSourceDurationMs": { "type": "integer", "minimum": 0 },
+        "logicalStartMs": { "type": "integer", "minimum": 0 },
+        "logicalEndMs": { "type": "integer", "minimum": 0 },
+        "audio": { "$ref": "#/$defs/audio" }
+      }
+    },
+    "audio": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["uri", "durationMs"],
+      "properties": {
+        "uri": { "type": "string", "minLength": 1 },
+        "durationMs": { "type": "integer", "minimum": 0 },
+        "contentHash": { "type": "string" },
+        "voiceId": { "type": "string" }
+      }
+    }
+  }
+}
