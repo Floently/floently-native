@@ -22,23 +22,23 @@ data class ReadNativeTtsAsset(
 )
 
 class ReadNativeTtsClient(
-    tokenProvider: () -> String? = { null },
-    baseUrl: String = "https://flowreader-api.onrender.com"
+    private val baseUrl: String = "https://flowreader-api.onrender.com"
 ) {
-    private val api = FloentlyApiClient(
-        baseUrl = baseUrl,
-        tokenProvider = tokenProvider
-    )
-
     suspend fun synthesize(
         text: String,
         language: String,
-        voiceId: String
+        voiceId: String,
+        accessToken: String? = null
     ): ReadNativeTtsAsset {
         val value = text.trim()
         require(value.isNotEmpty()) {
             "No readable text was available for synthesis."
         }
+
+        val api = FloentlyApiClient(
+            baseUrl = baseUrl,
+            tokenProvider = { accessToken }
+        )
 
         val response = api.post(
             path = "/api/tts/prerender",
