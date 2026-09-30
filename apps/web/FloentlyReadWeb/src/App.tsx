@@ -68,7 +68,7 @@ export default function App() {
       if (!runtime || !handle) return;
 
       runtime.playback.clear();
-      void runtime.core.dropManifest(handle);
+      void runtime.core.dropManifest(handle).catch(() => undefined);
       activeManifestHandle.current = null;
     };
   }, [runtime]);
@@ -113,7 +113,7 @@ export default function App() {
     if (runtime) {
       runtime.playback.clear();
       if (handle) {
-        void runtime.core.dropManifest(handle);
+        void runtime.core.dropManifest(handle).catch(() => undefined);
       }
     }
 
@@ -150,7 +150,7 @@ export default function App() {
       });
 
       if (previousHandle && previousHandle !== result.handle) {
-        void runtime.core.dropManifest(previousHandle);
+        void runtime.core.dropManifest(previousHandle).catch(() => undefined);
       }
 
       activeManifestHandle.current = result.handle;
