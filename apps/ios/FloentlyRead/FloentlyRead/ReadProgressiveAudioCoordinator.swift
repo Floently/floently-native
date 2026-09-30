@@ -16,6 +16,7 @@ actor ReadProgressiveAudioCoordinator {
         manifest: ReadingManifestV1,
         startingAt index: Int,
         voiceId: String,
+        accessToken: String? = nil,
         horizon: TimeInterval = 120,
         maxSegments: Int = 4
     ) async throws -> [ReadPlayableSegment] {
@@ -47,7 +48,8 @@ actor ReadProgressiveAudioCoordinator {
             let asset = try await tts.synthesize(
                 text: segment.text,
                 language: manifest.language,
-                voiceId: voiceId
+                voiceId: voiceId,
+                accessToken: accessToken
             )
             let localURL = try await cache.localURL(for: asset)
 
