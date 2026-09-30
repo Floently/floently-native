@@ -49,20 +49,24 @@ class ReadPlaybackService : MediaSessionService() {
                                 controller
                             ).build()
 
-                        val commands = defaults
+                        val commandsBuilder = defaults
                             .availableSessionCommands
                             .buildUpon()
-                            .add(
+
+                        if (controller.packageName == packageName) {
+                            commandsBuilder.add(
                                 ReadPlaybackCommandContract.loadDocumentCommand
                             )
-                            .build()
+                        }
 
                         return MediaSession.ConnectionResult
                             .AcceptedResultBuilder(
                                 session,
                                 controller
                             )
-                            .setAvailableSessionCommands(commands)
+                            .setAvailableSessionCommands(
+                                commandsBuilder.build()
+                            )
                             .build()
                     }
 
@@ -72,6 +76,14 @@ class ReadPlaybackService : MediaSessionService() {
                         customCommand: SessionCommand,
                         args: Bundle
                     ): ListenableFuture<SessionResult> {
+                        if (controller.packageName != packageName) {
+                            return Futures.immediateFuture(
+                                SessionResult(
+                                    SessionResult.RESULT_ERROR_PERMISSION_DENIED
+                                )
+                            )
+                        }
+
                         if (
                             customCommand.customAction
                             != ReadPlaybackCommandContract.ACTION_LOAD_DOCUMENT
