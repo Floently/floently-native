@@ -345,6 +345,12 @@ export class WebPlaybackSession {
       return;
     }
 
+    // Freeze the previous physical source while the destination is resolved.
+    // Otherwise old timeupdate events could move the public document clock
+    // after a long seek or voice change has already begun.
+    this.engine.pause();
+    this.active = null;
+
     this.replaceSnapshot({
       status: "preparing",
       elapsedMs: target,
@@ -464,7 +470,9 @@ export class WebPlaybackSession {
       this.audioByIndex.set(index, result);
       return result;
     } finally {
-      this.inFlightAudio.delete(index);
+      if (this.inFlightAudio.get(index) === promise) {
+        this.inFlightAudio.delete(index);
+      }
     }
   }
 
