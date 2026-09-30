@@ -1,6 +1,7 @@
 import type {
   LogicalTimePosition,
   ReadCoreRequest,
+  ReadCoreRequestWithoutId,
   ReadCoreResponse,
   ReadingManifestSummary,
   SegmentPosition,
@@ -101,11 +102,15 @@ export class ReadCoreWorkerClient {
 
   terminate(): void {
     this.worker.terminate();
+    const error = new Error("Read Core worker client terminated");
+    for (const pending of this.pending.values()) {
+      pending.reject(error);
+    }
     this.pending.clear();
   }
 
   private request<T>(
-    request: Omit<ReadCoreRequest, "id">,
+    request: ReadCoreRequestWithoutId,
   ): Promise<T> {
     const id = this.nextId++;
     const message = { id, ...request } as ReadCoreRequest;
