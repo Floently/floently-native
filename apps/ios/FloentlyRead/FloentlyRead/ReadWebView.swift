@@ -33,7 +33,7 @@ struct ReadWebView: UIViewRepresentable {
         controller.refreshNavigationState(from: webView)
     }
 
-    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+    @MainActor\n    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         private weak var controller: ReadBrowserController?
         private var observations: [NSKeyValueObservation] = []
         private var lastTerminatedURL: URL?
@@ -48,21 +48,25 @@ struct ReadWebView: UIViewRepresentable {
         }
 
         func observe(_ webView: WKWebView) {
-            observations = [
-                webView.observe(\.url, options: [.new]) { [weak self] webView, _ in self?.publish(webView) },
-                webView.observe(\.title, options: [.new]) { [weak self] webView, _ in self?.publish(webView) },
-                webView.observe(\.canGoBack, options: [.new]) { [weak self] webView, _ in self?.publish(webView) },
-                webView.observe(\.canGoForward, options: [.new]) { [weak self] webView, _ in self?.publish(webView) },
-                webView.observe(\.isLoading, options: [.new]) { [weak self] webView, _ in self?.publish(webView) },
-                webView.observe(\.estimatedProgress, options: [.new]) { [weak self] webView, _ in self?.publish(webView) }
-            ]
-        }
-
-        private func publish(_ webView: WKWebView) {
-            Task { @MainActor [weak self, weak webView] in
-                guard let self, let webView else { return }
-                self.controller?.refreshNavigationState(from: webView)
+            let publish: (WKWebView) -> Void = { [weak self] observedWebView in
+                // WKWebView is main-thread confined. KVO callbacks for these
+                // properties are delivered synchronously from that same owner.
+                // Swift 6 cannot infer this from KVO's Objective-C signature,
+                // so assert the already-required executor instead of hopping
+                // non-Sendable WebKit objects across actors.
+                MainActor.assumeIsolated {
+                    self?.controller?.refreshNavigationState(from: observedWebView)
+                }
             }
+
+            observations = [
+                webView.observe(\.url, options: [.new]) { observed, _ in publish(observed) },
+                webView.observe(\.title, options: [.new]) { observed, _ in publish(observed) },
+                webView.observe(\.canGoBack, options: [.new]) { observed, _ in publish(observed) },
+                webView.observe(\.canGoForward, options: [.new]) { observed, _ in publish(observed) },
+                webView.observe(\.isLoading, options: [.new]) { observed, _ in publish(observed) },
+                webView.observe(\.estimatedProgress, options: [.new]) { observed, _ in publish(observed) }
+            ]
         }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
