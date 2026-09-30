@@ -3,7 +3,7 @@
 **Status:** Architecture standard for the next-generation Floently apps  
 **Effective:** 2026-09-30  
 **Repository:** `Floently/floently-native`  
-**Scope:** Future/native Floently Read, Learn, Create, and shared next-generation services.  
+**Scope:** Future Floently Read, Learn, Create across iOS, Android, web/browser surfaces, and shared next-generation services.  
 **Non-scope:** This document does **not** order a rewrite of the current production React Native/Expo app. The current app remains a supported legacy/release line until the next-generation products pass their release gates.
 
 ## 1. Decision
@@ -238,16 +238,23 @@ Do not split a service into a new language without an ADR explaining the operati
 
 ### 4.9 Web app and browser extension
 
-**Primary:** TypeScript + React.
+**Primary UI:** TypeScript + React.  
+**Shared document engine:** Rust compiled to WebAssembly where shared deterministic document semantics are valuable.
 
 Use:
-- a modern React application framework/build system based on product needs;
-- Web Workers for CPU-bound browser tasks;
-- Service Workers for offline/cache where appropriate;
-- browser-native media APIs only for browser surfaces;
+- React/TypeScript for browser UI, routing, accessibility, browser application state, and presentation;
+- Rust/WASM for shared document-core operations such as segmentation, canonical indexing, duration estimation, progress/seek mapping, and prefetch planning;
+- Web Workers to run Rust/WASM and other CPU-bound work off the browser UI thread;
+- a lightweight serialized worker contract so React does not need to own an entire multi-hour document manifest in component state;
+- Web Audio / HTMLMediaElement / AudioWorklet according to measured playback/timing needs;
+- the Media Session API for browser/OS media controls where supported;
+- IndexedDB + Cache Storage for local structured/cache state when the offline slice is implemented;
+- Service Workers for offline/resource behavior where appropriate;
 - Playwright for end-to-end browser tests.
 
-The web reader is a separate presentation/runtime. It must consume the same logical document/playback contracts where possible but must not constrain native iOS/Android architecture.
+The same `ReadingManifest` semantics must drive web, iOS, and Android. Browser-specific implementation details may differ, but the web reader may not invent a parallel document clock, segmentation algorithm, or seek model.
+
+The next-generation web surface lives separately from the current production web reader until it passes product, performance, accessibility, and release gates.
 
 ### 4.10 Database, cache, and storage
 

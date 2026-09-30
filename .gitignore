@@ -47,3 +47,8 @@ shared/api-contracts/backend-map-*/route_string_extract.txt
 shared/api-contracts/backend-map-*/backend_route_candidates.txt
 shared/api-contracts/backend-map-*/client_api_call_extract.txt
 shared/api-contracts/backend-map-*/client_source_files.txt
+
+
+# Next-generation web build artifacts
+apps/web/FloentlyReadWeb/dist/
+apps/web/FloentlyReadWeb/src/generated/read-core-wasm/
