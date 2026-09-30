@@ -16,6 +16,7 @@ on:
       - "docs/READ_MOBILE_BROWSER_COMPATIBILITY_0330.md"
       - "docs/design/READ_MOBILE_BROWSER_UX_SPEC_0330.md"
       - "scripts/validate_read_mobile_browser_0330.sh"
+      - "scripts/validate_read_manifest_contract.py"
       - ".github/workflows/read-mobile-browser-ci.yml"
   push:
     branches:
@@ -34,12 +35,21 @@ on:
       - "docs/READ_MOBILE_BROWSER_COMPATIBILITY_0330.md"
       - "docs/design/READ_MOBILE_BROWSER_UX_SPEC_0330.md"
       - "scripts/validate_read_mobile_browser_0330.sh"
+      - "scripts/validate_read_manifest_contract.py"
       - ".github/workflows/read-mobile-browser-ci.yml"
 
 permissions:
   contents: read
 
 jobs:
+  read-manifest-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate ReadingManifest v1 fixture and invariants
+        run: python3 scripts/validate_read_manifest_contract.py
+
   read-core-rust:
     runs-on: ubuntu-latest
     timeout-minutes: 5
