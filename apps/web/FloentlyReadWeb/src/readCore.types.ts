@@ -83,6 +83,13 @@ export type ReadCoreRequest =
       };
     };
 
+export type ReadCoreRequestWithoutId =
+  ReadCoreRequest extends infer Request
+    ? Request extends { id: number }
+      ? Omit<Request, "id">
+      : never
+    : never;
+
 export type ReadCoreSuccess =
   | ReadingManifestSummary
   | SegmentPosition
