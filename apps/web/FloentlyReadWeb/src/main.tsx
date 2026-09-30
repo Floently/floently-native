@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { ReadRuntimeProvider } from "./runtime/ReadRuntimeContext";
 
 const root = document.getElementById("root");
 
@@ -10,6 +11,8 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <ReadRuntimeProvider>
+      <App />
+    </ReadRuntimeProvider>
   </StrictMode>,
 );
