@@ -14,9 +14,13 @@ final class ReadBrowserController: ObservableObject {
     @Published var readingStatus = "Ready"
     @Published var extractedText: String = ""
     @Published var selectionText: String = ""
+    @Published private(set) var webViewGeneration = 0
 
     weak var webView: WKWebView?
     private var pendingURL: URL?
+    private var rendererCrashURL: URL?
+    private var rendererCrashCount = 0
+    private var lastRendererCrashAt: Date?
 
     static let protectedAuthenticationHosts: Set<String> = [
         "accounts.google.com",
@@ -80,11 +84,68 @@ final class ReadBrowserController: ObservableObject {
     }
 
     func reload() {
-        webView?.reload()
+        // Explicit Reload is intentionally a cold browser-surface restart.
+        // WKWebsiteDataStore.default() persists cookies/storage, while a fresh
+        // WKWebView discards a poisoned or wedged web-content process.
+        rendererCrashURL = nil
+        rendererCrashCount = 0
+        lastRendererCrashAt = nil
+        hardRestartPreservingPage(status: "Reloading page…")
     }
 
     func stopLoading() {
         webView?.stopLoading()
+        isLoading = false
+    }
+
+    func recoverFromWebContentTermination(url: URL?) {
+        let target = url ?? webView?.url ?? currentURL
+        let now = Date()
+        if target != nil,
+           target == rendererCrashURL,
+           let lastRendererCrashAt,
+           now.timeIntervalSince(lastRendererCrashAt) < 30 {
+            rendererCrashCount += 1
+        } else {
+            rendererCrashURL = target
+            rendererCrashCount = 1
+        }
+        lastRendererCrashAt = now
+
+        if rendererCrashCount >= 3 {
+            webView?.stopLoading()
+            webView = nil
+            pendingURL = target
+            isLoading = false
+            estimatedProgress = 0
+            readingStatus = "This page repeatedly stopped the web renderer. Tap Reload to start a fresh browser process."
+            return
+        }
+
+        hardRestartPreservingPage(status: "The page renderer restarted. Restoring the page…")
+    }
+
+    func markPageHealthy() {
+        rendererCrashURL = nil
+        rendererCrashCount = 0
+        lastRendererCrashAt = nil
+    }
+
+    private func hardRestartPreservingPage(status: String) {
+        let target = webView?.url ?? currentURL ?? pendingURL
+        webView?.stopLoading()
+        webView = nil
+        pendingURL = target
+        if let target {
+            currentURL = target
+            addressText = target.absoluteString
+            isLoading = true
+        } else {
+            isLoading = false
+        }
+        estimatedProgress = 0
+        readingStatus = status
+        webViewGeneration &+= 1
     }
 
     func refreshNavigationState(from webView: WKWebView) {
