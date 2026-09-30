@@ -6,7 +6,25 @@ export interface BrowserAudioEngineCallbacks {
   onError: (message: string) => void;
 }
 
-export class BrowserAudioEngine {
+export interface ReadAudioEngine {
+  readonly paused: boolean;
+  load(
+    url: string,
+    localOffsetMs: number,
+    playbackRate: number,
+  ): Promise<number | null>;
+  play(): Promise<void>;
+  pause(): void;
+  setRate(rate: number): void;
+  prime(urls: string[]): void;
+  destroy(): void;
+}
+
+export type ReadAudioEngineFactory = (
+  callbacks: BrowserAudioEngineCallbacks,
+) => ReadAudioEngine;
+
+export class BrowserAudioEngine implements ReadAudioEngine {
   private readonly audio = new Audio();
   private readonly preloaded = new Map<string, HTMLAudioElement>();
   private readonly callbacks: BrowserAudioEngineCallbacks;
