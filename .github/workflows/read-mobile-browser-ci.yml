@@ -82,6 +82,9 @@ jobs:
         run: cargo install wasm-pack --locked --version 0.15.0
       - name: Build Rust/WASM + React Read web
         run: bash scripts/build_read_web_wasm.sh
+      - name: Test document-wide web playback contracts
+        working-directory: apps/web/FloentlyReadWeb
+        run: npm test
       - name: Upload Read web production bundle
         uses: actions/upload-artifact@v4
         with:
