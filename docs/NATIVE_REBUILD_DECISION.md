@@ -57,3 +57,32 @@ The full decision is recorded in:
 - docs/CREATE_ABSOLUTE_BEST_STACK.md
 
 Create must not be built as another React Native/Expo patch if the target is CapCut-level or better quality.
+
+
+---
+
+## Governing polyglot decision — 2026-09-30
+
+The next-generation native product line is no longer defined as "Swift everywhere on iOS and Kotlin everywhere on Android." Swift and Kotlin remain the primary platform languages, but specialized components may use other languages/frameworks when they provide a material advantage.
+
+Authoritative documents:
+
+- `docs/NEXT_APP_POLYGLOT_TECHNOLOGY_STANDARD.md`
+- `docs/SPEECHIFY_ARCHITECTURE_STUDY_20260930.md`
+
+Core rule:
+
+> Best tool for the component, minimum number of boundaries.
+
+Examples:
+- Apple UI/media/system integration: Swift/SwiftUI/UIKit/AVFoundation.
+- Android UI/media/system integration: Kotlin/Compose/Media3.
+- Shared new high-performance engine: Rust by default when justified.
+- Mature codec/render/media integration: C++ where it is the better ecosystem fit.
+- Low-level ABI/interop: C.
+- Web: TypeScript/React.
+- Concurrency-heavy backend: Go where appropriate.
+- Product/BFF/web orchestration: TypeScript/Node.js.
+- AI/model/data services: Python, with FastAPI or Django selected by service needs.
+
+The current React Native/Expo app remains a separate legacy/release line until native replacements are proven better and safely released.

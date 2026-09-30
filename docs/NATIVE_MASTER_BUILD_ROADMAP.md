@@ -233,3 +233,28 @@ See:
 
 - docs/NO_LOSS_NATIVE_PARITY_RULE.md
 - docs/LEARN_ANIMATION_AND_INTERACTION_PARITY_CHECKLIST.md
+
+
+---
+
+## Governing next-generation technology standard
+
+From 2026-09-30 onward, technology selection for the next-generation native app line is governed by:
+
+- `docs/NEXT_APP_POLYGLOT_TECHNOLOGY_STANDARD.md`
+- `docs/SPEECHIFY_ARCHITECTURE_STUDY_20260930.md`
+
+This changes the interpretation of "native" from "one language per app" to a controlled polyglot architecture:
+
+- Swift/SwiftUI and Apple-native frameworks own Apple UI/system/media responsibilities.
+- Kotlin/Jetpack Compose and Android-native frameworks own Android UI/system/media responsibilities.
+- Rust is the preferred language for new shared high-performance systems code when a shared engine is justified.
+- C++ is preferred where mature media/codec/render ecosystems or dependencies make it the stronger choice.
+- C is limited to low-level/ABI/library interop.
+- TypeScript/React owns web/browser UI.
+- TypeScript/Node.js, Go, Python/FastAPI or Django may own backend components according to workload.
+- Python owns ML/model/data work by default; platform ML runtimes such as Core ML are used for on-device inference when appropriate.
+
+The rule is **best tool for the component, minimum number of boundaries**. Adding languages without a concrete architecture boundary and measurable benefit is prohibited.
+
+This standard applies to the next-generation `floently-native` line. It does not order a rewrite of the current production React Native/Expo app.
