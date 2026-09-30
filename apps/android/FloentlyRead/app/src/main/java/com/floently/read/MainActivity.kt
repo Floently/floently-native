@@ -77,10 +77,35 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MaterialTheme {
-                ReadBrowserScreen(
-                    initialUrl = incomingUrl.value,
-                    onExit = { finish() }
-                )
+                val context = LocalContext.current
+                val playbackController = remember {
+                    ReadPlaybackController(context)
+                }
+
+                DisposableEffect(playbackController) {
+                    onDispose {
+                        playbackController.release()
+                    }
+                }
+
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    ) {
+                        ReadBrowserScreen(
+                            initialUrl = incomingUrl.value,
+                            onExit = { finish() }
+                        )
+                    }
+
+                    ReadPersistentPlayerDock(
+                        controller = playbackController
+                    )
+                }
             }
         }
     }
