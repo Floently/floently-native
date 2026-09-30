@@ -78,7 +78,7 @@ fun ReadPersistentPlayerDock(
 
                 PlayerButton(
                     label = "−15",
-                    surface = palette.elevated,
+                    surface = palette.backgroundTop,
                     textColor = palette.text
                 ) {
                     controller.seekBy(-15_000)
@@ -94,7 +94,7 @@ fun ReadPersistentPlayerDock(
 
                 PlayerButton(
                     label = "+15",
-                    surface = palette.elevated,
+                    surface = palette.backgroundTop,
                     textColor = palette.text
                 ) {
                     controller.seekBy(15_000)
@@ -102,7 +102,7 @@ fun ReadPersistentPlayerDock(
 
                 PlayerButton(
                     label = speedLabel(snapshot.speed),
-                    surface = palette.elevated,
+                    surface = palette.backgroundTop,
                     textColor = palette.text
                 ) {
                     controller.setSpeed(nextSpeed(snapshot.speed))
