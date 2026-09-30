@@ -5,12 +5,16 @@ import FloentlyShared
 struct FloentlyReadApp: App {
     @StateObject private var browserRouter = ReadBrowserRouter()
     @StateObject private var playbackSession = ReadPlaybackSession()
+    @StateObject private var sessionStore = FloentlySessionStore()
+    @StateObject private var documentLoader = ReadDocumentPlaybackLoader()
 
     var body: some Scene {
         WindowGroup {
             ReadRootView()
                 .environmentObject(browserRouter)
                 .environmentObject(playbackSession)
+                .environmentObject(sessionStore)
+                .environmentObject(documentLoader)
                 .onOpenURL { incomingURL in
                     browserRouter.openIncomingURL(incomingURL)
                 }
