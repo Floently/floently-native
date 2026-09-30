@@ -1,8 +1,8 @@
 import type {
+  LogicalTimePosition,
   ReadingManifestSummary,
   ReadingSegmentDescriptor,
 } from "../readCore.types";
-import { ReadCoreWorkerClient } from "../readCore.client";
 import {
   defaultVoiceIdForLanguage,
   type ReadTtsAsset,
@@ -11,9 +11,13 @@ import {
 import {
   ReadAudioCache,
   type PlayableAudioAsset,
+  type ReadAudioCachePort,
 } from "./readAudioCache";
 import {
   BrowserAudioEngine,
+  type BrowserAudioEngineCallbacks,
+  type ReadAudioEngine,
+  type ReadAudioEngineFactory,
 } from "./browserAudioEngine";
 
 export type WebPlaybackStatus =
@@ -60,6 +64,23 @@ export interface WebPlaybackTelemetryEvent {
 export type WebPlaybackTelemetrySink =
   (event: WebPlaybackTelemetryEvent) => void;
 
+export interface ReadPlaybackCore {
+  segmentForLogicalTime(
+    handle: string,
+    elapsedMs: number,
+  ): Promise<LogicalTimePosition | null>;
+  getSegment(
+    handle: string,
+    index: number,
+  ): Promise<ReadingSegmentDescriptor>;
+  prefetchIndexes(
+    handle: string,
+    activeIndex: number,
+    horizonMs?: number,
+    maxSegments?: number,
+  ): Promise<number[]>;
+}
+
 interface RuntimeAudio {
   descriptor: ReadingSegmentDescriptor;
   tts: ReadTtsAsset;
@@ -89,10 +110,10 @@ function safeNumber(value: unknown, fallback: number): number {
 
 export class WebPlaybackSession {
   private readonly listeners = new Set<() => void>();
-  private readonly core: ReadCoreWorkerClient;
+  private readonly core: ReadPlaybackCore;
   private readonly tts: ReadTtsProvider;
-  private readonly cache: ReadAudioCache;
-  private readonly engine: BrowserAudioEngine;
+  private readonly cache: ReadAudioCachePort;
+  private readonly engine: ReadAudioEngine;
   private readonly telemetry?: WebPlaybackTelemetrySink;
 
   private manifest: ReadingManifestSummary | null = null;
@@ -119,9 +140,10 @@ export class WebPlaybackSession {
   };
 
   constructor(options: {
-    core: ReadCoreWorkerClient;
+    core: ReadPlaybackCore;
     tts: ReadTtsProvider;
-    cache?: ReadAudioCache;
+    cache?: ReadAudioCachePort;
+    engineFactory?: ReadAudioEngineFactory;
     telemetry?: WebPlaybackTelemetrySink;
   }) {
     this.core = options.core;
@@ -129,14 +151,19 @@ export class WebPlaybackSession {
     this.cache = options.cache ?? new ReadAudioCache();
     this.telemetry = options.telemetry;
 
-    this.engine = new BrowserAudioEngine({
+    const callbacks: BrowserAudioEngineCallbacks = {
       onTime: (currentTimeMs, physicalDurationMs) =>
         this.handlePhysicalTime(currentTimeMs, physicalDurationMs),
       onEnded: () => this.handleSegmentEnded(),
       onWaiting: () => this.handleWaiting(),
       onPlaying: () => this.handlePlaying(),
       onError: (message) => this.fail(message),
-    });
+    };
+    const engineFactory =
+      options.engineFactory
+      ?? ((engineCallbacks) => new BrowserAudioEngine(engineCallbacks));
+
+    this.engine = engineFactory(callbacks);
 
     this.installMediaSessionHandlers();
   }
