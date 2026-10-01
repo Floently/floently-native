@@ -65,6 +65,32 @@ object ReadBrowserPolicy {
           const text = normalize(
             selection ? selection.toString() : ""
           );
+
+          document.querySelectorAll(
+            "[data-floently-read-root='true']"
+          ).forEach((node) => {
+            node.removeAttribute("data-floently-read-root");
+            node.classList.remove(
+              "floently-read-active",
+              "floently-read-pulse"
+            );
+          });
+
+          if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            const container = range.commonAncestorContainer;
+            const element =
+              container.nodeType === Node.ELEMENT_NODE
+              ? container
+              : container.parentElement;
+            if (element instanceof HTMLElement) {
+              element.setAttribute(
+                "data-floently-read-root",
+                "true"
+              );
+            }
+          }
+
           return JSON.stringify({
             title: normalize(document.title),
             url: location.href,
@@ -143,12 +169,31 @@ object ReadBrowserPolicy {
               const score = Math.min(text.length, 14000) + semanticBonus + lessonBonus + exposedBonus + viewportWidthBonus
                 - linkDensity * 7000 - controls * 55 - narrowEdgePenalty - shellPenalty - fixedPenalty;
 
-              return { text, score };
+              return { element, text, score };
             })
             .filter(Boolean)
             .sort((a, b) => b.score - a.score);
 
-          const text = scored[0] ? scored[0].text : "";
+          const best = scored[0];
+          const text = best ? best.text : "";
+
+          document.querySelectorAll(
+            "[data-floently-read-root='true']"
+          ).forEach((node) => {
+            node.removeAttribute("data-floently-read-root");
+            node.classList.remove(
+              "floently-read-active",
+              "floently-read-pulse"
+            );
+          });
+
+          if (best?.element instanceof HTMLElement) {
+            best.element.setAttribute(
+              "data-floently-read-root",
+              "true"
+            );
+          }
+
           return JSON.stringify({
             title: normalize(document.title),
             url: location.href,
@@ -160,6 +205,105 @@ object ReadBrowserPolicy {
           });
         })();
     """.trimIndent()
+
+    fun readingVisualJavaScript(
+        active: Boolean,
+        pulse: Boolean
+    ): String {
+        val script = """
+            (() => {
+              const active = __ACTIVE__;
+              const pulse = __PULSE__;
+              const root = document.querySelector(
+                "[data-floently-read-root='true']"
+              );
+              if (!root) return;
+
+              const styleId =
+                "floently-read-live-visual-style";
+
+              if (!document.getElementById(styleId)) {
+                const style =
+                  document.createElement("style");
+                style.id = styleId;
+                style.textContent = `
+                  [data-floently-read-root='true'] {
+                    transition:
+                      outline-color 180ms ease,
+                      box-shadow 180ms ease;
+                    outline: 2px solid transparent;
+                    outline-offset: 4px;
+                  }
+                  [data-floently-read-root='true'].floently-read-active {
+                    outline-color:
+                      rgba(75, 195, 255, 0.38);
+                    box-shadow:
+                      0 0 0 5px rgba(75, 195, 255, 0.07),
+                      0 0 22px rgba(75, 195, 255, 0.12);
+                  }
+                  [data-floently-read-root='true'].floently-read-pulse {
+                    animation:
+                      floentlyReadPulse 720ms ease-out;
+                  }
+                  @keyframes floentlyReadPulse {
+                    0% {
+                      outline-color:
+                        rgba(135, 225, 255, 0.75);
+                      box-shadow:
+                        0 0 0 4px rgba(100, 210, 255, 0.15),
+                        0 0 32px rgba(100, 210, 255, 0.25);
+                    }
+                    100% {
+                      outline-color:
+                        rgba(75, 195, 255, 0.38);
+                      box-shadow:
+                        0 0 0 5px rgba(75, 195, 255, 0.07),
+                        0 0 22px rgba(75, 195, 255, 0.12);
+                    }
+                  }
+                `;
+                document.head.appendChild(style);
+              }
+
+              root.classList.toggle(
+                "floently-read-active",
+                active
+              );
+
+              if (!active) {
+                root.classList.remove(
+                  "floently-read-pulse"
+                );
+                return;
+              }
+
+              if (pulse) {
+                root.classList.remove(
+                  "floently-read-pulse"
+                );
+                void root.offsetWidth;
+                root.classList.add(
+                  "floently-read-pulse"
+                );
+                setTimeout(() => {
+                  root.classList.remove(
+                    "floently-read-pulse"
+                  );
+                }, 760);
+              }
+            })();
+        """.trimIndent()
+
+        return script
+            .replace(
+                "__ACTIVE__",
+                if (active) "true" else "false"
+            )
+            .replace(
+                "__PULSE__",
+                if (pulse) "true" else "false"
+            )
+    }
 
     private val DOMAIN_PATTERN = Regex("^[A-Za-z0-9.-]+\\.[A-Za-z]{2,}([/:?#].*)?${'$'}")
 }
