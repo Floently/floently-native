@@ -14,6 +14,10 @@ import type {
   WebPlaybackSession,
   WebPlaybackSnapshot,
 } from "../playback/webPlaybackSession";
+import {
+  effectiveReadHighlightMode,
+} from "../preferences/readPreferencesStore";
+import { useReadPreferences } from "../preferences/useReadPreferences";
 
 const READER_WINDOW_RADIUS = 2;
 const READER_PAGE_STRIDE = 4;
@@ -46,6 +50,11 @@ export function ReaderSurface({
   session: WebPlaybackSession;
   snapshot: WebPlaybackSnapshot;
 }) {
+  const preferences = useReadPreferences();
+  const effectiveHighlightMode = effectiveReadHighlightMode(
+    preferences.highlightMode,
+    false,
+  );
   const [windowValue, setWindowValue] =
     useState<ReadingSegmentWindow | null>(null);
   const [viewingCenterIndex, setViewingCenterIndex] = useState(
@@ -191,7 +200,14 @@ export function ReaderSurface({
   );
 
   return (
-    <section className="reader-surface" aria-label="Document reader">
+    <section
+      className="reader-surface"
+      aria-label="Document reader"
+      data-reader-font={preferences.readerFont}
+      data-reader-size={preferences.readerTextSize}
+      data-reader-spacing={preferences.readerLineSpacing}
+      data-highlight-mode={effectiveHighlightMode}
+    >
       <header className="reader-surface-header">
         <div>
           <p className="panel-kicker">Reading surface</p>
@@ -204,6 +220,12 @@ export function ReaderSurface({
             {isFollowingPlayback
               ? "Following playback"
               : "Browsing independently"}
+            {" · "}
+            {effectiveHighlightMode === "none"
+              ? "Highlight off"
+              : effectiveHighlightMode === "word"
+                ? "Word highlight"
+                : "Sentence highlight"}
           </p>
         </div>
 
@@ -249,11 +271,13 @@ export function ReaderSurface({
       <div className="reader-window" aria-live="polite">
         {windowValue?.segments.map((segment) => {
           const isActive = snapshot.activeSegmentIndex === segment.index;
+          const showActiveHighlight =
+            isActive && effectiveHighlightMode !== "none";
 
           return (
             <article
               className={
-                isActive
+                showActiveHighlight
                   ? "reader-region reader-region-active"
                   : "reader-region"
               }
@@ -261,7 +285,7 @@ export function ReaderSurface({
               aria-current={isActive ? "location" : undefined}
               onClick={(event) => seekFromRegion(event, segment)}
             >
-              {isActive ? (
+              {showActiveHighlight ? (
                 <span className="reader-region-current">
                   Current playback region
                 </span>
@@ -282,6 +306,9 @@ export function ReaderSurface({
         Only the nearby reading window is mounted in the interface. The full
         document remains inside the worker, while playback continues on one
         document-wide timeline.
+        {preferences.highlightMode === "word" && effectiveHighlightMode !== "word"
+          ? " Word timing is not yet verified, so sentence highlighting is used instead."
+          : ""}
       </p>
     </section>
   );
