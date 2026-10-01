@@ -309,6 +309,55 @@ describe("BrowserReadingBridge", () => {
     expect(adapter.scrolls).toHaveLength(0);
   });
 
+  it("clears only Floently highlights when semantic highlighting is disabled", async () => {
+    const { bridge, adapter, playback } = harness();
+
+    await bridge.startReading("cloud-tab-1");
+    await tick();
+
+    bridge.setHighlightEnabled(false);
+    await tick();
+    const highlightCount = adapter.highlights.length;
+
+    playback.setCursor(18);
+    await tick();
+
+    expect(adapter.clears).toContain("cloud-tab-1");
+    expect(adapter.highlights).toHaveLength(highlightCount);
+    expect(bridge.getSnapshot().status).toBe("ready");
+  });
+
+  it("keeps Read From Here functional while visual highlighting is disabled", async () => {
+    const { bridge, playback } = harness();
+
+    await bridge.startReading("cloud-tab-1");
+    bridge.setHighlightEnabled(false);
+
+    const started = await bridge.readFromHere({
+      x: 120,
+      y: 250,
+      viewportRevision: 7,
+    });
+
+    expect(started).toBe(true);
+    expect(playback.seekRequests.at(-1)).toBe(1_700);
+    expect(playback.playCount).toBe(1);
+  });
+
+  it("resumes sentence highlighting from the current cursor when re-enabled", async () => {
+    const { bridge, adapter, playback } = harness();
+
+    await bridge.startReading("cloud-tab-1");
+    bridge.setHighlightEnabled(false);
+    playback.setCursor(18);
+    await tick();
+
+    bridge.setHighlightEnabled(true);
+    await tick();
+
+    expect(adapter.highlights.at(-1)?.id).toBe("anchor-2");
+  });
+
   it("scrolls the current page anchor only after Follow is enabled", async () => {
     const { bridge, adapter } = harness();
 
