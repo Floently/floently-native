@@ -86,6 +86,61 @@ That means:
 
 The physical audio element never becomes the public document clock. Physical asset time is mapped into the logical document timeline.
 
+## Synced project library and source-preserving ingestion
+
+The next-generation web app now separates **semantic Read projects** from
+**original visual files** instead of forcing every source through one storage
+or rendering model.
+
+Cloud project contract:
+
+- `GET /api/v1/projects`
+- `GET /api/v1/projects/:id`
+- `POST /api/v1/projects/from-text`
+- `POST /api/v1/projects/upload`
+- `PUT /api/v1/projects/:id/progress`
+- `DELETE /api/v1/projects/:id`
+
+Requests reuse the current Floently bearer token and browser-default same-origin
+cookie behavior. Cross-origin project APIs are not forced into credentialed CORS
+mode.
+
+Supported ingestion paths in this slice:
+
+- **PDF** — original blob is persisted in IndexedDB and opened immediately as
+  the browser-rendered PDF pages. Cloud extraction runs behind that visible
+  source and links its project id back to the original local record.
+- **DOCX / EPUB / HTML / Markdown / TXT** — canonical upload/extraction creates
+  a synced project and opens the Rust/WASM Reader. If canonical extraction
+  cannot finish, the original file is still preserved as a local fallback.
+- **Pasted text** — saved directly as a synced cloud project.
+- **Website** — never copied into a document project; it is handed to the live
+  Browser V2 route and opened only inside remote Chromium.
+- **Google Drive** — Picker selection/download produces the same browser
+  `File` abstraction, then follows the identical rules above.
+
+Large files use the production fast-open policy: at 1.5 MB and above, canonical
+cloud open/upload has an 1800 ms first-open budget so a cold extractor cannot
+prevent the original source from appearing.
+
+File fingerprint reuse samples the first/last 64 KiB plus stable metadata and
+uses SHA-256 when available. The original visual-file store computes a full
+hash in the background but always merges that result into the latest record so
+a concurrently attached cloud `projectId` cannot be overwritten.
+
+Synced reading progress stores canonical character/scalar position, logical
+segment position, percentage, playback speed and voice. Resume maps the saved
+character offset back through the Rust scalar→logical-time function instead of
+guessing from paragraphs.
+
+Google Drive deployment also requires:
+
+- `VITE_GOOGLE_DRIVE_API_KEY`
+- `VITE_GOOGLE_DRIVE_APP_ID`
+
+The OAuth client id remains owned by the shared Floently auth backend and the
+same Google Identity Services loader is shared between login and Drive.
+
 ## Browser-local library
 
 The first product-shell slice stores imported text/Markdown in IndexedDB. This is intentionally an isolation layer while the production cloud library/project API is migrated.
