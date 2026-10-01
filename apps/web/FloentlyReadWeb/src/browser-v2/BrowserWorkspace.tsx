@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useReadRuntime } from "../runtime/ReadRuntimeContext";
@@ -128,6 +129,7 @@ export function BrowserWorkspace({
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const vncTargetRef = useRef<HTMLDivElement | null>(null);
   const vncDisplayRef = useRef<BrowserV2VncDisplay | null>(null);
+  const mobileKeyboardRef = useRef<HTMLTextAreaElement | null>(null);
   const gestureUnbindRef = useRef<(() => void) | null>(null);
   const startedRef = useRef(false);
   const attachingVideoRef = useRef(false);
@@ -150,6 +152,7 @@ export function BrowserWorkspace({
   );
   const [starting, setStarting] = useState(false);
   const [vncStage, setVncStage] = useState<BrowserV2VncStage | null>(null);
+  const [remoteTextInputFocused, setRemoteTextInputFocused] = useState(false);
   const [lastPoint, setLastPoint] = useState<ViewportPoint | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -359,6 +362,7 @@ export function BrowserWorkspace({
     setError(null);
     runtime?.browserReading.invalidate(null);
     setLastPoint(null);
+    setRemoteTextInputFocused(false);
 
     try {
       await cloud.open(target, tab.id);
@@ -387,6 +391,7 @@ export function BrowserWorkspace({
     setError(null);
     runtime?.browserReading.invalidate(null);
     setLastPoint(null);
+    setRemoteTextInputFocused(false);
 
     try {
       if (command === "back") await cloud.back(tab.id);
@@ -544,9 +549,76 @@ export function BrowserWorkspace({
       if (touchPoint) {
         void cloud
           .sendVncTouch("end", touchPoint.x, touchPoint.y, 0)
-          .catch(() => undefined);
+          .then((ack) => {
+            const focused = ack?.textInputFocused === true;
+            setRemoteTextInputFocused(focused);
+
+            if (focused) {
+              const field = mobileKeyboardRef.current;
+              if (field) {
+                field.value = "";
+                field.focus({ preventScroll: true });
+              }
+            }
+          })
+          .catch(() => {
+            setRemoteTextInputFocused(false);
+          });
       }
     }
+  }
+
+  function openMobileKeyboard(): void {
+    const field = mobileKeyboardRef.current;
+    if (!field) return;
+    field.value = "";
+    field.focus({ preventScroll: true });
+  }
+
+  function mobileKeyboardInput(event: FormEvent<HTMLTextAreaElement>): void {
+    if (!cloud) return;
+
+    const nativeInput = event.nativeEvent as InputEvent;
+    if (nativeInput.isComposing) return;
+
+    const text = event.currentTarget.value;
+    event.currentTarget.value = "";
+
+    if (text) {
+      void cloud.sendText(text).catch(() => {
+        setError("Phone keyboard input could not reach the focused webpage field.");
+      });
+    }
+  }
+
+  function mobileKeyboardKeyDown(
+    event: ReactKeyboardEvent<HTMLTextAreaElement>,
+  ): void {
+    if (!cloud) return;
+
+    const special = new Set([
+      "Backspace",
+      "Enter",
+      "Tab",
+      "Escape",
+      "ArrowLeft",
+      "ArrowRight",
+      "ArrowUp",
+      "ArrowDown",
+      "Delete",
+      "Home",
+      "End",
+      "PageUp",
+      "PageDown",
+    ]);
+
+    if (!special.has(event.key)) return;
+
+    event.preventDefault();
+    void cloud
+      .sendKey("down", event.key)
+      .then(() => cloud.sendKey("up", event.key))
+      .catch(() => undefined);
   }
 
   const lifecycleLabel = starting
@@ -726,6 +798,45 @@ export function BrowserWorkspace({
             </p>
             {vncStage ? <small>{vncStage}</small> : null}
           </div>
+        ) : null}
+
+        {cloud?.getDisplayTransport() === "vnc"
+        && mediaReady
+        && window.matchMedia("(pointer: coarse)").matches ? (
+          <>
+            <button
+              type="button"
+              className="browser-mobile-keyboard-button"
+              data-ready={remoteTextInputFocused}
+              aria-label={
+                remoteTextInputFocused
+                  ? "Type in focused remote webpage field"
+                  : "Open phone keyboard for remote webpage"
+              }
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                openMobileKeyboard();
+              }}
+            >
+              ⌨ Type
+            </button>
+            <textarea
+              ref={mobileKeyboardRef}
+              className="browser-mobile-keyboard-proxy"
+              aria-label="Remote webpage keyboard input"
+              autoCapitalize="sentences"
+              autoCorrect="off"
+              spellCheck={false}
+              inputMode="text"
+              enterKeyHint="go"
+              onInput={mobileKeyboardInput}
+              onKeyDown={mobileKeyboardKeyDown}
+              onBlur={(event) => {
+                event.currentTarget.value = "";
+              }}
+            />
+          </>
         ) : null}
 
         {lastPoint ? (
