@@ -45,6 +45,29 @@ struct ReadBrowserView: View {
                 controller.open(url: initialURL)
             }
         }
+        .onChange(of: playbackSession.state) { _, state in
+            let active = state == .playing
+            controller.setReadingVisual(
+                active: active,
+                pulse: active
+            )
+        }
+        .onChange(
+            of: playbackSession.activeSegmentIndex
+        ) { previous, current in
+            guard
+                previous != current,
+                current != nil,
+                playbackSession.state == .playing
+            else {
+                return
+            }
+
+            controller.setReadingVisual(
+                active: true,
+                pulse: true
+            )
+        }
     }
 
     private var browserToolbar: some View {
