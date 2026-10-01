@@ -54,6 +54,8 @@ final class ReadPlaybackSession: ObservableObject {
         }
     }
 
+    var onUnpreparedSeek: ((TimeInterval) -> Void)?
+
     private let player = AVQueuePlayer()
     private let resumeStore = ReadPlaybackResumeStore()
     private var segmentByItemId: [ObjectIdentifier: ReadPlayableSegment] = [:]
@@ -62,6 +64,8 @@ final class ReadPlaybackSession: ObservableObject {
     private var audioSessionObservers: [NSObjectProtocol] = []
     private var remoteCommandTargets: [(MPRemoteCommand, Any)] = []
     private var shouldResumeAfterInterruption = false
+    private var shouldResumeAfterBuffering = false
+    private var pendingSeekShouldResume = false
     private var lastResumePersistTime: TimeInterval = 0
 
     init() {
@@ -129,7 +133,12 @@ final class ReadPlaybackSession: ObservableObject {
             return
         }
 
-        let resume = state == .playing
+        let resume =
+            state == .playing
+            || shouldResumeAfterBuffering
+            || pendingSeekShouldResume
+        shouldResumeAfterBuffering = false
+        pendingSeekShouldResume = false
         let cursor = elapsedTime
         let currentRate = playbackRate
         document = updated
@@ -181,6 +190,8 @@ final class ReadPlaybackSession: ObservableObject {
         duration = 0
         bufferedAhead = 0
         activeSegmentIndex = nil
+        shouldResumeAfterBuffering = false
+        pendingSeekShouldResume = false
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
 
@@ -200,6 +211,8 @@ final class ReadPlaybackSession: ObservableObject {
 
     func pause() {
         player.pause()
+        shouldResumeAfterBuffering = false
+        pendingSeekShouldResume = false
         if document != nil {
             state = .paused
         }
@@ -215,11 +228,40 @@ final class ReadPlaybackSession: ObservableObject {
         guard let document, !document.segments.isEmpty else { return }
 
         let boundedTarget = min(max(0, logicalTime), max(duration, 0))
-        guard let target = segmentAndOffset(for: boundedTarget, in: document) else { return }
+        let shouldResume = resumeAfterSeek ?? (
+            state == .playing
+            || shouldResumeAfterBuffering
+        )
 
-        let shouldResume = resumeAfterSeek ?? (state == .playing)
+        guard hasPlayableCoverage(
+            for: boundedTarget,
+            in: document
+        ) else {
+            player.pause()
+            elapsedTime = boundedTarget
+            bufferedAhead = 0
+            activeSegmentIndex = nil
+            pendingSeekShouldResume = shouldResume
+            shouldResumeAfterBuffering = false
+            state = .preparing
+            persistResume(force: true)
+            publishNowPlaying()
+            onUnpreparedSeek?(boundedTarget)
+            return
+        }
+
+        guard let target = segmentAndOffset(
+            for: boundedTarget,
+            in: document
+        ) else {
+            return
+        }
+
         player.pause()
-        rebuildQueue(startingAt: target.segment.index, localOffset: target.offset)
+        rebuildQueue(
+            startingAt: target.segment.index,
+            localOffset: target.offset
+        )
         elapsedTime = boundedTarget
         state = shouldResume ? .playing : .paused
 
@@ -317,6 +359,8 @@ final class ReadPlaybackSession: ObservableObject {
                 if self.player.items().isEmpty {
                     let readyEnd = self.document?.segments.last?.logicalEndTime ?? 0
                     if readyEnd + 0.001 < self.duration {
+                        self.shouldResumeAfterBuffering =
+                            self.state == .playing
                         self.elapsedTime = min(readyEnd, self.duration)
                         self.bufferedAhead = 0
                         self.activeSegmentIndex = nil
@@ -545,6 +589,25 @@ final class ReadPlaybackSession: ObservableObject {
                 updatedAt: Date()
             )
         )
+    }
+
+    private func hasPlayableCoverage(
+        for logicalTime: TimeInterval,
+        in document: ReadPlayableDocument
+    ) -> Bool {
+        let epsilon: TimeInterval = 0.001
+
+        return document.segments.contains { segment in
+            let inside =
+                logicalTime + epsilon >= segment.logicalStartTime
+                && logicalTime < segment.logicalEndTime
+
+            let atDocumentEnd =
+                logicalTime >= duration - epsilon
+                && segment.logicalEndTime >= duration - epsilon
+
+            return inside || atDocumentEnd
+        }
     }
 
     private func segmentAndOffset(
