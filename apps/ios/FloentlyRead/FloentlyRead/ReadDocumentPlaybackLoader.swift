@@ -13,6 +13,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
     @Published private(set) var state: State = .idle
 
     private let coordinator: ReadProgressiveAudioCoordinator?
+    private let resumeStore = ReadPlaybackResumeStore()
     private var task: Task<Void, Never>?
 
     init() {
@@ -39,6 +40,10 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         }
 
         let accessToken = sessionStore.session?.token
+        let effectiveIndex = resolvedStartingIndex(
+            manifest: manifest,
+            requestedIndex: index
+        )
         state = .preparing
 
         task = Task { [weak self] in
@@ -47,7 +52,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
             do {
                 let segments = try await coordinator.prepare(
                     manifest: manifest,
-                    startingAt: index,
+                    startingAt: effectiveIndex,
                     voiceId: voiceId,
                     accessToken: accessToken
                 )
@@ -61,10 +66,22 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
 
                 guard !Task.isCancelled else { return }
 
-                playback.load(
-                    document,
-                    autoplay: autoplay
-                )
+                if
+                    let current = playback.document,
+                    current.id == document.id,
+                    current.revisionId == document.revisionId
+                {
+                    playback.refresh(document)
+                    if autoplay, playback.state != .playing {
+                        playback.play()
+                    }
+                } else {
+                    playback.load(
+                        document,
+                        autoplay: autoplay
+                    )
+                }
+
                 state = .ready
             } catch is CancellationError {
                 return
@@ -80,5 +97,29 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         if state == .preparing {
             state = .idle
         }
+    }
+
+    private func resolvedStartingIndex(
+        manifest: ReadingManifestV1,
+        requestedIndex: Int
+    ) -> Int {
+        guard
+            requestedIndex == 0,
+            let snapshot = resumeStore.load(
+                documentId: manifest.documentId,
+                revisionId: manifest.revisionId
+            ),
+            !manifest.segments.isEmpty
+        else {
+            return requestedIndex
+        }
+
+        let cursorMs = Int64(
+            max(0, snapshot.logicalTime) * 1_000
+        )
+
+        return manifest.segments.firstIndex {
+            cursorMs < $0.logicalEndMs
+        } ?? manifest.segments.indices.last ?? 0
     }
 }
