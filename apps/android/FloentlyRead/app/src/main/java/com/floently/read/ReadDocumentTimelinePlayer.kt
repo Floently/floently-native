@@ -74,22 +74,67 @@ class ReadDocumentTimelinePlayer(
                 && resumeAfterProgressiveSeek
         val previousSpeed = physicalPlayer.playbackParameters.speed
 
+        if (
+            sameDocument
+            && previous != null
+            && overridePositionMs == null
+            && isAppendOnlyExpansion(
+                previous = previous,
+                updated = value
+            )
+            && physicalPlayer.mediaItemCount
+                == previous.segments.size
+        ) {
+            val appended = value.segments.drop(
+                previous.segments.size
+            )
+            val wasEnded =
+                physicalPlayer.playbackState
+                    == Player.STATE_ENDED
+            val shouldResume =
+                physicalPlayer.playWhenReady
+
+            document = value
+
+            val appendedItems = appended.mapNotNull {
+                mediaItemForSegment(
+                    segment = it,
+                    document = value
+                )
+            }
+
+            if (appendedItems.isNotEmpty()) {
+                physicalPlayer.addMediaItems(
+                    appendedItems
+                )
+
+                if (wasEnded) {
+                    val nextIndex =
+                        previous.segments.size
+                    physicalPlayer.seekTo(
+                        nextIndex,
+                        0L
+                    )
+                    physicalPlayer.prepare()
+                    physicalPlayer.playWhenReady =
+                        shouldResume
+                }
+            }
+
+            invalidateState()
+            return
+        }
+
         document = value
 
         val items = value.segments.mapNotNull { segment ->
             val uri = segment.audioUri?.takeIf { it.isNotBlank() }
                 ?: return@mapNotNull null
 
-            MediaItem.Builder()
-                .setMediaId(segment.id)
-                .setUri(uri)
-                .setMediaMetadata(
-                    MediaMetadata.Builder()
-                        .setTitle(value.title)
-                        .setArtist(value.author ?: "Floently Read")
-                        .build()
-                )
-                .build()
+            mediaItemForSegment(
+                segment = segment,
+                document = value
+            )
         }
 
         if (items.isEmpty()) {
@@ -309,6 +354,46 @@ class ReadDocumentTimelinePlayer(
         )
         invalidateState()
         return Futures.immediateVoidFuture()
+    }
+
+    private fun isAppendOnlyExpansion(
+        previous: ReadPlayableDocument,
+        updated: ReadPlayableDocument
+    ): Boolean {
+        if (
+            updated.segments.size
+                < previous.segments.size
+            || updated.segments.isEmpty()
+        ) {
+            return false
+        }
+
+        return updated.segments
+            .take(previous.segments.size)
+            == previous.segments
+    }
+
+    private fun mediaItemForSegment(
+        segment: ReadPlaybackSegment,
+        document: ReadPlayableDocument
+    ): MediaItem? {
+        val uri = segment.audioUri
+            ?.takeIf { it.isNotBlank() }
+            ?: return null
+
+        return MediaItem.Builder()
+            .setMediaId(segment.id)
+            .setUri(uri)
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(document.title)
+                    .setArtist(
+                        document.author
+                            ?: "Floently Read"
+                    )
+                    .build()
+            )
+            .build()
     }
 
     private fun availableSegmentAndOffset(
