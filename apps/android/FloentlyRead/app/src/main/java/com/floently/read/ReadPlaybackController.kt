@@ -216,20 +216,23 @@ class ReadPlaybackController(
             status = "Loading document"
         )
 
+        val handoffId =
+            ReadManifestHandoffRegistry.register(request)
+
         val resultFuture = player.sendCustomCommand(
             ReadPlaybackCommandContract.loadManifestCommand,
-            ReadPlaybackCommandContract.encodeLoadManifest(
-                manifest = request.manifest,
-                voiceId = request.voiceId,
-                autoplay = request.autoplay,
-                startingAt = request.startingAt
-            )
+            ReadPlaybackCommandContract
+                .encodeLoadManifestHandoff(handoffId)
         )
 
         resultFuture.addListener(
             {
                 runCatching { resultFuture.get() }
                     .onSuccess { result ->
+                        ReadManifestHandoffRegistry.discard(
+                            handoffId
+                        )
+
                         if (
                             result.resultCode
                             != SessionResult.RESULT_SUCCESS
@@ -242,6 +245,9 @@ class ReadPlaybackController(
                         }
                     }
                     .onFailure {
+                        ReadManifestHandoffRegistry.discard(
+                            handoffId
+                        )
                         snapshot = snapshot.copy(
                             status = "Document load failed"
                         )
