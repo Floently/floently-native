@@ -196,6 +196,17 @@ private fun ReadBrowserScreen(
         rendererRecoveryBlocked = false
     }
 
+    fun hardRestartBrowser(status: String, resetCrashCounter: Boolean = false) {
+        if (resetCrashCounter) resetRendererRecovery()
+        webView?.stopLoading()
+        webView?.destroy()
+        webView = null
+        progress = 0
+        isLoading = !currentUrl.isNullOrBlank()
+        readingStatus = status
+        rendererGeneration += 1
+    }
+
     fun openExternal(uri: Uri) {
         try {
             context.startActivity(Intent(Intent.ACTION_VIEW, uri))
@@ -278,7 +289,16 @@ private fun ReadBrowserScreen(
                 enabled = currentUrl != null,
                 contentDescription = if (isLoading) "Stop loading" else "Reload"
             ) {
-                if (isLoading) webView?.stopLoading() else webView?.reload()
+                if (isLoading) {
+                    webView?.stopLoading()
+                    isLoading = false
+                    readingStatus = "Loading stopped."
+                } else {
+                    // Reload is deliberately a fresh WebView instance. Cookies
+                    // and site storage stay in the persistent WebView profile,
+                    // while a wedged renderer/process is discarded completely.
+                    hardRestartBrowser("Reloading page…", resetCrashCounter = true)
+                }
             }
         }
 
@@ -307,10 +327,7 @@ private fun ReadBrowserScreen(
                         paletteMuted = palette.muted,
                         paletteAccent = palette.accent,
                         onRetry = {
-                            rendererCrashCount = 0
-                            rendererRecoveryBlocked = false
-                            rendererGeneration += 1
-                            readingStatus = "Trying the page again…"
+                            hardRestartBrowser("Trying the page again…", resetCrashCounter = true)
                         }
                     )
                 }

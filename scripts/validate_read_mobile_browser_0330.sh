@@ -19,6 +19,7 @@ require_text() {
 for file in \
   "$ROOT/docs/design/READ_MOBILE_BROWSER_UX_SPEC_0330.md" \
   "$ROOT/docs/READ_MOBILE_BROWSER_COMPATIBILITY_0330.md" \
+  "$ROOT/docs/READ_NATIVE_BROWSER_AUTH_RECOVERY_20260930.md" \
   "$IOS/ReadBrowserModel.swift" \
   "$IOS/ReadWebView.swift" \
   "$IOS/ReadBrowserView.swift" \
@@ -32,6 +33,11 @@ done
 require_text "$IOS/ReadWebView.swift" "configuration.websiteDataStore = .default()"
 require_text "$IOS/ReadWebView.swift" "createWebViewWith configuration"
 require_text "$IOS/ReadWebView.swift" "webViewWebContentProcessDidTerminate"
+require_text "$IOS/ReadWebView.swift" "recoverFromWebContentTermination"
+require_text "$IOS/ReadBrowserModel.swift" "webViewGeneration"
+require_text "$IOS/ReadBrowserModel.swift" "hardRestartPreservingPage"
+require_text "$IOS/ReadWebView.swift" "configuration.websiteDataStore = .default()"
+require_text "$IOS/ReadBrowserView.swift" ".id(controller.webViewGeneration)"
 require_text "$IOS/ReadBrowserModel.swift" "accounts.google.com"
 require_text "$IOS/ReadBrowserModel.swift" "elementsFromPoint"
 require_text "$IOS/ReadBrowserModel.swift" "floentlyread"
@@ -56,6 +62,9 @@ require_text "$ANDROID_ACTIVITY" "WebSettings.MIXED_CONTENT_NEVER_ALLOW"
 require_text "$ANDROID_ACTIVITY" "settings.allowFileAccess = false"
 require_text "$ANDROID_ACTIVITY" "settings.safeBrowsingEnabled = true"
 require_text "$ANDROID_ACTIVITY" "onRenderProcessGone"
+require_text "$ANDROID_ACTIVITY" "hardRestartBrowser"
+require_text "$ANDROID_ACTIVITY" "webView?.destroy()"
+require_text "$ANDROID_ACTIVITY" "rendererGeneration += 1"
 require_text "$ANDROID_ACTIVITY" "onCreateWindow"
 require_text "$ANDROID/java/com/floently/read/ReadSpeechController.kt" "TextToSpeech"
 require_text "$ANDROID/java/com/floently/read/ReadSpeechController.kt" "onRangeStart"
@@ -76,6 +85,10 @@ fi
 if grep -RniE "handler\.proceed\(\)|proceed\(\).*Ssl" "$ANDROID_ACTIVITY"; then
   fail "Android Read browser must never bypass TLS certificate errors"
 fi
+
+require_text "$ROOT/docs/READ_NATIVE_BROWSER_AUTH_RECOVERY_20260930.md" "Website rendering, credential UI, touch/focus, and crash recovery must have one local platform owner on mobile."
+require_text "$ROOT/docs/READ_NATIVE_BROWSER_AUTH_RECOVERY_20260930.md" "com.apple.developer.web-browser.public-key-credential"
+require_text "$ROOT/docs/READ_NATIVE_BROWSER_AUTH_RECOVERY_20260930.md" "WEB_AUTHENTICATION_SUPPORT_FOR_BROWSER"
 
 require_text "$ROOT/docs/design/READ_MOBILE_BROWSER_UX_SPEC_0330.md" "Websites stay websites."
 require_text "$ROOT/docs/design/READ_MOBILE_BROWSER_UX_SPEC_0330.md" "Safari, Chrome, Firefox, Edge, Opera, Vivaldi, Brave, Samsung Internet"

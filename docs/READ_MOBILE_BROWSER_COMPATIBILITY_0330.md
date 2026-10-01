@@ -2,6 +2,8 @@
 
 Status: implementation reference for the Read mobile browser.
 
+2026-09-30 incident follow-up: the primary mobile browser must be a **local platform browser surface**, not the React Native -> web shell -> remote Chromium topology. Renderer replacement, passkey ownership, and release acceptance are specified in `READ_NATIVE_BROWSER_AUTH_RECOVERY_20260930.md`.
+
 ## Decision
 
 The universal mobile architecture is **native Read browser + browser-independent handoff**.
