@@ -6,6 +6,7 @@ struct ReadBrowserView: View {
     @EnvironmentObject private var playbackSession: ReadPlaybackSession
     @EnvironmentObject private var sessionStore: FloentlySessionStore
     @EnvironmentObject private var documentLoader: ReadDocumentPlaybackLoader
+    @EnvironmentObject private var voiceSettings: ReadVoiceSettings
 
     @StateObject private var controller = ReadBrowserController()
 
@@ -333,10 +334,9 @@ struct ReadBrowserView: View {
 
             documentLoader.load(
                 manifest: manifest,
-                voiceId:
-                    ReadBrowserNativeReading.defaultVoiceId(
-                        for: source.language
-                    ),
+                voiceId: voiceSettings.voiceId(
+                    for: source.language
+                ),
                 sessionStore: sessionStore,
                 playback: playbackSession,
                 autoplay: true
