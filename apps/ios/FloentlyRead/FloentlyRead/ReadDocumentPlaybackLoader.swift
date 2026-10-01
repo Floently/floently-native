@@ -160,6 +160,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         let shouldResume =
             playback.state == .playing
             || playback.state == .preparing
+        let previousVoice = activeVoiceId
 
         cancelTasks()
         preparedSegments.removeAll()
@@ -221,7 +222,56 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
             } catch is CancellationError {
                 return
             } catch {
-                state = .failed(error.localizedDescription)
+                guard
+                    let previousVoice,
+                    previousVoice != newVoice
+                else {
+                    state = .failed(error.localizedDescription)
+                    return
+                }
+
+                activeVoiceId = previousVoice
+                preparedSegments.removeAll()
+
+                do {
+                    let fallback = try await coordinator.prepare(
+                        manifest: manifest,
+                        startingAt: targetIndex,
+                        voiceId: previousVoice,
+                        accessToken: activeAccessToken
+                    )
+
+                    guard !Task.isCancelled else { return }
+
+                    for segment in fallback {
+                        preparedSegments[segment.index] = segment
+                    }
+
+                    let document = await coordinator.playableDocument(
+                        manifest: manifest,
+                        segments: preparedSegments.values.map { $0 }
+                    )
+
+                    guard !Task.isCancelled else { return }
+
+                    playback.refresh(document)
+                    state = .ready
+
+                    bindUnpreparedSeek(
+                        manifest: manifest,
+                        voiceId: previousVoice,
+                        accessToken: activeAccessToken,
+                        playback: playback
+                    )
+                    startRefillLoop(
+                        manifest: manifest,
+                        voiceId: previousVoice,
+                        accessToken: activeAccessToken,
+                        playback: playback
+                    )
+                } catch {
+                    state = .failed(error.localizedDescription)
+                }
             }
         }
     }
