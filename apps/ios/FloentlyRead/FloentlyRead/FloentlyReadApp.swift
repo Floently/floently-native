@@ -7,6 +7,7 @@ struct FloentlyReadApp: App {
     @StateObject private var playbackSession = ReadPlaybackSession()
     @StateObject private var sessionStore = FloentlySessionStore()
     @StateObject private var documentLoader = ReadDocumentPlaybackLoader()
+    @StateObject private var voiceSettings = ReadVoiceSettings()
 
     var body: some Scene {
         WindowGroup {
@@ -15,6 +16,7 @@ struct FloentlyReadApp: App {
                 .environmentObject(playbackSession)
                 .environmentObject(sessionStore)
                 .environmentObject(documentLoader)
+                .environmentObject(voiceSettings)
                 .onOpenURL { incomingURL in
                     browserRouter.openIncomingURL(incomingURL)
                 }
