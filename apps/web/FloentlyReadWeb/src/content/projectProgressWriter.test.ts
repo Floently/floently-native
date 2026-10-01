@@ -25,8 +25,8 @@ describe("project progress writer", () => {
   });
 
   it("serializes writes and coalesces cursor movement to the newest snapshot", async () => {
-    const firstWrite = {
-      release: () => undefined,
+    const firstWrite: { release: () => void } = {
+      release: () => {},
     };
     const save = vi.fn(
       async (
@@ -58,8 +58,8 @@ describe("project progress writer", () => {
   });
 
   it("does not let an active duplicate replace a newer pending cursor", async () => {
-    const firstWrite = {
-      release: () => undefined,
+    const firstWrite: { release: () => void } = {
+      release: () => {},
     };
     const save = vi.fn(
       async (
