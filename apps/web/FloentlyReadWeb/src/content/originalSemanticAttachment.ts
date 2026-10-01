@@ -1,5 +1,6 @@
 import {
   beginFileIngestion,
+  type UnifiedIngestionResult,
 } from "./unifiedDocumentIngestion";
 import {
   linkLocalOriginalToProject,
@@ -25,6 +26,38 @@ export function fileFromLocalOriginal(
   );
 }
 
+export function trackCanonicalIngestionForLocalOriginal(
+  localDocumentId: string,
+  canonical: Promise<UnifiedIngestionResult>,
+): Promise<ContentProject> {
+  const normalizedId = localDocumentId.trim();
+  if (!normalizedId) {
+    return Promise.reject(
+      new Error("The original document id is missing."),
+    );
+  }
+
+  const existing = activeAttachments.get(normalizedId);
+  if (existing) return existing;
+
+  const task = canonical
+    .then(async (result) => {
+      await linkLocalOriginalToProject(
+        normalizedId,
+        result.project.id,
+      );
+      return result.project;
+    })
+    .finally(() => {
+      if (activeAttachments.get(normalizedId) === task) {
+        activeAttachments.delete(normalizedId);
+      }
+    });
+
+  activeAttachments.set(normalizedId, task);
+  return task;
+}
+
 /**
  * Ensures one canonical semantic extraction/upload owns a local original at a
  * time. The original visual file may already be visible; therefore this path
@@ -41,27 +74,14 @@ export function attachSemanticProjectToLocalOriginal(
     );
   }
 
-  const existing = activeAttachments.get(normalizedId);
-  if (existing) return existing;
-
-  const task = beginFileIngestion(file, {
+  const canonical = beginFileIngestion(file, {
     fastOpen: false,
-  }).canonical
-    .then(async (result) => {
-      await linkLocalOriginalToProject(
-        normalizedId,
-        result.project.id,
-      );
-      return result.project;
-    })
-    .finally(() => {
-      if (activeAttachments.get(normalizedId) === task) {
-        activeAttachments.delete(normalizedId);
-      }
-    });
+  }).canonical;
 
-  activeAttachments.set(normalizedId, task);
-  return task;
+  return trackCanonicalIngestionForLocalOriginal(
+    normalizedId,
+    canonical,
+  );
 }
 
 export function semanticAttachmentInFlight(
