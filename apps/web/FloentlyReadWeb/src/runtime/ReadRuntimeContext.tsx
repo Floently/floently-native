@@ -12,11 +12,15 @@ import { RenderReadTtsProvider } from "../tts/readTtsProvider";
 import { getAuthAccessToken } from "../auth/authStore";
 import { getReadApiBaseUrl } from "../config/runtime";
 import { ReadDocumentSession } from "./readDocumentSession";
+import { BrowserV2CloudClient } from "../browser-v2/BrowserV2CloudClient";
+import { BrowserReadingBridge } from "../browser-v2/BrowserReadingBridge";
 
 export interface ReadWebRuntime {
   core: ReadCoreWorkerClient;
   playback: WebPlaybackSession;
   documents: ReadDocumentSession;
+  browser: BrowserV2CloudClient;
+  browserReading: BrowserReadingBridge;
   tts: RenderReadTtsProvider;
 }
 
@@ -38,17 +42,27 @@ export function ReadRuntimeProvider({ children }: PropsWithChildren) {
       cache,
     });
     const documents = new ReadDocumentSession(core, playback);
+    const browser = new BrowserV2CloudClient();
+    const browserReading = new BrowserReadingBridge(
+      browser.reader(),
+      core,
+      playback,
+    );
 
     const nextRuntime: ReadWebRuntime = {
       core,
       playback,
       documents,
+      browser,
+      browserReading,
       tts,
     };
 
     setRuntime(nextRuntime);
 
     return () => {
+      browserReading.destroy();
+      void browser.stop().catch(() => undefined);
       documents.destroy();
       playback.destroy();
       core.terminate();

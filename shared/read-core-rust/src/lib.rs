@@ -151,6 +151,45 @@ pub fn progress_for_position(
     (logical_scalars / manifest.text_scalar_length as f64).clamp(0.0, 1.0)
 }
 
+pub fn logical_time_for_scalar(
+    manifest: &ReadingManifest,
+    scalar_offset: usize,
+) -> Option<u64> {
+    if manifest.segments.is_empty() {
+        return None;
+    }
+
+    let target = scalar_offset.min(manifest.text_scalar_length);
+
+    for segment in &manifest.segments {
+        if target < segment.scalar_end
+            || segment.index + 1 == manifest.segments.len()
+        {
+            let scalar_span = segment
+                .scalar_end
+                .saturating_sub(segment.scalar_start)
+                .max(1);
+            let local_scalars = target
+                .saturating_sub(segment.scalar_start)
+                .min(scalar_span);
+            let fraction = local_scalars as f64 / scalar_span as f64;
+            let logical_span = segment
+                .logical_end_ms
+                .saturating_sub(segment.logical_start_ms);
+
+            return Some(
+                segment.logical_start_ms.saturating_add(
+                    (logical_span as f64 * fraction)
+                        .round()
+                        .max(0.0) as u64,
+                ),
+            );
+        }
+    }
+
+    None
+}
+
 pub fn segment_for_logical_time(
     manifest: &ReadingManifest,
     elapsed_ms: u64,
@@ -356,6 +395,24 @@ mod tests {
             progress_for_position(&manifest, position.index, position.fraction);
 
         assert!((roundtrip - 0.63).abs() < 0.01);
+    }
+
+    #[test]
+    fn maps_canonical_scalar_to_document_time() {
+        let text = (0..3000)
+            .map(|index| format!("word{index}"))
+            .collect::<Vec<_>>()
+            .join(" ");
+        let manifest = build_manifest("d1", "r1", "Book", "en", &text, 600);
+
+        let middle_scalar = manifest.text_scalar_length / 2;
+        let middle_time = logical_time_for_scalar(&manifest, middle_scalar).unwrap();
+        let end_time =
+            logical_time_for_scalar(&manifest, manifest.text_scalar_length).unwrap();
+
+        assert!(middle_time > 0);
+        assert!(middle_time < manifest.estimated_source_duration_ms);
+        assert_eq!(end_time, manifest.estimated_source_duration_ms);
     }
 
     #[test]

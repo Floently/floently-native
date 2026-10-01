@@ -83,6 +83,16 @@ export class ReadCoreWorkerClient {
     });
   }
 
+  logicalTimeForScalar(
+    handle: string,
+    scalarOffset: number,
+  ): Promise<number | null> {
+    return this.request<{ elapsedMs: number } | null>({
+      type: "logicalTimeForScalar",
+      payload: { handle, scalarOffset },
+    }).then((result) => result?.elapsedMs ?? null);
+  }
+
   getSegment(
     handle: string,
     index: number,

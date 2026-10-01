@@ -361,6 +361,61 @@ describe("WebPlaybackSession document-wide contract", () => {
     session.destroy();
   });
 
+  it("keeps the selected speed across document replacement and clear", () => {
+    const { session } = createHarness();
+
+    session.loadDocument(makeManifest());
+    session.setSpeed(2.5);
+    session.clear();
+
+    session.loadDocument({
+      ...makeManifest(),
+      handle: "doc-2:rev-2",
+      documentId: "doc-2",
+      revisionId: "rev-2",
+      title: "Another article",
+    });
+
+    expect(session.getSnapshot()).toMatchObject({
+      documentId: "doc-2",
+      speed: 2.5,
+    });
+
+    session.destroy();
+  });
+
+  it("keeps a selected voice across same-language page replacement", async () => {
+    const { session } = createHarness();
+
+    session.loadDocument(makeManifest());
+    await session.setVoice("voice:new");
+    session.clear();
+
+    session.loadDocument({
+      ...makeManifest(),
+      handle: "browser:page-2:rev-2",
+      documentId: "browser:page-2",
+      revisionId: "rev-2",
+      title: "Next web page",
+      language: "en",
+    });
+
+    expect(session.getSnapshot().voiceId).toBe("voice:new");
+
+    session.loadDocument({
+      ...makeManifest(),
+      handle: "browser:page-fi:rev-1",
+      documentId: "browser:page-fi",
+      revisionId: "rev-1",
+      title: "Finnish page",
+      language: "fi",
+    });
+
+    expect(session.getSnapshot().voiceId).not.toBe("voice:new");
+
+    session.destroy();
+  });
+
   it("keeps speed across hidden segment transitions", async () => {
     const { session, tts, engine } = createHarness();
 

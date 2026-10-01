@@ -1,5 +1,6 @@
 use floently_read_core::{
     build_manifest,
+    logical_time_for_scalar,
     position_for_progress,
     prefetch_indexes,
     segment_for_logical_time,
@@ -51,6 +52,12 @@ struct PositionDto {
 struct LogicalTimeDto {
     index: usize,
     local_offset_ms: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ScalarTimeDto {
+    elapsed_ms: u64,
 }
 
 impl From<ReadingManifest> for ManifestDto {
@@ -171,6 +178,19 @@ pub fn position_for_progress_json(
 }
 
 #[wasm_bindgen]
+pub fn logical_time_for_scalar_json(
+    manifest_json: &str,
+    scalar_offset: usize,
+) -> Result<String, JsValue> {
+    let manifest = decode_manifest(manifest_json)?;
+    let Some(elapsed_ms) = logical_time_for_scalar(&manifest, scalar_offset) else {
+        return Ok("null".to_string());
+    };
+
+    encode(&ScalarTimeDto { elapsed_ms })
+}
+
+#[wasm_bindgen]
 pub fn segment_for_logical_time_json(
     manifest_json: &str,
     elapsed_ms: f64,
@@ -206,6 +226,27 @@ pub fn prefetch_indexes_json(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn wasm_maps_scalar_to_logical_time() {
+        let manifest = build_manifest(
+            "doc",
+            "rev",
+            "Title",
+            "en",
+            "One two three. Four five six. Seven eight nine.",
+            600,
+        );
+        let encoded = serde_json::to_string(&ManifestDto::from(manifest.clone())).unwrap();
+        let result = logical_time_for_scalar_json(
+            &encoded,
+            manifest.text_scalar_length / 2,
+        )
+        .unwrap();
+        let decoded: serde_json::Value = serde_json::from_str(&result).unwrap();
+
+        assert!(decoded["elapsedMs"].as_u64().unwrap() > 0);
+    }
 
     #[test]
     fn wasm_dto_round_trip_preserves_manifest_semantics() {

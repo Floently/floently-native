@@ -2,6 +2,7 @@
 
 import initReadCore, {
   build_manifest_json,
+  logical_time_for_scalar_json,
   position_for_progress_json,
   prefetch_indexes_json,
   read_core_contract_version,
@@ -157,6 +158,22 @@ async function dispatch(request: ReadCoreRequest): Promise<ReadCoreResponse> {
           segment_for_logical_time_json(
             manifestJson,
             Math.max(0, Math.round(request.payload.elapsedMs)),
+          ),
+        );
+        return { id: request.id, ok: true, result };
+      }
+
+      case "logicalTimeForScalar": {
+        const manifestJson = requireManifest(request.payload.handle);
+        const manifest = JSON.parse(manifestJson) as CoreManifest;
+        const scalarOffset = Math.min(
+          manifest.textScalarLength,
+          Math.max(0, Math.round(request.payload.scalarOffset)),
+        );
+        const result = JSON.parse(
+          logical_time_for_scalar_json(
+            manifestJson,
+            scalarOffset,
           ),
         );
         return { id: request.id, ok: true, result };

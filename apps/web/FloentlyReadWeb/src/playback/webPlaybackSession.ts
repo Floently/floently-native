@@ -147,6 +147,9 @@ export class WebPlaybackSession {
   private readonly inFlightAudio = new Map<number, Promise<RuntimeAudio>>();
   private wantsPlayback = false;
   private generation = 0;
+  private preferredSpeed = 1;
+  private preferredVoiceId = defaultVoiceIdForLanguage("en");
+  private preferredVoiceLanguage: string | null = "en";
   private lastPersistedAt = 0;
   private lastTransitionAt = 0;
 
@@ -217,20 +220,27 @@ export class WebPlaybackSession {
     this.manifest = manifest;
     const resume = this.readResumeState(manifest);
     const speed = clamp(
-      resume?.speed ?? 1,
+      resume?.speed ?? this.preferredSpeed,
       MIN_SPEED,
       MAX_SPEED,
     );
     const voiceId =
       options.voiceId?.trim()
       || resume?.voiceId?.trim()
-      || defaultVoiceIdForLanguage(manifest.language);
+      || (
+        this.preferredVoiceLanguage === manifest.language
+          ? this.preferredVoiceId
+          : defaultVoiceIdForLanguage(manifest.language)
+      );
     const elapsedMs = clamp(
       resume?.elapsedMs ?? 0,
       0,
       manifest.estimatedSourceDurationMs,
     );
 
+    this.preferredSpeed = speed;
+    this.preferredVoiceId = voiceId;
+    this.preferredVoiceLanguage = manifest.language;
     this.engine.setRate(speed);
 
     this.replaceSnapshot({
@@ -339,6 +349,7 @@ export class WebPlaybackSession {
       MIN_SPEED,
       MAX_SPEED,
     );
+    this.preferredSpeed = bounded;
     this.engine.setRate(bounded);
     this.replaceSnapshot({ speed: bounded });
     this.persistResumeState(true);
@@ -352,6 +363,9 @@ export class WebPlaybackSession {
     const wasPlaying = this.wantsPlayback
       || this.snapshot.status === "playing";
     const cursor = this.snapshot.elapsedMs;
+
+    this.preferredVoiceId = normalized;
+    this.preferredVoiceLanguage = this.manifest?.language ?? null;
 
     this.generation += 1;
     this.wantsPlayback = wasPlaying;
