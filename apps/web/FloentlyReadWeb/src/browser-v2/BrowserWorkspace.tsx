@@ -651,6 +651,13 @@ export function BrowserWorkspace({
       .catch(() => undefined);
   }
 
+  const vncActive =
+    started && cloud?.getDisplayTransport() === "vnc";
+  const coarsePointer =
+    typeof window !== "undefined"
+    && window.matchMedia("(pointer: coarse)").matches;
+  const nativeDesktopVncMode = Boolean(vncActive && !coarsePointer);
+
   const lifecycleLabel = starting
     ? "Starting secure browser…"
     : mediaReady
@@ -803,12 +810,47 @@ export function BrowserWorkspace({
       <div
         ref={surfaceRef}
         className="browser-page-surface"
-        onPointerDown={pointerDown}
-        onPointerMove={pointerMove}
-        onPointerUp={pointerUp}
-        onPointerCancel={() => {
+        tabIndex={mediaReady ? 0 : -1}
+        onPointerDownCapture={pointerDown}
+        onPointerMoveCapture={pointerMove}
+        onPointerUpCapture={pointerUp}
+        onPointerCancelCapture={() => {
           pointerStartRef.current = null;
           touchPointRef.current = null;
+        }}
+        onKeyDownCapture={(event) => {
+          if (!cloud || !mediaReady || nativeDesktopVncMode) return;
+
+          const ownChrome =
+            event.target instanceof Element
+            && Boolean(
+              event.target.closest(
+                ".browser-mobile-keyboard-button, .browser-mobile-keyboard-proxy",
+              ),
+            );
+          if (ownChrome) return;
+          if (!vncActive && event.key === "Tab") return;
+          if (event.key.length > 32) return;
+
+          event.preventDefault();
+          void cloud.sendKey("down", event.key).catch(() => undefined);
+        }}
+        onKeyUpCapture={(event) => {
+          if (!cloud || !mediaReady || nativeDesktopVncMode) return;
+
+          const ownChrome =
+            event.target instanceof Element
+            && Boolean(
+              event.target.closest(
+                ".browser-mobile-keyboard-button, .browser-mobile-keyboard-proxy",
+              ),
+            );
+          if (ownChrome) return;
+          if (!vncActive && event.key === "Tab") return;
+          if (event.key.length > 32) return;
+
+          event.preventDefault();
+          void cloud.sendKey("up", event.key).catch(() => undefined);
         }}
       >
         <video
@@ -842,9 +884,7 @@ export function BrowserWorkspace({
           </div>
         ) : null}
 
-        {cloud?.getDisplayTransport() === "vnc"
-        && mediaReady
-        && window.matchMedia("(pointer: coarse)").matches ? (
+        {vncActive && mediaReady && coarsePointer ? (
           <>
             <button
               type="button"
