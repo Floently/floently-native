@@ -15,8 +15,13 @@ import {
   ingestTextIntoReader,
 } from "../content/unifiedDocumentIngestion";
 import { navigateTo } from "../routing/navigation";
+import { useAuthState } from "../auth/useAuthState";
+import {
+  GoogleDriveImportCancelledError,
+  pickGoogleDriveFileAsFile,
+} from "./googleDriveImport";
 
-type ImportSource = "device" | "paste" | "website";
+type ImportSource = "device" | "drive" | "paste" | "website";
 
 const READ_FILE_ACCEPT = [
   ".pdf",
@@ -82,6 +87,7 @@ function titleForText(text: string): string {
 }
 
 export function ImportPage() {
+  const auth = useAuthState();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [source, setSource] = useState<ImportSource>("device");
   const [pasteText, setPasteText] = useState("");
@@ -97,6 +103,9 @@ export function ImportPage() {
     }
     if (source === "website") {
       return "Open the real page in Floently Browser V2. It will not be copied into a text view.";
+    }
+    if (source === "drive") {
+      return "Choose a supported file from Google Drive. It follows the same original-source and synced-project rules as a device file.";
     }
 
     return "PDFs keep their original pages. DOCX, EPUB, HTML, Markdown and TXT use the synced document pipeline.";
@@ -218,6 +227,40 @@ export function ImportPage() {
     }
   }
 
+  async function openGoogleDrive(): Promise<void> {
+    if (busy) return;
+
+    setBusy(true);
+    setError(null);
+    setStatus("Opening Google Drive…");
+
+    try {
+      const file = await pickGoogleDriveFileAsFile(
+        auth.googleClientId,
+        {
+          onStatus: (message) => setStatus(message),
+        },
+      );
+
+      setBusy(false);
+      await openFile(file);
+    } catch (reason) {
+      setBusy(false);
+
+      if (reason instanceof GoogleDriveImportCancelledError) {
+        setStatus("Google Drive selection cancelled.");
+        return;
+      }
+
+      setStatus(null);
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Google Drive could not be opened.",
+      );
+    }
+  }
+
   function openWebsite(
     event: FormEvent<HTMLFormElement>,
   ): void {
@@ -254,6 +297,7 @@ export function ImportPage() {
       <div className="import-source-tabs" role="tablist" aria-label="Import source">
         {([
           ["device", "Device"],
+          ["drive", "Google Drive"],
           ["paste", "Paste text"],
           ["website", "Website"],
         ] as const).map(([id, label]) => (
@@ -315,6 +359,31 @@ export function ImportPage() {
             accept={READ_FILE_ACCEPT}
             onChange={onFileChange}
           />
+        </div>
+      ) : null}
+
+      {source === "drive" ? (
+        <div className="import-dropzone">
+          <span className="import-drop-icon" aria-hidden="true">G</span>
+          <h2>Choose from Google Drive</h2>
+          <p>
+            PDF · Google Docs · Google Slides · Google Sheets · text and
+            supported document files
+          </p>
+          <button
+            type="button"
+            className="page-primary-action"
+            disabled={busy || !auth.googleClientId}
+            onClick={() => void openGoogleDrive()}
+          >
+            {busy ? "Opening…" : "Choose from Drive"}
+          </button>
+          {!auth.googleClientId ? (
+            <small className="import-drive-note">
+              Google Drive will be available when Google sign-in is enabled for
+              this deployment.
+            </small>
+          ) : null}
         </div>
       ) : null}
 
