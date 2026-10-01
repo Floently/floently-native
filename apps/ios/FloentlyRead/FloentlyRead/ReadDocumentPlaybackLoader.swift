@@ -28,6 +28,8 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
 
     private var task: Task<Void, Never>?
     private var refillTask: Task<Void, Never>?
+    private var seekTask: Task<Void, Never>?
+    private weak var boundPlayback: ReadPlaybackSession?
     private var preparedSegments: [Int: ReadPlayableSegment] = [:]
     private var lastUnderrunBoundaryIndex: Int?
     private var nextRefillAllowedAt = Date.distantPast
@@ -51,6 +53,21 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         lastUnderrunBoundaryIndex = nil
         nextRefillAllowedAt = .distantPast
         refillTelemetry = ReadProgressiveRefillTelemetry()
+
+        if boundPlayback !== playback {
+            boundPlayback?.onUnpreparedSeek = nil
+        }
+        boundPlayback = playback
+        playback.onUnpreparedSeek = { [weak self, weak playback] logicalTime in
+            guard let self, let playback else { return }
+            self.loadWindowForUnpreparedSeek(
+                logicalTime: logicalTime,
+                manifest: manifest,
+                voiceId: voiceId,
+                accessToken: sessionStore.session?.token,
+                playback: playback
+            )
+        }
 
         guard let coordinator else {
             state = .failed(
@@ -126,9 +143,84 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         preparedSegments.removeAll()
         lastUnderrunBoundaryIndex = nil
         nextRefillAllowedAt = .distantPast
+        boundPlayback?.onUnpreparedSeek = nil
+        boundPlayback = nil
 
         if state == .preparing {
             state = .idle
+        }
+    }
+
+    private func loadWindowForUnpreparedSeek(
+        logicalTime: TimeInterval,
+        manifest: ReadingManifestV1,
+        voiceId: String,
+        accessToken: String?,
+        playback: ReadPlaybackSession
+    ) {
+        guard let coordinator, !manifest.segments.isEmpty else {
+            return
+        }
+
+        seekTask?.cancel()
+        refillTask?.cancel()
+
+        let cursorMs = Int64(
+            max(0, logicalTime) * 1_000
+        )
+        let targetIndex = manifest.segments.firstIndex {
+            cursorMs < $0.logicalEndMs
+        } ?? manifest.segments.indices.last ?? 0
+
+        state = .preparing
+        refillTelemetry.refillAttempts += 1
+
+        seekTask = Task { [weak self, weak playback] in
+            guard let self, let playback else { return }
+
+            do {
+                let segments = try await coordinator.prepare(
+                    manifest: manifest,
+                    startingAt: targetIndex,
+                    voiceId: voiceId,
+                    accessToken: accessToken
+                )
+
+                guard !Task.isCancelled else { return }
+
+                preparedSegments.removeAll()
+                for segment in segments {
+                    preparedSegments[segment.index] = segment
+                }
+
+                let document = await coordinator.playableDocument(
+                    manifest: manifest,
+                    segments: preparedSegments.values.map { $0 }
+                )
+
+                guard !Task.isCancelled else { return }
+
+                playback.refresh(document)
+                refillTelemetry.refillSuccesses += 1
+                refillTelemetry.lastFailure = nil
+                state = .ready
+                lastUnderrunBoundaryIndex = nil
+                nextRefillAllowedAt = .distantPast
+
+                startRefillLoop(
+                    manifest: manifest,
+                    voiceId: voiceId,
+                    accessToken: accessToken,
+                    playback: playback
+                )
+            } catch is CancellationError {
+                return
+            } catch {
+                refillTelemetry.refillFailures += 1
+                refillTelemetry.lastFailure =
+                    error.localizedDescription
+                state = .failed(error.localizedDescription)
+            }
         }
     }
 
@@ -255,6 +347,8 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         task = nil
         refillTask?.cancel()
         refillTask = nil
+        seekTask?.cancel()
+        seekTask = nil
     }
 
     private func resolvedStartingIndex(
