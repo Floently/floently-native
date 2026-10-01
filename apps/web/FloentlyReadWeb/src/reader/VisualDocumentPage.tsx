@@ -27,6 +27,29 @@ function isPdf(record: LocalOriginalDocumentRecord): boolean {
   );
 }
 
+function mergeOriginalSnapshot(
+  current: LocalOriginalDocumentRecord | null,
+  next: LocalOriginalDocumentRecord,
+): LocalOriginalDocumentRecord {
+  if (!current || current.id !== next.id) return next;
+
+  const sameVisualFile =
+    current.name === next.name
+    && current.type === next.type
+    && current.size === next.size
+    && current.lastModified === next.lastModified
+    && current.quickSignature === next.quickSignature;
+
+  return sameVisualFile
+    ? {
+        ...next,
+        // IndexedDB may materialize a fresh Blob object on every read. Keep
+        // the already-rendered Blob so semantic polling cannot reload the PDF.
+        blob: current.blob,
+      }
+    : next;
+}
+
 export function VisualDocumentPage({
   localDocumentId,
 }: {
@@ -57,7 +80,7 @@ export function VisualDocumentPage({
 
   const objectUrl = useMemo(
     () => record ? URL.createObjectURL(record.blob) : null,
-    [record],
+    [record?.blob],
   );
 
   useEffect(() => {
@@ -82,7 +105,9 @@ export function VisualDocumentPage({
           );
         }
 
-        setRecord(next);
+        setRecord((current) =>
+          mergeOriginalSnapshot(current, next),
+        );
 
         if (next.projectId) {
           setSemanticWaitExpired(false);
@@ -241,12 +266,15 @@ export function VisualDocumentPage({
         await getLocalOriginalDocument(record.id);
 
       setProject(null);
-      setRecord(
-        refreshed ?? {
-          ...record,
-          projectId: nextProject.id,
-          updatedAt: Date.now(),
-        },
+      setRecord((current) =>
+        mergeOriginalSnapshot(
+          current,
+          refreshed ?? {
+            ...record,
+            projectId: nextProject.id,
+            updatedAt: Date.now(),
+          },
+        ),
       );
       setSemanticWaitExpired(false);
       setSemanticLoadRevision((value) => value + 1);
