@@ -52,3 +52,8 @@ shared/api-contracts/backend-map-*/client_source_files.txt
 # Next-generation web build artifacts
 apps/web/FloentlyReadWeb/dist/
 apps/web/FloentlyReadWeb/src/generated/read-core-wasm/
+
+# Generated native Rust Read Core artifacts
+.build/
+apps/ios/FloentlyRead/Generated/
+apps/android/FloentlyRead/app/src/main/jniLibs/
