@@ -17,10 +17,13 @@ object ReadPlaybackCommandContract {
         "com.floently.read.command.LOAD_DOCUMENT"
     const val ACTION_LOAD_MANIFEST =
         "com.floently.read.command.LOAD_MANIFEST"
+    const val ACTION_CHANGE_VOICE =
+        "com.floently.read.command.CHANGE_VOICE"
 
     const val EXTRA_DOCUMENT_JSON = "document_json"
     const val EXTRA_MANIFEST_HANDOFF_ID = "manifest_handoff_id"
     const val EXTRA_AUTOPLAY = "autoplay"
+    const val EXTRA_VOICE_ID = "voice_id"
 
     val loadDocumentCommand: SessionCommand
         get() = SessionCommand(
@@ -33,6 +36,25 @@ object ReadPlaybackCommandContract {
             ACTION_LOAD_MANIFEST,
             Bundle.EMPTY
         )
+
+    val changeVoiceCommand: SessionCommand
+        get() = SessionCommand(
+            ACTION_CHANGE_VOICE,
+            Bundle.EMPTY
+        )
+
+    fun encodeChangeVoice(
+        voiceId: String
+    ): Bundle = Bundle().apply {
+        putString(EXTRA_VOICE_ID, voiceId)
+    }
+
+    fun decodeChangeVoice(
+        args: Bundle
+    ): String? =
+        args.getString(EXTRA_VOICE_ID)
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
 
     fun encodeLoadManifestHandoff(
         handoffId: String
