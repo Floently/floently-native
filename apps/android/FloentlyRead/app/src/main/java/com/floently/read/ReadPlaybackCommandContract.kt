@@ -5,10 +5,21 @@ import androidx.media3.session.SessionCommand
 import org.json.JSONArray
 import org.json.JSONObject
 
+data class ReadManifestLoadRequest(
+    val manifest: ReadingManifestV1,
+    val voiceId: String,
+    val autoplay: Boolean,
+    val startingAt: Int
+)
+
 object ReadPlaybackCommandContract {
     const val ACTION_LOAD_DOCUMENT =
         "com.floently.read.command.LOAD_DOCUMENT"
+    const val ACTION_LOAD_MANIFEST =
+        "com.floently.read.command.LOAD_MANIFEST"
+
     const val EXTRA_DOCUMENT_JSON = "document_json"
+    const val EXTRA_MANIFEST_HANDOFF_ID = "manifest_handoff_id"
     const val EXTRA_AUTOPLAY = "autoplay"
 
     val loadDocumentCommand: SessionCommand
@@ -16,6 +27,34 @@ object ReadPlaybackCommandContract {
             ACTION_LOAD_DOCUMENT,
             Bundle.EMPTY
         )
+
+    val loadManifestCommand: SessionCommand
+        get() = SessionCommand(
+            ACTION_LOAD_MANIFEST,
+            Bundle.EMPTY
+        )
+
+    fun encodeLoadManifestHandoff(
+        handoffId: String
+    ): Bundle = Bundle().apply {
+        putString(
+            EXTRA_MANIFEST_HANDOFF_ID,
+            handoffId
+        )
+    }
+
+    fun decodeLoadManifest(
+        args: Bundle
+    ): ReadManifestLoadRequest? {
+        val handoffId = args.getString(
+            EXTRA_MANIFEST_HANDOFF_ID
+        )?.takeIf { it.isNotBlank() }
+            ?: return null
+
+        return ReadManifestHandoffRegistry.take(
+            handoffId
+        )
+    }
 
     fun encodeLoadDocument(
         document: ReadPlayableDocument,
