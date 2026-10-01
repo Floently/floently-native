@@ -1,7 +1,11 @@
 package com.floently.read
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
@@ -14,21 +18,39 @@ import com.google.common.util.concurrent.ListenableFuture
 /**
  * Application-level owner for Floently Read media playback.
  *
- * This service intentionally lives outside Activity/Compose lifecycles so
- * navigation cannot destroy the player. The next phase will place a
- * document-timeline adapter in front of ExoPlayer so MediaSession exposes one
- * logical document duration/position while hidden TTS segments remain private.
+ * The service owns physical playback, logical document virtualization and
+ * durable resume state outside Activity/Compose lifecycles.
  */
 @OptIn(UnstableApi::class)
 class ReadPlaybackService : MediaSessionService() {
     private var physicalPlayer: ExoPlayer? = null
     private var documentPlayer: ReadDocumentTimelinePlayer? = null
     private var mediaSession: MediaSession? = null
+    private var resumeStore: ReadPlaybackResumeStore? = null
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val persistResumeRunnable = object : Runnable {
+        override fun run() {
+            persistResume()
+            mainHandler.postDelayed(this, 5_000L)
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
 
+        resumeStore = ReadPlaybackResumeStore(this)
+
+        val speechAudioAttributes = AudioAttributes.Builder()
+            .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
+            .setUsage(C.USAGE_MEDIA)
+            .build()
+
         val exoPlayer = ExoPlayer.Builder(this)
+            .setAudioAttributes(
+                speechAudioAttributes,
+                true
+            )
             .setHandleAudioBecomingNoisy(true)
             .build()
 
@@ -112,10 +134,20 @@ class ReadPlaybackService : MediaSessionService() {
                             )
 
                         val (document, autoplay) = decoded
+                        val saved = resumeStore?.load(
+                            documentId = document.id,
+                            revisionId = document.revisionId
+                        )
+
                         player.loadDocument(
                             value = document,
-                            autoplay = autoplay
+                            autoplay = autoplay,
+                            resumePositionMs =
+                                saved?.logicalTimeMs,
+                            resumeSpeed =
+                                saved?.playbackSpeed
                         )
+                        persistResume()
 
                         return Futures.immediateFuture(
                             SessionResult(
@@ -126,6 +158,11 @@ class ReadPlaybackService : MediaSessionService() {
                 }
             )
             .build()
+
+        mainHandler.postDelayed(
+            persistResumeRunnable,
+            5_000L
+        )
     }
 
     override fun onGetSession(
@@ -133,6 +170,9 @@ class ReadPlaybackService : MediaSessionService() {
     ): MediaSession? = mediaSession
 
     override fun onDestroy() {
+        persistResume()
+        mainHandler.removeCallbacks(persistResumeRunnable)
+
         mediaSession?.release()
         mediaSession = null
 
@@ -141,7 +181,40 @@ class ReadPlaybackService : MediaSessionService() {
 
         physicalPlayer?.release()
         physicalPlayer = null
+        resumeStore = null
 
         super.onDestroy()
+    }
+
+    private fun persistResume() {
+        val player = documentPlayer ?: return
+        val document = player.currentDocument() ?: return
+        val store = resumeStore ?: return
+
+        if (player.isDocumentEnded()) {
+            store.remove(
+                documentId = document.id,
+                revisionId = document.revisionId
+            )
+            return
+        }
+
+        store.save(
+            ReadPlaybackResumeSnapshot(
+                documentId = document.id,
+                revisionId = document.revisionId,
+                logicalTimeMs =
+                    player.currentLogicalPositionMs()
+                        .coerceIn(
+                            0L,
+                            document.logicalDurationMs
+                                .coerceAtLeast(0L)
+                        ),
+                playbackSpeed =
+                    player.currentPlaybackSpeed(),
+                updatedAtMs =
+                    System.currentTimeMillis()
+            )
+        )
     }
 }
