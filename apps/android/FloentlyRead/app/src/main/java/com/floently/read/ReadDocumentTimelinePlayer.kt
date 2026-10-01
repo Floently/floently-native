@@ -128,9 +128,6 @@ class ReadDocumentTimelinePlayer(
         document = value
 
         val items = value.segments.mapNotNull { segment ->
-            val uri = segment.audioUri?.takeIf { it.isNotBlank() }
-                ?: return@mapNotNull null
-
             mediaItemForSegment(
                 segment = segment,
                 document = value
