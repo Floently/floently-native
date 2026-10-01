@@ -5,17 +5,80 @@ import androidx.media3.session.SessionCommand
 import org.json.JSONArray
 import org.json.JSONObject
 
+data class ReadManifestLoadRequest(
+    val manifest: ReadingManifestV1,
+    val voiceId: String,
+    val autoplay: Boolean,
+    val startingAt: Int
+)
+
 object ReadPlaybackCommandContract {
     const val ACTION_LOAD_DOCUMENT =
         "com.floently.read.command.LOAD_DOCUMENT"
+    const val ACTION_LOAD_MANIFEST =
+        "com.floently.read.command.LOAD_MANIFEST"
+
     const val EXTRA_DOCUMENT_JSON = "document_json"
+    const val EXTRA_MANIFEST_JSON = "manifest_json"
+    const val EXTRA_VOICE_ID = "voice_id"
     const val EXTRA_AUTOPLAY = "autoplay"
+    const val EXTRA_STARTING_AT = "starting_at"
 
     val loadDocumentCommand: SessionCommand
         get() = SessionCommand(
             ACTION_LOAD_DOCUMENT,
             Bundle.EMPTY
         )
+
+    val loadManifestCommand: SessionCommand
+        get() = SessionCommand(
+            ACTION_LOAD_MANIFEST,
+            Bundle.EMPTY
+        )
+
+    fun encodeLoadManifest(
+        manifest: ReadingManifestV1,
+        voiceId: String,
+        autoplay: Boolean,
+        startingAt: Int
+    ): Bundle = Bundle().apply {
+        putString(
+            EXTRA_MANIFEST_JSON,
+            ReadingManifestV1Codec.encode(manifest)
+        )
+        putString(EXTRA_VOICE_ID, voiceId)
+        putBoolean(EXTRA_AUTOPLAY, autoplay)
+        putInt(EXTRA_STARTING_AT, startingAt)
+    }
+
+    fun decodeLoadManifest(
+        args: Bundle
+    ): ReadManifestLoadRequest? {
+        val rawManifest = args.getString(EXTRA_MANIFEST_JSON)
+            ?.takeIf { it.isNotBlank() }
+            ?: return null
+        val voiceId = args.getString(EXTRA_VOICE_ID)
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: return null
+
+        val manifest = runCatching {
+            ReadingManifestV1Codec.decode(rawManifest)
+        }.getOrNull() ?: return null
+
+        return ReadManifestLoadRequest(
+            manifest = manifest,
+            voiceId = voiceId,
+            autoplay = args.getBoolean(
+                EXTRA_AUTOPLAY,
+                false
+            ),
+            startingAt = args.getInt(
+                EXTRA_STARTING_AT,
+                0
+            ).coerceAtLeast(0)
+        )
+    }
 
     fun encodeLoadDocument(
         document: ReadPlayableDocument,
