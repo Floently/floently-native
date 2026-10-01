@@ -637,6 +637,7 @@ class ReadPlaybackService : MediaSessionService() {
         }
 
         val cursor = player.currentLogicalPositionMs()
+        val previousVoice = activeVoiceId
         activeVoiceId = newVoice
 
         refillJob?.cancel()
@@ -715,6 +716,15 @@ class ReadPlaybackService : MediaSessionService() {
                     "Voice change synthesis failed",
                     error
                 )
+                activeVoiceId = previousVoice
+
+                if (
+                    previousVoice != null
+                    && activeManifest === manifest
+                ) {
+                    handleProgressiveSeek(cursor)
+                }
+
                 if (!future.isDone) {
                     future.set(
                         SessionResult(
