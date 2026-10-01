@@ -21,6 +21,7 @@ export interface ContentProject {
   status: string;
   sourceType: string;
   sourceUrl?: string | null;
+  language?: string | null;
   textHash: string;
   wordCount: number;
   characterCount: number;
@@ -84,6 +85,7 @@ export function normalizeProject(value: unknown): ContentProject | null {
     status: readString(value.status, "ready"),
     sourceType: readString(value.sourceType, "text"),
     sourceUrl: typeof value.sourceUrl === "string" ? value.sourceUrl : null,
+    language: typeof value.language === "string" ? value.language : null,
     textHash: readString(value.textHash),
     wordCount: readNumber(value.wordCount),
     characterCount: readNumber(value.characterCount),
