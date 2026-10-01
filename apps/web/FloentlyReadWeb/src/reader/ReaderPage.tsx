@@ -59,13 +59,14 @@ export function ReaderPage({
     );
   }
 
-  const requestedDocumentReady =
+  const activeManifest =
     documentSnapshot.status === "ready"
-    && documentSnapshot.manifest
     && (
       !documentId
       || documentSnapshot.documentId === documentId
-    );
+    )
+      ? documentSnapshot.manifest
+      : null;
 
   return (
     <section className="product-page reader-page">
