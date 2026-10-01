@@ -1,65 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-
-declare global {
-  interface Window {
-    google?: {
-      accounts?: {
-        id?: {
-          initialize: (options: {
-            client_id: string;
-            callback: (response: { credential?: string }) => void;
-          }) => void;
-          renderButton: (
-            parent: HTMLElement,
-            options: {
-              type: "standard";
-              theme: "outline";
-              size: "large";
-              shape: "pill";
-              text: "continue_with";
-              width: number;
-            },
-          ) => void;
-        };
-      };
-    };
-  }
-}
-
-let googleScriptPromise: Promise<void> | null = null;
-
-function loadGoogleIdentity(): Promise<void> {
-  if (window.google?.accounts?.id) return Promise.resolve();
-  if (googleScriptPromise) return googleScriptPromise;
-
-  googleScriptPromise = new Promise((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>(
-      'script[data-floently-google-identity="true"]',
-    );
-
-    if (existing) {
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener(
-        "error",
-        () => reject(new Error("Google sign in could not be loaded.")),
-        { once: true },
-      );
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    script.dataset.floentlyGoogleIdentity = "true";
-    script.onload = () => resolve();
-    script.onerror = () =>
-      reject(new Error("Google sign in could not be loaded."));
-    document.head.append(script);
-  });
-
-  return googleScriptPromise;
-}
+import { ensureGoogleIdentityScript } from "./googleIdentity";
 
 export function GoogleSignInButton({
   clientId,
@@ -76,7 +16,7 @@ export function GoogleSignInButton({
   useEffect(() => {
     let cancelled = false;
 
-    void loadGoogleIdentity()
+    void ensureGoogleIdentityScript()
       .then(() => {
         if (cancelled || !targetRef.current) return;
         const identity = window.google?.accounts?.id;
