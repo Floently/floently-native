@@ -336,6 +336,36 @@ export function BrowserWorkspace({
   ]);
 
   useEffect(() => {
+    if (!cloud || !started || cloud.getDisplayTransport() === "vnc") {
+      return;
+    }
+
+    const transport = cloud.getTransport();
+    const viewport = transport?.appliedViewport;
+    if (!transport || !viewport) return;
+
+    if (!active) {
+      setMediaReady(false);
+    }
+
+    void transport
+      .requestViewport({
+        cssWidth: viewport.cssWidth,
+        cssHeight: viewport.cssHeight,
+        devicePixelRatio: viewport.effectiveDpr,
+        visibility: active ? "visible" : "hidden",
+      })
+      .then(() => {
+        setMediaReady(cloud.isMediaReady());
+      })
+      .catch(() => {
+        if (active) {
+          setError("Secure browser viewport update failed.");
+        }
+      });
+  }, [active, cloud, started, snapshot?.connectivity]);
+
+  useEffect(() => {
     return () => {
       gestureUnbindRef.current?.();
       gestureUnbindRef.current = null;
