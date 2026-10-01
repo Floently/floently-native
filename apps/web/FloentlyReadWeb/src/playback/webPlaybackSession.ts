@@ -391,29 +391,52 @@ export class WebPlaybackSession {
     return this.seek(this.snapshot.elapsedMs + deltaMs);
   }
 
-  setSpeed(speed: number): void {
+  setSpeed(
+    speed: number,
+    options: { updatePreference?: boolean } = {},
+  ): void {
     const bounded = clamp(
       safeNumber(speed, this.snapshot.speed),
       MIN_SPEED,
       MAX_SPEED,
     );
-    this.preferredSpeed = bounded;
+    if (options.updatePreference !== false) {
+      this.preferredSpeed = bounded;
+    }
     this.engine.setRate(bounded);
     this.replaceSnapshot({ speed: bounded });
     this.persistResumeState(true);
     this.publishMediaState();
   }
 
-  async setVoice(voiceId: string): Promise<void> {
+  async setVoice(
+    voiceId: string,
+    options: {
+      updatePreference?: boolean;
+      language?: string | null;
+    } = {},
+  ): Promise<void> {
     const normalized = voiceId.trim();
-    if (!normalized || normalized === this.snapshot.voiceId) return;
+    if (!normalized || normalized === this.snapshot.voiceId) {
+      if (normalized && options.updatePreference !== false) {
+        this.preferredVoiceId = normalized;
+        this.preferredVoiceLanguage = baseLanguage(
+          options.language ?? this.manifest?.language,
+        );
+      }
+      return;
+    }
 
     const wasPlaying = this.wantsPlayback
       || this.snapshot.status === "playing";
     const cursor = this.snapshot.elapsedMs;
 
-    this.preferredVoiceId = normalized;
-    this.preferredVoiceLanguage = this.manifest?.language ?? null;
+    if (options.updatePreference !== false) {
+      this.preferredVoiceId = normalized;
+      this.preferredVoiceLanguage = baseLanguage(
+        options.language ?? this.manifest?.language,
+      );
+    }
 
     this.generation += 1;
     this.wantsPlayback = wasPlaying;
