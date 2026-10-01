@@ -5,12 +5,16 @@ import { LibraryPage } from "../library/LibraryPage";
 import { PreferencesPage } from "../preferences/PreferencesPage";
 import { BrowserWorkspace } from "../browser-v2/BrowserWorkspace";
 import { ReaderPage } from "../reader/ReaderPage";
+import { ProjectReaderPage } from "../reader/ProjectReaderPage";
+import { VisualDocumentPage } from "../reader/VisualDocumentPage";
 import { ReadRuntimeProvider } from "../runtime/ReadRuntimeContext";
 import { navigateTo } from "../routing/navigation";
 import { AppShell } from "./AppShell";
 
-function decodeDocumentId(pathname: string): string | null {
-  const prefix = "/app/reader/";
+function decodeRouteId(
+  pathname: string,
+  prefix: string,
+): string | null {
   if (!pathname.startsWith(prefix)) return null;
 
   const raw = pathname.slice(prefix.length).split("/")[0];
@@ -21,6 +25,10 @@ function decodeDocumentId(pathname: string): string | null {
   } catch {
     return raw;
   }
+}
+
+function decodeDocumentId(pathname: string): string | null {
+  return decodeRouteId(pathname, "/app/reader/");
 }
 
 function RouteContent({ pathname }: { pathname: string }) {
@@ -38,6 +46,20 @@ function RouteContent({ pathname }: { pathname: string }) {
 
   if (pathname.startsWith("/app/reader/")) {
     return <ReaderPage documentId={decodeDocumentId(pathname)} />;
+  }
+
+  if (pathname.startsWith("/app/project/")) {
+    const projectId = decodeRouteId(pathname, "/app/project/");
+    return projectId
+      ? <ProjectReaderPage projectId={projectId} />
+      : null;
+  }
+
+  if (pathname.startsWith("/app/document/")) {
+    const localDocumentId = decodeRouteId(pathname, "/app/document/");
+    return localDocumentId
+      ? <VisualDocumentPage localDocumentId={localDocumentId} />
+      : null;
   }
 
   if (pathname === "/app/browser") {
