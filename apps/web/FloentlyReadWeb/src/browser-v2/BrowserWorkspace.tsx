@@ -129,6 +129,7 @@ export function BrowserWorkspace({
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const vncTargetRef = useRef<HTMLDivElement | null>(null);
   const vncDisplayRef = useRef<BrowserV2VncDisplay | null>(null);
+  const vncAutoRetryRef = useRef(0);
   const mobileKeyboardRef = useRef<HTMLTextAreaElement | null>(null);
   const gestureUnbindRef = useRef<(() => void) | null>(null);
   const startedRef = useRef(false);
@@ -224,6 +225,7 @@ export function BrowserWorkspace({
             }
           },
           () => {
+            vncAutoRetryRef.current = 0;
             cloud.setVncFrameReady(true);
             setMediaReady(cloud.isMediaReady());
           },
@@ -234,6 +236,9 @@ export function BrowserWorkspace({
 
       const display = vncDisplayRef.current;
       if (!display.frameReady && vncStage !== "DISPLAY_CONNECTING") {
+        if (vncAutoRetryRef.current >= 3) return;
+        vncAutoRetryRef.current += 1;
+
         try {
           const grant =
             cloud.getVncDisplayGrant()
@@ -373,6 +378,7 @@ export function BrowserWorkspace({
     gestureUnbindRef.current = null;
     vncDisplayRef.current?.close();
     vncDisplayRef.current = null;
+    vncAutoRetryRef.current = 0;
     setVncStage(null);
 
     try {
@@ -788,6 +794,7 @@ export function BrowserWorkspace({
                 type="button"
                 onClick={() => {
                   setError(null);
+                  vncAutoRetryRef.current = 0;
                   setVncStage(null);
                   void attachDisplay();
                 }}
