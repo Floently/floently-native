@@ -121,7 +121,23 @@ export function createProjectProgressWriter(
       const key = progressKey(projectId, progress);
 
       if (pending?.key === key) return;
-      if (key === activeKey) return;
+
+      if (key === activeKey) {
+        // The latest playback state may legitimately return to the cursor that
+        // is still being written (for example, a backward seek). If a newer
+        // pending cursor exists, replace it with this final state. Once the
+        // active write succeeds, startNext() will recognize the identical key
+        // as already saved and avoid a redundant second PUT.
+        if (pending) {
+          pending = {
+            projectId,
+            progress,
+            key,
+          };
+        }
+        return;
+      }
+
       if (key === lastSavedKey && !inFlight) return;
 
       pending = {
