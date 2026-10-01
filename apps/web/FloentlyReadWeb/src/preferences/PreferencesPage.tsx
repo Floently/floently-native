@@ -12,12 +12,13 @@ export function PreferencesPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!runtime?.tts.listVoices) return;
+    const listVoices = runtime?.tts.listVoices?.bind(runtime.tts);
+    if (!listVoices) return;
+
     let cancelled = false;
     setVoiceStatus("loading");
 
-    void runtime.tts
-      .listVoices()
+    void listVoices()
       .then((catalog) => {
         if (cancelled) return;
         setVoices(catalog.voices);
