@@ -7,6 +7,15 @@ function normalizeBaseUrl(value: string): string {
   return value.replace(/\/+$/, "");
 }
 
+export function buildApiUrl(path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const generalApiBase = normalizeBaseUrl(envValue("VITE_API_URL"));
+
+  return generalApiBase
+    ? `${generalApiBase}${normalizedPath}`
+    : normalizedPath;
+}
+
 export function buildAuthApiUrl(path: string): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const hostname =
