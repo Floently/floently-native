@@ -8,12 +8,15 @@ import {
 } from "react";
 import {
   handoffOriginalDocument,
-  linkLocalOriginalToProject,
 } from "../content/localOriginalDocuments";
 import {
-  ingestFileIntoReader,
+  beginFileIngestion,
   ingestTextIntoReader,
 } from "../content/unifiedDocumentIngestion";
+import {
+  attachSemanticProjectToLocalOriginal,
+  trackCanonicalIngestionForLocalOriginal,
+} from "../content/originalSemanticAttachment";
 import { navigateTo } from "../routing/navigation";
 import { useAuthState } from "../auth/useAuthState";
 import {
@@ -128,19 +131,16 @@ export function ImportPage() {
         );
 
         // Extraction is deliberately background work after the original is
-        // already visible. The original page view is not blocked by OCR/parser
-        // latency or a cold backend.
-        void ingestFileIntoReader(file)
-          .then(async (result) => {
-            await linkLocalOriginalToProject(
-              local.id,
-              result.project.id,
-            );
-          })
-          .catch(() => {
-            // The original PDF remains usable even if the semantic layer is
-            // temporarily unavailable. The visual source is authoritative.
-          });
+        // already visible. It is not subject to the foreground fast-open
+        // budget, and retries on the visual document page join this same
+        // in-flight attachment instead of creating a duplicate upload.
+        void attachSemanticProjectToLocalOriginal(
+          local.id,
+          file,
+        ).catch(() => {
+          // The original PDF remains usable even if the semantic layer is
+          // temporarily unavailable. The visual source is authoritative.
+        });
 
         return;
       } catch (reason) {
@@ -155,9 +155,10 @@ export function ImportPage() {
     }
 
     setStatus(`Adding ${file.name} to your synced library…`);
+    const ingestion = beginFileIngestion(file);
 
     try {
-      const result = await ingestFileIntoReader(file);
+      const result = await ingestion.immediate;
       navigateTo(
         `/app/project/${encodeURIComponent(result.project.id)}`,
       );
@@ -166,6 +167,18 @@ export function ImportPage() {
       // This mirrors production's fail-open visual-source behavior.
       try {
         const local = await handoffOriginalDocument(file);
+
+        // The canonical request may simply have exceeded the first-open
+        // budget. Keep that exact request alive and attach its eventual
+        // project to the preserved original.
+        void trackCanonicalIngestionForLocalOriginal(
+          local.id,
+          ingestion.canonical,
+        ).catch(() => {
+          // A true extraction failure leaves the original usable and the
+          // visual document page exposes an explicit retry.
+        });
+
         navigateTo(
           `/app/document/${encodeURIComponent(local.id)}`,
         );
