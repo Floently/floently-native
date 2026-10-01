@@ -141,6 +141,7 @@ export function BrowserWorkspace({
     y: number;
   } | null>(null);
   const touchPointRef = useRef<ViewportPoint | null>(null);
+  const handledImportTargetRef = useRef<string | null>(null);
 
   const [snapshot, setSnapshot] = useState<BrowserSnapshot | null>(
     () => cloud?.getBrowserSnapshot() ?? null,
@@ -160,6 +161,14 @@ export function BrowserWorkspace({
   const [voices, setVoices] = useState<ReadVoice[]>([]);
   const [voicesLoading, setVoicesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const requestedImportTarget =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("url")
+      : null;
+  const requestedAutostart =
+    typeof window !== "undefined"
+      && new URLSearchParams(window.location.search).get("autostart") === "1";
 
   const tab = useMemo(() => activeTab(snapshot), [snapshot]);
   const ownsBrowserPlayback = Boolean(
@@ -363,6 +372,43 @@ export function BrowserWorkspace({
     snapshot?.connectivity,
     snapshot?.lifecycle,
     started,
+  ]);
+
+  useEffect(() => {
+    if (!active) {
+      handledImportTargetRef.current = null;
+    }
+  }, [active]);
+
+  useEffect(() => {
+    if (
+      !active
+      || !mediaReady
+      || !tab
+      || !requestedAutostart
+      || !requestedImportTarget
+      || handledImportTargetRef.current === requestedImportTarget
+    ) {
+      return;
+    }
+
+    const target = normalizeTarget(requestedImportTarget);
+    if (!target) return;
+
+    if (tab.url === target) {
+      handledImportTargetRef.current = requestedImportTarget;
+      return;
+    }
+
+    handledImportTargetRef.current = requestedImportTarget;
+    void navigate(target);
+  }, [
+    active,
+    mediaReady,
+    requestedAutostart,
+    requestedImportTarget,
+    tab?.id,
+    tab?.url,
   ]);
 
   useEffect(() => {

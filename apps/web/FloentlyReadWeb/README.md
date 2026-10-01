@@ -86,11 +86,79 @@ That means:
 
 The physical audio element never becomes the public document clock. Physical asset time is mapped into the logical document timeline.
 
-## Browser-local library
+## Synced project library and source-preserving ingestion
 
-The first product-shell slice stores imported text/Markdown in IndexedDB. This is intentionally an isolation layer while the production cloud library/project API is migrated.
+The next-generation web app now separates **semantic Read projects** from
+**original visual files** instead of forcing every source through one storage
+or rendering model.
 
-PDF, EPUB, Office documents, web capture and cloud synchronization are **not** being faked through this store. They should arrive as dedicated ingestion/persistence adapters behind the same document/session interfaces.
+Cloud project contract:
+
+- `GET /api/v1/projects`
+- `GET /api/v1/projects/:id`
+- `POST /api/v1/projects/from-text`
+- `POST /api/v1/projects/upload`
+- `PUT /api/v1/projects/:id/progress`
+- `DELETE /api/v1/projects/:id`
+
+Requests reuse the current Floently bearer token and browser-default same-origin
+cookie behavior. Cross-origin project APIs are not forced into credentialed CORS
+mode.
+
+Supported ingestion paths in this slice:
+
+- **PDF** — original blob is persisted in IndexedDB and opened immediately as
+  the browser-rendered PDF pages. Cloud extraction runs behind that visible
+  source and links its project id back to the original local record.
+- **DOCX / EPUB / HTML / Markdown / TXT** — canonical upload/extraction creates
+  a synced project and opens the Rust/WASM Reader. If canonical extraction
+  cannot finish, the original file is still preserved as a local fallback.
+- **Pasted text** — saved directly as a synced cloud project.
+- **Website** — never copied into a document project; it is handed to the live
+  Browser V2 route and opened only inside remote Chromium.
+- **Google Drive** — Picker selection/download produces the same browser
+  `File` abstraction, then follows the identical rules above.
+
+Large files use the production fast-open policy: at 1.5 MB and above,
+the **foreground wait** has an 1800 ms first-open budget so a cold extractor
+cannot prevent the original source from appearing. The canonical upload/
+extraction promise is not cancelled by that budget; it continues behind the
+visible original and links its project when it completes. The original-document
+surface can retry the reading layer, and a retry joins the same in-flight task
+when one still exists.
+
+File fingerprint reuse samples the first/last 64 KiB plus stable metadata and
+uses SHA-256 when available. The original visual-file store computes a full
+hash in the background but always merges that result into the latest record so
+a concurrently attached cloud `projectId` cannot be overwritten. Background
+dedupe never deletes the id of an already-open original; Library collapses
+duplicate identities for presentation, while explicit removal deletes the full
+local duplicate identity set. PDF Blob identity is kept stable while semantic
+metadata is polled so the visible PDF does not reload every polling interval.
+
+Synced reading progress stores canonical character/scalar position, logical
+segment position, percentage, playback speed and voice. Resume maps the saved
+character offset back through the Rust scalar→logical-time function instead of
+guessing from paragraphs.
+
+Google Drive deployment also requires:
+
+- `VITE_GOOGLE_DRIVE_API_KEY`
+- `VITE_GOOGLE_DRIVE_APP_ID`
+
+The OAuth client id remains owned by the shared Floently auth backend and the
+same Google Identity Services loader is shared between login and Drive.
+
+## Browser-local migration library
+
+The first product-shell slice stored text/Markdown in IndexedDB before the
+synced project API was ported. That store remains readable only as a migration
+compatibility layer so documents imported during early development are not
+silently lost.
+
+New text/file imports use the synced project API described above. Original
+visual files use the dedicated original-document IndexedDB store, and websites
+use Browser V2.
 
 ## Reader virtualization
 
