@@ -44,6 +44,18 @@ describe("local original document hash completion", () => {
     });
   });
 
+  it("can inherit an existing semantic project when a full hash matches", () => {
+    const completed = withCompletedContentHash(
+      record({ projectId: null }),
+      "same-content",
+      400,
+      "project-from-existing-copy",
+    );
+
+    expect(completed.projectId).toBe("project-from-existing-copy");
+    expect(completed.contentHash).toBe("same-content");
+  });
+
   it("does not mutate the current record", () => {
     const current = record();
     const completed = withCompletedContentHash(
