@@ -63,45 +63,75 @@ function writeStored(key: string, value: string | null): void {
   }
 }
 
-function readThemePreference(): ReadThemePreference {
-  const value = readStored(THEME_STORAGE_KEY);
+export function normalizeReadThemePreference(
+  value: unknown,
+): ReadThemePreference {
   return value === "light" || value === "dark" || value === "system"
     ? value
     : "dark";
 }
 
-function readHighlightMode(): ReadHighlightMode {
-  const value = readStored(HIGHLIGHT_STORAGE_KEY);
+function readThemePreference(): ReadThemePreference {
+  return normalizeReadThemePreference(readStored(THEME_STORAGE_KEY));
+}
+
+export function normalizeReadHighlightMode(
+  value: unknown,
+): ReadHighlightMode {
   return value === "none" || value === "sentence" || value === "word"
     ? value
     : "sentence";
 }
 
-function readReaderFont(): ReadReaderFont {
-  return readStored(READER_FONT_STORAGE_KEY) === "sans"
-    ? "sans"
-    : "serif";
+function readHighlightMode(): ReadHighlightMode {
+  return normalizeReadHighlightMode(readStored(HIGHLIGHT_STORAGE_KEY));
 }
 
-function readReaderTextSize(): ReadReaderTextSize {
-  const value = readStored(READER_TEXT_SIZE_STORAGE_KEY);
+export function normalizeReadReaderFont(
+  value: unknown,
+): ReadReaderFont {
+  return value === "sans" ? "sans" : "serif";
+}
+
+function readReaderFont(): ReadReaderFont {
+  return normalizeReadReaderFont(readStored(READER_FONT_STORAGE_KEY));
+}
+
+export function normalizeReadReaderTextSize(
+  value: unknown,
+): ReadReaderTextSize {
   return value === "compact" || value === "large"
     ? value
     : "comfortable";
 }
 
-function readReaderLineSpacing(): ReadReaderLineSpacing {
-  const value = readStored(READER_LINE_SPACING_STORAGE_KEY);
+function readReaderTextSize(): ReadReaderTextSize {
+  return normalizeReadReaderTextSize(readStored(READER_TEXT_SIZE_STORAGE_KEY));
+}
+
+export function normalizeReadReaderLineSpacing(
+  value: unknown,
+): ReadReaderLineSpacing {
   return value === "compact" || value === "spacious"
     ? value
     : "comfortable";
 }
 
-function readSpeed(): number {
-  const value = Number(readStored(SPEED_STORAGE_KEY));
-  return Number.isFinite(value) && value >= 0.5 && value <= 3
-    ? value
+function readReaderLineSpacing(): ReadReaderLineSpacing {
+  return normalizeReadReaderLineSpacing(
+    readStored(READER_LINE_SPACING_STORAGE_KEY),
+  );
+}
+
+export function normalizeReadSpeed(value: unknown): number {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric >= 0.5 && numeric <= 3
+    ? numeric
     : 1;
+}
+
+function readSpeed(): number {
+  return normalizeReadSpeed(readStored(SPEED_STORAGE_KEY));
 }
 
 function systemPrefersDark(): boolean {
