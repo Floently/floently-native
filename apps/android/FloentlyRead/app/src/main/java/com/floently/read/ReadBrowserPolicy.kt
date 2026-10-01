@@ -58,10 +58,22 @@ object ReadBrowserPolicy {
 
     val selectionExtractionJavaScript: String = """
         (() => {
-          const selection = window.getSelection();
-          return String(selection ? selection.toString() : "")
+          const normalize = (value) => String(value || "")
             .replace(/\s+/g, " ")
             .trim();
+          const selection = window.getSelection();
+          const text = normalize(
+            selection ? selection.toString() : ""
+          );
+          return JSON.stringify({
+            title: normalize(document.title),
+            url: location.href,
+            language: normalize(
+              document.documentElement?.lang || ""
+            ),
+            text,
+            wordCount: text ? text.split(/\s+/).length : 0
+          });
         })();
     """.trimIndent()
 
@@ -136,7 +148,16 @@ object ReadBrowserPolicy {
             .filter(Boolean)
             .sort((a, b) => b.score - a.score);
 
-          return scored[0] ? scored[0].text : "";
+          const text = scored[0] ? scored[0].text : "";
+          return JSON.stringify({
+            title: normalize(document.title),
+            url: location.href,
+            language: normalize(
+              document.documentElement?.lang || ""
+            ),
+            text,
+            wordCount: text ? text.split(/\s+/).length : 0
+          });
         })();
     """.trimIndent()
 
