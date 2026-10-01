@@ -25,7 +25,9 @@ describe("project progress writer", () => {
   });
 
   it("serializes writes and coalesces cursor movement to the newest snapshot", async () => {
-    let releaseFirst: (() => void) | null = null;
+    const firstWrite = {
+      release: () => undefined,
+    };
     const save = vi.fn(
       async (
         _projectId: string,
@@ -33,7 +35,7 @@ describe("project progress writer", () => {
       ) => {
         if (progress.currentCharacterOffset === 10) {
           await new Promise<void>((resolve) => {
-            releaseFirst = resolve;
+            firstWrite.release = resolve;
           });
         }
       },
@@ -47,7 +49,7 @@ describe("project progress writer", () => {
     await Promise.resolve();
     expect(save).toHaveBeenCalledTimes(1);
 
-    releaseFirst?.();
+    firstWrite.release();
     await writer.flush();
 
     expect(save).toHaveBeenCalledTimes(2);
@@ -56,7 +58,9 @@ describe("project progress writer", () => {
   });
 
   it("does not let an active duplicate replace a newer pending cursor", async () => {
-    let releaseFirst: (() => void) | null = null;
+    const firstWrite = {
+      release: () => undefined,
+    };
     const save = vi.fn(
       async (
         _projectId: string,
@@ -64,7 +68,7 @@ describe("project progress writer", () => {
       ) => {
         if (progress.currentCharacterOffset === 10) {
           await new Promise<void>((resolve) => {
-            releaseFirst = resolve;
+            firstWrite.release = resolve;
           });
         }
       },
@@ -76,7 +80,7 @@ describe("project progress writer", () => {
     writer.queue("p1", { currentCharacterOffset: 10 });
 
     await Promise.resolve();
-    releaseFirst?.();
+    firstWrite.release();
     await writer.flush();
 
     expect(save).toHaveBeenCalledTimes(2);
