@@ -110,6 +110,25 @@ function safeNumber(value: unknown, fallback: number): number {
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
+function baseLanguage(language: string | null | undefined): string | null {
+  const normalized = language?.trim().toLowerCase();
+  if (!normalized) return null;
+  return normalized.split("-")[0] || null;
+}
+
+function sameLanguage(
+  left: string | null | undefined,
+  right: string | null | undefined,
+): boolean {
+  const normalizedLeft = baseLanguage(left);
+  const normalizedRight = baseLanguage(right);
+  return Boolean(
+    normalizedLeft
+    && normalizedRight
+    && normalizedLeft === normalizedRight,
+  );
+}
+
 function scalarCursorForDescriptor(
   descriptor: ReadingSegmentDescriptor,
   elapsedMs: number,
@@ -175,6 +194,11 @@ export class WebPlaybackSession {
     cache?: ReadAudioCachePort;
     engineFactory?: ReadAudioEngineFactory;
     telemetry?: WebPlaybackTelemetrySink;
+    initialPreferences?: {
+      speed?: number;
+      voiceId?: string | null;
+      voiceLanguage?: string | null;
+    };
   }) {
     this.core = options.core;
     this.tts = options.tts;
@@ -194,6 +218,27 @@ export class WebPlaybackSession {
       ?? ((engineCallbacks) => new BrowserAudioEngine(engineCallbacks));
 
     this.engine = engineFactory(callbacks);
+
+    const initialSpeed = clamp(
+      safeNumber(options.initialPreferences?.speed, 1),
+      MIN_SPEED,
+      MAX_SPEED,
+    );
+    const initialVoiceLanguage =
+      baseLanguage(options.initialPreferences?.voiceLanguage);
+    const initialVoiceId =
+      options.initialPreferences?.voiceId?.trim()
+      || defaultVoiceIdForLanguage(initialVoiceLanguage ?? "en");
+
+    this.preferredSpeed = initialSpeed;
+    this.preferredVoiceId = initialVoiceId;
+    this.preferredVoiceLanguage = initialVoiceLanguage;
+    this.snapshot = {
+      ...this.snapshot,
+      speed: initialSpeed,
+      voiceId: initialVoiceId,
+    };
+    this.engine.setRate(initialSpeed);
 
     this.installMediaSessionHandlers();
   }
@@ -228,7 +273,10 @@ export class WebPlaybackSession {
       options.voiceId?.trim()
       || resume?.voiceId?.trim()
       || (
-        this.preferredVoiceLanguage === manifest.language
+        sameLanguage(
+          this.preferredVoiceLanguage,
+          manifest.language,
+        )
           ? this.preferredVoiceId
           : defaultVoiceIdForLanguage(manifest.language)
       );
