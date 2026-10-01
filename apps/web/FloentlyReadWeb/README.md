@@ -119,14 +119,22 @@ Supported ingestion paths in this slice:
 - **Google Drive** — Picker selection/download produces the same browser
   `File` abstraction, then follows the identical rules above.
 
-Large files use the production fast-open policy: at 1.5 MB and above, canonical
-cloud open/upload has an 1800 ms first-open budget so a cold extractor cannot
-prevent the original source from appearing.
+Large files use the production fast-open policy: at 1.5 MB and above,
+the **foreground wait** has an 1800 ms first-open budget so a cold extractor
+cannot prevent the original source from appearing. The canonical upload/
+extraction promise is not cancelled by that budget; it continues behind the
+visible original and links its project when it completes. The original-document
+surface can retry the reading layer, and a retry joins the same in-flight task
+when one still exists.
 
 File fingerprint reuse samples the first/last 64 KiB plus stable metadata and
 uses SHA-256 when available. The original visual-file store computes a full
 hash in the background but always merges that result into the latest record so
-a concurrently attached cloud `projectId` cannot be overwritten.
+a concurrently attached cloud `projectId` cannot be overwritten. Background
+dedupe never deletes the id of an already-open original; Library collapses
+duplicate identities for presentation, while explicit removal deletes the full
+local duplicate identity set. PDF Blob identity is kept stable while semantic
+metadata is polled so the visible PDF does not reload every polling interval.
 
 Synced reading progress stores canonical character/scalar position, logical
 segment position, percentage, playback speed and voice. Resume maps the saved
