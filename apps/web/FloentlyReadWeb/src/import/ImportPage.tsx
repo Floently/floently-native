@@ -51,10 +51,11 @@ function normalizeWebsiteInput(value: string): string {
   const raw = value.trim();
   if (!raw) return "";
 
-  if (/^https?:///i.test(raw)) {
+  const lower = raw.toLowerCase();
+  if (lower.startsWith("http://") || lower.startsWith("https://")) {
     try {
       const parsed = new URL(raw);
-      return ["http:", "https:"].includes(parsed.protocol)
+      return parsed.protocol === "http:" || parsed.protocol === "https:"
         ? parsed.href
         : "";
     } catch {
@@ -62,7 +63,7 @@ function normalizeWebsiteInput(value: string): string {
     }
   }
 
-  if (/^[w.-]+.[a-z]{2,}(?:[/:?#]|$)/i.test(raw)) {
+  if (!raw.includes(" ") && raw.includes(".")) {
     try {
       return new URL(`https://${raw}`).href;
     } catch {
@@ -75,8 +76,8 @@ function normalizeWebsiteInput(value: string): string {
 
 function titleForText(text: string): string {
   const firstLine = text
-    .split(/?
-/)
+    .replaceAll("\r", "")
+    .split("\n")
     .map((line) => line.trim())
     .find(Boolean);
 
