@@ -158,6 +158,14 @@ class ReadDocumentTimelinePlayer(
         invalidateState()
     }
 
+    fun prepareForAudioReplacement() {
+        resumeAfterProgressiveSeek =
+            physicalPlayer.playWhenReady
+        physicalPlayer.pause()
+        physicalPlayer.clearMediaItems()
+        invalidateState()
+    }
+
     fun clearDocument() {
         document = null
         resumeAfterProgressiveSeek = false
