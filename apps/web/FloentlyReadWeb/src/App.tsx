@@ -6,10 +6,8 @@ import {
   type KeyboardEvent,
   type PointerEvent,
 } from "react";
-import type {
-  ReadingManifestSummary,
-  SegmentPosition,
-} from "./readCore.types";
+import type { ReadingManifestSummary } from "./readCore.types";
+import { ReaderSurface } from "./reader/ReaderSurface";
 import { useWebPlaybackSnapshot } from "./playback/useWebPlaybackSnapshot";
 import type {
   WebPlaybackSession,
@@ -54,9 +52,6 @@ export default function App() {
   const [text, setText] = useState(SAMPLE_TEXT);
   const [title, setTitle] = useState("Floently Read sample");
   const [manifest, setManifest] = useState<ReadingManifestSummary | null>(null);
-  const [progress, setProgress] = useState(0.35);
-  const [position, setPosition] = useState<SegmentPosition | null>(null);
-  const [prefetch, setPrefetch] = useState<number[]>([]);
   const [status, setStatus] = useState("Ready to index");
   const [error, setError] = useState<string | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
@@ -73,40 +68,6 @@ export default function App() {
     };
   }, [runtime]);
 
-  useEffect(() => {
-    if (!runtime || !manifest) {
-      setPosition(null);
-      setPrefetch([]);
-      return;
-    }
-
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        const mapped = await runtime.core.positionForProgress(
-          manifest.handle,
-          progress,
-        );
-        const indexes = await runtime.core.prefetchIndexes(
-          manifest.handle,
-          mapped.index,
-        );
-
-        if (cancelled) return;
-        setPosition(mapped);
-        setPrefetch(indexes);
-      } catch (reason) {
-        if (cancelled) return;
-        setError(reason instanceof Error ? reason.message : String(reason));
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [runtime, manifest, progress]);
-
   function releaseCurrentDocument(): void {
     const handle = activeManifestHandle.current;
 
@@ -119,8 +80,6 @@ export default function App() {
 
     activeManifestHandle.current = null;
     setManifest(null);
-    setPosition(null);
-    setPrefetch([]);
   }
 
   async function buildManifest(): Promise<void> {
@@ -155,7 +114,6 @@ export default function App() {
 
       activeManifestHandle.current = result.handle;
       setManifest(result);
-      setProgress(0);
       runtime.playback.loadDocument(result);
 
       setStatus(
@@ -186,10 +144,6 @@ export default function App() {
       event.target.value = "";
     }
   }
-
-  const logicalElapsedMs = manifest
-    ? manifest.estimatedSourceDurationMs * progress
-    : 0;
 
   return (
     <main className="page-shell">
@@ -291,69 +245,21 @@ export default function App() {
                   value={formatDuration(manifest.estimatedSourceDurationMs)}
                 />
                 <Metric
-                  label="Segments"
-                  value={manifest.segmentCount.toLocaleString()}
+                  label="Core"
+                  value="Rust/WASM"
                 />
                 <Metric
-                  label="Rust build"
+                  label="Index build"
                   value={`${manifest.buildMs.toFixed(1)} ms`}
                 />
               </div>
 
-              <div className="timeline-card">
-                <div className="timeline-header">
-                  <span>Logical document position</span>
-                  <strong>{Math.round(progress * 100)}%</strong>
-                </div>
-                <input
-                  className="progress-slider"
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.001"
-                  value={progress}
-                  onChange={(event) => setProgress(Number(event.target.value))}
-                />
-                <div className="timeline-footer">
-                  <span>{formatDuration(logicalElapsedMs)}</span>
-                  <span>{formatDuration(manifest.estimatedSourceDurationMs)}</span>
-                </div>
-              </div>
-
               <div className="mapping-card">
                 <p>
-                  Rust maps that public position to hidden transport data
-                  without changing the public media identity.
+                  The document is exposed as one continuous reading timeline.
+                  Internal transport regions stay hidden from the public media
+                  identity while the nearby reading surface is loaded on demand.
                 </p>
-                <p>
-                  Diagnostic mapping: segment{" "}
-                  <strong>{position?.index ?? "…"}</strong>
-                  {position
-                    ? ` at ${Math.round(position.fraction * 100)}%`
-                    : ""}
-                  . Prefetch:{" "}
-                  <strong>
-                    {prefetch.length > 0
-                      ? prefetch.map((index) => `#${index}`).join(", ")
-                      : "none needed"}
-                  </strong>
-                </p>
-              </div>
-
-              <div className="segment-list">
-                <div className="segment-list-header">
-                  <span>First hidden transport units</span>
-                  <span>diagnostics only</span>
-                </div>
-                {manifest.firstSegments.map((segment) => (
-                  <div className="segment-row" key={segment.id}>
-                    <span>#{segment.index}</span>
-                    <span>{segment.wordCount} words</span>
-                    <span>
-                      {formatDuration(segment.estimatedSourceDurationMs)}
-                    </span>
-                  </div>
-                ))}
               </div>
             </>
           ) : (
@@ -367,6 +273,15 @@ export default function App() {
           )}
         </aside>
       </section>
+
+      {runtime && manifest ? (
+        <ReaderSurface
+          core={runtime.core}
+          manifest={manifest}
+          session={runtime.playback}
+          snapshot={playback}
+        />
+      ) : null}
 
       {runtime && manifest ? (
         <PlaybackDock

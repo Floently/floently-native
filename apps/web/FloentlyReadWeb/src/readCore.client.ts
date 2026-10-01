@@ -5,6 +5,7 @@ import type {
   ReadCoreResponse,
   ReadingManifestSummary,
   ReadingSegmentDescriptor,
+  ReadingSegmentWindow,
   SegmentPosition,
 } from "./readCore.types";
 
@@ -89,6 +90,17 @@ export class ReadCoreWorkerClient {
     return this.request<ReadingSegmentDescriptor>({
       type: "getSegment",
       payload: { handle, index },
+    });
+  }
+
+  getSegmentWindow(
+    handle: string,
+    centerIndex: number,
+    radius = 2,
+  ): Promise<ReadingSegmentWindow> {
+    return this.request<ReadingSegmentWindow>({
+      type: "getSegmentWindow",
+      payload: { handle, centerIndex, radius },
     });
   }
 

@@ -337,6 +337,30 @@ describe("WebPlaybackSession document-wide contract", () => {
     session.destroy();
   });
 
+  it("exposes the active reading region and canonical scalar cursor", async () => {
+    const { session, engine } = createHarness();
+
+    session.loadDocument(makeManifest());
+    await session.play();
+    engine.emitTime(5_000, 10_000);
+
+    expect(session.getSnapshot()).toMatchObject({
+      activeSegmentIndex: 0,
+      canonicalScalarCursor: 50,
+      elapsedMs: 5_000,
+    });
+
+    await session.seek(15_000);
+
+    expect(session.getSnapshot()).toMatchObject({
+      activeSegmentIndex: 1,
+      canonicalScalarCursor: 150,
+      elapsedMs: 15_000,
+    });
+
+    session.destroy();
+  });
+
   it("keeps speed across hidden segment transitions", async () => {
     const { session, tts, engine } = createHarness();
 
