@@ -183,7 +183,9 @@ export async function updateContentProjectProgress(
   projectId: string,
   progress: Partial<ProjectProgress>,
 ): Promise<ProjectProgress | null> {
-  const result = await requestApiJson<{ progress?: unknown }>(
+  const result = await requestApiJson<
+    { progress?: unknown } | undefined
+  >(
     buildApiUrl(
       `/api/v1/projects/${encodeURIComponent(projectId)}/progress`,
     ),
@@ -198,5 +200,5 @@ export async function updateContentProjectProgress(
     "Could not save reading progress.",
   );
 
-  return normalizeProjectProgress(result.progress);
+  return normalizeProjectProgress(result?.progress);
 }
