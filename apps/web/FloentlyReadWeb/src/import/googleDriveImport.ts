@@ -17,26 +17,17 @@ type GoogleTokenClient = {
 
 export type GoogleDriveImportStatusHandler = (message: string) => void;
 
-const GOOGLE_DRIVE_MEDIA_IMPORT_MAX_BYTES = 15 * 1024 * 1024;
 const GOOGLE_DRIVE_PICKER_MIME_TYPES = [
   "application/pdf",
+  "application/epub+zip",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "text/plain",
   "text/markdown",
+  "text/html",
   "text/csv",
   "application/vnd.google-apps.document",
   "application/vnd.google-apps.presentation",
   "application/vnd.google-apps.spreadsheet",
-  "audio/mpeg",
-  "audio/mp3",
-  "audio/mp4",
-  "audio/wav",
-  "audio/x-wav",
-  "audio/webm",
-  "audio/ogg",
-  "video/mp4",
-  "video/webm",
-  "video/quicktime",
-  "video/x-matroska",
 ].join(",");
 
 
@@ -52,19 +43,7 @@ function formatBytes(value: number): string {
   return `${Math.max(1, Math.round(value / 1024))} KB`;
 }
 
-function isMediaMimeType(mimeType: string): boolean {
-  const normalized = mimeType.toLowerCase();
-  return normalized.startsWith("audio/") || normalized.startsWith("video/");
-}
 
-function parseDriveSize(value: string | undefined): number | null {
-  if (!value) {
-    return null;
-  }
-
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
-}
 
 async function downloadDriveFileById(
   fileId: string,
@@ -73,14 +52,6 @@ async function downloadDriveFileById(
 ): Promise<File> {
   options.onStatus?.("Checking Google Drive file...");
   const metadata = await fetchDriveMetadata(fileId, accessToken);
-  const sizeBytes = parseDriveSize(metadata.size);
-
-  if (isMediaMimeType(metadata.mimeType) && sizeBytes !== null && sizeBytes > GOOGLE_DRIVE_MEDIA_IMPORT_MAX_BYTES) {
-    throw new Error(
-      `${metadata.name} is ${formatBytes(sizeBytes)}. Media imports are currently limited to ${formatBytes(GOOGLE_DRIVE_MEDIA_IMPORT_MAX_BYTES)}. Please choose a smaller audio or video file first.`,
-    );
-  }
-
   options.onStatus?.(`Downloading ${metadata.name} from Google Drive...`);
   const file = await fetchDriveFile(metadata, accessToken);
   options.onStatus?.(`Downloaded ${file.name} (${formatBytes(file.size)}). Preparing import...`);
