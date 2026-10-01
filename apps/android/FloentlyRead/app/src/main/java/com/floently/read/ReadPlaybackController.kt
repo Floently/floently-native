@@ -53,6 +53,14 @@ class ReadPlaybackController(
     private var controller: MediaController? = null
     private var pendingDocumentLoad:
         Pair<ReadPlayableDocument, Boolean>? = null
+    private var pendingManifestLoad: ReadManifestLoadRequest? = null
+
+    private val refreshRunnable = object : Runnable {
+        override fun run() {
+            controller?.let(::publish)
+            mainHandler.postDelayed(this, 500L)
+        }
+    }
 
     private val listener = object : Player.Listener {
         override fun onEvents(
@@ -71,6 +79,16 @@ class ReadPlaybackController(
                         controller = value
                         value.addListener(listener)
                         publish(value)
+                        mainHandler.removeCallbacks(refreshRunnable)
+                        mainHandler.post(refreshRunnable)
+
+                        pendingManifestLoad?.let { request ->
+                            pendingManifestLoad = null
+                            sendManifestLoad(
+                                value,
+                                request
+                            )
+                        }
 
                         pendingDocumentLoad?.let { (document, autoplay) ->
                             pendingDocumentLoad = null
@@ -91,10 +109,41 @@ class ReadPlaybackController(
         )
     }
 
+    fun loadManifest(
+        manifest: ReadingManifestV1,
+        voiceId: String,
+        autoplay: Boolean = false,
+        startingAt: Int = 0
+    ) {
+        val request = ReadManifestLoadRequest(
+            manifest = manifest,
+            voiceId = voiceId,
+            autoplay = autoplay,
+            startingAt = startingAt.coerceAtLeast(0)
+        )
+        pendingDocumentLoad = null
+
+        val player = controller
+        if (player == null) {
+            pendingManifestLoad = request
+            snapshot = snapshot.copy(
+                status = "Connecting player"
+            )
+            return
+        }
+
+        sendManifestLoad(
+            player,
+            request
+        )
+    }
+
     fun loadDocument(
         document: ReadPlayableDocument,
         autoplay: Boolean = false
     ) {
+        pendingManifestLoad = null
+
         val player = controller
         if (player == null) {
             pendingDocumentLoad = document to autoplay
@@ -146,6 +195,9 @@ class ReadPlaybackController(
 
     fun release() {
         pendingDocumentLoad = null
+        pendingManifestLoad = null
+        mainHandler.removeCallbacks(refreshRunnable)
+
         val value = controller
         if (value != null) {
             value.removeListener(listener)
@@ -154,6 +206,49 @@ class ReadPlaybackController(
         } else {
             MediaController.releaseFuture(future)
         }
+    }
+
+    private fun sendManifestLoad(
+        player: MediaController,
+        request: ReadManifestLoadRequest
+    ) {
+        snapshot = snapshot.copy(
+            status = "Loading document"
+        )
+
+        val resultFuture = player.sendCustomCommand(
+            ReadPlaybackCommandContract.loadManifestCommand,
+            ReadPlaybackCommandContract.encodeLoadManifest(
+                manifest = request.manifest,
+                voiceId = request.voiceId,
+                autoplay = request.autoplay,
+                startingAt = request.startingAt
+            )
+        )
+
+        resultFuture.addListener(
+            {
+                runCatching { resultFuture.get() }
+                    .onSuccess { result ->
+                        if (
+                            result.resultCode
+                            != SessionResult.RESULT_SUCCESS
+                        ) {
+                            snapshot = snapshot.copy(
+                                status = "Document load failed"
+                            )
+                        } else {
+                            publish(player)
+                        }
+                    }
+                    .onFailure {
+                        snapshot = snapshot.copy(
+                            status = "Document load failed"
+                        )
+                    }
+            },
+            mainExecutor
+        )
     }
 
     private fun sendDocumentLoad(
@@ -200,13 +295,24 @@ class ReadPlaybackController(
 
     private fun publish(player: Player) {
         val duration = resolvedDuration(player)
+        val position = player.currentPosition
+            .coerceIn(
+                0L,
+                duration.coerceAtLeast(0L)
+            )
         val buffered = player.bufferedPosition
             .takeIf { it != C.TIME_UNSET }
             ?.coerceIn(0L, duration.coerceAtLeast(0L))
-            ?: 0L
+            ?: position
+
+        val prefixExhausted =
+            player.playbackState == Player.STATE_ENDED
+                && position + 1L < duration
 
         val status = when {
             player.playbackState == Player.STATE_BUFFERING ->
+                "Preparing audio"
+            prefixExhausted ->
                 "Preparing audio"
             player.playbackState == Player.STATE_ENDED ->
                 "Finished"
@@ -229,8 +335,7 @@ class ReadPlaybackController(
                 ?: "Floently Read",
             status = status,
             isPlaying = player.isPlaying || player.playWhenReady,
-            positionMs = player.currentPosition
-                .coerceIn(0L, duration.coerceAtLeast(0L)),
+            positionMs = position,
             durationMs = duration,
             bufferedPositionMs = buffered,
             speed = player.playbackParameters.speed
