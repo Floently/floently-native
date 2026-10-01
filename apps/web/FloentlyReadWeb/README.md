@@ -118,6 +118,8 @@ Key invariants:
 - one app-owned remote-browser client survives internal `/app/*` navigation;
 - the WebRTC/noVNC display stays mounted with that client so Browser → Library → Browser does not allocate a second Chromium session;
 - one app-owned `WebPlaybackSession` owns TTS, speed, voice, seek, cache and Media Session;
+- selected speed remains app/session-owned across browser page/document replacement; same-language selected voice is preserved as well;
+- automatic noVNC display retries are bounded; a person can explicitly retry display or replace the secure browser session afterward;
 - page sentence anchors are mapped to canonical Unicode scalar ranges;
 - playback's canonical scalar cursor maps back to remote page highlighting;
 - Follow controls scrolling only; highlighting can remain active while Follow is off;
