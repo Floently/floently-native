@@ -12,8 +12,11 @@ on:
       - "shared/api-contracts/read/**"
       - "shared/read-core-rust/**"
       - "shared/read-core-wasm/**"
+      - "shared/read-core-native-ffi/**"
       - "apps/web/FloentlyReadWeb/**"
       - "scripts/build_read_web_wasm.sh"
+      - "scripts/build_read_native_core_ios.sh"
+      - "scripts/build_read_native_core_android.sh"
       - "docs/NEXT_APP_POLYGLOT_TECHNOLOGY_STANDARD.md"
       - "docs/SPEECHIFY_ARCHITECTURE_STUDY_20260930.md"
       - "docs/READ_MOBILE_BROWSER_COMPATIBILITY_0330.md"
@@ -34,8 +37,11 @@ on:
       - "shared/api-contracts/read/**"
       - "shared/read-core-rust/**"
       - "shared/read-core-wasm/**"
+      - "shared/read-core-native-ffi/**"
       - "apps/web/FloentlyReadWeb/**"
       - "scripts/build_read_web_wasm.sh"
+      - "scripts/build_read_native_core_ios.sh"
+      - "scripts/build_read_native_core_android.sh"
       - "docs/NEXT_APP_POLYGLOT_TECHNOLOGY_STANDARD.md"
       - "docs/SPEECHIFY_ARCHITECTURE_STUDY_20260930.md"
       - "docs/READ_MOBILE_BROWSER_COMPATIBILITY_0330.md"
@@ -67,6 +73,8 @@ jobs:
         run: cargo test --manifest-path shared/read-core-rust/Cargo.toml
       - name: Test Rust WebAssembly adapter
         run: cargo test --manifest-path shared/read-core-wasm/Cargo.toml
+      - name: Test native Rust FFI adapter
+        run: cargo test --manifest-path shared/read-core-native-ffi/Cargo.toml
 
   read-web-wasm:
     runs-on: ubuntu-latest
@@ -118,7 +126,12 @@ jobs:
           test -n "$SDKMANAGER" && test -x "$SDKMANAGER"
           echo "Using SDK manager: $SDKMANAGER"
           yes | "$SDKMANAGER" --licenses >/dev/null || true
-          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018"
+          echo "ANDROID_NDK_HOME=$SDK_ROOT/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked --version 3.5.4
+      - name: Build shared Rust Read Core for Android
+        run: bash scripts/build_read_native_core_android.sh
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
@@ -140,6 +153,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install XcodeGen
         run: brew install xcodegen
+      - name: Build shared Rust Read Core for Apple platforms
+        run: bash scripts/build_read_native_core_ios.sh
       - name: Generate Floently Read Xcode project
         working-directory: apps/ios/FloentlyRead
         run: xcodegen generate
