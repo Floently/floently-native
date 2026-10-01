@@ -106,6 +106,31 @@ The virtualized reader:
 
 Word-level highlighting is intentionally deferred until backend timing payloads are verified and can be mapped to canonical scalar offsets without guessing.
 
+## Browser V2 migration
+
+The next-generation Browser route reuses the hardened authenticated remote-browser transport from the current production Browser V2 while moving reading semantics onto the polyglot Read runtime.
+
+Key invariants:
+
+- the rendered remote Chromium page remains the primary visible surface;
+- pressing **Read page** never swaps the page for extracted text;
+- DOM extraction is private semantic input to the Rust/WASM document model;
+- one app-owned remote-browser client survives internal `/app/*` navigation;
+- the WebRTC/noVNC display stays mounted with that client so Browser → Library → Browser does not allocate a second Chromium session;
+- one app-owned `WebPlaybackSession` owns TTS, speed, voice, seek, cache and Media Session;
+- page sentence anchors are mapped to canonical Unicode scalar ranges;
+- playback's canonical scalar cursor maps back to remote page highlighting;
+- Follow controls scrolling only; highlighting can remain active while Follow is off;
+- Read From Here revalidates the current private page before seeking;
+- page revision/navigation invalidates browser-owned speech immediately;
+- stale browser events cannot stop a different library document that later owns playback.
+
+The Browser V2 transport remains one owner-authenticated channel. Display tickets stay out of URLs/query strings, remote viewport revisions are validated, and mobile noVNC touch is sent through the existing owner input channel.
+
+Runtime variable:
+
+- `VITE_BROWSER_V2_ORIGIN` — authenticated Browser V2 HTTPS/WSS ingress. Required when the deployed Read host cannot proxy the Browser V2 WebSocket/session path.
+
 ## TTS and audio cache
 
 The provider adapter currently reuses the existing Read Render contract:
