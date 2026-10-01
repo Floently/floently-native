@@ -1,4 +1,5 @@
 import {
+  useMemo,
   useRef,
   useState,
   type ChangeEvent,
@@ -6,94 +7,234 @@ import {
   type FormEvent,
 } from "react";
 import {
-  saveLibraryDocument,
-  type LibraryDocument,
-} from "../library/documentRepository";
+  handoffOriginalDocument,
+  linkLocalOriginalToProject,
+} from "../content/localOriginalDocuments";
+import {
+  ingestFileIntoReader,
+  ingestTextIntoReader,
+} from "../content/unifiedDocumentIngestion";
 import { navigateTo } from "../routing/navigation";
 
-function sourceTypeForFile(fileName: string): LibraryDocument["sourceType"] {
-  return fileName.toLowerCase().endsWith(".md") ? "markdown" : "text";
+type ImportSource = "device" | "paste" | "website";
+
+const READ_FILE_ACCEPT = [
+  ".pdf",
+  ".docx",
+  ".epub",
+  ".html",
+  ".htm",
+  ".md",
+  ".markdown",
+  ".txt",
+  "application/pdf",
+  "application/epub+zip",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/html",
+  "text/markdown",
+  "text/plain",
+].join(",");
+
+function isPdfFile(file: File): boolean {
+  return (
+    file.type === "application/pdf"
+    || file.name.toLowerCase().endsWith(".pdf")
+  );
 }
 
-function titleForFile(fileName: string): string {
-  return fileName.replace(/\.(txt|md|markdown)$/i, "") || fileName;
+function normalizeWebsiteInput(value: string): string {
+  const raw = value.trim();
+  if (!raw) return "";
+
+  if (/^https?:///i.test(raw)) {
+    try {
+      const parsed = new URL(raw);
+      return ["http:", "https:"].includes(parsed.protocol)
+        ? parsed.href
+        : "";
+    } catch {
+      return "";
+    }
+  }
+
+  if (/^[w.-]+.[a-z]{2,}(?:[/:?#]|$)/i.test(raw)) {
+    try {
+      return new URL(`https://${raw}`).href;
+    } catch {
+      return "";
+    }
+  }
+
+  return `https://www.google.com/search?q=${encodeURIComponent(raw)}`;
+}
+
+function titleForText(text: string): string {
+  const firstLine = text
+    .split(/?
+/)
+    .map((line) => line.trim())
+    .find(Boolean);
+
+  if (!firstLine) return "Pasted text";
+  return firstLine.length <= 80
+    ? firstLine
+    : `${firstLine.slice(0, 77)}…`;
 }
 
 export function ImportPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [title, setTitle] = useState("");
-  const [language, setLanguage] = useState("en");
-  const [text, setText] = useState("");
-  const [sourceType, setSourceType] =
-    useState<LibraryDocument["sourceType"]>("text");
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [source, setSource] = useState<ImportSource>("device");
+  const [pasteText, setPasteText] = useState("");
+  const [website, setWebsite] = useState("");
+  const [dragging, setDragging] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function acceptFile(file: File) {
-    try {
-      setError(null);
+  const sourceDescription = useMemo(() => {
+    if (source === "paste") {
+      return "Paste text and save it as a synced Read project.";
+    }
+    if (source === "website") {
+      return "Open the real page in Floently Browser V2. It will not be copied into a text view.";
+    }
 
-      if (
-        !file.name.toLowerCase().endsWith(".txt")
-        && !file.name.toLowerCase().endsWith(".md")
-        && !file.name.toLowerCase().endsWith(".markdown")
-        && !file.type.startsWith("text/")
-      ) {
-        throw new Error(
-          "This migration slice currently accepts text and Markdown files.",
+    return "PDFs keep their original pages. DOCX, EPUB, HTML, Markdown and TXT use the synced document pipeline.";
+  }, [source]);
+
+  async function openFile(file: File): Promise<void> {
+    if (!file || busy) return;
+
+    setBusy(true);
+    setError(null);
+
+    if (isPdfFile(file)) {
+      try {
+        setStatus("Opening the original PDF pages…");
+        const local = await handoffOriginalDocument(file);
+
+        navigateTo(
+          `/app/document/${encodeURIComponent(local.id)}`,
+        );
+
+        // Extraction is deliberately background work after the original is
+        // already visible. The original page view is not blocked by OCR/parser
+        // latency or a cold backend.
+        void ingestFileIntoReader(file)
+          .then(async (result) => {
+            await linkLocalOriginalToProject(
+              local.id,
+              result.project.id,
+            );
+          })
+          .catch(() => {
+            // The original PDF remains usable even if the semantic layer is
+            // temporarily unavailable. The visual source is authoritative.
+          });
+
+        return;
+      } catch (reason) {
+        setBusy(false);
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : "Could not open this PDF.",
+        );
+        return;
+      }
+    }
+
+    setStatus(`Adding ${file.name} to your synced library…`);
+
+    try {
+      const result = await ingestFileIntoReader(file);
+      navigateTo(
+        `/app/project/${encodeURIComponent(result.project.id)}`,
+      );
+    } catch (reason) {
+      // Preserve the original file when canonical extraction cannot finish.
+      // This mirrors production's fail-open visual-source behavior.
+      try {
+        const local = await handoffOriginalDocument(file);
+        navigateTo(
+          `/app/document/${encodeURIComponent(local.id)}`,
+        );
+      } catch {
+        setBusy(false);
+        setStatus(null);
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : "Could not import this document.",
         );
       }
-
-      const value = await file.text();
-      setText(value);
-      setTitle(titleForFile(file.name));
-      setSourceType(sourceTypeForFile(file.name));
-      setFileName(file.name);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
     }
   }
 
-  function onFileChange(event: ChangeEvent<HTMLInputElement>) {
+  function onFileChange(event: ChangeEvent<HTMLInputElement>): void {
     const file = event.target.files?.[0];
-    if (file) void acceptFile(file);
+    if (file) void openFile(file);
     event.target.value = "";
   }
 
-  function onDrop(event: DragEvent<HTMLDivElement>) {
+  function onDrop(event: DragEvent<HTMLDivElement>): void {
     event.preventDefault();
+    setDragging(false);
+
     const file = event.dataTransfer.files?.[0];
-    if (file) void acceptFile(file);
+    if (file) {
+      setSource("device");
+      void openFile(file);
+    }
   }
 
-  async function save(event: FormEvent<HTMLFormElement>) {
+  async function savePastedText(
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> {
     event.preventDefault();
+    const text = pasteText.trim();
+    if (!text || busy) return;
 
-    if (!text.trim()) {
-      setError("Add or import document text first.");
+    setBusy(true);
+    setError(null);
+    setStatus("Saving text to your synced library…");
+
+    try {
+      const result = await ingestTextIntoReader(text, {
+        title: titleForText(text),
+        sourceType: "text",
+      });
+      navigateTo(
+        `/app/project/${encodeURIComponent(result.project.id)}`,
+      );
+    } catch (reason) {
+      setBusy(false);
+      setStatus(null);
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not save this text.",
+      );
+    }
+  }
+
+  function openWebsite(
+    event: FormEvent<HTMLFormElement>,
+  ): void {
+    event.preventDefault();
+    const target = normalizeWebsiteInput(website);
+
+    if (!target) {
+      setError("Enter a valid web address or search.");
       return;
     }
 
-    setIsSaving(true);
-    setError(null);
+    const params = new URLSearchParams({
+      url: target,
+      autostart: "1",
+    });
 
-    try {
-      const document = await saveLibraryDocument({
-        title,
-        language,
-        text,
-        sourceType,
-      });
-
-      navigateTo(
-        `/app/reader/${encodeURIComponent(document.id)}`,
-      );
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
-    } finally {
-      setIsSaving(false);
-    }
+    navigateTo(`/app/browser?${params.toString()}`);
   }
 
   return (
@@ -103,94 +244,136 @@ export function ImportPage() {
           <p className="eyebrow">Add reading material</p>
           <h1>Import</h1>
           <p>
-            Text and Markdown are wired end-to-end in this first product shell.
-            Additional file and web adapters can plug into the same document
-            contract without changing the reader.
+            PDFs keep their original pages. Websites keep their live page.
+            Floently adds a semantic reading layer without replacing the source
+            you opened.
           </p>
         </div>
       </header>
 
-      <form className="import-layout" onSubmit={save}>
+      <div className="import-source-tabs" role="tablist" aria-label="Import source">
+        {([
+          ["device", "Device"],
+          ["paste", "Paste text"],
+          ["website", "Website"],
+        ] as const).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={source === id}
+            className={source === id ? "active" : ""}
+            onClick={() => {
+              setSource(id);
+              setError(null);
+              setStatus(null);
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <p className="import-source-description">{sourceDescription}</p>
+
+      {source === "device" ? (
         <div
-          className="import-dropzone"
+          className={
+            dragging
+              ? "import-dropzone import-dropzone-active"
+              : "import-dropzone"
+          }
+          onDragEnter={(event) => {
+            event.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={(event) => {
+            if (event.currentTarget === event.target) {
+              setDragging(false);
+            }
+          }}
           onDragOver={(event) => event.preventDefault()}
           onDrop={onDrop}
         >
           <span className="import-drop-icon" aria-hidden="true">↥</span>
-          <h2>Drop a text or Markdown file</h2>
+          <h2>{dragging ? "Drop to open" : "Drop a document here"}</h2>
           <p>
-            {fileName
-              ? `${fileName} is loaded and ready to review.`
-              : "Or choose a file from this device."}
+            PDF · DOCX · EPUB · HTML · Markdown · TXT
           </p>
           <button
             type="button"
-            className="card-secondary"
+            className="page-primary-action"
+            disabled={busy}
             onClick={() => fileInputRef.current?.click()}
           >
-            Choose file
+            {busy ? "Opening…" : "Choose document"}
           </button>
           <input
             ref={fileInputRef}
             className="visually-hidden"
             type="file"
-            accept=".txt,.md,.markdown,text/plain,text/markdown"
+            accept={READ_FILE_ACCEPT}
             onChange={onFileChange}
           />
         </div>
+      ) : null}
 
-        <div className="import-editor-card">
+      {source === "paste" ? (
+        <form className="import-editor-card import-single-card" onSubmit={savePastedText}>
           <label>
-            Document title
-            <input
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="Untitled document"
-            />
-          </label>
-
-          <label>
-            Reading language
-            <select
-              value={language}
-              onChange={(event) => setLanguage(event.target.value)}
-            >
-              <option value="en">English</option>
-              <option value="fi">Finnish</option>
-              <option value="sv">Swedish</option>
-              <option value="de">German</option>
-              <option value="fr">French</option>
-              <option value="es">Spanish</option>
-              <option value="auto">Auto detect</option>
-            </select>
-          </label>
-
-          <label>
-            Document text
+            Text
             <textarea
-              value={text}
-              onChange={(event) => {
-                setText(event.target.value);
-                if (!fileName) setSourceType("text");
-              }}
+              value={pasteText}
+              onChange={(event) => setPasteText(event.target.value)}
               placeholder="Paste the text you want to read…"
+              autoFocus
             />
           </label>
-
           <div className="import-editor-footer">
-            <span>{text.length.toLocaleString()} characters</span>
+            <span>{pasteText.length.toLocaleString()} characters</span>
             <button
               type="submit"
               className="page-primary-action"
-              disabled={isSaving || !text.trim()}
+              disabled={busy || !pasteText.trim()}
             >
-              {isSaving ? "Saving…" : "Save and open reader"}
+              {busy ? "Saving…" : "Save and read"}
             </button>
           </div>
+        </form>
+      ) : null}
 
-          {error ? <p className="page-error" role="alert">{error}</p> : null}
-        </div>
-      </form>
+      {source === "website" ? (
+        <form className="import-editor-card import-single-card" onSubmit={openWebsite}>
+          <label>
+            Website address or search
+            <input
+              type="text"
+              inputMode="url"
+              value={website}
+              onChange={(event) => setWebsite(event.target.value)}
+              placeholder="example.com/article or search terms"
+              autoFocus
+            />
+          </label>
+          <div className="import-editor-footer">
+            <span>The site opens inside the authenticated live browser.</span>
+            <button
+              type="submit"
+              className="page-primary-action"
+              disabled={!website.trim()}
+            >
+              Open live page
+            </button>
+          </div>
+        </form>
+      ) : null}
+
+      {status ? (
+        <p className="import-status" role="status">{status}</p>
+      ) : null}
+      {error ? (
+        <p className="page-error" role="alert">{error}</p>
+      ) : null}
     </section>
   );
 }
