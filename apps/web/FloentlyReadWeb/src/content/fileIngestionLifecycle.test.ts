@@ -8,27 +8,19 @@ const mocks = vi.hoisted(() => ({
   getContentProject: vi.fn(),
 }));
 
-const {
-  uploadContentProject,
-  fingerprintDocumentFile,
-  getProjectForFileFingerprint,
-  rememberProjectForFileFingerprint,
-  getContentProject,
-} = mocks;
-
 vi.mock("./documentUploadApi", () => ({
-  uploadContentProject,
+  uploadContentProject: mocks.uploadContentProject,
 }));
 
 vi.mock("./documentFingerprintStore", () => ({
-  fingerprintDocumentFile,
-  getProjectForFileFingerprint,
-  rememberProjectForFileFingerprint,
+  fingerprintDocumentFile: mocks.fingerprintDocumentFile,
+  getProjectForFileFingerprint: mocks.getProjectForFileFingerprint,
+  rememberProjectForFileFingerprint: mocks.rememberProjectForFileFingerprint,
 }));
 
 vi.mock("./projectApi", () => ({
   createProjectFromText: vi.fn(),
-  getContentProject,
+  getContentProject: mocks.getContentProject,
 }));
 
 import {
@@ -59,8 +51,8 @@ describe("file ingestion lifecycle", () => {
   beforeEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
-    fingerprintDocumentFile.mockResolvedValue(null);
-    getProjectForFileFingerprint.mockReturnValue(null);
+    mocks.fingerprintDocumentFile.mockResolvedValue(null);
+    mocks.getProjectForFileFingerprint.mockReturnValue(null);
   });
 
   it("lets canonical extraction outlive the foreground fast-open budget", async () => {
@@ -71,7 +63,7 @@ describe("file ingestion lifecycle", () => {
     } = {
       resolve: () => {},
     };
-    uploadContentProject.mockReturnValue(
+    mocks.uploadContentProject.mockReturnValue(
       new Promise((resolve) => {
         upload.resolve = resolve;
       }),
@@ -109,7 +101,7 @@ describe("file ingestion lifecycle", () => {
     } = {
       resolve: () => {},
     };
-    uploadContentProject.mockReturnValue(
+    mocks.uploadContentProject.mockReturnValue(
       new Promise((resolve) => {
         upload.resolve = resolve;
       }),
