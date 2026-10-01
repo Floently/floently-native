@@ -299,8 +299,11 @@ export async function handoffOriginalDocument(
       return;
     }
 
+    const latest = await getLocalOriginalDocument(record.id);
+    if (!latest) return;
+
     await putRecord({
-      ...record,
+      ...latest,
       contentHash: hash,
       updatedAt: Date.now(),
     });
