@@ -39,6 +39,8 @@ export interface WebPlaybackSnapshot {
   durationMs: number;
   elapsedMs: number;
   bufferedAheadMs: number;
+  activeSegmentIndex: number | null;
+  canonicalScalarCursor: number | null;
   speed: number;
   voiceId: string;
   error: string | null;
@@ -108,6 +110,29 @@ function safeNumber(value: unknown, fallback: number): number {
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
+function scalarCursorForDescriptor(
+  descriptor: ReadingSegmentDescriptor,
+  elapsedMs: number,
+): number {
+  const logicalDurationMs = Math.max(
+    1,
+    descriptor.logicalEndMs - descriptor.logicalStartMs,
+  );
+  const fraction = clamp(
+    (elapsedMs - descriptor.logicalStartMs) / logicalDurationMs,
+    0,
+    1,
+  );
+  const scalarSpan = Math.max(
+    0,
+    descriptor.scalarEnd - descriptor.scalarStart,
+  );
+
+  return Math.round(
+    descriptor.scalarStart + scalarSpan * fraction,
+  );
+}
+
 export class WebPlaybackSession {
   private readonly listeners = new Set<() => void>();
   private readonly core: ReadPlaybackCore;
@@ -134,6 +159,8 @@ export class WebPlaybackSession {
     durationMs: 0,
     elapsedMs: 0,
     bufferedAheadMs: 0,
+    activeSegmentIndex: null,
+    canonicalScalarCursor: null,
     speed: 1,
     voiceId: defaultVoiceIdForLanguage("en"),
     error: null,
@@ -215,6 +242,8 @@ export class WebPlaybackSession {
       durationMs: manifest.estimatedSourceDurationMs,
       elapsedMs,
       bufferedAheadMs: 0,
+      activeSegmentIndex: null,
+      canonicalScalarCursor: elapsedMs === 0 ? 0 : null,
       speed,
       voiceId,
       error: null,
@@ -244,6 +273,8 @@ export class WebPlaybackSession {
       durationMs: 0,
       elapsedMs: 0,
       bufferedAheadMs: 0,
+      activeSegmentIndex: null,
+      canonicalScalarCursor: null,
       error: null,
     });
     this.clearMediaSession(false);
@@ -366,6 +397,9 @@ export class WebPlaybackSession {
       this.replaceSnapshot({
         status: "ended",
         elapsedMs: manifest.estimatedSourceDurationMs,
+        activeSegmentIndex:
+          manifest.segmentCount > 0 ? manifest.segmentCount - 1 : null,
+        canonicalScalarCursor: manifest.textScalarLength,
       });
       this.persistResumeState(true);
       this.publishMediaState();
@@ -447,6 +481,11 @@ export class WebPlaybackSession {
       this.replaceSnapshot({
         status: autoplay ? "preparing" : "paused",
         elapsedMs: target,
+        activeSegmentIndex: runtime.descriptor.index,
+        canonicalScalarCursor: scalarCursorForDescriptor(
+          runtime.descriptor,
+          target,
+        ),
         error: null,
       });
       this.publishMediaState();
@@ -654,6 +693,11 @@ export class WebPlaybackSession {
 
     this.replaceSnapshot({
       elapsedMs,
+      activeSegmentIndex: active.descriptor.index,
+      canonicalScalarCursor: scalarCursorForDescriptor(
+        active.descriptor,
+        elapsedMs,
+      ),
       status:
         this.wantsPlayback && !this.engine.paused
           ? "playing"
@@ -683,6 +727,8 @@ export class WebPlaybackSession {
         status: "ended",
         elapsedMs: manifest.estimatedSourceDurationMs,
         bufferedAheadMs: 0,
+        activeSegmentIndex: active.descriptor.index,
+        canonicalScalarCursor: manifest.textScalarLength,
       });
       this.persistResumeState(true);
       this.publishMediaState();
