@@ -5,9 +5,13 @@ import {
 } from "../content/localOriginalDocuments";
 import {
   getContentProject,
-  updateContentProjectProgress,
   type ContentProject,
 } from "../content/projectApi";
+import {
+  createProjectProgressWriter,
+  projectProgressFromPlayback,
+  type ProjectProgressPayload,
+} from "../content/projectProgressWriter";
 import { useReadRuntime } from "../runtime/ReadRuntimeContext";
 import { useWebPlaybackSnapshot } from "../playback/useWebPlaybackSnapshot";
 import { navigateTo } from "../routing/navigation";
@@ -31,6 +35,18 @@ export function VisualDocumentPage({
   const [project, setProject] = useState<ContentProject | null>(null);
   const [error, setError] = useState<string | null>(null);
   const lastSavedAtRef = useRef(0);
+  const latestProgressRef = useRef<{
+    projectId: string;
+    progress: ProjectProgressPayload;
+  } | null>(null);
+  const progressWriterRef = useRef<
+    ReturnType<typeof createProjectProgressWriter> | null
+  >(null);
+
+  if (!progressWriterRef.current) {
+    progressWriterRef.current = createProjectProgressWriter();
+  }
+  const progressWriter = progressWriterRef.current;
 
   const objectUrl = useMemo(
     () => record ? URL.createObjectURL(record.blob) : null,
@@ -86,6 +102,8 @@ export function VisualDocumentPage({
     if (!runtime || !record?.projectId) return;
 
     let cancelled = false;
+    lastSavedAtRef.current = 0;
+    latestProgressRef.current = null;
 
     void getContentProject(record.projectId)
       .then(async (nextProject) => {
@@ -141,6 +159,12 @@ export function VisualDocumentPage({
       return;
     }
 
+    const progress = projectProgressFromPlayback(playback);
+    latestProgressRef.current = {
+      projectId: project.id,
+      progress,
+    };
+
     const now = Date.now();
     const terminal =
       playback.status === "paused"
@@ -152,21 +176,7 @@ export function VisualDocumentPage({
     }
 
     lastSavedAtRef.current = now;
-    const percent =
-      playback.durationMs > 0
-        ? Math.min(
-            100,
-            Math.max(0, playback.elapsedMs / playback.durationMs * 100),
-          )
-        : 0;
-
-    void updateContentProjectProgress(project.id, {
-      currentSegmentIndex: playback.activeSegmentIndex ?? 0,
-      currentCharacterOffset: playback.canonicalScalarCursor ?? 0,
-      progressPercent: percent,
-      playbackRate: playback.speed,
-      voiceId: playback.voiceId,
-    }).catch(() => undefined);
+    progressWriter.queue(project.id, progress);
   }, [
     playback.activeSegmentIndex,
     playback.canonicalScalarCursor,
@@ -176,8 +186,33 @@ export function VisualDocumentPage({
     playback.speed,
     playback.status,
     playback.voiceId,
+    progressWriter,
     project,
   ]);
+
+  useEffect(() => {
+    const flushLatestProgress = () => {
+      const latest = latestProgressRef.current;
+      if (!latest) return;
+
+      progressWriter.queue(latest.projectId, latest.progress);
+      void progressWriter.flush();
+    };
+    const flushWhenHidden = () => {
+      if (document.visibilityState === "hidden") {
+        flushLatestProgress();
+      }
+    };
+
+    window.addEventListener("pagehide", flushLatestProgress);
+    document.addEventListener("visibilitychange", flushWhenHidden);
+
+    return () => {
+      window.removeEventListener("pagehide", flushLatestProgress);
+      document.removeEventListener("visibilitychange", flushWhenHidden);
+      flushLatestProgress();
+    };
+  }, [progressWriter]);
 
   const semanticReady = Boolean(
     project

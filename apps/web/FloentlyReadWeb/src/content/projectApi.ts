@@ -189,6 +189,7 @@ export async function updateContentProjectProgress(
     ),
     {
       method: "PUT",
+      keepalive: true,
       headers: buildAuthorizedHeaders({
         "Content-Type": "application/json",
       }),

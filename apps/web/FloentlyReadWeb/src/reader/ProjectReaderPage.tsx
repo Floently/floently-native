@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import {
   getContentProject,
-  updateContentProjectProgress,
   type ContentProject,
 } from "../content/projectApi";
+import {
+  createProjectProgressWriter,
+  projectProgressFromPlayback,
+  type ProjectProgressPayload,
+} from "../content/projectProgressWriter";
 import { useReadRuntime } from "../runtime/ReadRuntimeContext";
 import { useReadDocumentSnapshot } from "../runtime/useReadDocumentSnapshot";
 import { useWebPlaybackSnapshot } from "../playback/useWebPlaybackSnapshot";
@@ -27,12 +31,26 @@ export function ProjectReaderPage({
   const [error, setError] = useState<string | null>(null);
   const restoredProjectRef = useRef<string | null>(null);
   const lastSavedAtRef = useRef(0);
+  const latestProgressRef = useRef<{
+    projectId: string;
+    progress: ProjectProgressPayload;
+  } | null>(null);
+  const progressWriterRef = useRef<
+    ReturnType<typeof createProjectProgressWriter> | null
+  >(null);
+
+  if (!progressWriterRef.current) {
+    progressWriterRef.current = createProjectProgressWriter();
+  }
+  const progressWriter = progressWriterRef.current;
 
   useEffect(() => {
     if (!runtime || !projectId) return;
 
     let cancelled = false;
     restoredProjectRef.current = null;
+    lastSavedAtRef.current = 0;
+    latestProgressRef.current = null;
     setError(null);
 
     void getContentProject(projectId)
@@ -97,6 +115,12 @@ export function ProjectReaderPage({
       return;
     }
 
+    const progress = projectProgressFromPlayback(playback);
+    latestProgressRef.current = {
+      projectId: project.id,
+      progress,
+    };
+
     const now = Date.now();
     const terminal =
       playback.status === "paused"
@@ -108,17 +132,7 @@ export function ProjectReaderPage({
     }
 
     lastSavedAtRef.current = now;
-
-    void updateContentProjectProgress(project.id, {
-      currentSegmentIndex: playback.activeSegmentIndex ?? 0,
-      currentCharacterOffset: playback.canonicalScalarCursor ?? 0,
-      progressPercent: progressPercent(
-        playback.elapsedMs,
-        playback.durationMs,
-      ),
-      playbackRate: playback.speed,
-      voiceId: playback.voiceId,
-    }).catch(() => undefined);
+    progressWriter.queue(project.id, progress);
   }, [
     playback.activeSegmentIndex,
     playback.canonicalScalarCursor,
@@ -128,9 +142,34 @@ export function ProjectReaderPage({
     playback.speed,
     playback.status,
     playback.voiceId,
+    progressWriter,
     project,
     runtime,
   ]);
+
+  useEffect(() => {
+    const flushLatestProgress = () => {
+      const latest = latestProgressRef.current;
+      if (!latest) return;
+
+      progressWriter.queue(latest.projectId, latest.progress);
+      void progressWriter.flush();
+    };
+    const flushWhenHidden = () => {
+      if (document.visibilityState === "hidden") {
+        flushLatestProgress();
+      }
+    };
+
+    window.addEventListener("pagehide", flushLatestProgress);
+    document.addEventListener("visibilitychange", flushWhenHidden);
+
+    return () => {
+      window.removeEventListener("pagehide", flushLatestProgress);
+      document.removeEventListener("visibilitychange", flushWhenHidden);
+      flushLatestProgress();
+    };
+  }, [progressWriter]);
 
   if (!runtime) {
     return (

@@ -312,7 +312,7 @@ function openGooglePicker({
         onStatus?.(`Google Picker returned: ${String(action || "unknown")}`);
 
         if ((action === pickerApi.Action.CANCEL || action === "cancel") && !selected) {
-          reject(new Error("Google Picker did not return a selected file. Click the file once so it is highlighted, then press Select again."));
+          reject(new GoogleDriveImportCancelledError());
           return;
         }
 

@@ -282,7 +282,7 @@ export function ImportPage() {
   }
 
   return (
-    <section className="product-page import-page">
+    <section className="product-page import-page" aria-busy={busy}>
       <header className="product-page-header">
         <div>
           <p className="eyebrow">Add reading material</p>
@@ -295,7 +295,7 @@ export function ImportPage() {
         </div>
       </header>
 
-      <div className="import-source-tabs" role="tablist" aria-label="Import source">
+      <div className="import-source-tabs" role="group" aria-label="Import source">
         {([
           ["device", "Device"],
           ["drive", "Google Drive"],
@@ -305,8 +305,7 @@ export function ImportPage() {
           <button
             key={id}
             type="button"
-            role="tab"
-            aria-selected={source === id}
+            aria-pressed={source === id}
             className={source === id ? "active" : ""}
             onClick={() => {
               setSource(id);
