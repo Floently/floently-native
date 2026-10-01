@@ -1,11 +1,22 @@
-# Floently Read Web — next-generation foundation
+# Floently Read Web — next-generation polyglot app
 
-This is the **next-generation** web surface for Floently Read. It does not replace or modify the current production web reader.
+This workspace is the **parallel next-generation** Floently Read web application. It does not replace or modify the current production web app in `Floently/flowreader`.
 
-## Architecture
+## Technology ownership
+
+The web rebuild follows the repository-wide controlled-polyglot standard:
 
 ```
-React / TypeScript
+Public + signed-in UI
+React 19 + TypeScript
+        |
+        +--> browser-native history / IndexedDB / Cache Storage / Media Session
+        |
+        v
+app-owned ReadRuntimeProvider
+        |
+        +--> WebPlaybackSession
+        +--> ReadDocumentSession
         |
         v
 Web Worker
@@ -19,12 +30,104 @@ ReadingManifest v1
 
 Responsibilities:
 
-- React/TypeScript: browser UI and presentation state.
-- Web Worker: CPU isolation and ownership of full manifest JSON.
-- Rust/WASM: deterministic document segmentation, duration estimation, logical-time mapping, progress mapping, and prefetch planning.
-- ReadingManifest v1: shared semantic contract across web, Swift, Kotlin, Python, and backend services.
+- **React/TypeScript**: landing/auth/product UI, routing, forms, accessibility, bounded reader rendering and application state.
+- **Browser-native APIs**: history, IndexedDB document storage, physical media, Media Session and durable audio cache.
+- **Web Worker**: CPU isolation and ownership of full ReadingManifest JSON.
+- **Rust/WASM**: deterministic document segmentation, document-wide duration/seek mapping, canonical scalar mapping and prefetch planning.
+- **Existing Floently/Learn auth API**: account/session authority. The new web build does not create a separate identity backend.
+- **ReadingManifest v1**: language-neutral semantic contract shared with Swift, Kotlin and backend services.
 
-The React tree deliberately receives a lightweight manifest summary rather than the entire document text/manifest.
+The React reader deliberately receives only a bounded nearby document window. Hidden TTS segments are transport details, never the public document/media identity.
+
+## Product routes
+
+Public:
+
+- `/` — READ landing page
+- `/login`, `/signin`, `/auth/login` — shared account login
+- `/signup`, `/register`, `/auth/signup` — shared account registration
+
+Protected:
+
+- `/app/library` — browser-local library for the migration build
+- `/app/import` — text/Markdown import
+- `/app/reader/:documentId` — worker-backed virtualized reader
+- `/app/reader` — current document reader
+- `/app/browser` — Browser V2 migration boundary
+- `/app/preferences` — live playback speed/voice controls
+- `/app/account` — shared Floently account/session
+
+Protected redirects accept only same-origin `/app/*` `returnTo` values.
+
+## Authentication
+
+The product shell reuses the existing Read/Learn auth contract:
+
+- `POST /api/v1/auth/login/password`
+- `POST /api/v1/auth/register/password`
+- `GET /api/v1/auth/session`
+- `POST /api/v1/auth/logout`
+- `GET /api/v1/auth/google/config`
+- `POST /api/v1/auth/login/google`
+
+Session bootstrap is cookie-first, with bearer fallback for compatibility. The TTS adapter resolves the currently authenticated bearer token lazily at request time.
+
+## Document and playback lifetime
+
+`ReadRuntimeProvider` is mounted around the protected product shell, not around individual pages.
+
+That means:
+
+- internal navigation does not recreate PlaybackSession;
+- playback can continue while moving Reader → Library → Import/Preferences;
+- the active worker manifest stays alive while it is the current document;
+- switching documents drops the previous manifest only after the replacement is ready;
+- leaving the protected app tears down the worker/player cleanly.
+
+The physical audio element never becomes the public document clock. Physical asset time is mapped into the logical document timeline.
+
+## Browser-local library
+
+The first product-shell slice stores imported text/Markdown in IndexedDB. This is intentionally an isolation layer while the production cloud library/project API is migrated.
+
+PDF, EPUB, Office documents, web capture and cloud synchronization are **not** being faked through this store. They should arrive as dedicated ingestion/persistence adapters behind the same document/session interfaces.
+
+## Reader virtualization
+
+The virtualized reader:
+
+- asks the worker for a bounded nearby segment window;
+- never mounts the entire multi-hour manifest/text in React;
+- follows the active logical playback region by default;
+- lets the person browse earlier/later without interrupting playback;
+- offers “Follow playback” to rejoin;
+- maps clicks on visible text to the logical document timeline;
+- exposes region-level active state only.
+
+Word-level highlighting is intentionally deferred until backend timing payloads are verified and can be mapped to canonical scalar offsets without guessing.
+
+## TTS and audio cache
+
+The provider adapter currently reuses the existing Read Render contract:
+
+- default base: `https://flowreader-api.onrender.com`
+- `POST /api/tts/prerender`
+- `GET /api/voices/unified`
+- optional authenticated bearer header
+
+The audio cache uses Cache Storage + IndexedDB metadata and remains bounded. Media Session publishes one logical document item even while hidden synthesis assets change underneath it.
+
+## Runtime variables
+
+See `.env.example`.
+
+Key variables:
+
+- `VITE_AUTH_API_URL` — explicit shared auth API base for non-production hosts
+- `VITE_API_URL` — general fallback API base
+- `VITE_READ_API_BASE_URL` — TTS/voice API base
+
+Known production host routing mirrors the existing web app: `floently.com` can use same-origin auth proxying while `read.floently.com`, `learn.floently.com` and `create.floently.com` resolve auth to `https://learn-api.floently.com`.
 
 ## Local build
 
@@ -36,96 +139,27 @@ bash scripts/build_read_web_wasm.sh
 
 The script:
 
-1. adds the `wasm32-unknown-unknown` Rust target if needed;
-2. builds `shared/read-core-wasm` with `wasm-pack`;
-3. writes generated bindings into `src/generated/read-core-wasm`;
+1. ensures the `wasm32-unknown-unknown` Rust target;
+2. builds `shared/read-core-wasm` using `wasm-pack`;
+3. writes generated bindings under `src/generated/read-core-wasm`;
 4. installs web dependencies;
-5. creates the production Vite bundle.
+5. builds the production Vite bundle.
 
 Generated WASM bindings are build artifacts and are not committed.
 
-## Current functional slice
+## Qualification still required before cutover
 
-- paste text;
-- import TXT/Markdown;
-- build a canonical whole-document manifest off the UI thread;
-- display whole-document words/duration/segment count;
-- map public document progress into hidden segment/local position;
-- compute the next 120 seconds of prefetch indexes.
+A green CI build does **not** authorize replacing the current production READ web app. Remaining qualification includes:
 
-Browser playback, Media Session, IndexedDB/cache, document virtualization, and real TTS asset integration are subsequent slices.
-
-
-## Document-wide browser playback
-
-The next-generation web runtime now owns playback above React screens:
-
-```
-ReadRuntimeProvider
-  -> WebPlaybackSession
-      -> Rust/WASM worker for logical document mapping
-      -> ReadTtsProvider for hidden synthesis assets
-      -> ReadAudioCache for bounded browser caching
-      -> BrowserAudioEngine for physical media
-      -> Media Session API for browser/OS controls
-  -> React screens observe/control the session
-```
-
-`WebPlaybackSession` owns:
-
-- public document elapsed time and total duration;
-- play/pause/buffering/ended/error state;
-- playback speed;
-- voice identity;
-- exact document seek requests;
-- hidden segment transitions;
-- 120-second time-horizon prefetch planning;
-- resume persistence;
-- Media Session metadata/actions;
-- telemetry hooks.
-
-The physical media element never becomes the public document clock. Physical
-asset time is mapped proportionally into the hidden segment's logical document
-range until actual-duration manifest refinement is implemented.
-
-### Current TTS adapter
-
-The first provider adapter reuses the existing Floently Read Render contract:
-
-- default base: `https://flowreader-api.onrender.com`;
-- `POST /api/tts/prerender`;
-- `GET /api/voices/unified`;
-- supports optional bearer-token injection;
-- consumes audio URL, server cache key/hit, voice/provider/model metadata, and
-  raw timing metadata when supplied.
-
-The adapter intentionally does not guess the unit of the legacy ambiguous
-`duration` property. Explicit `durationMs`/`duration_seconds` variants are
-accepted; otherwise the browser media element supplies physical asset duration.
-
-Word timing remains raw until the backend timing payload is verified and can be
-mapped safely to ReadingManifest canonical scalar offsets.
-
-### Browser audio cache
-
-The initial cache layer:
-
-- keys assets by server cache key or SHA-256 synthesis identity;
-- uses Cache Storage when the audio response is CORS-readable;
-- records cache metadata in IndexedDB;
-- keeps a bounded maximum of 32 durable entries;
-- uses object URLs for cached blobs;
-- falls back to the remote audio URL if browser caching is unavailable.
-
-### Still not qualified
-
-A successful CI build does **not** prove Speechify-class playback quality.
-Before browser playback is considered complete we still require:
-
-- live authenticated Render TTS integration testing;
-- CORS/cache behavior testing in Safari/Chrome/Firefox;
-- real long-document transition-gap measurement;
-- Media Session behavior on supported desktop/mobile browsers;
-- interruption/device-route behavior where browsers expose it;
-- actual timing normalization for word highlighting;
-- Playwright and physical-device long-session tests.
+- live authenticated login/register/Google flows against deployed auth;
+- live authenticated TTS and voice catalog;
+- Safari/Chrome/Firefox cache and Media Session testing;
+- long-document transition-gap measurement;
+- PDF/EPUB/document ingestion;
+- cloud library/project synchronization;
+- full Browser V2 page-preserving reader migration;
+- account/billing/subscription feature parity;
+- accessibility/i18n;
+- Playwright route/auth/import/library/reader flows;
+- long-session browser/device testing;
+- migration/cutover checklist with rollback.
