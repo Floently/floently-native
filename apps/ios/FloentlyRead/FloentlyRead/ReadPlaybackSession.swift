@@ -84,15 +84,15 @@ final class ReadPlaybackSession: ObservableObject {
             documentId: document.id,
             revisionId: document.revisionId
         )
-        if let saved {
-            playbackRate = min(3.0, max(0.5, saved.playbackRate))
-        }
-
         let requestedCursor = min(
             max(0, saved?.logicalTime ?? 0),
             max(duration, 0)
         )
         elapsedTime = requestedCursor
+
+        if let saved {
+            playbackRate = min(3.0, max(0.5, saved.playbackRate))
+        }
 
         if let target = segmentAndOffset(
             for: requestedCursor,
