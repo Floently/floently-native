@@ -167,6 +167,18 @@ async function getByIndex(
   }
 }
 
+export function withCompletedContentHash(
+  record: LocalOriginalDocumentRecord,
+  contentHash: string,
+  updatedAt = Date.now(),
+): LocalOriginalDocumentRecord {
+  return {
+    ...record,
+    contentHash,
+    updatedAt,
+  };
+}
+
 async function putRecord(
   record: LocalOriginalDocumentRecord,
 ): Promise<void> {
@@ -302,11 +314,9 @@ export async function handoffOriginalDocument(
     const latest = await getLocalOriginalDocument(record.id);
     if (!latest) return;
 
-    await putRecord({
-      ...latest,
-      contentHash: hash,
-      updatedAt: Date.now(),
-    });
+    await putRecord(
+      withCompletedContentHash(latest, hash),
+    );
   })();
 
   return {
