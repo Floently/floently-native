@@ -68,7 +68,7 @@ export function normalizeReadThemePreference(
 ): ReadThemePreference {
   return value === "light" || value === "dark" || value === "system"
     ? value
-    : "dark";
+    : "light";
 }
 
 function readThemePreference(): ReadThemePreference {
