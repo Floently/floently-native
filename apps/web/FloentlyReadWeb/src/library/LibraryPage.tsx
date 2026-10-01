@@ -1,12 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   deleteLibraryDocument,
   listLibraryDocuments,
   type LibraryDocument,
 } from "./documentRepository";
+import {
+  deleteContentProject,
+  listContentProjects,
+  type ContentProject,
+} from "../content/projectApi";
+import {
+  listLocalOriginalDocuments,
+  removeLocalOriginalDocument,
+  type LocalOriginalDocumentRecord,
+} from "../content/localOriginalDocuments";
 import { navigateTo } from "../routing/navigation";
 
-function formatUpdatedAt(value: string): string {
+function formatUpdatedAt(value: string | number): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
 
@@ -16,37 +26,209 @@ function formatUpdatedAt(value: string): string {
   }).format(date);
 }
 
+function sourceLabel(sourceType: string): string {
+  const normalized = sourceType.trim().toLowerCase();
+  if (normalized === "pdf") return "PDF";
+  if (normalized === "epub") return "EPUB";
+  if (normalized === "docx") return "DOCX";
+  if (normalized === "html") return "HTML";
+  if (normalized === "markdown" || normalized === "md") return "Markdown";
+  if (normalized === "text" || normalized === "txt") return "Text";
+  return sourceType || "Document";
+}
+
+function sourceGlyph(sourceType: string): string {
+  const normalized = sourceType.trim().toLowerCase();
+  if (normalized === "pdf") return "P";
+  if (normalized === "epub") return "E";
+  if (normalized === "docx") return "D";
+  if (normalized === "markdown" || normalized === "md") return "M";
+  if (normalized === "html") return "H";
+  return "T";
+}
+
+function localOriginalType(record: LocalOriginalDocumentRecord): string {
+  if (
+    record.type === "application/pdf"
+    || record.name.toLowerCase().endsWith(".pdf")
+  ) {
+    return "pdf";
+  }
+
+  const extension = record.name.split(".").pop()?.toLowerCase();
+  return extension || "file";
+}
+
 export function LibraryPage() {
-  const [documents, setDocuments] = useState<LibraryDocument[]>([]);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">(
-    "loading",
-  );
+  const [projects, setProjects] = useState<ContentProject[]>([]);
+  const [originals, setOriginals] =
+    useState<LocalOriginalDocumentRecord[]>([]);
+  const [legacyDocuments, setLegacyDocuments] =
+    useState<LibraryDocument[]>([]);
+  const [query, setQuery] = useState("");
+  const [status, setStatus] =
+    useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
 
-  async function refresh() {
-    try {
-      setStatus("loading");
-      setError(null);
-      setDocuments(await listLibraryDocuments());
-      setStatus("ready");
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
-      setStatus("error");
+  async function refresh(): Promise<void> {
+    setStatus("loading");
+    setError(null);
+
+    const [cloudResult, originalsResult, legacyResult] =
+      await Promise.allSettled([
+        listContentProjects(100, 0),
+        listLocalOriginalDocuments(100),
+        listLibraryDocuments(),
+      ]);
+
+    if (cloudResult.status === "fulfilled") {
+      setProjects(cloudResult.value);
     }
+    if (originalsResult.status === "fulfilled") {
+      setOriginals(originalsResult.value);
+    }
+    if (legacyResult.status === "fulfilled") {
+      setLegacyDocuments(legacyResult.value);
+    }
+
+    const failures = [
+      cloudResult,
+      originalsResult,
+      legacyResult,
+    ].filter((result) => result.status === "rejected");
+
+    if (failures.length === 3) {
+      setStatus("error");
+      setError("Your library could not be loaded.");
+      return;
+    }
+
+    if (failures.length > 0) {
+      setError(
+        "Some library information could not be refreshed. Available documents are still shown.",
+      );
+    }
+
+    setStatus("ready");
   }
 
   useEffect(() => {
     void refresh();
   }, []);
 
-  async function removeDocument(document: LibraryDocument) {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  const linkedProjectIds = useMemo(
+    () =>
+      new Set(
+        originals
+          .map((record) => record.projectId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    [originals],
+  );
+
+  const filteredProjects = useMemo(
+    () =>
+      projects.filter(
+        (project) =>
+          !linkedProjectIds.has(project.id)
+          && (
+            !normalizedQuery
+            || project.title.toLowerCase().includes(normalizedQuery)
+          ),
+      ),
+    [linkedProjectIds, normalizedQuery, projects],
+  );
+
+  const filteredOriginals = useMemo(
+    () =>
+      originals.filter(
+        (record) =>
+          !normalizedQuery
+          || record.name.toLowerCase().includes(normalizedQuery),
+      ),
+    [normalizedQuery, originals],
+  );
+
+  const filteredLegacy = useMemo(
+    () =>
+      legacyDocuments.filter(
+        (document) =>
+          !normalizedQuery
+          || document.title.toLowerCase().includes(normalizedQuery),
+      ),
+    [legacyDocuments, normalizedQuery],
+  );
+
+  const continueProjects = useMemo(
+    () =>
+      projects
+        .filter(
+          (project) =>
+            (project.progress?.progressPercent ?? 0) > 0
+            && (project.progress?.progressPercent ?? 0) < 100,
+        )
+        .sort((left, right) =>
+          (right.progress?.updatedAt ?? "").localeCompare(
+            left.progress?.updatedAt ?? "",
+          ),
+        )
+        .slice(0, 4),
+    [projects],
+  );
+
+  const totalItems =
+    filteredProjects.length
+    + filteredOriginals.length
+    + filteredLegacy.length;
+
+  async function removeProject(project: ContentProject): Promise<void> {
+    if (!window.confirm(`Delete “${project.title}” from your synced library?`)) {
+      return;
+    }
+
+    try {
+      await deleteContentProject(project.id);
+      setProjects((current) =>
+        current.filter((item) => item.id !== project.id),
+      );
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+    }
+  }
+
+  async function removeOriginal(
+    record: LocalOriginalDocumentRecord,
+  ): Promise<void> {
+    if (
+      !window.confirm(
+        `Remove the original “${record.name}” from this device?`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await removeLocalOriginalDocument(record.id);
+      setOriginals((current) =>
+        current.filter((item) => item.id !== record.id),
+      );
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+    }
+  }
+
+  async function removeLegacy(document: LibraryDocument): Promise<void> {
     if (!window.confirm(`Remove “${document.title}” from this browser?`)) {
       return;
     }
 
     try {
       await deleteLibraryDocument(document.id);
-      await refresh();
+      setLegacyDocuments((current) =>
+        current.filter((item) => item.id !== document.id),
+      );
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
     }
@@ -59,8 +241,9 @@ export function LibraryPage() {
           <p className="eyebrow">Your reading</p>
           <h1>Library</h1>
           <p>
-            Documents imported into this next-generation build are stored
-            locally in this browser while the cloud library API is migrated.
+            Synced projects and original visual files live together. PDFs keep
+            their device copy for page-faithful viewing while extracted reading
+            text stays in the linked cloud project.
           </p>
         </div>
         <button
@@ -72,17 +255,80 @@ export function LibraryPage() {
         </button>
       </header>
 
+      <div className="library-toolbar">
+        <label>
+          <span className="visually-hidden">Search library</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search library"
+          />
+        </label>
+        <button
+          type="button"
+          className="card-secondary"
+          disabled={status === "loading"}
+          onClick={() => void refresh()}
+        >
+          Refresh
+        </button>
+      </div>
+
       {error ? <p className="page-error" role="alert">{error}</p> : null}
 
-      {status === "loading" ? (
-        <div className="page-loading">Loading your browser library…</div>
-      ) : documents.length === 0 ? (
+      {continueProjects.length > 0 && !normalizedQuery ? (
+        <section className="library-continue-section">
+          <div className="library-section-heading">
+            <h2>Continue reading</h2>
+          </div>
+          <div className="library-continue-grid">
+            {continueProjects.map((project) => (
+              <button
+                type="button"
+                className="library-continue-card"
+                key={project.id}
+                onClick={() =>
+                  navigateTo(
+                    `/app/project/${encodeURIComponent(project.id)}`,
+                  )
+                }
+              >
+                <span>
+                  {Math.round(project.progress?.progressPercent ?? 0)}%
+                </span>
+                <strong>{project.title}</strong>
+                <small>{sourceLabel(project.sourceType)}</small>
+                <i>
+                  <b
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        Math.max(0, project.progress?.progressPercent ?? 0),
+                      )}%`,
+                    }}
+                  />
+                </i>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <div className="library-section-heading">
+        <h2>All documents</h2>
+        <span>{totalItems} items</span>
+      </div>
+
+      {status === "loading" && totalItems === 0 ? (
+        <div className="page-loading">Loading your library…</div>
+      ) : totalItems === 0 && !normalizedQuery ? (
         <div className="library-empty">
           <span aria-hidden="true">⌁</span>
           <h2>Your library is ready for its first document.</h2>
           <p>
-            Import text or Markdown now. PDF, EPUB and web capture will use
-            dedicated ingestion adapters in later migration slices.
+            Import PDF, DOCX, EPUB, HTML, Markdown or text—or open a live
+            website in Browser V2.
           </p>
           <button
             type="button"
@@ -92,10 +338,104 @@ export function LibraryPage() {
             Import your first document
           </button>
         </div>
+      ) : totalItems === 0 ? (
+        <div className="library-empty">
+          <h2>No documents match “{query}”.</h2>
+        </div>
       ) : (
         <div className="library-grid">
-          {documents.map((document) => (
-            <article className="library-card" key={document.id}>
+          {filteredOriginals.map((record) => {
+            const type = localOriginalType(record);
+            const linkedProject = record.projectId
+              ? projects.find((project) => project.id === record.projectId)
+              : null;
+
+            return (
+              <article className="library-card" key={`original:${record.id}`}>
+                <div className="library-card-icon" aria-hidden="true">
+                  {sourceGlyph(type)}
+                </div>
+                <div className="library-card-body">
+                  <p className="library-card-type">
+                    {sourceLabel(type)} · Original on this device
+                  </p>
+                  <h2>{record.name}</h2>
+                  <p>
+                    {linkedProject
+                      ? `${linkedProject.wordCount.toLocaleString()} readable words · semantic layer synced`
+                      : "Original source preserved · reading layer may still be preparing"}
+                  </p>
+                  <span>Updated {formatUpdatedAt(record.updatedAt)}</span>
+                </div>
+                <div className="library-card-actions">
+                  <button
+                    type="button"
+                    className="card-primary"
+                    onClick={() =>
+                      navigateTo(
+                        `/app/document/${encodeURIComponent(record.id)}`,
+                      )
+                    }
+                  >
+                    Open original
+                  </button>
+                  <button
+                    type="button"
+                    className="card-secondary"
+                    onClick={() => void removeOriginal(record)}
+                  >
+                    Remove device copy
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+
+          {filteredProjects.map((project) => (
+            <article className="library-card" key={`project:${project.id}`}>
+              <div className="library-card-icon" aria-hidden="true">
+                {sourceGlyph(project.sourceType)}
+              </div>
+              <div className="library-card-body">
+                <p className="library-card-type">
+                  {sourceLabel(project.sourceType)} · Synced
+                </p>
+                <h2>{project.title}</h2>
+                <p>
+                  {project.wordCount.toLocaleString()} words
+                  {project.progress
+                    ? ` · ${Math.round(project.progress.progressPercent)}% read`
+                    : ""}
+                </p>
+                <span>
+                  Updated {formatUpdatedAt(project.updatedAt)}
+                </span>
+              </div>
+              <div className="library-card-actions">
+                <button
+                  type="button"
+                  className="card-primary"
+                  onClick={() =>
+                    navigateTo(
+                      `/app/project/${encodeURIComponent(project.id)}`,
+                    )
+                  }
+                >
+                  Read
+                </button>
+                <button
+                  type="button"
+                  className="card-secondary"
+                  onClick={() => void removeProject(project)}
+                >
+                  Delete
+                </button>
+              </div>
+            </article>
+          ))}
+
+          {filteredLegacy.map((document) => (
+            <article className="library-card" key={`legacy:${document.id}`}>
               <div className="library-card-icon" aria-hidden="true">
                 {document.sourceType === "markdown" ? "M" : "T"}
               </div>
@@ -103,7 +443,7 @@ export function LibraryPage() {
                 <p className="library-card-type">
                   {document.sourceType === "markdown"
                     ? "Markdown"
-                    : "Text document"}
+                    : "Text"} · Browser-local legacy
                 </p>
                 <h2>{document.title}</h2>
                 <p>{document.text.slice(0, 180)}</p>
@@ -126,7 +466,7 @@ export function LibraryPage() {
                 <button
                   type="button"
                   className="card-secondary"
-                  onClick={() => void removeDocument(document)}
+                  onClick={() => void removeLegacy(document)}
                 >
                   Remove
                 </button>
