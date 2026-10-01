@@ -269,8 +269,7 @@ export class BrowserReadingBridge {
     const tabId = this.snapshot.tabId;
 
     if (
-      !this.highlightEnabled
-      || this.snapshot.status !== "ready"
+      this.snapshot.status !== "ready"
       || !source
       || !manifest
       || !tabId
@@ -455,7 +454,8 @@ export class BrowserReadingBridge {
           );
 
           if (
-            pending.generation !== this.generation
+            !this.highlightEnabled
+            || pending.generation !== this.generation
             || pending.tabId !== this.snapshot.tabId
             || this.snapshot.status !== "ready"
           ) {
