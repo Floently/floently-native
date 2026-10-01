@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getLocalOriginalDocument,
   type LocalOriginalDocumentRecord,
 } from "../content/localOriginalDocuments";
 import {
   getContentProject,
+  updateContentProjectProgress,
   type ContentProject,
 } from "../content/projectApi";
 import { useReadRuntime } from "../runtime/ReadRuntimeContext";
@@ -29,6 +30,7 @@ export function VisualDocumentPage({
     useState<LocalOriginalDocumentRecord | null>(null);
   const [project, setProject] = useState<ContentProject | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const lastSavedAtRef = useRef(0);
 
   const objectUrl = useMemo(
     () => record ? URL.createObjectURL(record.blob) : null,
@@ -130,6 +132,52 @@ export function VisualDocumentPage({
       cancelled = true;
     };
   }, [record?.projectId, runtime]);
+
+  useEffect(() => {
+    if (
+      !project
+      || playback.documentId !== `project:${project.id}`
+    ) {
+      return;
+    }
+
+    const now = Date.now();
+    const terminal =
+      playback.status === "paused"
+      || playback.status === "ended"
+      || playback.status === "error";
+
+    if (!terminal && now - lastSavedAtRef.current < 5_000) {
+      return;
+    }
+
+    lastSavedAtRef.current = now;
+    const percent =
+      playback.durationMs > 0
+        ? Math.min(
+            100,
+            Math.max(0, playback.elapsedMs / playback.durationMs * 100),
+          )
+        : 0;
+
+    void updateContentProjectProgress(project.id, {
+      currentSegmentIndex: playback.activeSegmentIndex ?? 0,
+      currentCharacterOffset: playback.canonicalScalarCursor ?? 0,
+      progressPercent: percent,
+      playbackRate: playback.speed,
+      voiceId: playback.voiceId,
+    }).catch(() => undefined);
+  }, [
+    playback.activeSegmentIndex,
+    playback.canonicalScalarCursor,
+    playback.documentId,
+    playback.durationMs,
+    playback.elapsedMs,
+    playback.speed,
+    playback.status,
+    playback.voiceId,
+    project,
+  ]);
 
   const semanticReady = Boolean(
     project
