@@ -79,6 +79,14 @@ export type ReadCoreRequest =
     }
   | {
       id: number;
+      type: "logicalTimeForScalar";
+      payload: {
+        handle: string;
+        scalarOffset: number;
+      };
+    }
+  | {
+      id: number;
       type: "prefetchIndexes";
       payload: {
         handle: string;
@@ -125,6 +133,7 @@ export type ReadCoreSuccess =
   | ReadingSegmentWindow
   | SegmentPosition
   | LogicalTimePosition
+  | { elapsedMs: number }
   | number[]
   | null
   | { dropped: boolean };
