@@ -668,6 +668,14 @@ private fun ReadBrowserScreen(
                         isPlaying = playbackController.snapshot.isPlaying,
                         onPlayPause = ::toggleNativeReading,
                         onReadPage = {
+                            activeReadingManifest = null
+                            webView?.evaluateJavascript(
+                                ReadBrowserPolicy.readingVisualJavaScript(
+                                    active = false,
+                                    pulse = false
+                                ),
+                                null
+                            )
                             val view = webView
                             val url = view?.url
                             if (view == null || url.isNullOrBlank()) return@ReadStrip
@@ -705,6 +713,14 @@ private fun ReadBrowserScreen(
                             }
                         },
                         onReadSelection = {
+                            activeReadingManifest = null
+                            webView?.evaluateJavascript(
+                                ReadBrowserPolicy.readingVisualJavaScript(
+                                    active = false,
+                                    pulse = false
+                                ),
+                                null
+                            )
                             val view = webView
                             val url = view?.url
                             if (view == null || url.isNullOrBlank()) return@ReadStrip
