@@ -110,14 +110,14 @@ export function ReaderPage({
             Return to library
           </button>
         </div>
-      ) : documentId && !requestedDocumentReady ? (
+      ) : documentId && !activeManifest ? (
         <div className="page-loading">
           Building the document timeline in the Rust worker…
         </div>
-      ) : requestedDocumentReady ? (
+      ) : activeManifest ? (
         <ReaderSurface
           core={runtime.core}
-          manifest={documentSnapshot.manifest}
+          manifest={activeManifest}
           session={runtime.playback}
           snapshot={playback}
         />
