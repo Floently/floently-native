@@ -179,6 +179,95 @@ final class ReadBrowserController: ObservableObject {
         }
     }
 
+    func setReadingVisual(
+        active: Bool,
+        pulse: Bool = false
+    ) {
+        guard let webView else { return }
+
+        let activeValue = active ? "true" : "false"
+        let pulseValue = pulse ? "true" : "false"
+
+        let script = """
+        (() => {
+          const active = (activeValue);
+          const pulse = (pulseValue);
+          const root = document.querySelector(
+            "[data-floently-read-root='true']"
+          );
+          if (!root) return;
+
+          const styleId = "floently-read-live-visual-style";
+          if (!document.getElementById(styleId)) {
+            const style = document.createElement("style");
+            style.id = styleId;
+            style.textContent = `
+              [data-floently-read-root='true'] {
+                transition:
+                  outline-color 180ms ease,
+                  box-shadow 180ms ease;
+                outline: 2px solid transparent;
+                outline-offset: 4px;
+              }
+              [data-floently-read-root='true'].floently-read-active {
+                outline-color: rgba(75, 195, 255, 0.38);
+                box-shadow:
+                  0 0 0 5px rgba(75, 195, 255, 0.07),
+                  0 0 22px rgba(75, 195, 255, 0.12);
+              }
+              [data-floently-read-root='true'].floently-read-pulse {
+                animation: floentlyReadPulse 720ms ease-out;
+              }
+              @keyframes floentlyReadPulse {
+                0% {
+                  outline-color: rgba(135, 225, 255, 0.75);
+                  box-shadow:
+                    0 0 0 4px rgba(100, 210, 255, 0.15),
+                    0 0 32px rgba(100, 210, 255, 0.25);
+                }
+                100% {
+                  outline-color: rgba(75, 195, 255, 0.38);
+                  box-shadow:
+                    0 0 0 5px rgba(75, 195, 255, 0.07),
+                    0 0 22px rgba(75, 195, 255, 0.12);
+                }
+              }
+            `;
+            document.head.appendChild(style);
+          }
+
+          root.classList.toggle(
+            "floently-read-active",
+            active
+          );
+
+          if (!active) {
+            root.classList.remove(
+              "floently-read-pulse"
+            );
+            return;
+          }
+
+          if (pulse) {
+            root.classList.remove(
+              "floently-read-pulse"
+            );
+            void root.offsetWidth;
+            root.classList.add(
+              "floently-read-pulse"
+            );
+            setTimeout(() => {
+              root.classList.remove(
+                "floently-read-pulse"
+              );
+            }, 760);
+          }
+        })();
+        """
+
+        webView.evaluateJavaScript(script)
+    }
+
     static func isProtectedAuthenticationURL(_ url: URL) -> Bool {
         guard let host = url.host?.lowercased() else { return false }
         return protectedAuthenticationHosts.contains(host)
@@ -230,6 +319,32 @@ final class ReadBrowserController: ObservableObject {
       const text = normalize(
         selection ? selection.toString() : ""
       );
+
+      document.querySelectorAll(
+        "[data-floently-read-root='true']"
+      ).forEach((node) => {
+        node.removeAttribute("data-floently-read-root");
+        node.classList.remove(
+          "floently-read-active",
+          "floently-read-pulse"
+        );
+      });
+
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const container = range.commonAncestorContainer;
+        const element =
+          container.nodeType === Node.ELEMENT_NODE
+          ? container
+          : container.parentElement;
+        if (element instanceof HTMLElement) {
+          element.setAttribute(
+            "data-floently-read-root",
+            "true"
+          );
+        }
+      }
+
       return JSON.stringify({
         title: normalize(document.title),
         url: location.href,
@@ -313,6 +428,24 @@ final class ReadBrowserController: ObservableObject {
 
       const best = scored[0];
       const text = best ? best.text : "";
+
+      document.querySelectorAll(
+        "[data-floently-read-root='true']"
+      ).forEach((node) => {
+        node.removeAttribute("data-floently-read-root");
+        node.classList.remove(
+          "floently-read-active",
+          "floently-read-pulse"
+        );
+      });
+
+      if (best?.element instanceof HTMLElement) {
+        best.element.setAttribute(
+          "data-floently-read-root",
+          "true"
+        );
+      }
+
       return JSON.stringify({
         title: normalize(document.title),
         url: location.href,

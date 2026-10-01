@@ -9,6 +9,8 @@ struct ReadBrowserView: View {
     @EnvironmentObject private var voiceSettings: ReadVoiceSettings
 
     @StateObject private var controller = ReadBrowserController()
+    @State private var visualDocumentId: String?
+    @State private var visualRevisionId: String?
 
     let initialURL: URL?
 
@@ -44,6 +46,32 @@ struct ReadBrowserView: View {
             if let initialURL, controller.currentURL == nil {
                 controller.open(url: initialURL)
             }
+        }
+        .onChange(of: playbackSession.state) { _, state in
+            let active =
+                state == .playing
+                && playbackMatchesVisualDocument
+            controller.setReadingVisual(
+                active: active,
+                pulse: active
+            )
+        }
+        .onChange(
+            of: playbackSession.activeSegmentIndex
+        ) { previous, current in
+            guard
+                previous != current,
+                current != nil,
+                playbackSession.state == .playing,
+                playbackMatchesVisualDocument
+            else {
+                return
+            }
+
+            controller.setReadingVisual(
+                active: true,
+                pulse: true
+            )
         }
     }
 
@@ -164,6 +192,7 @@ struct ReadBrowserView: View {
     private var readStrip: some View {
         HStack(spacing: 8) {
             Button {
+                clearReadingVisualAssociation()
                 controller.readPage()
             } label: {
                 Label(
@@ -184,6 +213,7 @@ struct ReadBrowserView: View {
             )
 
             Button {
+                clearReadingVisualAssociation()
                 controller.readSelection()
             } label: {
                 Image(systemName: "selection.pin.in.out")
@@ -305,6 +335,28 @@ struct ReadBrowserView: View {
             ?? "Web reading"
     }
 
+    private var playbackMatchesVisualDocument: Bool {
+        guard
+            let document = playbackSession.document,
+            let visualDocumentId,
+            let visualRevisionId
+        else {
+            return false
+        }
+
+        return document.id == visualDocumentId
+            && document.revisionId == visualRevisionId
+    }
+
+    private func clearReadingVisualAssociation() {
+        visualDocumentId = nil
+        visualRevisionId = nil
+        controller.setReadingVisual(
+            active: false,
+            pulse: false
+        )
+    }
+
     private func toggleNativeReading() {
         guard let source = activeReadingSource else {
             return
@@ -315,6 +367,9 @@ struct ReadBrowserView: View {
                 try ReadBrowserNativeReading.manifest(
                     for: source
                 )
+
+            visualDocumentId = manifest.documentId
+            visualRevisionId = manifest.revisionId
 
             if
                 let current = playbackSession.document,
