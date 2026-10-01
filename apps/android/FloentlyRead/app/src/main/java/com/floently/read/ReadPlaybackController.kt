@@ -34,6 +34,12 @@ class ReadPlaybackController(
     var snapshot by mutableStateOf(ReadPlayerUiSnapshot())
         private set
 
+    var activeLanguage by mutableStateOf("auto")
+        private set
+
+    var activeVoiceId by mutableStateOf<String?>(null)
+        private set
+
     private val applicationContext = context.applicationContext
     private val mainHandler = Handler(Looper.getMainLooper())
     private val mainExecutor = Executor { command ->
@@ -115,6 +121,9 @@ class ReadPlaybackController(
         autoplay: Boolean = false,
         startingAt: Int = 0
     ) {
+        activeLanguage = manifest.language
+        activeVoiceId = voiceId
+
         val request = ReadManifestLoadRequest(
             manifest = manifest,
             voiceId = voiceId,
@@ -193,9 +202,53 @@ class ReadPlaybackController(
         publish(player)
     }
 
+    fun changeVoice(voiceId: String) {
+        val value = voiceId.trim()
+        if (value.isBlank() || value == activeVoiceId) {
+            return
+        }
+
+        val player = controller ?: return
+        snapshot = snapshot.copy(
+            status = "Changing voice"
+        )
+
+        val request = player.sendCustomCommand(
+            ReadPlaybackCommandContract.changeVoiceCommand,
+            ReadPlaybackCommandContract.encodeChangeVoice(value)
+        )
+
+        request.addListener(
+            {
+                runCatching { request.get() }
+                    .onSuccess { result ->
+                        if (
+                            result.resultCode
+                            == SessionResult.RESULT_SUCCESS
+                        ) {
+                            activeVoiceId = value
+                            publish(player)
+                        } else {
+                            snapshot = snapshot.copy(
+                                status = "Voice change failed"
+                            )
+                        }
+                    }
+                    .onFailure {
+                        snapshot = snapshot.copy(
+                            status = "Voice change failed"
+                        )
+                    }
+            },
+            mainExecutor
+        )
+    }
+
     fun release() {
         pendingDocumentLoad = null
         pendingManifestLoad = null
+        activeVoiceId = null
+        activeLanguage = "auto"
         mainHandler.removeCallbacks(refreshRunnable)
 
         val value = controller
