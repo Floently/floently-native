@@ -36,7 +36,6 @@ export async function uploadContentProject(
       method: "POST",
       body,
       headers: buildAuthorizedHeaders(),
-      credentials: "include",
     });
   } catch {
     throw new DocumentUploadError(
