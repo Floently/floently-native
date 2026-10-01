@@ -151,6 +151,7 @@ export function BrowserWorkspace({
     () => Boolean(cloud?.getBrowserSnapshot()),
   );
   const [starting, setStarting] = useState(false);
+  const [retryAttempt, setRetryAttempt] = useState(0);
   const [vncStage, setVncStage] = useState<BrowserV2VncStage | null>(null);
   const [remoteTextInputFocused, setRemoteTextInputFocused] = useState(false);
   const [lastPoint, setLastPoint] = useState<ViewportPoint | null>(null);
@@ -314,7 +315,7 @@ export function BrowserWorkspace({
         setError(friendlyBrowserError(reason));
       })
       .finally(() => setStarting(false));
-  }, [active, attachDisplay, cloud, started, userId]);
+  }, [active, attachDisplay, cloud, retryAttempt, started, userId]);
 
   useEffect(() => {
     if (!started || !cloud) return;
@@ -355,6 +356,35 @@ export function BrowserWorkspace({
     observer.observe(surfaceRef.current);
     return () => observer.disconnect();
   }, [cloud, started]);
+
+  async function retrySecureBrowser(): Promise<void> {
+    if (!cloud) return;
+
+    setError(null);
+    setMediaReady(false);
+    setStarted(false);
+    setStarting(false);
+    setSnapshot(null);
+    setLastPoint(null);
+    setRemoteTextInputFocused(false);
+    runtime?.browserReading.invalidate(null);
+
+    gestureUnbindRef.current?.();
+    gestureUnbindRef.current = null;
+    vncDisplayRef.current?.close();
+    vncDisplayRef.current = null;
+    setVncStage(null);
+
+    try {
+      await cloud.stop();
+      cloud.prepareRestart();
+      startedRef.current = false;
+      attachingVideoRef.current = false;
+      setRetryAttempt((value) => value + 1);
+    } catch (reason) {
+      setError(friendlyBrowserError(reason));
+    }
+  }
 
   async function navigate(target: string): Promise<void> {
     if (!cloud || !tab || !mediaReady) return;
@@ -743,18 +773,30 @@ export function BrowserWorkspace({
       {error || reading.error ? (
         <div className="browser-error" role="alert">
           <span>{error ?? reading.error}</span>
-          {started && cloud?.getDisplayTransport() === "vnc" ? (
-            <button
-              type="button"
-              onClick={() => {
-                setError(null);
-                setVncStage(null);
-                void attachDisplay();
-              }}
-            >
-              Retry display
-            </button>
-          ) : null}
+          <span className="browser-error-actions">
+            {started
+            && !mediaReady
+            && cloud?.getDisplayTransport() === "vnc" ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setVncStage(null);
+                  void attachDisplay();
+                }}
+              >
+                Retry display
+              </button>
+            ) : null}
+            {!mediaReady ? (
+              <button
+                type="button"
+                onClick={() => void retrySecureBrowser()}
+              >
+                Retry secure browser
+              </button>
+            ) : null}
+          </span>
         </div>
       ) : null}
 
