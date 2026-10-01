@@ -15,6 +15,7 @@ export CARGO_TARGET_DIR
 rm -rf "$OUTPUT"
 mkdir -p "$OUTPUT"
 
+pushd "$(dirname "$MANIFEST")" >/dev/null
 cargo ndk \
   -p 26 \
   -t armeabi-v7a \
@@ -22,7 +23,8 @@ cargo ndk \
   -t x86 \
   -t x86_64 \
   -o "$OUTPUT" \
-  build --release --manifest-path "$MANIFEST"
+  build --release
+popd >/dev/null
 
 for abi in armeabi-v7a arm64-v8a x86 x86_64; do
   test -f "$OUTPUT/$abi/libfloently_read_core_native.so"
