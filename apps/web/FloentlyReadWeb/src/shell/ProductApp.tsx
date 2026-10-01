@@ -1,9 +1,9 @@
 import type { ReadAuthUser } from "../auth/authStore";
 import { AccountPage } from "../account/AccountPage";
-import { BrowserPage } from "../browser/BrowserPage";
 import { ImportPage } from "../import/ImportPage";
 import { LibraryPage } from "../library/LibraryPage";
 import { PreferencesPage } from "../preferences/PreferencesPage";
+import { BrowserWorkspace } from "../browser-v2/BrowserWorkspace";
 import { ReaderPage } from "../reader/ReaderPage";
 import { ReadRuntimeProvider } from "../runtime/ReadRuntimeContext";
 import { navigateTo } from "../routing/navigation";
@@ -41,7 +41,7 @@ function RouteContent({ pathname }: { pathname: string }) {
   }
 
   if (pathname === "/app/browser") {
-    return <BrowserPage />;
+    return null;
   }
 
   if (pathname === "/app/preferences") {
@@ -76,10 +76,13 @@ export function ProductApp({
   pathname: string;
   user: ReadAuthUser;
 }) {
+  const browserActive = pathname === "/app/browser";
+
   return (
     <ReadRuntimeProvider>
       <AppShell pathname={pathname} user={user}>
-        <RouteContent pathname={pathname} />
+        <BrowserWorkspace active={browserActive} userId={user.id} />
+        {browserActive ? null : <RouteContent pathname={pathname} />}
       </AppShell>
     </ReadRuntimeProvider>
   );
