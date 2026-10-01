@@ -7,6 +7,7 @@ import type {
   WebPlaybackSession,
   WebPlaybackSnapshot,
 } from "../playback/webPlaybackSession";
+import { setReadSpeedPreference } from "../preferences/readPreferencesStore";
 
 function formatDuration(milliseconds: number): string {
   const totalSeconds = Math.max(0, Math.round(milliseconds / 1_000));
@@ -143,11 +144,13 @@ export function PlaybackDock({
         <select
           id="playback-speed"
           value={snapshot.speed}
-          onChange={(event) =>
-            session.setSpeed(Number(event.target.value))
-          }
+          onChange={(event) => {
+            const speed = Number(event.target.value);
+            setReadSpeedPreference(speed);
+            session.setSpeed(speed);
+          }}
         >
-          {[0.75, 1, 1.25, 1.5, 2, 2.5, 3].map((speed) => (
+          {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3].map((speed) => (
             <option value={speed} key={speed}>
               {speed}×
             </option>
