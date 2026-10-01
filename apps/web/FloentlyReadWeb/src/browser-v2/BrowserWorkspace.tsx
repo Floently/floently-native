@@ -375,6 +375,12 @@ export function BrowserWorkspace({
   ]);
 
   useEffect(() => {
+    if (!active) {
+      handledImportTargetRef.current = null;
+    }
+  }, [active]);
+
+  useEffect(() => {
     if (
       !active
       || !mediaReady
