@@ -60,6 +60,7 @@ class ReadPlaybackService : MediaSessionService() {
         SettableFuture<SessionResult>? = null
     private var refillJob: Job? = null
     private var seekLoadJob: Job? = null
+    private var voiceChangeJob: Job? = null
 
     private var activeManifest: ReadingManifestV1? = null
     private var activeVoiceId: String? = null
@@ -136,6 +137,10 @@ class ReadPlaybackService : MediaSessionService() {
                                 ReadPlaybackCommandContract
                                     .loadManifestCommand
                             )
+                            commandsBuilder.add(
+                                ReadPlaybackCommandContract
+                                    .changeVoiceCommand
+                            )
                         }
 
                         return MediaSession.ConnectionResult
@@ -193,6 +198,21 @@ class ReadPlaybackService : MediaSessionService() {
                                         )
 
                                 loadPlayableDocument(decoded)
+                            }
+
+                            ReadPlaybackCommandContract
+                                .ACTION_CHANGE_VOICE -> {
+                                val voiceId =
+                                    ReadPlaybackCommandContract
+                                        .decodeChangeVoice(args)
+                                        ?: return Futures.immediateFuture(
+                                            SessionResult(
+                                                SessionResult
+                                                    .RESULT_ERROR_BAD_VALUE
+                                            )
+                                        )
+
+                                startVoiceChange(voiceId)
                             }
 
                             else -> Futures.immediateFuture(
@@ -577,6 +597,139 @@ class ReadPlaybackService : MediaSessionService() {
         }
     }
 
+    private fun startVoiceChange(
+        voiceId: String
+    ): ListenableFuture<SessionResult> {
+        val manifest = activeManifest
+            ?: return Futures.immediateFuture(
+                SessionResult(
+                    SessionResult.RESULT_ERROR_INVALID_STATE
+                )
+            )
+        val player = documentPlayer
+            ?: return Futures.immediateFuture(
+                SessionResult(
+                    SessionResult.RESULT_ERROR_INVALID_STATE
+                )
+            )
+        val audioCoordinator = coordinator
+            ?: return Futures.immediateFuture(
+                SessionResult(
+                    SessionResult.RESULT_ERROR_INVALID_STATE
+                )
+            )
+
+        val newVoice = voiceId.trim()
+        if (newVoice.isBlank()) {
+            return Futures.immediateFuture(
+                SessionResult(
+                    SessionResult.RESULT_ERROR_BAD_VALUE
+                )
+            )
+        }
+
+        if (newVoice == activeVoiceId) {
+            return Futures.immediateFuture(
+                SessionResult(
+                    SessionResult.RESULT_SUCCESS
+                )
+            )
+        }
+
+        val cursor = player.currentLogicalPositionMs()
+        activeVoiceId = newVoice
+
+        refillJob?.cancel()
+        refillJob = null
+        seekLoadJob?.cancel()
+        seekLoadJob = null
+        voiceChangeJob?.cancel()
+        preparedSegments.clear()
+        lastUnderrunBoundaryIndex = null
+        nextRefillAllowedAtMs = 0L
+
+        player.prepareForAudioReplacement()
+
+        val future = SettableFuture.create<SessionResult>()
+
+        voiceChangeJob = serviceScope.launch {
+            try {
+                val targetIndex = manifest.segments.indexOfFirst {
+                    cursor < it.logicalEndMs
+                }.takeIf { it >= 0 }
+                    ?: manifest.segments.lastIndex
+
+                if (targetIndex < 0) {
+                    future.set(
+                        SessionResult(
+                            SessionResult.RESULT_ERROR_INVALID_STATE
+                        )
+                    )
+                    return@launch
+                }
+
+                val segments = audioCoordinator.prepare(
+                    manifest = manifest,
+                    startingAt = targetIndex,
+                    voiceId = newVoice,
+                    accessToken = currentAccessToken()
+                )
+
+                segments.forEach {
+                    preparedSegments[it.index] = it
+                }
+
+                val updated = audioCoordinator.playableDocument(
+                    manifest = manifest,
+                    segments = preparedSegments.values.toList()
+                )
+
+                player.loadDocument(
+                    value = updated,
+                    overridePositionMs = cursor
+                )
+
+                startRefillLoop(
+                    manifest = manifest,
+                    voiceId = newVoice
+                )
+                persistResume()
+
+                future.set(
+                    SessionResult(
+                        SessionResult.RESULT_SUCCESS
+                    )
+                )
+            } catch (error: CancellationException) {
+                if (!future.isDone) {
+                    future.set(
+                        SessionResult(
+                            SessionResult.RESULT_ERROR_INVALID_STATE
+                        )
+                    )
+                }
+                throw error
+            } catch (error: Exception) {
+                Log.e(
+                    TAG,
+                    "Voice change synthesis failed",
+                    error
+                )
+                if (!future.isDone) {
+                    future.set(
+                        SessionResult(
+                            SessionResult.RESULT_ERROR_INVALID_STATE
+                        )
+                    )
+                }
+            } finally {
+                voiceChangeJob = null
+            }
+        }
+
+        return future
+    }
+
     private fun resolvedStartingIndex(
         manifest: ReadingManifestV1,
         requestedIndex: Int
@@ -629,6 +782,9 @@ class ReadPlaybackService : MediaSessionService() {
 
         seekLoadJob?.cancel()
         seekLoadJob = null
+
+        voiceChangeJob?.cancel()
+        voiceChangeJob = null
 
         preparedSegments.clear()
         lastUnderrunBoundaryIndex = null
