@@ -368,6 +368,26 @@ describe("WebPlaybackSession document-wide contract", () => {
     session.destroy();
   });
 
+  it("can change the preferred voice before any document is loaded", async () => {
+    const { session } = createHarness();
+
+    await session.setVoice(
+      "voice:future-en",
+      { language: "en-US" },
+    );
+
+    expect(session.getSnapshot()).toMatchObject({
+      status: "idle",
+      documentId: null,
+      voiceId: "voice:future-en",
+    });
+
+    session.loadDocument(makeManifest());
+    expect(session.getSnapshot().voiceId).toBe("voice:future-en");
+
+    session.destroy();
+  });
+
   it("starts a fresh session from persisted speed and same-language voice defaults", () => {
     const { session } = createHarness({
       speed: 1.75,
