@@ -1,6 +1,14 @@
 import Foundation
 import FloentlyShared
 
+struct ReadProgressiveRefillTelemetry: Equatable {
+    var refillAttempts = 0
+    var refillSuccesses = 0
+    var refillFailures = 0
+    var underruns = 0
+    var lastFailure: String?
+}
+
 @MainActor
 final class ReadDocumentPlaybackLoader: ObservableObject {
     enum State: Equatable {
@@ -11,10 +19,18 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
     }
 
     @Published private(set) var state: State = .idle
+    @Published private(set) var refillTelemetry =
+        ReadProgressiveRefillTelemetry()
 
     private let coordinator: ReadProgressiveAudioCoordinator?
     private let resumeStore = ReadPlaybackResumeStore()
+    private let refillLowWatermark: TimeInterval = 45
+
     private var task: Task<Void, Never>?
+    private var refillTask: Task<Void, Never>?
+    private var preparedSegments: [Int: ReadPlayableSegment] = [:]
+    private var lastUnderrunBoundaryIndex: Int?
+    private var nextRefillAllowedAt = Date.distantPast
 
     init() {
         coordinator = try? ReadProgressiveAudioCoordinator(
@@ -30,7 +46,11 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         autoplay: Bool = false,
         startingAt index: Int = 0
     ) {
-        task?.cancel()
+        cancelTasks()
+        preparedSegments.removeAll()
+        lastUnderrunBoundaryIndex = nil
+        nextRefillAllowedAt = .distantPast
+        refillTelemetry = ReadProgressiveRefillTelemetry()
 
         guard let coordinator else {
             state = .failed(
@@ -59,9 +79,13 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
 
                 guard !Task.isCancelled else { return }
 
+                for segment in segments {
+                    preparedSegments[segment.index] = segment
+                }
+
                 let document = await coordinator.playableDocument(
                     manifest: manifest,
-                    segments: segments
+                    segments: preparedSegments.values.map { $0 }
                 )
 
                 guard !Task.isCancelled else { return }
@@ -83,6 +107,12 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                 }
 
                 state = .ready
+                startRefillLoop(
+                    manifest: manifest,
+                    voiceId: voiceId,
+                    accessToken: accessToken,
+                    playback: playback
+                )
             } catch is CancellationError {
                 return
             } catch {
@@ -92,11 +122,139 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
     }
 
     func cancel() {
-        task?.cancel()
-        task = nil
+        cancelTasks()
+        preparedSegments.removeAll()
+        lastUnderrunBoundaryIndex = nil
+        nextRefillAllowedAt = .distantPast
+
         if state == .preparing {
             state = .idle
         }
+    }
+
+    private func startRefillLoop(
+        manifest: ReadingManifestV1,
+        voiceId: String,
+        accessToken: String?,
+        playback: ReadPlaybackSession
+    ) {
+        refillTask?.cancel()
+
+        refillTask = Task { [weak self, weak playback] in
+            guard let self, let playback else { return }
+
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(
+                        nanoseconds: 1_000_000_000
+                    )
+                } catch {
+                    return
+                }
+
+                guard
+                    let current = playback.document,
+                    current.id == manifest.documentId,
+                    current.revisionId == manifest.revisionId
+                else {
+                    return
+                }
+
+                if playback.state == .ended {
+                    return
+                }
+
+                await refillIfNeeded(
+                    manifest: manifest,
+                    voiceId: voiceId,
+                    accessToken: accessToken,
+                    playback: playback
+                )
+            }
+        }
+    }
+
+    private func refillIfNeeded(
+        manifest: ReadingManifestV1,
+        voiceId: String,
+        accessToken: String?,
+        playback: ReadPlaybackSession
+    ) async {
+        guard
+            let coordinator,
+            !manifest.segments.isEmpty,
+            Date() >= nextRefillAllowedAt
+        else {
+            return
+        }
+
+        let highestPrepared = preparedSegments.keys.max() ?? -1
+        let nextIndex = highestPrepared + 1
+
+        guard nextIndex < manifest.segments.count else {
+            return
+        }
+
+        let prefixExhausted =
+            playback.state == .preparing
+            && playback.elapsedTime + 0.001 < playback.duration
+
+        if prefixExhausted,
+           lastUnderrunBoundaryIndex != highestPrepared {
+            lastUnderrunBoundaryIndex = highestPrepared
+            refillTelemetry.underruns += 1
+        }
+
+        guard
+            prefixExhausted
+            || playback.bufferedAhead <= refillLowWatermark
+        else {
+            return
+        }
+
+        refillTelemetry.refillAttempts += 1
+
+        do {
+            let segments = try await coordinator.prepare(
+                manifest: manifest,
+                startingAt: nextIndex,
+                voiceId: voiceId,
+                accessToken: accessToken
+            )
+
+            guard !Task.isCancelled else { return }
+
+            for segment in segments {
+                preparedSegments[segment.index] = segment
+            }
+
+            let document = await coordinator.playableDocument(
+                manifest: manifest,
+                segments: preparedSegments.values.map { $0 }
+            )
+
+            guard !Task.isCancelled else { return }
+
+            playback.refresh(document)
+            refillTelemetry.refillSuccesses += 1
+            refillTelemetry.lastFailure = nil
+            nextRefillAllowedAt = .distantPast
+        } catch is CancellationError {
+            return
+        } catch {
+            refillTelemetry.refillFailures += 1
+            refillTelemetry.lastFailure =
+                error.localizedDescription
+            nextRefillAllowedAt = Date()
+                .addingTimeInterval(5)
+        }
+    }
+
+    private func cancelTasks() {
+        task?.cancel()
+        task = nil
+        refillTask?.cancel()
+        refillTask = nil
     }
 
     private func resolvedStartingIndex(
