@@ -347,8 +347,19 @@ final class ReadPlaybackSession: ObservableObject {
                 object: AVAudioSession.sharedInstance(),
                 queue: .main
             ) { [weak self] notification in
+                let rawType =
+                    notification.userInfo?[AVAudioSessionInterruptionTypeKey]
+                    as? UInt
+                let rawOptions =
+                    notification.userInfo?[AVAudioSessionInterruptionOptionKey]
+                    as? UInt
+                    ?? 0
+
                 Task { @MainActor in
-                    self?.handleInterruption(notification)
+                    self?.handleInterruption(
+                        rawType: rawType,
+                        rawOptions: rawOptions
+                    )
                 }
             }
         )
@@ -359,8 +370,12 @@ final class ReadPlaybackSession: ObservableObject {
                 object: AVAudioSession.sharedInstance(),
                 queue: .main
             ) { [weak self] notification in
+                let rawReason =
+                    notification.userInfo?[AVAudioSessionRouteChangeReasonKey]
+                    as? UInt
+
                 Task { @MainActor in
-                    self?.handleRouteChange(notification)
+                    self?.handleRouteChange(rawReason: rawReason)
                 }
             }
         )
@@ -378,9 +393,12 @@ final class ReadPlaybackSession: ObservableObject {
         )
     }
 
-    private func handleInterruption(_ notification: Notification) {
+    private func handleInterruption(
+        rawType: UInt?,
+        rawOptions: UInt
+    ) {
         guard
-            let rawType = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+            let rawType,
             let type = AVAudioSession.InterruptionType(rawValue: rawType)
         else {
             return
@@ -397,10 +415,9 @@ final class ReadPlaybackSession: ObservableObject {
             publishNowPlaying()
 
         case .ended:
-            let rawOptions =
-                notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt
-                ?? 0
-            let options = AVAudioSession.InterruptionOptions(rawValue: rawOptions)
+            let options = AVAudioSession.InterruptionOptions(
+                rawValue: rawOptions
+            )
             let resume = shouldResumeAfterInterruption
                 && options.contains(.shouldResume)
             shouldResumeAfterInterruption = false
@@ -417,10 +434,12 @@ final class ReadPlaybackSession: ObservableObject {
         }
     }
 
-    private func handleRouteChange(_ notification: Notification) {
+    private func handleRouteChange(rawReason: UInt?) {
         guard
-            let rawReason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
-            let reason = AVAudioSession.RouteChangeReason(rawValue: rawReason)
+            let rawReason,
+            let reason = AVAudioSession.RouteChangeReason(
+                rawValue: rawReason
+            )
         else {
             return
         }
