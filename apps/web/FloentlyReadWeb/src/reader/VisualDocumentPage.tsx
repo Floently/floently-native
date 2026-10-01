@@ -160,10 +160,16 @@ export function VisualDocumentPage({
         if (cancelled) return;
 
         if (nextProject.progress?.playbackRate) {
-          runtime.playback.setSpeed(nextProject.progress.playbackRate);
+          runtime.playback.setSpeed(
+            nextProject.progress.playbackRate,
+            { updatePreference: false },
+          );
         }
         if (nextProject.progress?.voiceId) {
-          await runtime.playback.setVoice(nextProject.progress.voiceId);
+          await runtime.playback.setVoice(
+            nextProject.progress.voiceId,
+            { updatePreference: false },
+          );
         }
 
         if (nextProject.progress?.currentCharacterOffset) {
