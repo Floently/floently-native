@@ -49,9 +49,32 @@ async function withinFastOpenBudget<T>(
   }
 }
 
-export async function ingestFileIntoReader(
+export interface FileIngestionOptions {
+  title?: string;
+  /**
+   * Keep the production first-open budget for UI-blocking imports.
+   * Set false only when the original source is already visible and canonical
+   * extraction is allowed to finish fully in the background.
+   */
+  fastOpen?: boolean;
+}
+
+export interface FileIngestionHandle {
+  /**
+   * The complete canonical project operation. It is never cancelled by the
+   * first-open UI budget and may finish after the original visual source opens.
+   */
+  canonical: Promise<UnifiedIngestionResult>;
+  /**
+   * The result appropriate for a foreground open. Large files may reject after
+   * the first-open budget while canonical continues behind the preserved source.
+   */
+  immediate: Promise<UnifiedIngestionResult>;
+}
+
+async function canonicalFileIngestion(
   file: File,
-  options: { title?: string } = {},
+  options: Pick<FileIngestionOptions, "title">,
 ): Promise<UnifiedIngestionResult> {
   let fingerprint: string | null = null;
 
@@ -66,10 +89,7 @@ export async function ingestFileIntoReader(
 
     if (existingProjectId) {
       try {
-        const project = await withinFastOpenBudget(
-          getContentProject(existingProjectId),
-          file,
-        );
+        const project = await getContentProject(existingProjectId);
         rememberProjectForFileFingerprint(fingerprint, project.id);
 
         return {
@@ -78,16 +98,14 @@ export async function ingestFileIntoReader(
           reused: true,
         };
       } catch {
-        // Stale fingerprint mappings and slow cloud reads are recoverable:
-        // upload the file again instead of blocking the person.
+        // A stale mapping is recoverable. Continue to one canonical upload.
       }
     }
   }
 
-  const project = await withinFastOpenBudget(
-    uploadContentProject(file, options),
-    file,
-  );
+  const project = await uploadContentProject(file, {
+    title: options.title,
+  });
 
   if (fingerprint) {
     rememberProjectForFileFingerprint(fingerprint, project.id);
@@ -98,6 +116,29 @@ export async function ingestFileIntoReader(
     project,
     reused: false,
   };
+}
+
+export function beginFileIngestion(
+  file: File,
+  options: FileIngestionOptions = {},
+): FileIngestionHandle {
+  const canonical = canonicalFileIngestion(file, options);
+  const immediate =
+    options.fastOpen === false
+      ? canonical
+      : withinFastOpenBudget(canonical, file);
+
+  return {
+    canonical,
+    immediate,
+  };
+}
+
+export async function ingestFileIntoReader(
+  file: File,
+  options: FileIngestionOptions = {},
+): Promise<UnifiedIngestionResult> {
+  return beginFileIngestion(file, options).immediate;
 }
 
 export async function ingestTextIntoReader(
