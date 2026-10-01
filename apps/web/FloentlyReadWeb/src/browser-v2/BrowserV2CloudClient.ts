@@ -897,6 +897,43 @@ export class BrowserV2CloudClient implements BrowserBackend {
     if (this.navigationWait) { const w = this.navigationWait; this.navigationWait = null;
       window.clearTimeout(w.timer); w.reject(fail("SESSION_GONE")); }
   }
+  /**
+   * Re-arm this app-owned client only after a completed stop.
+   *
+   * Browser V2 deliberately has one owner session at a time. Retry therefore
+   * destroys the old authenticated allocation first, then explicitly reuses
+   * this JavaScript owner object with fresh tickets/socket/transport. This is
+   * never called while an allocation or media transport is still attached.
+   */
+  prepareRestart(): void {
+    if (
+      this.allocation
+      || this.signal
+      || this.transport
+      || this.offSignal
+      || this.heartbeatTimer !== null
+    ) {
+      throw fail("BROWSER_V2_SESSION_STILL_ACTIVE");
+    }
+
+    this.stopped = false;
+    this.connected = false;
+    this.workerReady = false;
+    this.vncFrameReady = false;
+    this.vncDisplayGrant = null;
+    this.signalProgress = {
+      phase: null,
+      answerReceived: false,
+      iceReceived: false,
+    };
+    this.signalReadyGeneration = 0;
+    this.safeMediaFailure = null;
+    this.sequence = 0;
+    this.lastRemoteSequence = 0;
+    this.navigationRevision = 0;
+    this.preserveForReload = false;
+  }
+
   subscribe(fn: (e: BrowserEvent) => void) { this.events.add(fn); return () => this.events.delete(fn); }
   private unsupported(): Promise<never> { return Promise.reject(fail("UNSUPPORTED_CAPABILITY")); }
   private navigate(type:"browser.open"|"browser.back"|"browser.forward"|"browser.reload"|"browser.stop",
