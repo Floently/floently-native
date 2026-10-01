@@ -22,6 +22,7 @@ import type {
   TabSnapshot,
   ViewportPoint,
 } from "./transport/browserContracts";
+import type { ReadVoice } from "../tts/readTtsProvider";
 
 function normalizeTarget(value: string): string | null {
   const trimmed = value.trim();
@@ -156,6 +157,8 @@ export function BrowserWorkspace({
   const [vncStage, setVncStage] = useState<BrowserV2VncStage | null>(null);
   const [remoteTextInputFocused, setRemoteTextInputFocused] = useState(false);
   const [lastPoint, setLastPoint] = useState<ViewportPoint | null>(null);
+  const [voices, setVoices] = useState<ReadVoice[]>([]);
+  const [voicesLoading, setVoicesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const tab = useMemo(() => activeTab(snapshot), [snapshot]);
@@ -168,6 +171,33 @@ export function BrowserWorkspace({
   const isPlaying =
     ownsBrowserPlayback
     && ["preparing", "buffering", "playing"].includes(playback.status);
+
+  useEffect(() => {
+    if (!runtime || !active || voices.length > 0 || voicesLoading) return;
+
+    const listVoices = runtime.tts.listVoices?.bind(runtime.tts);
+    if (!listVoices) return;
+
+    let cancelled = false;
+    setVoicesLoading(true);
+
+    void listVoices()
+      .then((catalog) => {
+        if (!cancelled) {
+          setVoices(catalog.voices);
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) {
+          setVoicesLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [active, runtime, voices.length, voicesLoading]);
 
   useEffect(() => {
     if (!cloud) return;
@@ -802,6 +832,54 @@ export function BrowserWorkspace({
             >
               Read from here
             </button>
+
+            <label className="browser-reader-select">
+              <span>Speed</span>
+              <select
+                value={playback.speed}
+                onChange={(event) =>
+                  runtime?.playback.setSpeed(Number(event.target.value))
+                }
+              >
+                {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3].map(
+                  (speed) => (
+                    <option key={speed} value={speed}>
+                      {speed}×
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+
+            <label className="browser-reader-select browser-reader-voice">
+              <span>Voice</span>
+              <select
+                value={playback.voiceId}
+                disabled={voicesLoading || voices.length === 0}
+                onChange={(event) =>
+                  void runtime?.playback.setVoice(event.target.value)
+                }
+              >
+                {voices.length === 0 ? (
+                  <option value={playback.voiceId}>
+                    {voicesLoading ? "Loading…" : "Current voice"}
+                  </option>
+                ) : (
+                  <>
+                    {!voices.some((voice) => voice.id === playback.voiceId) ? (
+                      <option value={playback.voiceId}>Current voice</option>
+                    ) : null}
+                    {voices.map((voice) => (
+                      <option key={voice.id} value={voice.id}>
+                        {voice.name}
+                        {voice.locale ? ` · ${voice.locale}` : ""}
+                      </option>
+                    ))}
+                  </>
+                )}
+              </select>
+            </label>
+
             <span className="browser-reading-title">
               {reading.title ?? "Current page"}
             </span>
