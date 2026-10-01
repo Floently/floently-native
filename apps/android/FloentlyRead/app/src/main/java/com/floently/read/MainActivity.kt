@@ -167,6 +167,9 @@ private fun ReadBrowserScreen(
     var selectedLanguage by remember { mutableStateOf("auto") }
     var lastLoadedDocumentId by remember { mutableStateOf<String?>(null) }
     var lastLoadedRevisionId by remember { mutableStateOf<String?>(null) }
+    var activeReadingManifest by remember {
+        mutableStateOf<ReadingManifestV1?>(null)
+    }
     var rendererGeneration by remember { mutableIntStateOf(0) }
     var rendererCrashUrl by remember { mutableStateOf<String?>(null) }
     var rendererCrashCount by remember { mutableIntStateOf(0) }
@@ -231,11 +234,19 @@ private fun ReadBrowserScreen(
         resetRendererRecovery()
         addressText = target
         currentUrl = target
+        webView?.evaluateJavascript(
+            ReadBrowserPolicy.readingVisualJavaScript(
+                active = false,
+                pulse = false
+            ),
+            null
+        )
         pageTitle = ""
         extractedText = ""
         extractedLanguage = "auto"
         selectedText = ""
         selectedLanguage = "auto"
+        activeReadingManifest = null
         readingStatus = "Loading…"
         webView?.loadUrl(target)
     }
@@ -304,6 +315,8 @@ private fun ReadBrowserScreen(
                     ReadBrowserNativeReading.manifest(source)
                 }
             }.onSuccess { manifest ->
+                activeReadingManifest = manifest
+
                 val sameReading =
                     manifest.documentId == lastLoadedDocumentId &&
                         manifest.revisionId == lastLoadedRevisionId
@@ -341,6 +354,35 @@ private fun ReadBrowserScreen(
         if (!initialUrl.isNullOrBlank() && initialUrl != currentUrl) {
             openAddress(initialUrl)
         }
+    }
+
+    val playbackSnapshot = playbackController.snapshot
+    val activeSegmentIndex =
+        activeReadingManifest?.segments?.firstOrNull { segment ->
+            playbackSnapshot.positionMs < segment.logicalEndMs
+        }?.index
+            ?: activeReadingManifest?.segments?.lastOrNull()
+                ?.takeIf {
+                    playbackSnapshot.positionMs >=
+                        it.logicalStartMs
+                }
+                ?.index
+
+    LaunchedEffect(
+        playbackSnapshot.isPlaying,
+        activeSegmentIndex,
+        webView
+    ) {
+        val view = webView ?: return@LaunchedEffect
+        val active = playbackSnapshot.isPlaying
+
+        view.evaluateJavascript(
+            ReadBrowserPolicy.readingVisualJavaScript(
+                active = active,
+                pulse = active && activeSegmentIndex != null
+            ),
+            null
+        )
     }
 
     BackHandler(enabled = canGoBack) {
