@@ -9,6 +9,7 @@ import {
   useBrowserLocation,
 } from "./routing/navigation";
 import { ProductApp } from "./shell/ProductApp";
+import { startReadPreferencesEnvironment } from "./preferences/readPreferencesStore";
 import "./styles.css";
 
 function AppLoading({ label }: { label: string }) {
@@ -57,6 +58,7 @@ export default function App() {
 
   useEffect(() => {
     void initializeAuth();
+    return startReadPreferencesEnvironment();
   }, []);
 
   if (
