@@ -309,13 +309,6 @@ function openGooglePicker({
         const docs = data?.[pickerApi.Response.DOCUMENTS] ?? data?.docs ?? data?.documents ?? [];
         const selected = Array.isArray(docs) ? docs[0] : null;
 
-        (window as any).__FLOWREADER_LAST_PICKER_DATA = data;
-        try {
-          console.info("[FlowReader] Google Picker callback JSON", JSON.stringify(data, null, 2));
-        } catch {
-          console.info("[FlowReader] Google Picker callback", data);
-        }
-
         onStatus?.(`Google Picker returned: ${String(action || "unknown")}`);
 
         if ((action === pickerApi.Action.CANCEL || action === "cancel") && !selected) {
