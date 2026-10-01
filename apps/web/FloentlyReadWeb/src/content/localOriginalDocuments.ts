@@ -212,6 +212,36 @@ export async function getLocalOriginalDocument(
   }
 }
 
+async function getAllLocalOriginalRecords(): Promise<
+  LocalOriginalDocumentRecord[]
+> {
+  const database = await openDatabase();
+
+  try {
+    const transaction = database.transaction(STORE_NAME, "readonly");
+    return await requestResult(
+      transaction.objectStore(STORE_NAME).getAll(),
+    ) as LocalOriginalDocumentRecord[];
+  } finally {
+    database.close();
+  }
+}
+
+export function sameOriginalIdentity(
+  left: LocalOriginalDocumentRecord,
+  right: LocalOriginalDocumentRecord,
+): boolean {
+  if (left.contentHash && right.contentHash) {
+    return left.contentHash === right.contentHash;
+  }
+
+  return Boolean(
+    left.quickSignature
+    && right.quickSignature
+    && left.quickSignature === right.quickSignature,
+  );
+}
+
 export async function listLocalOriginalDocuments(
   limit = 80,
 ): Promise<LocalOriginalDocumentRecord[]> {
@@ -252,11 +282,24 @@ export async function listLocalOriginalDocuments(
 export async function removeLocalOriginalDocument(
   id: string,
 ): Promise<void> {
+  const records = await getAllLocalOriginalRecords();
+  const target = records.find((record) => record.id === id) ?? null;
+  const idsToDelete = target
+    ? records
+        .filter((record) => sameOriginalIdentity(target, record))
+        .map((record) => record.id)
+    : [id];
+
   const database = await openDatabase();
 
   try {
     const transaction = database.transaction(STORE_NAME, "readwrite");
-    transaction.objectStore(STORE_NAME).delete(id);
+    const store = transaction.objectStore(STORE_NAME);
+
+    for (const recordId of idsToDelete) {
+      store.delete(recordId);
+    }
+
     await transactionComplete(transaction);
   } finally {
     database.close();
