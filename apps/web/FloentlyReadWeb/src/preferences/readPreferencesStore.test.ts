@@ -15,7 +15,7 @@ import {
 describe("Read preference normalization", () => {
   it("validates stored theme, reading and typography values", () => {
     expect(normalizeReadThemePreference("system")).toBe("system");
-    expect(normalizeReadThemePreference("sepia")).toBe("dark");
+    expect(normalizeReadThemePreference("sepia")).toBe("light");
 
     expect(normalizeReadHighlightMode("none")).toBe("none");
     expect(normalizeReadHighlightMode("word")).toBe("word");
