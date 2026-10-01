@@ -13,6 +13,8 @@ const EMPTY_SNAPSHOT: WebPlaybackSnapshot = {
   durationMs: 0,
   elapsedMs: 0,
   bufferedAheadMs: 0,
+  activeSegmentIndex: null,
+  canonicalScalarCursor: null,
   speed: 1,
   voiceId: "",
   error: null,
