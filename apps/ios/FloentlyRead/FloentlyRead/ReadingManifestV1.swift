@@ -222,3 +222,35 @@ enum ReadingManifestValidationError: LocalizedError, Equatable {
         }
     }
 }
+
+
+extension ReadingManifestV1 {
+    func playableDocument(
+        author: String? = nil,
+        localURLForSegment: (ReadingManifestSegmentV1) -> URL?
+    ) -> ReadPlayableDocument {
+        let playable = readyAudioPrefix.compactMap { segment -> ReadPlayableSegment? in
+            guard let url = localURLForSegment(segment) else { return nil }
+
+            return ReadPlayableSegment(
+                id: segment.id,
+                index: segment.index,
+                url: url,
+                logicalStartTime: TimeInterval(segment.logicalStartMs) / 1_000,
+                logicalEndTime: TimeInterval(segment.logicalEndMs) / 1_000,
+                physicalDuration: segment.audio.map {
+                    TimeInterval($0.durationMs) / 1_000
+                }
+            )
+        }
+
+        return ReadPlayableDocument(
+            id: documentId,
+            revisionId: revisionId,
+            title: title,
+            author: author,
+            estimatedDuration: estimatedSourceDuration,
+            segments: playable
+        )
+    }
+}

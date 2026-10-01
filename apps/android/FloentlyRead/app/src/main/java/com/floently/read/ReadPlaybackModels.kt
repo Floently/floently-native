@@ -16,6 +16,48 @@ data class ReadPlaybackSegment(
 ) {
     val logicalDurationMs: Long
         get() = (logicalEndMs - logicalStartMs).coerceAtLeast(0L)
+
+    fun logicalOffsetForPhysical(
+        physicalOffsetMs: Long,
+        resolvedPhysicalDurationMs: Long? = actualDurationMs
+    ): Long {
+        val physicalDuration = resolvedPhysicalDurationMs
+            ?.takeIf { it > 0L }
+
+        if (physicalDuration == null || logicalDurationMs <= 0L) {
+            return physicalOffsetMs
+                .coerceIn(0L, logicalDurationMs)
+        }
+
+        val fraction = physicalOffsetMs
+            .coerceIn(0L, physicalDuration)
+            .toDouble() / physicalDuration.toDouble()
+
+        return (fraction * logicalDurationMs)
+            .toLong()
+            .coerceIn(0L, logicalDurationMs)
+    }
+
+    fun physicalOffsetForLogical(
+        logicalOffsetMs: Long,
+        resolvedPhysicalDurationMs: Long? = actualDurationMs
+    ): Long {
+        val physicalDuration = resolvedPhysicalDurationMs
+            ?.takeIf { it > 0L }
+
+        if (physicalDuration == null || logicalDurationMs <= 0L) {
+            return logicalOffsetMs
+                .coerceIn(0L, logicalDurationMs)
+        }
+
+        val fraction = logicalOffsetMs
+            .coerceIn(0L, logicalDurationMs)
+            .toDouble() / logicalDurationMs.toDouble()
+
+        return (fraction * physicalDuration)
+            .toLong()
+            .coerceIn(0L, physicalDuration)
+    }
 }
 
 data class ReadPlayableDocument(
@@ -59,12 +101,27 @@ object ReadPlaybackTimeline {
 
     fun logicalTime(
         segment: ReadPlaybackSegment,
-        localOffsetMs: Long,
-        documentDurationMs: Long
+        physicalOffsetMs: Long,
+        documentDurationMs: Long,
+        resolvedPhysicalDurationMs: Long? = segment.actualDurationMs
     ): Long {
-        return (segment.logicalStartMs + localOffsetMs.coerceAtLeast(0L))
+        val logicalOffset = segment.logicalOffsetForPhysical(
+            physicalOffsetMs = physicalOffsetMs,
+            resolvedPhysicalDurationMs = resolvedPhysicalDurationMs
+        )
+
+        return (segment.logicalStartMs + logicalOffset)
             .coerceIn(0L, documentDurationMs.coerceAtLeast(0L))
     }
+
+    fun physicalOffset(
+        segment: ReadPlaybackSegment,
+        logicalOffsetMs: Long,
+        resolvedPhysicalDurationMs: Long? = segment.actualDurationMs
+    ): Long = segment.physicalOffsetForLogical(
+        logicalOffsetMs = logicalOffsetMs,
+        resolvedPhysicalDurationMs = resolvedPhysicalDurationMs
+    )
 
     fun progress(document: ReadPlayableDocument, logicalTimeMs: Long): Double {
         val duration = document.logicalDurationMs

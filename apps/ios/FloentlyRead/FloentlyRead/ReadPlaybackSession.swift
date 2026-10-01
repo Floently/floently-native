@@ -9,6 +9,7 @@ struct ReadPlayableSegment: Identifiable, Equatable {
     let url: URL
     let logicalStartTime: TimeInterval
     let logicalEndTime: TimeInterval
+    let physicalDuration: TimeInterval?
 
     var logicalDuration: TimeInterval {
         max(0, logicalEndTime - logicalStartTime)
@@ -44,36 +45,67 @@ final class ReadPlaybackSession: ObservableObject {
     @Published private(set) var activeSegmentIndex: Int?
     @Published var playbackRate: Float = 1.0 {
         didSet {
-            playbackRate = min(2.0, max(0.5, playbackRate))
+            playbackRate = min(3.0, max(0.5, playbackRate))
             if state == .playing {
                 player.rate = playbackRate
             }
+            persistResumeIfNeeded()
             publishNowPlaying()
         }
     }
 
     private let player = AVQueuePlayer()
+    private let resumeStore = ReadPlaybackResumeStore()
     private var segmentByItemId: [ObjectIdentifier: ReadPlayableSegment] = [:]
     private var timeObserver: Any?
     private var itemEndObserver: NSObjectProtocol?
+    private var audioSessionObservers: [NSObjectProtocol] = []
     private var remoteCommandTargets: [(MPRemoteCommand, Any)] = []
+    private var shouldResumeAfterInterruption = false
+    private var lastResumePersistTime: TimeInterval = 0
 
     init() {
         configureAudioSession()
         installTimeObserver()
         installItemEndObserver()
+        installAudioSessionObservers()
         installRemoteCommands()
     }
 
     func load(_ document: ReadPlayableDocument, autoplay: Bool = false) {
         self.document = document
         state = .preparing
-        elapsedTime = 0
         duration = max(
             document.estimatedDuration,
             document.segments.last?.logicalEndTime ?? 0
         )
-        rebuildQueue(startingAt: 0, localOffset: 0)
+
+        let saved = resumeStore.load(
+            documentId: document.id,
+            revisionId: document.revisionId
+        )
+        let requestedCursor = min(
+            max(0, saved?.logicalTime ?? 0),
+            max(duration, 0)
+        )
+        elapsedTime = requestedCursor
+
+        if let saved {
+            playbackRate = min(3.0, max(0.5, saved.playbackRate))
+        }
+
+        if let target = segmentAndOffset(
+            for: requestedCursor,
+            in: document
+        ) {
+            rebuildQueue(
+                startingAt: target.segment.index,
+                localOffset: target.offset
+            )
+        } else {
+            rebuildQueue(startingAt: 0, localOffset: 0)
+        }
+
         state = .ready
         publishNowPlaying()
 
@@ -82,7 +114,64 @@ final class ReadPlaybackSession: ObservableObject {
         }
     }
 
+    func refresh(_ updated: ReadPlayableDocument) {
+        guard let current = document else {
+            load(updated)
+            return
+        }
+
+        guard
+            current.id == updated.id,
+            current.revisionId == updated.revisionId
+        else {
+            persistResume(force: true)
+            load(updated)
+            return
+        }
+
+        let resume = state == .playing
+        let cursor = elapsedTime
+        let currentRate = playbackRate
+        document = updated
+        duration = max(
+            updated.estimatedDuration,
+            updated.segments.last?.logicalEndTime ?? 0
+        )
+
+        guard !updated.segments.isEmpty else {
+            player.pause()
+            player.removeAllItems()
+            segmentByItemId.removeAll()
+            bufferedAhead = 0
+            activeSegmentIndex = nil
+            state = .preparing
+            persistResume(force: true)
+            publishNowPlaying()
+            return
+        }
+
+        guard let target = segmentAndOffset(for: cursor, in: updated) else {
+            return
+        }
+
+        rebuildQueue(
+            startingAt: target.segment.index,
+            localOffset: target.offset
+        )
+        elapsedTime = min(cursor, duration)
+        playbackRate = currentRate
+        state = resume ? .playing : .paused
+
+        if resume {
+            activateAudioSession()
+            player.playImmediately(atRate: playbackRate)
+        }
+        persistResume(force: true)
+        publishNowPlaying()
+    }
+
     func clear() {
+        persistResume(force: true)
         player.pause()
         player.removeAllItems()
         segmentByItemId.removeAll()
@@ -105,6 +194,7 @@ final class ReadPlaybackSession: ObservableObject {
 
         player.playImmediately(atRate: playbackRate)
         state = .playing
+        persistResume(force: true)
         publishNowPlaying()
     }
 
@@ -113,6 +203,7 @@ final class ReadPlaybackSession: ObservableObject {
         if document != nil {
             state = .paused
         }
+        persistResume(force: true)
         publishNowPlaying()
     }
 
@@ -136,6 +227,7 @@ final class ReadPlaybackSession: ObservableObject {
             activateAudioSession()
             player.playImmediately(atRate: playbackRate)
         }
+        persistResume(force: true)
         publishNowPlaying()
     }
 
@@ -182,7 +274,20 @@ final class ReadPlaybackSession: ObservableObject {
             return
         }
 
-        let target = CMTime(seconds: localOffset, preferredTimescale: 600)
+        guard
+            let currentItem = player.currentItem,
+            let segment = segmentByItemId[ObjectIdentifier(currentItem)]
+        else {
+            updateCurrentLogicalTime()
+            return
+        }
+
+        let physicalOffset = physicalOffset(
+            forLogicalOffset: localOffset,
+            in: segment,
+            item: currentItem
+        )
+        let target = CMTime(seconds: physicalOffset, preferredTimescale: 600)
         player.seek(to: target, toleranceBefore: .zero, toleranceAfter: .zero)
         updateCurrentLogicalTime()
     }
@@ -210,12 +315,167 @@ final class ReadPlaybackSession: ObservableObject {
                 self.updateCurrentLogicalTime()
 
                 if self.player.items().isEmpty {
-                    self.elapsedTime = self.duration
-                    self.state = .ended
+                    let readyEnd = self.document?.segments.last?.logicalEndTime ?? 0
+                    if readyEnd + 0.001 < self.duration {
+                        self.elapsedTime = min(readyEnd, self.duration)
+                        self.bufferedAhead = 0
+                        self.activeSegmentIndex = nil
+                        self.state = .preparing
+                        self.persistResume(force: true)
+                    } else {
+                        self.elapsedTime = self.duration
+                        self.state = .ended
+                        if let document = self.document {
+                            self.resumeStore.remove(
+                                documentId: document.id,
+                                revisionId: document.revisionId
+                            )
+                        }
+                    }
                     self.publishNowPlaying()
                 }
             }
         }
+    }
+
+    private func installAudioSessionObservers() {
+        let center = NotificationCenter.default
+
+        audioSessionObservers.append(
+            center.addObserver(
+                forName: AVAudioSession.interruptionNotification,
+                object: AVAudioSession.sharedInstance(),
+                queue: .main
+            ) { [weak self] notification in
+                let rawType =
+                    notification.userInfo?[AVAudioSessionInterruptionTypeKey]
+                    as? UInt
+                let rawOptions =
+                    notification.userInfo?[AVAudioSessionInterruptionOptionKey]
+                    as? UInt
+                    ?? 0
+
+                Task { @MainActor in
+                    self?.handleInterruption(
+                        rawType: rawType,
+                        rawOptions: rawOptions
+                    )
+                }
+            }
+        )
+
+        audioSessionObservers.append(
+            center.addObserver(
+                forName: AVAudioSession.routeChangeNotification,
+                object: AVAudioSession.sharedInstance(),
+                queue: .main
+            ) { [weak self] notification in
+                let rawReason =
+                    notification.userInfo?[AVAudioSessionRouteChangeReasonKey]
+                    as? UInt
+
+                Task { @MainActor in
+                    self?.handleRouteChange(rawReason: rawReason)
+                }
+            }
+        )
+
+        audioSessionObservers.append(
+            center.addObserver(
+                forName: AVAudioSession.mediaServicesWereResetNotification,
+                object: AVAudioSession.sharedInstance(),
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.handleMediaServicesReset()
+                }
+            }
+        )
+    }
+
+    private func handleInterruption(
+        rawType: UInt?,
+        rawOptions: UInt
+    ) {
+        guard
+            let rawType,
+            let type = AVAudioSession.InterruptionType(rawValue: rawType)
+        else {
+            return
+        }
+
+        switch type {
+        case .began:
+            shouldResumeAfterInterruption = state == .playing
+            player.pause()
+            if document != nil {
+                state = .paused
+            }
+            persistResume(force: true)
+            publishNowPlaying()
+
+        case .ended:
+            let options = AVAudioSession.InterruptionOptions(
+                rawValue: rawOptions
+            )
+            let resume = shouldResumeAfterInterruption
+                && options.contains(.shouldResume)
+            shouldResumeAfterInterruption = false
+
+            if resume {
+                activateAudioSession()
+                player.playImmediately(atRate: playbackRate)
+                state = .playing
+                publishNowPlaying()
+            }
+
+        @unknown default:
+            break
+        }
+    }
+
+    private func handleRouteChange(rawReason: UInt?) {
+        guard
+            let rawReason,
+            let reason = AVAudioSession.RouteChangeReason(
+                rawValue: rawReason
+            )
+        else {
+            return
+        }
+
+        if reason == .oldDeviceUnavailable, state == .playing {
+            pause()
+        }
+    }
+
+    private func handleMediaServicesReset() {
+        guard let document else {
+            configureAudioSession()
+            return
+        }
+
+        let wasPlaying = state == .playing
+        let cursor = elapsedTime
+        configureAudioSession()
+
+        if let target = segmentAndOffset(for: cursor, in: document) {
+            rebuildQueue(
+                startingAt: target.segment.index,
+                localOffset: target.offset
+            )
+        }
+
+        elapsedTime = min(cursor, duration)
+        state = wasPlaying ? .playing : .paused
+
+        if wasPlaying {
+            activateAudioSession()
+            player.playImmediately(atRate: playbackRate)
+        }
+
+        persistResume(force: true)
+        publishNowPlaying()
     }
 
     private func updateCurrentLogicalTime() {
@@ -232,16 +492,21 @@ final class ReadPlaybackSession: ObservableObject {
         }
 
         activeSegmentIndex = segment.index
-        let local = max(0, currentItem.currentTime().seconds.isFinite
+        let physicalLocal = max(0, currentItem.currentTime().seconds.isFinite
             ? currentItem.currentTime().seconds
             : 0)
-        elapsedTime = min(duration, segment.logicalStartTime + local)
+        let logicalLocal = logicalOffset(
+            forPhysicalOffset: physicalLocal,
+            in: segment,
+            item: currentItem
+        )
+        elapsedTime = min(duration, segment.logicalStartTime + logicalLocal)
 
         var ahead: TimeInterval = 0
         for item in player.items() {
             guard let queuedSegment = segmentByItemId[ObjectIdentifier(item)] else { continue }
             if queuedSegment.index == segment.index {
-                ahead += max(0, queuedSegment.logicalDuration - local)
+                ahead += max(0, queuedSegment.logicalDuration - logicalLocal)
             } else if queuedSegment.index > segment.index {
                 ahead += queuedSegment.logicalDuration
             }
@@ -251,7 +516,35 @@ final class ReadPlaybackSession: ObservableObject {
         if state != .paused && player.rate > 0 {
             state = .playing
         }
+        persistResumeIfNeeded()
         publishNowPlaying()
+    }
+
+    private func persistResumeIfNeeded() {
+        persistResume(force: false)
+    }
+
+    private func persistResume(force: Bool) {
+        guard let document, state != .ended else { return }
+
+        let now = Date().timeIntervalSince1970
+        if !force, now - lastResumePersistTime < 2 {
+            return
+        }
+        lastResumePersistTime = now
+
+        resumeStore.save(
+            ReadPlaybackResumeSnapshot(
+                documentId: document.id,
+                revisionId: document.revisionId,
+                logicalTime: min(
+                    max(0, elapsedTime),
+                    max(0, duration)
+                ),
+                playbackRate: playbackRate,
+                updatedAt: Date()
+            )
+        )
     }
 
     private func segmentAndOffset(
@@ -271,6 +564,58 @@ final class ReadPlaybackSession: ObservableObject {
 
         guard let last = document.segments.last else { return nil }
         return (last, last.logicalDuration)
+    }
+
+    private func physicalDuration(
+        for segment: ReadPlayableSegment,
+        item: AVPlayerItem
+    ) -> TimeInterval? {
+        if let duration = segment.physicalDuration,
+           duration.isFinite,
+           duration > 0 {
+            return duration
+        }
+
+        let itemDuration = item.duration.seconds
+        if itemDuration.isFinite, itemDuration > 0 {
+            return itemDuration
+        }
+
+        return nil
+    }
+
+    private func logicalOffset(
+        forPhysicalOffset physicalOffset: TimeInterval,
+        in segment: ReadPlayableSegment,
+        item: AVPlayerItem
+    ) -> TimeInterval {
+        guard
+            let physicalDuration = physicalDuration(for: segment, item: item),
+            physicalDuration > 0,
+            segment.logicalDuration > 0
+        else {
+            return min(segment.logicalDuration, max(0, physicalOffset))
+        }
+
+        let fraction = min(1, max(0, physicalOffset / physicalDuration))
+        return fraction * segment.logicalDuration
+    }
+
+    private func physicalOffset(
+        forLogicalOffset logicalOffset: TimeInterval,
+        in segment: ReadPlayableSegment,
+        item: AVPlayerItem
+    ) -> TimeInterval {
+        guard
+            let physicalDuration = physicalDuration(for: segment, item: item),
+            physicalDuration > 0,
+            segment.logicalDuration > 0
+        else {
+            return min(max(0, logicalOffset), segment.logicalDuration)
+        }
+
+        let fraction = min(1, max(0, logicalOffset / segment.logicalDuration))
+        return fraction * physicalDuration
     }
 
     private func installRemoteCommands() {

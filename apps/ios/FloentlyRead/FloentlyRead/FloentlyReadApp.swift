@@ -5,12 +5,16 @@ import FloentlyShared
 struct FloentlyReadApp: App {
     @StateObject private var browserRouter = ReadBrowserRouter()
     @StateObject private var playbackSession = ReadPlaybackSession()
+    @StateObject private var sessionStore = FloentlySessionStore()
+    @StateObject private var documentLoader = ReadDocumentPlaybackLoader()
 
     var body: some Scene {
         WindowGroup {
             ReadRootView()
                 .environmentObject(browserRouter)
                 .environmentObject(playbackSession)
+                .environmentObject(sessionStore)
+                .environmentObject(documentLoader)
                 .onOpenURL { incomingURL in
                     browserRouter.openIncomingURL(incomingURL)
                 }
@@ -36,6 +40,7 @@ final class ReadBrowserRouter: ObservableObject {
 
 struct ReadRootView: View {
     @EnvironmentObject private var browserRouter: ReadBrowserRouter
+    @EnvironmentObject private var playbackSession: ReadPlaybackSession
 
     var body: some View {
         NavigationStack {
@@ -44,6 +49,12 @@ struct ReadRootView: View {
             }
             .navigationDestination(isPresented: $browserRouter.isBrowserPresented) {
                 ReadBrowserView(initialURL: browserRouter.browserURL)
+            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if playbackSession.document != nil {
+                ReadPersistentPlayerView()
+                    .environmentObject(playbackSession)
             }
         }
     }
