@@ -438,6 +438,14 @@ export class WebPlaybackSession {
       );
     }
 
+    if (!this.manifest) {
+      this.replaceSnapshot({
+        voiceId: normalized,
+        error: null,
+      });
+      return;
+    }
+
     this.generation += 1;
     this.wantsPlayback = wasPlaying;
     this.engine.pause();
