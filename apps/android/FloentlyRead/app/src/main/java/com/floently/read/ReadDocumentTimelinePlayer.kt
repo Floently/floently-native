@@ -26,6 +26,7 @@ class ReadDocumentTimelinePlayer(
 ) : ForwardingSimpleBasePlayer(physicalPlayer) {
 
     private var document: ReadPlayableDocument? = null
+    private var resumeAfterProgressiveSeek = false
 
     fun currentDocument(): ReadPlayableDocument? = document
 
@@ -67,6 +68,10 @@ class ReadDocumentTimelinePlayer(
         }
         val previousPlayWhenReady =
             sameDocument && physicalPlayer.playWhenReady
+        val progressiveSeekShouldResume =
+            sameDocument
+                && overridePositionMs != null
+                && resumeAfterProgressiveSeek
         val previousSpeed = physicalPlayer.playbackParameters.speed
 
         document = value
@@ -144,12 +149,18 @@ class ReadDocumentTimelinePlayer(
 
         physicalPlayer.prepare()
         physicalPlayer.playWhenReady =
-            if (sameDocument) previousPlayWhenReady else autoplay
+            if (sameDocument) {
+                previousPlayWhenReady || progressiveSeekShouldResume
+            } else {
+                autoplay
+            }
+        resumeAfterProgressiveSeek = false
         invalidateState()
     }
 
     fun clearDocument() {
         document = null
+        resumeAfterProgressiveSeek = false
         physicalPlayer.stop()
         physicalPlayer.clearMediaItems()
         invalidateState()
@@ -261,6 +272,10 @@ class ReadDocumentTimelinePlayer(
         )
 
         if (target == null) {
+            resumeAfterProgressiveSeek =
+                physicalPlayer.playWhenReady
+            physicalPlayer.pause()
+            invalidateState()
             onUnpreparedSeek?.invoke(requested)
             return Futures.immediateVoidFuture()
         }
