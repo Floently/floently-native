@@ -2279,3 +2279,10 @@ button:disabled,
   resize: none;
   pointer-events: none;
 }
+
+
+.browser-error-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 7px;
+}
