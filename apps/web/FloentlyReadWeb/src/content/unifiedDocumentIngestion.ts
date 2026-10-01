@@ -29,9 +29,9 @@ async function withinFastOpenBudget<T>(
     return operation;
   }
 
-  let timerId: number | null = null;
+  let timerId: ReturnType<typeof globalThis.setTimeout> | null = null;
   const timeout = new Promise<never>((_, reject) => {
-    timerId = window.setTimeout(() => {
+    timerId = globalThis.setTimeout(() => {
       reject(
         new Error(
           "Canonical import is continuing too slowly; open the original immediately.",
@@ -44,7 +44,7 @@ async function withinFastOpenBudget<T>(
     return await Promise.race([operation, timeout]);
   } finally {
     if (timerId !== null) {
-      window.clearTimeout(timerId);
+      globalThis.clearTimeout(timerId);
     }
   }
 }
