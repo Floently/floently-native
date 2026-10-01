@@ -4,6 +4,10 @@ import {
   type LocalOriginalDocumentRecord,
 } from "../content/localOriginalDocuments";
 import {
+  attachSemanticProjectToLocalOriginal,
+  fileFromLocalOriginal,
+} from "../content/originalSemanticAttachment";
+import {
   getContentProject,
   type ContentProject,
 } from "../content/projectApi";
@@ -34,6 +38,9 @@ export function VisualDocumentPage({
     useState<LocalOriginalDocumentRecord | null>(null);
   const [project, setProject] = useState<ContentProject | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [semanticBusy, setSemanticBusy] = useState(false);
+  const [semanticWaitExpired, setSemanticWaitExpired] = useState(false);
+  const [semanticLoadRevision, setSemanticLoadRevision] = useState(0);
   const lastSavedAtRef = useRef(0);
   const latestProgressRef = useRef<{
     projectId: string;
@@ -77,11 +84,15 @@ export function VisualDocumentPage({
 
         setRecord(next);
 
-        if (!next.projectId && attempts < 20) {
+        if (next.projectId) {
+          setSemanticWaitExpired(false);
+        } else if (attempts < 40) {
           attempts += 1;
           timer = window.setTimeout(() => {
             void refresh();
           }, 1_500);
+        } else {
+          setSemanticWaitExpired(true);
         }
       } catch (reason) {
         if (!cancelled) {
@@ -149,7 +160,7 @@ export function VisualDocumentPage({
     return () => {
       cancelled = true;
     };
-  }, [record?.projectId, runtime]);
+  }, [record?.projectId, runtime, semanticLoadRevision]);
 
   useEffect(() => {
     if (
@@ -214,6 +225,43 @@ export function VisualDocumentPage({
     };
   }, [progressWriter]);
 
+  async function retrySemanticLayer(): Promise<void> {
+    if (!record || semanticBusy) return;
+
+    setSemanticBusy(true);
+    setError(null);
+
+    try {
+      const nextProject =
+        await attachSemanticProjectToLocalOriginal(
+          record.id,
+          fileFromLocalOriginal(record),
+        );
+      const refreshed =
+        await getLocalOriginalDocument(record.id);
+
+      setProject(null);
+      setRecord(
+        refreshed ?? {
+          ...record,
+          projectId: nextProject.id,
+          updatedAt: Date.now(),
+        },
+      );
+      setSemanticWaitExpired(false);
+      setSemanticLoadRevision((value) => value + 1);
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "The reading layer could not be prepared.",
+      );
+      setSemanticWaitExpired(true);
+    } finally {
+      setSemanticBusy(false);
+    }
+  }
+
   const semanticReady = Boolean(
     project
     && playback.documentId === `project:${project.id}`,
@@ -235,9 +283,13 @@ export function VisualDocumentPage({
             <span>
               {semanticReady
                 ? "Original pages · reading layer ready"
-                : record?.projectId
-                  ? "Original pages · preparing reading layer"
-                  : "Original pages · extracting reading layer"}
+                : semanticBusy
+                  ? "Original pages · retrying reading layer"
+                  : record?.projectId
+                    ? "Original pages · preparing reading layer"
+                    : semanticWaitExpired
+                      ? "Original pages · reading layer needs attention"
+                      : "Original pages · extracting reading layer"}
             </span>
           </div>
         </div>
@@ -251,6 +303,16 @@ export function VisualDocumentPage({
             >
               Download original
             </a>
+          ) : null}
+          {!semanticReady && record && (semanticWaitExpired || error) ? (
+            <button
+              type="button"
+              className="card-secondary"
+              disabled={semanticBusy}
+              onClick={() => void retrySemanticLayer()}
+            >
+              {semanticBusy ? "Retrying…" : "Retry reading layer"}
+            </button>
           ) : null}
           <button
             type="button"
