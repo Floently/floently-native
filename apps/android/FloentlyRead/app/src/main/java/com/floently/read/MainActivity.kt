@@ -86,6 +86,13 @@ class MainActivity : ComponentActivity() {
                 val playbackController = remember {
                     ReadPlaybackController(context)
                 }
+                val voiceSettings = remember {
+                    ReadVoiceSettings(context)
+                }
+
+                LaunchedEffect(voiceSettings) {
+                    voiceSettings.refresh()
+                }
 
                 DisposableEffect(playbackController) {
                     onDispose {
@@ -104,12 +111,14 @@ class MainActivity : ComponentActivity() {
                         ReadBrowserScreen(
                             initialUrl = incomingUrl.value,
                             playbackController = playbackController,
+                            voiceSettings = voiceSettings,
                             onExit = { finish() }
                         )
                     }
 
                     ReadPersistentPlayerDock(
-                        controller = playbackController
+                        controller = playbackController,
+                        voiceSettings = voiceSettings
                     )
                 }
             }
@@ -136,6 +145,7 @@ class MainActivity : ComponentActivity() {
 private fun ReadBrowserScreen(
     initialUrl: String?,
     playbackController: ReadPlaybackController,
+    voiceSettings: ReadVoiceSettings,
     onExit: () -> Unit
 ) {
     val context = LocalContext.current
@@ -311,10 +321,9 @@ private fun ReadBrowserScreen(
                     lastLoadedRevisionId = manifest.revisionId
                     playbackController.loadManifest(
                         manifest = manifest,
-                        voiceId =
-                            ReadBrowserNativeReading.defaultVoiceId(
-                                source.language
-                            ),
+                        voiceId = voiceSettings.voiceId(
+                            source.language
+                        ),
                         autoplay = true
                     )
                     readingStatus =
