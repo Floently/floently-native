@@ -21,6 +21,8 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
     @Published private(set) var state: State = .idle
     @Published private(set) var refillTelemetry =
         ReadProgressiveRefillTelemetry()
+    @Published private(set) var activeVoiceId: String?
+    @Published private(set) var activeLanguage = "auto"
 
     private let coordinator: ReadProgressiveAudioCoordinator?
     private let resumeStore = ReadPlaybackResumeStore()
@@ -31,6 +33,8 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
     private var seekTask: Task<Void, Never>?
     private weak var boundPlayback: ReadPlaybackSession?
     private var preparedSegments: [Int: ReadPlayableSegment] = [:]
+    private var activeManifest: ReadingManifestV1?
+    private var activeAccessToken: String?
     private var lastUnderrunBoundaryIndex: Int?
     private var nextRefillAllowedAt = Date.distantPast
 
@@ -50,24 +54,20 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
     ) {
         cancelTasks()
         preparedSegments.removeAll()
+        activeManifest = manifest
+        activeVoiceId = voiceId
+        activeLanguage = manifest.language
+        activeAccessToken = sessionStore.session?.token
         lastUnderrunBoundaryIndex = nil
         nextRefillAllowedAt = .distantPast
         refillTelemetry = ReadProgressiveRefillTelemetry()
 
-        if boundPlayback !== playback {
-            boundPlayback?.onUnpreparedSeek = nil
-        }
-        boundPlayback = playback
-        playback.onUnpreparedSeek = { [weak self, weak playback] logicalTime in
-            guard let self, let playback else { return }
-            self.loadWindowForUnpreparedSeek(
-                logicalTime: logicalTime,
-                manifest: manifest,
-                voiceId: voiceId,
-                accessToken: sessionStore.session?.token,
-                playback: playback
-            )
-        }
+        bindUnpreparedSeek(
+            manifest: manifest,
+            voiceId: voiceId,
+            accessToken: activeAccessToken,
+            playback: playback
+        )
 
         guard let coordinator else {
             state = .failed(
@@ -76,7 +76,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
             return
         }
 
-        let accessToken = sessionStore.session?.token
+        let accessToken = activeAccessToken
         let effectiveIndex = resolvedStartingIndex(
             manifest: manifest,
             requestedIndex: index
@@ -138,9 +138,151 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         }
     }
 
+    func changeVoice(
+        to voiceId: String,
+        playback: ReadPlaybackSession
+    ) {
+        guard
+            let coordinator,
+            let manifest = activeManifest,
+            !manifest.segments.isEmpty
+        else {
+            return
+        }
+
+        let newVoice = voiceId.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        guard !newVoice.isEmpty else { return }
+        guard newVoice != activeVoiceId else { return }
+
+        let cursor = playback.elapsedTime
+        let shouldResume =
+            playback.state == .playing
+            || playback.state == .preparing
+        let previousVoice = activeVoiceId
+
+        cancelTasks()
+        preparedSegments.removeAll()
+        lastUnderrunBoundaryIndex = nil
+        nextRefillAllowedAt = .distantPast
+        activeVoiceId = newVoice
+        state = .preparing
+
+        playback.beginAudioReplacement(
+            at: cursor,
+            resumeAfterReady: shouldResume
+        )
+
+        bindUnpreparedSeek(
+            manifest: manifest,
+            voiceId: newVoice,
+            accessToken: activeAccessToken,
+            playback: playback
+        )
+
+        let cursorMs = Int64(max(0, cursor) * 1_000)
+        let targetIndex = manifest.segments.firstIndex {
+            cursorMs < $0.logicalEndMs
+        } ?? manifest.segments.indices.last ?? 0
+
+        task = Task { [weak self, weak playback] in
+            guard let self, let playback else { return }
+
+            do {
+                let segments = try await coordinator.prepare(
+                    manifest: manifest,
+                    startingAt: targetIndex,
+                    voiceId: newVoice,
+                    accessToken: activeAccessToken
+                )
+
+                guard !Task.isCancelled else { return }
+
+                for segment in segments {
+                    preparedSegments[segment.index] = segment
+                }
+
+                let document = await coordinator.playableDocument(
+                    manifest: manifest,
+                    segments: preparedSegments.values.map { $0 }
+                )
+
+                guard !Task.isCancelled else { return }
+
+                playback.refresh(document)
+                state = .ready
+
+                startRefillLoop(
+                    manifest: manifest,
+                    voiceId: newVoice,
+                    accessToken: activeAccessToken,
+                    playback: playback
+                )
+            } catch is CancellationError {
+                return
+            } catch {
+                guard
+                    let previousVoice,
+                    previousVoice != newVoice
+                else {
+                    state = .failed(error.localizedDescription)
+                    return
+                }
+
+                activeVoiceId = previousVoice
+                preparedSegments.removeAll()
+
+                do {
+                    let fallback = try await coordinator.prepare(
+                        manifest: manifest,
+                        startingAt: targetIndex,
+                        voiceId: previousVoice,
+                        accessToken: activeAccessToken
+                    )
+
+                    guard !Task.isCancelled else { return }
+
+                    for segment in fallback {
+                        preparedSegments[segment.index] = segment
+                    }
+
+                    let document = await coordinator.playableDocument(
+                        manifest: manifest,
+                        segments: preparedSegments.values.map { $0 }
+                    )
+
+                    guard !Task.isCancelled else { return }
+
+                    playback.refresh(document)
+                    state = .ready
+
+                    bindUnpreparedSeek(
+                        manifest: manifest,
+                        voiceId: previousVoice,
+                        accessToken: activeAccessToken,
+                        playback: playback
+                    )
+                    startRefillLoop(
+                        manifest: manifest,
+                        voiceId: previousVoice,
+                        accessToken: activeAccessToken,
+                        playback: playback
+                    )
+                } catch {
+                    state = .failed(error.localizedDescription)
+                }
+            }
+        }
+    }
+
     func cancel() {
         cancelTasks()
         preparedSegments.removeAll()
+        activeManifest = nil
+        activeVoiceId = nil
+        activeLanguage = "auto"
+        activeAccessToken = nil
         lastUnderrunBoundaryIndex = nil
         nextRefillAllowedAt = .distantPast
         boundPlayback?.onUnpreparedSeek = nil
@@ -148,6 +290,31 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
 
         if state == .preparing {
             state = .idle
+        }
+    }
+
+    private func bindUnpreparedSeek(
+        manifest: ReadingManifestV1,
+        voiceId: String,
+        accessToken: String?,
+        playback: ReadPlaybackSession
+    ) {
+        if boundPlayback !== playback {
+            boundPlayback?.onUnpreparedSeek = nil
+        }
+        boundPlayback = playback
+
+        playback.onUnpreparedSeek = {
+            [weak self, weak playback] logicalTime in
+            guard let self, let playback else { return }
+
+            self.loadWindowForUnpreparedSeek(
+                logicalTime: logicalTime,
+                manifest: manifest,
+                voiceId: voiceId,
+                accessToken: accessToken,
+                playback: playback
+            )
         }
     }
 

@@ -4,6 +4,9 @@ import FloentlyShared
 
 struct ReadPersistentPlayerView: View {
     @EnvironmentObject private var playback: ReadPlaybackSession
+    @EnvironmentObject private var loader: ReadDocumentPlaybackLoader
+    @EnvironmentObject private var voiceSettings: ReadVoiceSettings
+    @EnvironmentObject private var sessionStore: FloentlySessionStore
     @State private var seekDraft: TimeInterval?
 
     private let palette = FloentlyPalette.read
@@ -90,6 +93,38 @@ struct ReadPersistentPlayerView: View {
                             .background(palette.elevated)
                             .clipShape(Capsule())
                     }
+
+                    Menu {
+                        ForEach(voiceOptions) { voice in
+                            Button {
+                                voiceSettings.select(
+                                    voiceId: voice.id,
+                                    for: loader.activeLanguage
+                                )
+                                loader.changeVoice(
+                                    to: voice.id,
+                                    playback: playback
+                                )
+                            } label: {
+                                if voice.id == currentVoiceId {
+                                    Label(
+                                        voice.name,
+                                        systemImage: "checkmark"
+                                    )
+                                } else {
+                                    Text(voice.name)
+                                }
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "waveform")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(palette.text)
+                            .frame(width: 36, height: 36)
+                            .background(palette.elevated)
+                            .clipShape(Circle())
+                    }
+                    .accessibilityLabel("Reading voice")
                 }
 
                 HStack(spacing: 8) {
@@ -128,7 +163,48 @@ struct ReadPersistentPlayerView: View {
             .padding(.horizontal, 10)
             .padding(.bottom, 6)
             .accessibilityElement(children: .contain)
+            .task {
+                await voiceSettings.refresh(
+                    sessionStore: sessionStore
+                )
+            }
         }
+    }
+
+    private var currentVoiceId: String {
+        loader.activeVoiceId
+            ?? voiceSettings.voiceId(
+                for: loader.activeLanguage
+            )
+    }
+
+    private var voiceOptions: [ReadVoiceOption] {
+        let available = voiceSettings.availableVoices(
+            for: loader.activeLanguage
+        )
+
+        if !available.isEmpty {
+            return available
+        }
+
+        return [
+            ReadVoiceOption(
+                id: "google:en-US-Neural2-C",
+                name: "English Neural",
+                language: "en",
+                locale: "en-US",
+                gender: nil,
+                accent: nil
+            ),
+            ReadVoiceOption(
+                id: "azure:fi-FI-SelmaNeural",
+                name: "Selma",
+                language: "fi",
+                locale: "fi-FI",
+                gender: nil,
+                accent: nil
+            )
+        ]
     }
 
     private var statusText: String {

@@ -1,6 +1,7 @@
 package com.floently.read
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,12 +9,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -27,6 +31,7 @@ import com.floently.shared.design.floentlyPalette
 @Composable
 fun ReadPersistentPlayerDock(
     controller: ReadPlaybackController,
+    voiceSettings: ReadVoiceSettings,
     modifier: Modifier = Modifier
 ) {
     val snapshot = controller.snapshot
@@ -41,6 +46,19 @@ fun ReadPersistentPlayerDock(
     } else {
         snapshot.positionMs
     }
+    val selectionRevision = voiceSettings.selectionRevision
+    val activeLanguage = controller.activeLanguage
+    val currentVoiceId = controller.activeVoiceId
+        ?: voiceSettings.voiceId(activeLanguage)
+    val voiceOptions = voiceSettings.availableVoices(
+        activeLanguage
+    )
+    var voiceMenuExpanded by remember {
+        mutableStateOf(false)
+    }
+
+    @Suppress("UNUSED_VARIABLE")
+    val voiceSelectionVersion = selectionRevision
 
     Surface(
         color = palette.backgroundBottom.copy(alpha = 0.98f),
@@ -106,6 +124,47 @@ fun ReadPersistentPlayerDock(
                     textColor = palette.text
                 ) {
                     controller.setSpeed(nextSpeed(snapshot.speed))
+                }
+
+                Box {
+                    PlayerButton(
+                        label = "Voice",
+                        surface = palette.backgroundTop,
+                        textColor = palette.text
+                    ) {
+                        voiceMenuExpanded = true
+                    }
+
+                    DropdownMenu(
+                        expanded = voiceMenuExpanded,
+                        onDismissRequest = {
+                            voiceMenuExpanded = false
+                        }
+                    ) {
+                        voiceOptions.forEach { voice ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        if (voice.id == currentVoiceId) {
+                                            "✓ " + voice.name
+                                        } else {
+                                            voice.name
+                                        }
+                                    )
+                                },
+                                onClick = {
+                                    voiceSettings.select(
+                                        voiceId = voice.id,
+                                        language = activeLanguage
+                                    )
+                                    controller.changeVoice(
+                                        voice.id
+                                    )
+                                    voiceMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
                 }
             }
 

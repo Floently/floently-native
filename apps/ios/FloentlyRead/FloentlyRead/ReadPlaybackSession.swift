@@ -277,6 +277,30 @@ final class ReadPlaybackSession: ObservableObject {
         seek(to: elapsedTime + delta)
     }
 
+    func beginAudioReplacement(
+        at logicalTime: TimeInterval,
+        resumeAfterReady: Bool
+    ) {
+        guard document != nil else { return }
+
+        player.pause()
+        player.removeAllItems()
+        segmentByItemId.removeAll()
+
+        elapsedTime = min(
+            max(0, logicalTime),
+            max(0, duration)
+        )
+        bufferedAhead = 0
+        activeSegmentIndex = nil
+        pendingSeekShouldResume = resumeAfterReady
+        shouldResumeAfterBuffering = false
+        state = .preparing
+
+        persistResume(force: true)
+        publishNowPlaying()
+    }
+
     private func configureAudioSession() {
         do {
             let session = AVAudioSession.sharedInstance()
