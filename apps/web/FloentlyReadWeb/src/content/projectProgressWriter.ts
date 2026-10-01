@@ -121,7 +121,7 @@ export function createProjectProgressWriter(
       const key = progressKey(projectId, progress);
 
       if (pending?.key === key) return;
-      if (key === activeKey && !pending) return;
+      if (key === activeKey) return;
       if (key === lastSavedKey && !inFlight) return;
 
       pending = {

@@ -55,6 +55,35 @@ describe("project progress writer", () => {
     expect(save.mock.calls[1]?.[1].currentCharacterOffset).toBe(30);
   });
 
+  it("does not let an active duplicate replace a newer pending cursor", async () => {
+    let releaseFirst: (() => void) | null = null;
+    const save = vi.fn(
+      async (
+        _projectId: string,
+        progress: { currentCharacterOffset?: number },
+      ) => {
+        if (progress.currentCharacterOffset === 10) {
+          await new Promise<void>((resolve) => {
+            releaseFirst = resolve;
+          });
+        }
+      },
+    );
+    const writer = createProjectProgressWriter(save);
+
+    writer.queue("p1", { currentCharacterOffset: 10 });
+    writer.queue("p1", { currentCharacterOffset: 30 });
+    writer.queue("p1", { currentCharacterOffset: 10 });
+
+    await Promise.resolve();
+    releaseFirst?.();
+    await writer.flush();
+
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save.mock.calls[0]?.[1].currentCharacterOffset).toBe(10);
+    expect(save.mock.calls[1]?.[1].currentCharacterOffset).toBe(30);
+  });
+
   it("does not resend an identical snapshot after it is saved", async () => {
     const save = vi.fn(async () => undefined);
     const writer = createProjectProgressWriter(save);
