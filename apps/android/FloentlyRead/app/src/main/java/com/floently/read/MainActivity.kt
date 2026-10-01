@@ -54,6 +54,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,7 +67,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.floently.shared.design.FloentlyProduct
 import com.floently.shared.design.floentlyPalette
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONTokener
+import org.json.JSONObject
 
 class MainActivity : ComponentActivity() {
     private val incomingUrl = mutableStateOf<String?>(null)
@@ -98,6 +103,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         ReadBrowserScreen(
                             initialUrl = incomingUrl.value,
+                            playbackController = playbackController,
                             onExit = { finish() }
                         )
                     }
@@ -129,15 +135,12 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun ReadBrowserScreen(
     initialUrl: String?,
+    playbackController: ReadPlaybackController,
     onExit: () -> Unit
 ) {
     val context = LocalContext.current
     val palette = floentlyPalette(FloentlyProduct.Read)
-    val speech = remember { ReadSpeechController(context) }
-
-    DisposableEffect(speech) {
-        onDispose { speech.shutdown() }
-    }
+    val scope = rememberCoroutineScope()
 
     var webView by remember { mutableStateOf<WebView?>(null) }
     var currentUrl by remember { mutableStateOf<String?>(initialUrl) }
@@ -147,8 +150,13 @@ private fun ReadBrowserScreen(
     var isLoading by remember { mutableStateOf(false) }
     var progress by remember { mutableIntStateOf(0) }
     var readingStatus by remember { mutableStateOf("Ready") }
+    var pageTitle by remember { mutableStateOf("") }
     var extractedText by remember { mutableStateOf("") }
+    var extractedLanguage by remember { mutableStateOf("auto") }
     var selectedText by remember { mutableStateOf("") }
+    var selectedLanguage by remember { mutableStateOf("auto") }
+    var lastLoadedDocumentId by remember { mutableStateOf<String?>(null) }
+    var lastLoadedRevisionId by remember { mutableStateOf<String?>(null) }
     var rendererGeneration by remember { mutableIntStateOf(0) }
     var rendererCrashUrl by remember { mutableStateOf<String?>(null) }
     var rendererCrashCount by remember { mutableIntStateOf(0) }
@@ -213,16 +221,111 @@ private fun ReadBrowserScreen(
         resetRendererRecovery()
         addressText = target
         currentUrl = target
-        speech.stop()
+        pageTitle = ""
         extractedText = ""
+        extractedLanguage = "auto"
         selectedText = ""
+        selectedLanguage = "auto"
         readingStatus = "Loading…"
         webView?.loadUrl(target)
     }
 
     fun decodeJavascriptString(value: String?): String {
         if (value.isNullOrBlank() || value == "null") return ""
-        return runCatching { JSONTokener(value).nextValue() as? String ?: "" }.getOrDefault("")
+        return runCatching {
+            JSONTokener(value).nextValue() as? String ?: ""
+        }.getOrDefault("")
+    }
+
+    fun decodeExtraction(
+        value: String?
+    ): ReadBrowserExtraction? {
+        val decoded = decodeJavascriptString(value)
+        if (decoded.isBlank()) return null
+
+        return runCatching {
+            val json = JSONObject(decoded)
+            ReadBrowserExtraction(
+                title = json.optString("title"),
+                url = json.optString("url"),
+                language = json.optString("language")
+                    .ifBlank { "auto" },
+                text = json.optString("text"),
+                wordCount = json.optInt("wordCount", 0)
+            )
+        }.getOrNull()
+    }
+
+    fun toggleNativeReading() {
+        val url = currentUrl ?: return
+        val selection = selectedText.trim()
+        val page = extractedText.trim()
+        val usingSelection = selection.isNotBlank()
+        val text = if (usingSelection) selection else page
+
+        if (text.isBlank()) return
+
+        val source = ReadBrowserReadingSource(
+            kind = if (usingSelection) {
+                ReadBrowserReadingSource.Kind.SELECTION
+            } else {
+                ReadBrowserReadingSource.Kind.PAGE
+            },
+            url = url,
+            title = pageTitle.ifBlank {
+                runCatching { Uri.parse(url).host }
+                    .getOrNull()
+                    .orEmpty()
+                    .ifBlank { "Web reading" }
+            },
+            language = if (usingSelection) {
+                selectedLanguage
+            } else {
+                extractedLanguage
+            },
+            text = text
+        )
+
+        readingStatus = "Preparing audio for the live page…"
+
+        scope.launch {
+            runCatching {
+                withContext(Dispatchers.Default) {
+                    ReadBrowserNativeReading.manifest(source)
+                }
+            }.onSuccess { manifest ->
+                val sameReading =
+                    manifest.documentId == lastLoadedDocumentId &&
+                        manifest.revisionId == lastLoadedRevisionId
+
+                if (sameReading && playbackController.snapshot.visible) {
+                    playbackController.togglePlayPause()
+                    readingStatus =
+                        if (playbackController.snapshot.isPlaying) {
+                            "Reading the live page."
+                        } else {
+                            "Reading paused."
+                        }
+                } else {
+                    lastLoadedDocumentId = manifest.documentId
+                    lastLoadedRevisionId = manifest.revisionId
+                    playbackController.loadManifest(
+                        manifest = manifest,
+                        voiceId =
+                            ReadBrowserNativeReading.defaultVoiceId(
+                                source.language
+                            ),
+                        autoplay = true
+                    )
+                    readingStatus =
+                        "Preparing native audio while the page stays live."
+                }
+            }.onFailure { error ->
+                readingStatus =
+                    "Could not prepare this page: " +
+                        (error.localizedMessage ?: "Unknown error")
+            }
+        }
     }
 
     LaunchedEffect(initialUrl) {
@@ -508,12 +611,11 @@ private fun ReadBrowserScreen(
                         accent = palette.accent,
                         surface = palette.backgroundBottom,
                         textColor = palette.text,
-                        playEnabled = speech.isReady && (selectedText.isNotBlank() || extractedText.isNotBlank()),
-                        isSpeaking = speech.isSpeaking && !speech.isPaused,
-                        onPlayPause = {
-                            val text = selectedText.ifBlank { extractedText }
-                            if (text.isNotBlank()) speech.toggle(text)
-                        },
+                        playEnabled =
+                            selectedText.isNotBlank()
+                                || extractedText.isNotBlank(),
+                        isPlaying = playbackController.snapshot.isPlaying,
+                        onPlayPause = ::toggleNativeReading,
                         onReadPage = {
                             val view = webView
                             val url = view?.url
@@ -523,10 +625,27 @@ private fun ReadBrowserScreen(
                                 return@ReadStrip
                             }
                             readingStatus = "Finding the main reading area…"
-                            view.evaluateJavascript(ReadBrowserPolicy.pageExtractionJavaScript) { result ->
-                                val text = decodeJavascriptString(result).trim()
+                            view.evaluateJavascript(
+                                ReadBrowserPolicy.pageExtractionJavaScript
+                            ) { result ->
+                                val payload = decodeExtraction(result)
+                                val text = payload?.text
+                                    ?.trim()
+                                    .orEmpty()
+
                                 extractedText = text
-                                val words = text.split(Regex("\\s+")).count { it.isNotBlank() }
+                                extractedLanguage =
+                                    payload?.language ?: "auto"
+                                pageTitle =
+                                    payload?.title
+                                        ?.takeIf { it.isNotBlank() }
+                                        ?: view.title.orEmpty()
+
+                                val words =
+                                    payload?.wordCount
+                                        ?: text.split(Regex("\\s+"))
+                                            .count { it.isNotBlank() }
+
                                 readingStatus = if (words == 0) {
                                     "No readable lesson or article text was found on the visible page."
                                 } else {
@@ -542,9 +661,24 @@ private fun ReadBrowserScreen(
                                 readingStatus = "Finish signing in before using Read on this page."
                                 return@ReadStrip
                             }
-                            view.evaluateJavascript(ReadBrowserPolicy.selectionExtractionJavaScript) { result ->
-                                selectedText = decodeJavascriptString(result).trim()
-                                readingStatus = if (selectedText.isBlank()) "Select text on the page first." else "Selection ready to read."
+                            view.evaluateJavascript(
+                                ReadBrowserPolicy.selectionExtractionJavaScript
+                            ) { result ->
+                                val payload = decodeExtraction(result)
+                                selectedText =
+                                    payload?.text?.trim().orEmpty()
+                                selectedLanguage =
+                                    payload?.language ?: "auto"
+                                if (payload?.title?.isNotBlank() == true) {
+                                    pageTitle = payload.title
+                                }
+
+                                readingStatus =
+                                    if (selectedText.isBlank()) {
+                                        "Select text on the page first."
+                                    } else {
+                                        "Selection ready to read."
+                                    }
                             }
                         },
                         modifier = Modifier
@@ -556,6 +690,14 @@ private fun ReadBrowserScreen(
         }
     }
 }
+
+private data class ReadBrowserExtraction(
+    val title: String,
+    val url: String,
+    val language: String,
+    val text: String,
+    val wordCount: Int
+)
 
 @Composable
 private fun BrowserStart(paletteText: Color, paletteMuted: Color, paletteAccent: Color) {
@@ -632,7 +774,7 @@ private fun ReadStrip(
     surface: Color,
     textColor: Color,
     playEnabled: Boolean,
-    isSpeaking: Boolean,
+    isPlaying: Boolean,
     onPlayPause: () -> Unit,
     onReadPage: () -> Unit,
     onReadSelection: () -> Unit,
@@ -665,7 +807,7 @@ private fun ReadStrip(
                 colors = ButtonDefaults.buttonColors(containerColor = surface),
                 modifier = Modifier.height(48.dp)
             ) {
-                Text(if (isSpeaking) "Pause" else "Play")
+                Text(if (isPlaying) "Pause" else "Play")
             }
 
             Button(

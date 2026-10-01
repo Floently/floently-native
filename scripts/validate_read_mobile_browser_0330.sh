@@ -22,9 +22,11 @@ for file in \
   "$IOS/ReadBrowserModel.swift" \
   "$IOS/ReadWebView.swift" \
   "$IOS/ReadBrowserView.swift" \
-  "$IOS/ReadSpeechController.swift" \
+  "$IOS/ReadCoreNative.swift" \
+  "$IOS/ReadBrowserNativeReading.swift" \
   "$ANDROID/java/com/floently/read/MainActivity.kt" \
-  "$ANDROID/java/com/floently/read/ReadSpeechController.kt" \
+  "$ANDROID/java/com/floently/read/ReadCoreNative.kt" \
+  "$ANDROID/java/com/floently/read/ReadBrowserNativeReading.kt" \
   "$ANDROID/java/com/floently/read/ReadBrowserPolicy.kt"; do
   test -f "$file" || fail "missing $file"
 done
@@ -36,9 +38,11 @@ require_text "$IOS/ReadBrowserModel.swift" "accounts.google.com"
 require_text "$IOS/ReadBrowserModel.swift" "elementsFromPoint"
 require_text "$IOS/ReadBrowserModel.swift" "floentlyread"
 require_text "$IOS/ReadBrowserModel.swift" "/mobile/open"
-require_text "$IOS/ReadSpeechController.swift" "AVSpeechSynthesizer"
-require_text "$IOS/ReadSpeechController.swift" "NLLanguageRecognizer"
-require_text "$IOS/ReadBrowserView.swift" "speech.toggle(text:"
+require_text "$IOS/ReadCoreNative.swift" "ReadCoreNative"
+require_text "$IOS/ReadCoreNative.swift" "floently_read_build_manifest_json"
+require_text "$IOS/ReadBrowserNativeReading.swift" "ReadBrowserNativeReading"
+require_text "$IOS/ReadBrowserView.swift" "documentLoader.load("
+require_text "$IOS/ReadBrowserView.swift" "playbackSession.togglePlayPause()"
 require_text "$ROOT/apps/ios/FloentlyRead/project.yml" "floentlyread"
 require_text "$ROOT/apps/ios/FloentlyRead/FloentlyRead/FloentlyRead.entitlements" "applinks:read.floently.com"
 
@@ -57,9 +61,10 @@ require_text "$ANDROID_ACTIVITY" "settings.allowFileAccess = false"
 require_text "$ANDROID_ACTIVITY" "settings.safeBrowsingEnabled = true"
 require_text "$ANDROID_ACTIVITY" "onRenderProcessGone"
 require_text "$ANDROID_ACTIVITY" "onCreateWindow"
-require_text "$ANDROID/java/com/floently/read/ReadSpeechController.kt" "TextToSpeech"
-require_text "$ANDROID/java/com/floently/read/ReadSpeechController.kt" "onRangeStart"
-require_text "$ANDROID_ACTIVITY" "speech.toggle(text)"
+require_text "$ANDROID/java/com/floently/read/ReadCoreNative.kt" "System.loadLibrary"
+require_text "$ANDROID/java/com/floently/read/ReadBrowserNativeReading.kt" "ReadBrowserNativeReading"
+require_text "$ANDROID_ACTIVITY" "playbackController.loadManifest("
+require_text "$ANDROID_ACTIVITY" "toggleNativeReading"
 require_text "$ANDROID_ACTIVITY" "onReceivedSslError"
 require_text "$ANDROID_POLICY" "accounts.google.com"
 require_text "$ANDROID_POLICY" "FLOENTLY_LIVE_READER_0330"
@@ -81,3 +86,12 @@ require_text "$ROOT/docs/design/READ_MOBILE_BROWSER_UX_SPEC_0330.md" "Websites s
 require_text "$ROOT/docs/design/READ_MOBILE_BROWSER_UX_SPEC_0330.md" "Safari, Chrome, Firefox, Edge, Opera, Vivaldi, Brave, Samsung Internet"
 
 echo "FLOENTLY_READ_MOBILE_BROWSER_0330=PASS"
+
+
+if grep -Fq "speech.toggle(text:" "$IOS/ReadBrowserView.swift"; then
+  fail "iOS live-page Read must use the persistent native playback session, not screen-local speech"
+fi
+
+if grep -Fq "speech.toggle(text)" "$ANDROID_ACTIVITY"; then
+  fail "Android live-page Read must use the persistent MediaSessionService player, not screen-local TTS"
+fi

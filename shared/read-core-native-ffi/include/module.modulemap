@@ -1,0 +1,4 @@
+module FloentlyReadCore {
+    header "floently_read_core.h"
+    export *
+}

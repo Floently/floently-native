@@ -41,3 +41,32 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
+
+
+val readCoreNativeAbis = listOf(
+    "armeabi-v7a",
+    "arm64-v8a",
+    "x86",
+    "x86_64"
+)
+
+val verifyReadCoreNative by tasks.registering {
+    doLast {
+        val missing = readCoreNativeAbis.filter { abi ->
+            !file(
+                "src/main/jniLibs/$abi/libfloently_read_core_native.so"
+            ).isFile
+        }
+
+        check(missing.isEmpty()) {
+            "Missing Rust Read Core JNI libraries for: " +
+                missing.joinToString() +
+                ". Run scripts/build_read_native_core_android.sh " +
+                "from the repository root before building Android."
+        }
+    }
+}
+
+tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn(verifyReadCoreNative)
+}

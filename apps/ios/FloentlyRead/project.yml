@@ -17,6 +17,8 @@ targets:
           - FloentlyRead.entitlements
     dependencies:
       - package: FloentlyShared
+      - framework: Generated/FloentlyReadCore.xcframework
+        embed: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.vitusidi.floently.read.native.dev
