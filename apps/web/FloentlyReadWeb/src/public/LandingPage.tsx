@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { navigateTo } from "../routing/navigation";
 import type { ReadAuthSession } from "../auth/authStore";
 
@@ -8,7 +9,7 @@ function LinkButton({
 }: {
   href: string;
   className: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <a
