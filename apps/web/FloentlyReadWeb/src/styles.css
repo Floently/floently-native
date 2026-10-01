@@ -2244,3 +2244,38 @@ button:disabled,
     display: none;
   }
 }
+
+
+.browser-mobile-keyboard-button {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 5;
+  min-height: 38px;
+  border: 1px solid rgba(255,255,255,0.11);
+  border-radius: 11px;
+  padding: 0 12px;
+  background: rgba(12,14,20,0.88);
+  color: #e3e7ef;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 760;
+  backdrop-filter: blur(12px);
+}
+
+.browser-mobile-keyboard-button[data-ready="true"] {
+  border-color: rgba(85,211,157,0.28);
+  color: #a9efcf;
+}
+
+.browser-mobile-keyboard-proxy {
+  position: absolute;
+  left: 16px;
+  bottom: 62px;
+  z-index: 4;
+  width: 2px;
+  height: 2px;
+  opacity: 0.01;
+  resize: none;
+  pointer-events: none;
+}
