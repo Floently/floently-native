@@ -141,11 +141,16 @@ Google Drive deployment also requires:
 The OAuth client id remains owned by the shared Floently auth backend and the
 same Google Identity Services loader is shared between login and Drive.
 
-## Browser-local library
+## Browser-local migration library
 
-The first product-shell slice stores imported text/Markdown in IndexedDB. This is intentionally an isolation layer while the production cloud library/project API is migrated.
+The first product-shell slice stored text/Markdown in IndexedDB before the
+synced project API was ported. That store remains readable only as a migration
+compatibility layer so documents imported during early development are not
+silently lost.
 
-PDF, EPUB, Office documents, web capture and cloud synchronization are **not** being faked through this store. They should arrive as dedicated ingestion/persistence adapters behind the same document/session interfaces.
+New text/file imports use the synced project API described above. Original
+visual files use the dedicated original-document IndexedDB store, and websites
+use Browser V2.
 
 ## Reader virtualization
 
