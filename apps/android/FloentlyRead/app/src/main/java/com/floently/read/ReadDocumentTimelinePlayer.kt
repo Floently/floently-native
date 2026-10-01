@@ -21,7 +21,8 @@ import com.google.common.util.concurrent.ListenableFuture
  */
 @OptIn(UnstableApi::class)
 class ReadDocumentTimelinePlayer(
-    private val physicalPlayer: ExoPlayer
+    private val physicalPlayer: ExoPlayer,
+    private val onUnpreparedSeek: ((Long) -> Unit)? = null
 ) : ForwardingSimpleBasePlayer(physicalPlayer) {
 
     private var document: ReadPlayableDocument? = null
@@ -43,11 +44,18 @@ class ReadDocumentTimelinePlayer(
             && currentLogicalPositionMs() >= value.logicalDurationMs
     }
 
+    fun hasExhaustedPreparedWindowBeforeDocumentEnd(): Boolean {
+        val value = document ?: return false
+        return physicalPlayer.playbackState == Player.STATE_ENDED
+            && currentLogicalPositionMs() < value.logicalDurationMs
+    }
+
     fun loadDocument(
         value: ReadPlayableDocument,
         autoplay: Boolean = false,
         resumePositionMs: Long? = null,
-        resumeSpeed: Float? = null
+        resumeSpeed: Float? = null,
+        overridePositionMs: Long? = null
     ) {
         val previous = document
         val sameDocument = previous?.id == value.id
@@ -88,34 +96,37 @@ class ReadDocumentTimelinePlayer(
         }
 
         val targetLogical = (
-            if (sameDocument) {
-                previousPosition
-            } else {
-                resumePositionMs
-            } ?: 0L
+            overridePositionMs
+                ?: if (sameDocument) {
+                    previousPosition
+                } else {
+                    resumePositionMs
+                }
+                ?: 0L
         ).coerceIn(
             0L,
             value.logicalDurationMs.coerceAtLeast(0L)
         )
 
-        val target = ReadPlaybackTimeline.segmentAndOffset(
+        val target = availableSegmentAndOffset(
             document = value,
             logicalTimeMs = targetLogical
+        ) ?: ReadSegmentPosition(
+            segment = value.segments.first(),
+            localOffsetMs = 0L
         )
-        val targetQueueIndex = target?.segment?.let { segment ->
-            value.segments.indexOfFirst {
-                it.index == segment.index && it.id == segment.id
-            }
-        }?.takeIf { it >= 0 } ?: 0
 
-        val physicalOffset = target?.let {
-            ReadPlaybackTimeline.physicalOffset(
-                segment = it.segment,
-                logicalOffsetMs = it.localOffsetMs,
-                resolvedPhysicalDurationMs =
-                    it.segment.actualDurationMs
-            )
-        } ?: 0L
+        val targetQueueIndex = value.segments.indexOfFirst {
+            it.index == target.segment.index
+                && it.id == target.segment.id
+        }.takeIf { it >= 0 } ?: 0
+
+        val physicalOffset = ReadPlaybackTimeline.physicalOffset(
+            segment = target.segment,
+            logicalOffsetMs = target.localOffsetMs,
+            resolvedPhysicalDurationMs =
+                target.segment.actualDurationMs
+        )
 
         physicalPlayer.setMediaItems(
             items,
@@ -187,7 +198,7 @@ class ReadDocumentTimelinePlayer(
                 resolvedPhysicalDurationMs = resolvedPhysicalDuration
             )
         } else {
-            0L
+            value.segments.firstOrNull()?.logicalStartMs ?: 0L
         }
 
         val logicalBuffered = if (active != null) {
@@ -210,7 +221,7 @@ class ReadDocumentTimelinePlayer(
                     value.logicalDurationMs
                 )
         } else {
-            0L
+            logicalPosition
         }
 
         return state.buildUpon()
@@ -237,12 +248,22 @@ class ReadDocumentTimelinePlayer(
                 seekCommand
             )
 
-        val requested =
+        val requested = (
             if (positionMs == C.TIME_UNSET) 0L else positionMs
-        val target = ReadPlaybackTimeline.segmentAndOffset(
+        ).coerceIn(
+            0L,
+            value.logicalDurationMs.coerceAtLeast(0L)
+        )
+
+        val target = availableSegmentAndOffset(
             document = value,
             logicalTimeMs = requested
-        ) ?: return Futures.immediateVoidFuture()
+        )
+
+        if (target == null) {
+            onUnpreparedSeek?.invoke(requested)
+            return Futures.immediateVoidFuture()
+        }
 
         val queueIndex = value.segments.indexOfFirst {
             it.index == target.segment.index
@@ -265,6 +286,36 @@ class ReadDocumentTimelinePlayer(
         )
         invalidateState()
         return Futures.immediateVoidFuture()
+    }
+
+    private fun availableSegmentAndOffset(
+        document: ReadPlayableDocument,
+        logicalTimeMs: Long
+    ): ReadSegmentPosition? {
+        if (document.segments.isEmpty()) return null
+
+        val bounded = logicalTimeMs.coerceIn(
+            0L,
+            document.logicalDurationMs.coerceAtLeast(0L)
+        )
+
+        val segment = document.segments.firstOrNull {
+            bounded >= it.logicalStartMs
+                && bounded < it.logicalEndMs
+        } ?: document.segments.lastOrNull()?.takeIf {
+            bounded == document.logicalDurationMs
+                && it.logicalEndMs >= document.logicalDurationMs
+        } ?: return null
+
+        return ReadSegmentPosition(
+            segment = segment,
+            localOffsetMs = (
+                bounded - segment.logicalStartMs
+            ).coerceIn(
+                0L,
+                segment.logicalDurationMs
+            )
+        )
     }
 
     private fun logicalPosition(
