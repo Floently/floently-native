@@ -171,10 +171,12 @@ export function withCompletedContentHash(
   record: LocalOriginalDocumentRecord,
   contentHash: string,
   updatedAt = Date.now(),
+  fallbackProjectId: string | null = null,
 ): LocalOriginalDocumentRecord {
   return {
     ...record,
     contentHash,
+    projectId: record.projectId ?? fallbackProjectId,
     updatedAt,
   };
 }
@@ -306,16 +308,21 @@ export async function handoffOriginalDocument(
     if (!hash) return;
 
     const exact = await getByIndex(HASH_INDEX, hash);
-    if (exact && exact.id !== record.id) {
-      await removeLocalOriginalDocument(record.id);
-      return;
-    }
-
     const latest = await getLocalOriginalDocument(record.id);
     if (!latest) return;
 
+    // Never delete the just-opened id during background hashing: another route
+    // or tab may already be rendering it. listLocalOriginalDocuments() dedupes
+    // identical hashes for presentation while both ids remain addressable.
     await putRecord(
-      withCompletedContentHash(latest, hash),
+      withCompletedContentHash(
+        latest,
+        hash,
+        Date.now(),
+        exact && exact.id !== latest.id
+          ? exact.projectId
+          : null,
+      ),
     );
   })();
 
