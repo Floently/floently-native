@@ -1,10 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const uploadContentProject = vi.fn();
-const fingerprintDocumentFile = vi.fn();
-const getProjectForFileFingerprint = vi.fn();
-const rememberProjectForFileFingerprint = vi.fn();
-const getContentProject = vi.fn();
+const mocks = vi.hoisted(() => ({
+  uploadContentProject: vi.fn(),
+  fingerprintDocumentFile: vi.fn(),
+  getProjectForFileFingerprint: vi.fn(),
+  rememberProjectForFileFingerprint: vi.fn(),
+  getContentProject: vi.fn(),
+}));
+
+const {
+  uploadContentProject,
+  fingerprintDocumentFile,
+  getProjectForFileFingerprint,
+  rememberProjectForFileFingerprint,
+  getContentProject,
+} = mocks;
 
 vi.mock("./documentUploadApi", () => ({
   uploadContentProject,
@@ -56,10 +66,12 @@ describe("file ingestion lifecycle", () => {
   it("lets canonical extraction outlive the foreground fast-open budget", async () => {
     vi.useFakeTimers();
 
-    let resolveUpload: ((value: ReturnType<typeof project>) => void) | null = null;
+    const upload = {
+      resolve: (_value: ReturnType<typeof project>) => undefined,
+    };
     uploadContentProject.mockReturnValue(
       new Promise((resolve) => {
-        resolveUpload = resolve;
+        upload.resolve = resolve;
       }),
     );
 
@@ -80,7 +92,7 @@ describe("file ingestion lifecycle", () => {
     );
     await immediate;
 
-    resolveUpload?.(project());
+    upload.resolve(project());
     await expect(ingestion.canonical).resolves.toMatchObject({
       project: { id: "project-1" },
       reused: false,
@@ -90,10 +102,12 @@ describe("file ingestion lifecycle", () => {
   it("can disable the foreground budget when the original is already visible", async () => {
     vi.useFakeTimers();
 
-    let resolveUpload: ((value: ReturnType<typeof project>) => void) | null = null;
+    const upload = {
+      resolve: (_value: ReturnType<typeof project>) => undefined,
+    };
     uploadContentProject.mockReturnValue(
       new Promise((resolve) => {
-        resolveUpload = resolve;
+        upload.resolve = resolve;
       }),
     );
 
@@ -117,7 +131,7 @@ describe("file ingestion lifecycle", () => {
     );
     expect(settled).toBe(false);
 
-    resolveUpload?.(project("project-visible"));
+    upload.resolve(project("project-visible"));
 
     await expect(ingestion.immediate).resolves.toMatchObject({
       project: { id: "project-visible" },
