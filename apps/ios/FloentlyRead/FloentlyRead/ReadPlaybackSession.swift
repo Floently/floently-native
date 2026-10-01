@@ -339,7 +339,7 @@ final class ReadPlaybackSession: ObservableObject {
     }
 
     private func installAudioSessionObservers() {
-        let center = NotificationCenter.default()
+        let center = NotificationCenter.default
 
         audioSessionObservers.append(
             center.addObserver(
