@@ -70,6 +70,7 @@ export class CloudWebRtcTransport {
   #remoteSequence = 0;
   #viewport = null;
   #videoReady = false;
+  #visibility = "visible";
   // After a dropped peer, video.readyState and dimensions may still describe
   // the LAST frozen decoded frame. Require a NEW rVFC callback on recovery.
   #freshFrameRequired = false;
@@ -220,7 +221,8 @@ export class CloudWebRtcTransport {
     // last frame remains visually painted in the HTMLVideoElement.
   }
   get decodedFrameReady() {
-    return this.#videoReady && !this.#freshFrameRequired && !this.#stopped &&
+    return this.#visibility === "visible" &&
+      this.#videoReady && !this.#freshFrameRequired && !this.#stopped &&
       this.#peer.connectionState === "connected" && validViewport(this.#viewport) &&
       Math.abs(this.#video.videoWidth - this.#viewport.mediaWidth) <= 1 &&
       Math.abs(this.#video.videoHeight - this.#viewport.mediaHeight) <= 1;
@@ -403,6 +405,7 @@ export class CloudWebRtcTransport {
     const generation = this.#frameGeneration;
     const check = (freshFrame = false) => {
       if (this.#stopped || generation !== this.#frameGeneration ||
+          this.#visibility !== "visible" ||
           this.#video.readyState < 2 || !this.#video.videoWidth ||
           !this.#video.videoHeight) return;
       if (this.#freshFrameRequired) {
@@ -435,8 +438,16 @@ export class CloudWebRtcTransport {
 
   async requestViewport({ cssWidth, cssHeight, devicePixelRatio = 1, visibility = "visible" } = {}) {
     if (![cssWidth, cssHeight].every(v => Number.isSafeInteger(v) && v > 0) ||
-        !Number.isFinite(devicePixelRatio) || devicePixelRatio < 1 || devicePixelRatio > 2)
+        !Number.isFinite(devicePixelRatio) || devicePixelRatio < 1 || devicePixelRatio > 2 ||
+        !["visible", "hidden"].includes(visibility))
       throw new Error("VIEWPORT_INVALID");
+
+    if (visibility !== this.#visibility) {
+      this.#visibility = visibility;
+      this.#invalidateDecodedFrame();
+      this.#notifyVideoState();
+    }
+
     await this.#sendSignal("client.viewport", { cssWidth, cssHeight, devicePixelRatio, visibility });
   }
 
