@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  sameOriginalIdentity,
   withCompletedContentHash,
   type LocalOriginalDocumentRecord,
 } from "./localOriginalDocuments";
@@ -54,6 +55,29 @@ describe("local original document hash completion", () => {
 
     expect(completed.projectId).toBe("project-from-existing-copy");
     expect(completed.contentHash).toBe("same-content");
+  });
+
+  it("uses full hash first and quick signature before hashing", () => {
+    expect(
+      sameOriginalIdentity(
+        record({ contentHash: "full", quickSignature: "a" }),
+        record({ id: "other", contentHash: "full", quickSignature: "b" }),
+      ),
+    ).toBe(true);
+
+    expect(
+      sameOriginalIdentity(
+        record({ contentHash: null, quickSignature: "quick" }),
+        record({ id: "other", contentHash: null, quickSignature: "quick" }),
+      ),
+    ).toBe(true);
+
+    expect(
+      sameOriginalIdentity(
+        record({ contentHash: "left", quickSignature: "same" }),
+        record({ id: "other", contentHash: "right", quickSignature: "same" }),
+      ),
+    ).toBe(false);
   });
 
   it("does not mutate the current record", () => {
