@@ -19,10 +19,8 @@ object ReadPlaybackCommandContract {
         "com.floently.read.command.LOAD_MANIFEST"
 
     const val EXTRA_DOCUMENT_JSON = "document_json"
-    const val EXTRA_MANIFEST_JSON = "manifest_json"
-    const val EXTRA_VOICE_ID = "voice_id"
+    const val EXTRA_MANIFEST_HANDOFF_ID = "manifest_handoff_id"
     const val EXTRA_AUTOPLAY = "autoplay"
-    const val EXTRA_STARTING_AT = "starting_at"
 
     val loadDocumentCommand: SessionCommand
         get() = SessionCommand(
@@ -36,47 +34,25 @@ object ReadPlaybackCommandContract {
             Bundle.EMPTY
         )
 
-    fun encodeLoadManifest(
-        manifest: ReadingManifestV1,
-        voiceId: String,
-        autoplay: Boolean,
-        startingAt: Int
+    fun encodeLoadManifestHandoff(
+        handoffId: String
     ): Bundle = Bundle().apply {
         putString(
-            EXTRA_MANIFEST_JSON,
-            ReadingManifestV1Codec.encode(manifest)
+            EXTRA_MANIFEST_HANDOFF_ID,
+            handoffId
         )
-        putString(EXTRA_VOICE_ID, voiceId)
-        putBoolean(EXTRA_AUTOPLAY, autoplay)
-        putInt(EXTRA_STARTING_AT, startingAt)
     }
 
     fun decodeLoadManifest(
         args: Bundle
     ): ReadManifestLoadRequest? {
-        val rawManifest = args.getString(EXTRA_MANIFEST_JSON)
-            ?.takeIf { it.isNotBlank() }
-            ?: return null
-        val voiceId = args.getString(EXTRA_VOICE_ID)
-            ?.trim()
-            ?.takeIf { it.isNotEmpty() }
+        val handoffId = args.getString(
+            EXTRA_MANIFEST_HANDOFF_ID
+        )?.takeIf { it.isNotBlank() }
             ?: return null
 
-        val manifest = runCatching {
-            ReadingManifestV1Codec.decode(rawManifest)
-        }.getOrNull() ?: return null
-
-        return ReadManifestLoadRequest(
-            manifest = manifest,
-            voiceId = voiceId,
-            autoplay = args.getBoolean(
-                EXTRA_AUTOPLAY,
-                false
-            ),
-            startingAt = args.getInt(
-                EXTRA_STARTING_AT,
-                0
-            ).coerceAtLeast(0)
+        return ReadManifestHandoffRegistry.take(
+            handoffId
         )
     }
 
