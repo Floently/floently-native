@@ -13,7 +13,9 @@ final class ReadBrowserController: ObservableObject {
     @Published var estimatedProgress: Double = 0
     @Published var readingStatus = "Ready"
     @Published var extractedText: String = ""
+    @Published var extractedLanguage: String = "auto"
     @Published var selectionText: String = ""
+    @Published var selectionLanguage: String = "auto"
 
     weak var webView: WKWebView?
     private var pendingURL: URL?
@@ -60,7 +62,9 @@ final class ReadBrowserController: ObservableObject {
         addressText = url.absoluteString
         currentURL = url
         extractedText = ""
+        extractedLanguage = "auto"
         selectionText = ""
+        selectionLanguage = "auto"
         readingStatus = "Loading…"
 
         guard let webView else {
@@ -123,6 +127,8 @@ final class ReadBrowserController: ObservableObject {
                 }
 
                 self.extractedText = payload.text
+                self.extractedLanguage =
+                    payload.language.isEmpty ? "auto" : payload.language
                 self.pageTitle = payload.title.isEmpty ? self.pageTitle : payload.title
                 self.readingStatus = "Ready to read \(payload.wordCount) words from the live page."
             }
@@ -143,9 +149,32 @@ final class ReadBrowserController: ObservableObject {
                     self.readingStatus = "Could not read the selection: \(error.localizedDescription)"
                     return
                 }
-                let text = (result as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                guard
+                    let json = result as? String,
+                    let data = json.data(using: .utf8),
+                    let payload = try? JSONDecoder().decode(
+                        ReadBrowserExtraction.self,
+                        from: data
+                    )
+                else {
+                    self.selectionText = ""
+                    self.selectionLanguage = "auto"
+                    self.readingStatus = "Select text on the page first."
+                    return
+                }
+
+                let text = payload.text.trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
                 self.selectionText = text
-                self.readingStatus = text.isEmpty ? "Select text on the page first." : "Selection ready to read."
+                self.selectionLanguage =
+                    payload.language.isEmpty
+                    ? "auto"
+                    : payload.language
+                self.readingStatus =
+                    text.isEmpty
+                    ? "Select text on the page first."
+                    : "Selection ready to read."
             }
         }
     }
@@ -194,10 +223,22 @@ final class ReadBrowserController: ObservableObject {
 
     private static let selectionExtractionJavaScript = #"""
     (() => {
-      const selection = window.getSelection();
-      return String(selection ? selection.toString() : "")
+      const normalize = (value) => String(value || "")
         .replace(/\s+/g, " ")
         .trim();
+      const selection = window.getSelection();
+      const text = normalize(
+        selection ? selection.toString() : ""
+      );
+      return JSON.stringify({
+        title: normalize(document.title),
+        url: location.href,
+        language: normalize(
+          document.documentElement?.lang || ""
+        ),
+        text,
+        wordCount: text ? text.split(/\s+/).length : 0
+      });
     })();
     """#
 
@@ -275,6 +316,9 @@ final class ReadBrowserController: ObservableObject {
       return JSON.stringify({
         title: normalize(document.title),
         url: location.href,
+        language: normalize(
+          document.documentElement?.lang || ""
+        ),
         text,
         wordCount: text ? text.split(/\s+/).length : 0
       });
@@ -285,6 +329,7 @@ final class ReadBrowserController: ObservableObject {
 private struct ReadBrowserExtraction: Decodable {
     let title: String
     let url: String
+    let language: String
     let text: String
     let wordCount: Int
 }
