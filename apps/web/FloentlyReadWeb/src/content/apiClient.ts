@@ -50,5 +50,14 @@ export async function requestApiJson<T>(
     throw new Error(await readApiError(response, fallbackError));
   }
 
-  return await response.json() as T;
+  const raw = await response.text();
+  if (!raw.trim()) {
+    return undefined as T;
+  }
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    throw new Error("The content service returned an invalid response.");
+  }
 }
