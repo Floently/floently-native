@@ -57,7 +57,7 @@ describe("project progress writer", () => {
     expect(save.mock.calls[1]?.[1].currentCharacterOffset).toBe(30);
   });
 
-  it("does not let an active duplicate replace a newer pending cursor", async () => {
+  it("keeps the newest queued cursor even when it returns to the active value", async () => {
     const firstWrite: { release: () => void } = {
       release: () => {},
     };
@@ -77,15 +77,18 @@ describe("project progress writer", () => {
 
     writer.queue("p1", { currentCharacterOffset: 10 });
     writer.queue("p1", { currentCharacterOffset: 30 });
+
+    // A real backward seek may return to the same cursor that is still being
+    // written. Last queued state wins; treating this as a duplicate would let
+    // the stale pending 30 overwrite the user's newer position.
     writer.queue("p1", { currentCharacterOffset: 10 });
 
     await Promise.resolve();
     firstWrite.release();
     await writer.flush();
 
-    expect(save).toHaveBeenCalledTimes(2);
+    expect(save).toHaveBeenCalledTimes(1);
     expect(save.mock.calls[0]?.[1].currentCharacterOffset).toBe(10);
-    expect(save.mock.calls[1]?.[1].currentCharacterOffset).toBe(30);
   });
 
   it("does not resend an identical snapshot after it is saved", async () => {
