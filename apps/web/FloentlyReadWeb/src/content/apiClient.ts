@@ -41,10 +41,7 @@ export async function requestApiJson<T>(
   init: RequestInit,
   fallbackError: string,
 ): Promise<T> {
-  const response = await fetch(url, {
-    credentials: "include",
-    ...init,
-  });
+  const response = await fetch(url, init);
 
   if (!response.ok) {
     throw new Error(await readApiError(response, fallbackError));
