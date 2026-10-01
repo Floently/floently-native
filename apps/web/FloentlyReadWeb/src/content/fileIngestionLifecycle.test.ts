@@ -66,8 +66,10 @@ describe("file ingestion lifecycle", () => {
   it("lets canonical extraction outlive the foreground fast-open budget", async () => {
     vi.useFakeTimers();
 
-    const upload = {
-      resolve: (_value: ReturnType<typeof project>) => undefined,
+    const upload: {
+      resolve: (value: ReturnType<typeof project>) => void;
+    } = {
+      resolve: () => {},
     };
     uploadContentProject.mockReturnValue(
       new Promise((resolve) => {
@@ -102,8 +104,10 @@ describe("file ingestion lifecycle", () => {
   it("can disable the foreground budget when the original is already visible", async () => {
     vi.useFakeTimers();
 
-    const upload = {
-      resolve: (_value: ReturnType<typeof project>) => undefined,
+    const upload: {
+      resolve: (value: ReturnType<typeof project>) => void;
+    } = {
+      resolve: () => {},
     };
     uploadContentProject.mockReturnValue(
       new Promise((resolve) => {
