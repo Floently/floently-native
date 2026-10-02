@@ -303,7 +303,8 @@ class ReadPlaybackService : MediaSessionService() {
                     manifest = request.manifest,
                     startingAt = startingAt,
                     voiceId = request.voiceId,
-                    accessToken = currentAccessToken()
+                    accessToken = currentAccessToken(),
+                    maxSegments = 1
                 )
 
                 preparedSegments.clear()
@@ -414,8 +415,14 @@ class ReadPlaybackService : MediaSessionService() {
         refillJob?.cancel()
 
         refillJob = serviceScope.launch {
+            var firstPass = true
+
             while (isActive) {
-                delay(1_000L)
+                if (!firstPass) {
+                    delay(1_000L)
+                }
+                val forceRefill = firstPass
+                firstPass = false
 
                 val player = documentPlayer ?: return@launch
                 val current = player.currentDocument()
@@ -465,7 +472,8 @@ class ReadPlaybackService : MediaSessionService() {
                         .coerceAtLeast(0L)
 
                 if (
-                    !exhausted
+                    !forceRefill
+                    && !exhausted
                     && bufferedAhead > refillLowWatermarkMs
                 ) {
                     continue
@@ -553,7 +561,8 @@ class ReadPlaybackService : MediaSessionService() {
                     manifest = manifest,
                     startingAt = targetIndex,
                     voiceId = voiceId,
-                    accessToken = currentAccessToken()
+                    accessToken = currentAccessToken(),
+                    maxSegments = 1
                 )
 
                 preparedSegments.clear()
@@ -673,7 +682,8 @@ class ReadPlaybackService : MediaSessionService() {
                     manifest = manifest,
                     startingAt = targetIndex,
                     voiceId = newVoice,
-                    accessToken = currentAccessToken()
+                    accessToken = currentAccessToken(),
+                    maxSegments = 1
                 )
 
                 segments.forEach {
