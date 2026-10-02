@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://floently.com/contracts/learn/v1/activity-definition.schema.json",
+  "title": "ActivityDefinitionV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "activity_id",
+    "activity_type",
+    "pathway",
+    "skill",
+    "content_ref",
+    "response_contract"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "activity_id": { "type": "string", "minLength": 1 },
+    "activity_type": { "type": "string", "minLength": 1 },
+    "pathway": {
+      "type": "string",
+      "enum": ["everyday", "yki", "professional"]
+    },
+    "skill": {
+      "type": "string",
+      "enum": ["vocabulary", "grammar", "listening", "speaking", "reading", "writing"]
+    },
+    "content_ref": { "type": "string", "minLength": 1 },
+    "response_contract": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "evaluation_policy": {
+      "type": ["object", "null"],
+      "additionalProperties": true
+    },
+    "media_refs": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

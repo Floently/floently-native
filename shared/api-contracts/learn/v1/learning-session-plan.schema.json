@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://floently.com/contracts/learn/v1/learning-session-plan.schema.json",
+  "title": "LearningSessionPlanV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "session_id",
+    "revision",
+    "pathway",
+    "level_band",
+    "objective",
+    "policy_version",
+    "activities",
+    "resume_cursor",
+    "generated_at"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "session_id": { "type": "string", "minLength": 1 },
+    "revision": { "type": "integer", "minimum": 1 },
+    "pathway": {
+      "type": "string",
+      "enum": ["everyday", "yki", "professional"]
+    },
+    "level_band": {
+      "type": "string",
+      "enum": ["A1_A2", "B1_B2", "C1_C2"]
+    },
+    "objective": { "type": "string", "minLength": 1 },
+    "policy_version": { "type": "string", "minLength": 1 },
+    "activities": {
+      "type": "array",
+      "items": { "$ref": "activity-definition.schema.json" }
+    },
+    "resume_cursor": { "type": "integer", "minimum": 0 },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": ["string", "null"], "format": "date-time" }
+  }
+}

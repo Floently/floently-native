@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://floently.com/contracts/learn/v1/learning-event.schema.json",
+  "title": "LearningEventV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "learner_id",
+    "session_id",
+    "event_type",
+    "pathway",
+    "occurred_at",
+    "idempotency_key",
+    "evidence"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "event_id": { "type": "string", "minLength": 1 },
+    "learner_id": { "type": "string", "minLength": 1 },
+    "session_id": { "type": "string", "minLength": 1 },
+    "activity_id": { "type": ["string", "null"] },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "card_shown",
+        "card_answered",
+        "card_correct",
+        "card_incorrect",
+        "confidence_captured",
+        "review_scheduled",
+        "review_completed",
+        "vocabulary_mastered",
+        "grammar_activity",
+        "reading_task",
+        "listening_task",
+        "writing_submitted",
+        "writing_feedback",
+        "speaking_session",
+        "roleplay_turn",
+        "roleplay_completed",
+        "yki_task_attempt",
+        "yki_skill_result",
+        "professional_scenario_attempt",
+        "professional_mission_completed",
+        "phrase_captured",
+        "phrase_reviewed",
+        "learner_correction",
+        "qualified_activity"
+      ]
+    },
+    "pathway": {
+      "type": "string",
+      "enum": ["everyday", "yki", "professional"]
+    },
+    "skill": {
+      "type": ["string", "null"],
+      "enum": [null, "vocabulary", "grammar", "listening", "speaking", "reading", "writing"]
+    },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "idempotency_key": { "type": "string", "minLength": 1 },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}
