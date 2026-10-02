@@ -406,17 +406,9 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         refillTask = Task { [weak self, weak playback] in
             guard let self, let playback else { return }
 
-            // The current segment has already been published. Start filling
-            // the forward horizon immediately instead of waiting for the
-            // first periodic refill tick.
-            await refillIfNeeded(
-                manifest: manifest,
-                voiceId: voiceId,
-                accessToken: accessToken,
-                playback: playback,
-                force: true
-            )
-
+            // The first playable segment is already published. Keep forward
+            // refill on the existing periodic scheduler until ordinary queue
+            // expansion is append-only and acoustically qualified.
             while !Task.isCancelled {
                 do {
                     try await Task.sleep(
@@ -452,15 +444,11 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         manifest: ReadingManifestV1,
         voiceId: String,
         accessToken: String?,
-        playback: ReadPlaybackSession,
-        force: Bool = false
+        playback: ReadPlaybackSession
     ) async {
         guard
             let coordinator,
             !manifest.segments.isEmpty,
-            let current = playback.document,
-            current.id == manifest.documentId,
-            current.revisionId == manifest.revisionId,
             Date() >= nextRefillAllowedAt
         else {
             return
@@ -484,8 +472,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         }
 
         guard
-            force
-            || prefixExhausted
+            prefixExhausted
             || playback.bufferedAhead <= refillLowWatermark
         else {
             return
