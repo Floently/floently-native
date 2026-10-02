@@ -4,7 +4,8 @@ import Foundation
 struct ReadNativeTtsAsset: Equatable {
     let audioURL: URL
     let cacheKey: String
-    let contentHash: String
+    let requestHash: String
+    let contentHash: String?
     let duration: TimeInterval?
     let voiceId: String
     let provider: String?
@@ -91,20 +92,36 @@ actor ReadNativeTtsClient {
             ?? (source["voice_id"] as? String)
             ?? voiceId
 
-        let hashInput = [
+        let resolvedProvider =
+            (source["provider"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedModel =
+            (source["model"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let requestIdentity = [
             value,
-            language,
+            language.isEmpty ? "auto" : language,
             resolvedVoice,
-            "render-read-prerender"
+            resolvedProvider ?? "unknown-provider",
+            resolvedModel ?? "unknown-model",
+            "read-tts-request-v2"
         ].joined(separator: "\u{1f}")
-        let digest = SHA256.hash(data: Data(hashInput.utf8))
-            .map { String(format: "%02x", $0) }
-            .joined()
+        let requestDigest = SHA256.hash(
+            data: Data(requestIdentity.utf8)
+        )
+        .map { String(format: "%02x", $0) }
+        .joined()
+        let requestHash = "sha256:\(requestDigest)"
+
+        let contentHash =
+            (source["contentHash"] as? String)
+            ?? (source["content_hash"] as? String)
 
         let cacheKey =
             (source["cacheKey"] as? String)
             ?? (source["cache_key"] as? String)
-            ?? "read-tts:sha256:\(digest)"
+            ?? "read-tts:req:\(requestHash)"
 
         let explicitDuration: TimeInterval? = {
             if let ms = source["durationMs"] as? NSNumber {
@@ -125,11 +142,12 @@ actor ReadNativeTtsClient {
         return ReadNativeTtsAsset(
             audioURL: audioURL,
             cacheKey: cacheKey,
-            contentHash: "sha256:\(digest)",
+            requestHash: requestHash,
+            contentHash: contentHash,
             duration: explicitDuration,
             voiceId: resolvedVoice,
-            provider: source["provider"] as? String,
-            model: source["model"] as? String
+            provider: resolvedProvider,
+            model: resolvedModel
         )
     }
 
