@@ -1,4 +1,9 @@
 import type { ReadTtsAsset } from "../tts/readTtsProvider";
+import {
+  DEFAULT_READ_AUDIO_CACHE_BUDGET,
+  planReadAudioCacheEvictions,
+  resolveReadAudioCacheKey,
+} from "./readAudioCachePolicy";
 
 export interface PlayableAudioAsset {
   url: string;
@@ -19,12 +24,12 @@ interface AudioCacheMetadata {
   sourceUrl: string;
   cachedAt: number;
   lastAccessedAt: number;
+  byteSize?: number;
 }
 
 const CACHE_NAME = "floently-read-audio-v1";
 const DB_NAME = "floently-read-audio-v1";
 const STORE_NAME = "assets";
-const MAX_CACHE_ENTRIES = 32;
 
 function hasCacheStorage(): boolean {
   return typeof caches !== "undefined";
@@ -107,11 +112,38 @@ async function deleteMetadata(cacheKey: string): Promise<void> {
   db.close();
 }
 
+function hasKnownByteSize(
+  metadata: AudioCacheMetadata,
+): metadata is AudioCacheMetadata & { byteSize: number } {
+  return (
+    Number.isFinite(metadata.byteSize)
+    && Number(metadata.byteSize) >= 0
+  );
+}
+
 export class ReadAudioCache implements ReadAudioCachePort {
-  private readonly objectUrls = new Set<string>();
+  private readonly objectUrls = new Map<string, string>();
+  private readonly activeLeaseCounts = new Map<string, number>();
+  private pruneInProgress = false;
+  private pruneRequested = false;
+  private disposed = false;
 
   async resolve(asset: ReadTtsAsset): Promise<PlayableAudioAsset> {
-    const cacheKey = asset.cacheKey || asset.contentHash;
+    const cacheKey = resolveReadAudioCacheKey(
+      asset.cacheKey,
+      asset.contentHash,
+    );
+
+    if (!cacheKey) {
+      return {
+        url: asset.audioUrl,
+        cacheKey: "",
+        contentHash: asset.contentHash,
+        fromBrowserCache: false,
+        release: () => undefined,
+      };
+    }
+
     const cacheUrl = syntheticCacheUrl(cacheKey);
 
     if (hasCacheStorage()) {
@@ -120,16 +152,17 @@ export class ReadAudioCache implements ReadAudioCachePort {
         const cached = await cache.match(cacheUrl);
         if (cached) {
           const blob = await cached.blob();
-          const objectUrl = URL.createObjectURL(blob);
-          this.objectUrls.add(objectUrl);
+          const objectUrl = this.createLeasedObjectUrl(blob, cacheKey);
+          const now = Date.now();
 
           void writeMetadata({
             cacheKey,
             contentHash: asset.contentHash,
             sourceUrl: asset.audioUrl,
-            cachedAt: Date.now(),
-            lastAccessedAt: Date.now(),
-          });
+            cachedAt: now,
+            lastAccessedAt: now,
+            byteSize: blob.size,
+          }).finally(() => this.schedulePrune());
 
           return {
             url: objectUrl,
@@ -144,7 +177,7 @@ export class ReadAudioCache implements ReadAudioCachePort {
       }
     }
 
-    const stored = await this.tryStore(asset, cacheUrl);
+    const stored = await this.tryStore(asset, cacheUrl, cacheKey);
     if (stored) {
       return stored;
     }
@@ -159,15 +192,21 @@ export class ReadAudioCache implements ReadAudioCachePort {
   }
 
   dispose(): void {
-    for (const url of this.objectUrls) {
+    this.disposed = true;
+    this.pruneRequested = false;
+
+    for (const url of this.objectUrls.keys()) {
       URL.revokeObjectURL(url);
     }
+
     this.objectUrls.clear();
+    this.activeLeaseCounts.clear();
   }
 
   private async tryStore(
     asset: ReadTtsAsset,
     cacheUrl: string,
+    cacheKey: string,
   ): Promise<PlayableAudioAsset | null> {
     if (!hasCacheStorage()) return null;
 
@@ -186,22 +225,23 @@ export class ReadAudioCache implements ReadAudioCachePort {
       await cache.put(cacheUrl, response.clone());
 
       const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      this.objectUrls.add(objectUrl);
+      const objectUrl = this.createLeasedObjectUrl(blob, cacheKey);
+      const now = Date.now();
 
       await writeMetadata({
-        cacheKey: asset.cacheKey,
+        cacheKey,
         contentHash: asset.contentHash,
         sourceUrl: asset.audioUrl,
-        cachedAt: Date.now(),
-        lastAccessedAt: Date.now(),
+        cachedAt: now,
+        lastAccessedAt: now,
+        byteSize: blob.size,
       });
 
-      void this.prune();
+      this.schedulePrune();
 
       return {
         url: objectUrl,
-        cacheKey: asset.cacheKey,
+        cacheKey,
         contentHash: asset.contentHash,
         fromBrowserCache: false,
         release: () => this.releaseObjectUrl(objectUrl),
@@ -211,30 +251,128 @@ export class ReadAudioCache implements ReadAudioCachePort {
     }
   }
 
+  private createLeasedObjectUrl(
+    blob: Blob,
+    cacheKey: string,
+  ): string {
+    const objectUrl = URL.createObjectURL(blob);
+    this.objectUrls.set(objectUrl, cacheKey);
+    this.activeLeaseCounts.set(
+      cacheKey,
+      (this.activeLeaseCounts.get(cacheKey) ?? 0) + 1,
+    );
+    return objectUrl;
+  }
+
   private releaseObjectUrl(url: string): void {
-    if (!this.objectUrls.delete(url)) return;
+    const cacheKey = this.objectUrls.get(url);
+    if (!cacheKey) return;
+
+    this.objectUrls.delete(url);
     URL.revokeObjectURL(url);
+
+    const remaining = (this.activeLeaseCounts.get(cacheKey) ?? 1) - 1;
+    if (remaining > 0) {
+      this.activeLeaseCounts.set(cacheKey, remaining);
+    } else {
+      this.activeLeaseCounts.delete(cacheKey);
+    }
+
+    this.schedulePrune();
+  }
+
+  private schedulePrune(): void {
+    if (this.disposed) return;
+
+    this.pruneRequested = true;
+    if (this.pruneInProgress) return;
+
+    this.pruneInProgress = true;
+    void (async () => {
+      while (this.pruneRequested && !this.disposed) {
+        this.pruneRequested = false;
+        await this.prune();
+      }
+    })().finally(() => {
+      this.pruneInProgress = false;
+      if (this.pruneRequested && !this.disposed) {
+        this.schedulePrune();
+      }
+    });
+  }
+
+  private async hydrateLegacyByteSizes(
+    cache: Cache,
+    entries: readonly AudioCacheMetadata[],
+  ): Promise<Array<AudioCacheMetadata & { byteSize: number }>> {
+    const hydrated: Array<AudioCacheMetadata & { byteSize: number }> = [];
+
+    for (const entry of entries) {
+      if (hasKnownByteSize(entry)) {
+        hydrated.push({
+          ...entry,
+          byteSize: Math.floor(entry.byteSize),
+        });
+        continue;
+      }
+
+      try {
+        const response = await cache.match(
+          syntheticCacheUrl(entry.cacheKey),
+        );
+
+        if (!response) {
+          await deleteMetadata(entry.cacheKey);
+          continue;
+        }
+
+        const blob = await response.blob();
+        const next = {
+          ...entry,
+          byteSize: blob.size,
+        };
+
+        hydrated.push(next);
+        await writeMetadata(next);
+      } catch {
+        // Unknown legacy size must not make the cache appear artificially
+        // small. Treat it as one full budget so an idle entry is eligible
+        // for conservative eviction while active leases remain protected.
+        hydrated.push({
+          ...entry,
+          byteSize: DEFAULT_READ_AUDIO_CACHE_BUDGET.maxBytes,
+        });
+      }
+    }
+
+    return hydrated;
   }
 
   private async prune(): Promise<void> {
+    if (!hasCacheStorage()) return;
+
+    const cache = await caches.open(CACHE_NAME).catch(() => null);
+    if (!cache) return;
+
     const entries = await readAllMetadata();
-    if (entries.length <= MAX_CACHE_ENTRIES) return;
+    if (entries.length === 0) return;
 
-    const stale = entries
-      .sort((a, b) => b.lastAccessedAt - a.lastAccessedAt)
-      .slice(MAX_CACHE_ENTRIES);
+    const hydrated = await this.hydrateLegacyByteSizes(cache, entries);
+    const activeCacheKeys = new Set(this.activeLeaseCounts.keys());
+    const evictions = planReadAudioCacheEvictions(
+      hydrated.map((entry) => ({
+        cacheKey: entry.cacheKey,
+        byteSize: entry.byteSize,
+        lastAccessedAt: entry.lastAccessedAt,
+      })),
+      activeCacheKeys,
+    );
 
-    const cache = hasCacheStorage()
-      ? await caches.open(CACHE_NAME).catch(() => null)
-      : null;
-
-    for (const entry of stale) {
-      if (cache) {
-        await cache
-          .delete(syntheticCacheUrl(entry.cacheKey))
-          .catch(() => false);
-      }
-      await deleteMetadata(entry.cacheKey);
+    for (const cacheKey of evictions) {
+      await cache
+        .delete(syntheticCacheUrl(cacheKey))
+        .catch(() => false);
+      await deleteMetadata(cacheKey);
     }
   }
 }
