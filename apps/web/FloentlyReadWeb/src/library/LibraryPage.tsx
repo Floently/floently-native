@@ -321,7 +321,7 @@ export function LibraryPage() {
       </div>
 
       {status === "loading" && totalItems === 0 ? (
-        <div className="page-loading">Loading your library…</div>
+        <div className="page-loading" role="status" aria-live="polite">Loading your library…</div>
       ) : totalItems === 0 && !normalizedQuery ? (
         <div className="library-empty">
           <span aria-hidden="true">⌁</span>
