@@ -170,6 +170,10 @@ private fun ReadBrowserScreen(
     var activeReadingManifest by remember {
         mutableStateOf<ReadingManifestV1?>(null)
     }
+    var sourceGeneration by remember { mutableIntStateOf(0) }
+    var extractionRequestGeneration by remember {
+        mutableIntStateOf(0)
+    }
     var rendererGeneration by remember { mutableIntStateOf(0) }
     var rendererCrashUrl by remember { mutableStateOf<String?>(null) }
     var rendererCrashCount by remember { mutableIntStateOf(0) }
@@ -217,6 +221,31 @@ private fun ReadBrowserScreen(
         rendererRecoveryBlocked = false
     }
 
+    fun invalidateReadableSource() {
+        sourceGeneration += 1
+        extractionRequestGeneration += 1
+        extractedText = ""
+        extractedLanguage = "auto"
+        selectedText = ""
+        selectedLanguage = "auto"
+        activeReadingManifest = null
+    }
+
+    fun hardRestartBrowser(
+        status: String,
+        resetCrashCounter: Boolean = false
+    ) {
+        if (resetCrashCounter) resetRendererRecovery()
+        invalidateReadableSource()
+        webView?.stopLoading()
+        webView?.destroy()
+        webView = null
+        progress = 0
+        isLoading = !currentUrl.isNullOrBlank()
+        readingStatus = status
+        rendererGeneration += 1
+    }
+
     fun openExternal(uri: Uri) {
         try {
             context.startActivity(Intent(Intent.ACTION_VIEW, uri))
@@ -232,6 +261,7 @@ private fun ReadBrowserScreen(
             return
         }
         resetRendererRecovery()
+        invalidateReadableSource()
         addressText = target
         currentUrl = target
         webView?.evaluateJavascript(
@@ -242,11 +272,6 @@ private fun ReadBrowserScreen(
             null
         )
         pageTitle = ""
-        extractedText = ""
-        extractedLanguage = "auto"
-        selectedText = ""
-        selectedLanguage = "auto"
-        activeReadingManifest = null
         readingStatus = "Loading…"
         webView?.loadUrl(target)
     }
@@ -279,6 +304,7 @@ private fun ReadBrowserScreen(
 
     fun toggleNativeReading() {
         val url = currentUrl ?: return
+        val generation = sourceGeneration
         val selection = selectedText.trim()
         val page = extractedText.trim()
         val usingSelection = selection.isNotBlank()
@@ -315,6 +341,13 @@ private fun ReadBrowserScreen(
                     ReadBrowserNativeReading.manifest(source)
                 }
             }.onSuccess { manifest ->
+                if (
+                    sourceGeneration != generation
+                    || currentUrl != source.url
+                ) {
+                    return@onSuccess
+                }
+
                 activeReadingManifest = manifest
 
                 val sameReading =
@@ -343,6 +376,9 @@ private fun ReadBrowserScreen(
                         "Preparing native audio while the page stays live."
                 }
             }.onFailure { error ->
+                if (sourceGeneration != generation) {
+                    return@onFailure
+                }
                 readingStatus =
                     "Could not prepare this page: " +
                         (error.localizedMessage ?: "Unknown error")
@@ -386,6 +422,7 @@ private fun ReadBrowserScreen(
     }
 
     BackHandler(enabled = canGoBack) {
+        invalidateReadableSource()
         webView?.goBack()
     }
 
@@ -407,10 +444,16 @@ private fun ReadBrowserScreen(
                 enabled = true,
                 contentDescription = if (canGoBack) "Back" else "Close browser"
             ) {
-                if (canGoBack) webView?.goBack() else onExit()
+                if (canGoBack) {
+                    invalidateReadableSource()
+                    webView?.goBack()
+                } else {
+                    onExit()
+                }
             }
 
             BrowserButton(label = "›", enabled = canGoForward, contentDescription = "Forward") {
+                invalidateReadableSource()
                 webView?.goForward()
             }
 
@@ -432,7 +475,16 @@ private fun ReadBrowserScreen(
                 enabled = currentUrl != null,
                 contentDescription = if (isLoading) "Stop loading" else "Reload"
             ) {
-                if (isLoading) webView?.stopLoading() else webView?.reload()
+                if (isLoading) {
+                    webView?.stopLoading()
+                    isLoading = false
+                    readingStatus = "Loading stopped."
+                } else {
+                    hardRestartBrowser(
+                        "Reloading page…",
+                        resetCrashCounter = true
+                    )
+                }
             }
         }
 
@@ -461,10 +513,10 @@ private fun ReadBrowserScreen(
                         paletteMuted = palette.muted,
                         paletteAccent = palette.accent,
                         onRetry = {
-                            rendererCrashCount = 0
-                            rendererRecoveryBlocked = false
-                            rendererGeneration += 1
-                            readingStatus = "Trying the page again…"
+                            hardRestartBrowser(
+                                "Trying the page again…",
+                                resetCrashCounter = true
+                            )
                         }
                     )
                 }
@@ -503,6 +555,7 @@ private fun ReadBrowserScreen(
                                         }
 
                                         override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
+                                            invalidateReadableSource()
                                             isLoading = true
                                             readingStatus = "Loading…"
                                             updateNavigation(view, url)
@@ -547,6 +600,7 @@ private fun ReadBrowserScreen(
                                                 rendererCrashCount = 1
                                             }
 
+                                            invalidateReadableSource()
                                             webView = null
                                             view.destroy()
 
