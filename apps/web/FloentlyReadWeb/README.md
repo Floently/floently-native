@@ -54,7 +54,7 @@ Protected:
 - `/app/reader/:documentId` — worker-backed virtualized reader
 - `/app/reader` — current document reader
 - `/app/browser` — Browser V2 migration boundary
-- `/app/preferences` — live playback speed/voice controls
+- `/app/preferences` — persistent theme, speed, voice, highlight and semantic-reader presentation controls
 - `/app/account` — shared Floently account/session
 
 Protected redirects accept only same-origin `/app/*` `returnTo` values.
@@ -173,6 +173,34 @@ The virtualized reader:
 - exposes region-level active state only.
 
 Word-level highlighting is intentionally deferred until backend timing payloads are verified and can be mapped to canonical scalar offsets without guessing.
+
+## Persistent reading preferences
+
+Read preferences are app-owned defaults rather than paragraph/TTS-asset state. They
+survive page reloads and document replacement in the current browser profile.
+
+Current persistent controls:
+
+- Read chrome theme: light, dark or live system preference;
+- playback speed from 0.5× through 3×;
+- preferred voice plus normalized language affinity;
+- visual highlight mode: none, sentence, or capability-gated word;
+- semantic-reader typeface, text size and line spacing.
+
+Theme, reading mode and selected voice reuse the proven production storage keys so
+an eventual cutover does not silently discard those preferences. New presentation
+settings use versioned Read-specific keys. Document/project resume state may restore
+its own saved speed and voice without rewriting these global defaults.
+
+The preference layer never restyles source-authoritative surfaces: original PDF pages
+remain browser-rendered and Browser V2 keeps the live remote webpage visible. Word
+highlighting remains disabled until the TTS timing contract provides verified
+canonical scalar mappings; a stored word preference safely falls back to sentence
+highlighting rather than fabricating timestamps.
+
+Reader text regions are pointer- and keyboard-operable. Pointer selection maps the
+chosen vertical point into the region timeline, while Enter/Space starts from the
+focused region boundary.
 
 ## Browser V2 migration
 
