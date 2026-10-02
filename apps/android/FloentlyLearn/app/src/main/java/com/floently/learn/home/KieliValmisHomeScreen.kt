@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
@@ -61,14 +62,15 @@ enum class KieliValmisDestination {
     Profile
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KieliValmisHomeScreen() {
     var destination by remember { mutableStateOf<KieliValmisDestination?>(null) }
     var showPathPicker by remember { mutableStateOf(false) }
 
-    if (destination != null) {
+    destination?.let {
         KieliValmisCapabilityScreen(
-            destination = destination!!,
+            destination = it,
             onBack = { destination = null }
         )
         return
@@ -153,63 +155,72 @@ fun KieliValmisHomeScreen() {
             Column(verticalArrangement = Arrangement.spacedBy(KVSpacing.m)) {
                 KieliValmisSectionHeader("Your pathways")
 
-                ResponsivePair {
-                    KieliValmisPathwayCard(
-                        icon = Icons.Rounded.Badge,
-                        title = "YKI preparation",
-                        subtitle = "Reading, listening, writing and speaking practice.",
-                        onClick = { destination = KieliValmisDestination.Yki },
-                        modifier = it
-                    )
-                } second@{
-                    KieliValmisPathwayCard(
-                        icon = Icons.Rounded.BusinessCenter,
-                        title = "Work in Finland",
-                        subtitle = "Professional Finnish and workplace communication.",
-                        onClick = { destination = KieliValmisDestination.Professional },
-                        modifier = it
-                    )
-                }
+                ResponsivePair(
+                    first = { modifier ->
+                        KieliValmisPathwayCard(
+                            icon = Icons.Rounded.Badge,
+                            title = "YKI preparation",
+                            subtitle = "Reading, listening, writing and speaking practice.",
+                            onClick = { destination = KieliValmisDestination.Yki },
+                            modifier = modifier
+                        )
+                    },
+                    second = { modifier ->
+                        KieliValmisPathwayCard(
+                            icon = Icons.Rounded.BusinessCenter,
+                            title = "Work in Finland",
+                            subtitle = "Professional Finnish and workplace communication.",
+                            onClick = { destination = KieliValmisDestination.Professional },
+                            modifier = modifier
+                        )
+                    }
+                )
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(KVSpacing.m)) {
                 KieliValmisSectionHeader("Practice by skill")
 
-                ResponsivePair {
-                    KieliValmisSkillCard(
-                        icon = Icons.Rounded.GraphicEq,
-                        title = "Speaking",
-                        subtitle = "Guided speaking and roleplay.",
-                        onClick = { destination = KieliValmisDestination.Speaking },
-                        modifier = it
-                    )
-                } second@{
-                    KieliValmisSkillCard(
-                        icon = Icons.Rounded.Headphones,
-                        title = "Listening",
-                        subtitle = "Understand Finnish in real situations.",
-                        onClick = { destination = KieliValmisDestination.Listening },
-                        modifier = it
-                    )
-                }
+                ResponsivePair(
+                    first = { modifier ->
+                        KieliValmisSkillCard(
+                            icon = Icons.Rounded.GraphicEq,
+                            title = "Speaking",
+                            subtitle = "Guided speaking and roleplay.",
+                            onClick = { destination = KieliValmisDestination.Speaking },
+                            modifier = modifier
+                        )
+                    },
+                    second = { modifier ->
+                        KieliValmisSkillCard(
+                            icon = Icons.Rounded.Headphones,
+                            title = "Listening",
+                            subtitle = "Understand Finnish in real situations.",
+                            onClick = { destination = KieliValmisDestination.Listening },
+                            modifier = modifier
+                        )
+                    }
+                )
 
-                ResponsivePair {
-                    KieliValmisSkillCard(
-                        icon = Icons.Rounded.MenuBook,
-                        title = "Reading",
-                        subtitle = "Build comprehension with focused tasks.",
-                        onClick = { destination = KieliValmisDestination.Reading },
-                        modifier = it
-                    )
-                } second@{
-                    KieliValmisSkillCard(
-                        icon = Icons.Rounded.Edit,
-                        title = "Writing",
-                        subtitle = "Practice useful and YKI-style writing.",
-                        onClick = { destination = KieliValmisDestination.Writing },
-                        modifier = it
-                    )
-                }
+                ResponsivePair(
+                    first = { modifier ->
+                        KieliValmisSkillCard(
+                            icon = Icons.Rounded.MenuBook,
+                            title = "Reading",
+                            subtitle = "Build comprehension with focused tasks.",
+                            onClick = { destination = KieliValmisDestination.Reading },
+                            modifier = modifier
+                        )
+                    },
+                    second = { modifier ->
+                        KieliValmisSkillCard(
+                            icon = Icons.Rounded.Edit,
+                            title = "Writing",
+                            subtitle = "Practice useful and YKI-style writing.",
+                            onClick = { destination = KieliValmisDestination.Writing },
+                            modifier = modifier
+                        )
+                    }
+                )
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(KVSpacing.m)) {
