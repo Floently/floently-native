@@ -57,6 +57,14 @@ class ReadProgressiveAudioCoordinator(
         }
     }
 
+    suspend fun replaceProtectedSegments(
+        segments: Collection<ReadPlaybackSegment>
+    ) {
+        cache.replaceProtectedUris(
+            segments.mapNotNull { it.audioUri }
+        )
+    }
+
     fun playableDocument(
         manifest: ReadingManifestV1,
         segments: List<ReadPlaybackSegment>,
