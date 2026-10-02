@@ -208,6 +208,14 @@ private fun ReadBrowserScreen(
 
     fun updateNavigation(view: WebView, url: String? = view.url) {
         url?.let {
+            if (
+                currentUrl != null
+                && currentUrl != it
+            ) {
+                // Covers redirects and same-document/history API navigation
+                // in addition to the normal onPageStarted path.
+                invalidateReadableSource()
+            }
             currentUrl = it
             addressText = it
         }
