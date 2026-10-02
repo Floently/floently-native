@@ -54,9 +54,16 @@ export function getReadApiBaseUrl(): string | undefined {
 }
 
 export function getReadBillingPortalUrl(): string | null {
-  return (
+  const candidate =
     envValue("VITE_STRIPE_READ_BILLING_PORTAL_URL")
-    || envValue("VITE_STRIPE_BILLING_PORTAL_URL")
-    || null
-  );
+    || envValue("VITE_STRIPE_BILLING_PORTAL_URL");
+
+  if (!candidate) return null;
+
+  try {
+    const parsed = new URL(candidate);
+    return parsed.protocol === "https:" ? parsed.href : null;
+  } catch {
+    return null;
+  }
 }
