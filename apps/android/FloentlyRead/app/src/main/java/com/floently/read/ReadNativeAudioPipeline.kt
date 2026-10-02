@@ -15,7 +15,8 @@ import java.security.MessageDigest
 data class ReadNativeTtsAsset(
     val audioUri: String,
     val cacheKey: String,
-    val contentHash: String,
+    val requestHash: String,
+    val contentHash: String?,
     val durationMs: Long?,
     val voiceId: String,
     val provider: String?,
@@ -61,18 +62,31 @@ class ReadNativeTtsClient(
             .ifBlank { source.optString("voice_id") }
             .ifBlank { voiceId }
 
-        val digest = sha256Hex(
+        val resolvedProvider = source.optString("provider")
+            .trim()
+            .takeIf { it.isNotBlank() }
+        val resolvedModel = source.optString("model")
+            .trim()
+            .takeIf { it.isNotBlank() }
+
+        val requestDigest = sha256Hex(
             listOf(
                 value,
-                language,
+                language.ifBlank { "auto" },
                 resolvedVoice,
-                "render-read-prerender"
+                resolvedProvider ?: "unknown-provider",
+                resolvedModel ?: "unknown-model",
+                "read-tts-request-v2"
             ).joinToString("\u001f")
         )
+        val requestHash = "sha256:$requestDigest"
+        val contentHash = source.optString("contentHash")
+            .ifBlank { source.optString("content_hash") }
+            .takeIf { it.isNotBlank() }
 
         val cacheKey = source.optString("cacheKey")
             .ifBlank { source.optString("cache_key") }
-            .ifBlank { "read-tts:sha256:$digest" }
+            .ifBlank { "read-tts:req:$requestHash" }
 
         val durationMs = when {
             source.has("durationMs") ->
@@ -93,13 +107,12 @@ class ReadNativeTtsClient(
         return ReadNativeTtsAsset(
             audioUri = audioUri,
             cacheKey = cacheKey,
-            contentHash = "sha256:$digest",
+            requestHash = requestHash,
+            contentHash = contentHash,
             durationMs = durationMs,
             voiceId = resolvedVoice,
-            provider = source.optString("provider")
-                .takeIf { it.isNotBlank() },
-            model = source.optString("model")
-                .takeIf { it.isNotBlank() }
+            provider = resolvedProvider,
+            model = resolvedModel
         )
     }
 
