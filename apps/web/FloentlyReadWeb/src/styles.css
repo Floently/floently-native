@@ -2861,6 +2861,38 @@ html[data-read-theme="light"] .app-sidebar {
   background: rgba(250, 251, 254, 0.88);
 }
 
+html[data-read-theme="light"] .landing-lead,
+html[data-read-theme="light"] .landing-pillars p,
+html[data-read-theme="light"] .auth-brand-panel p:last-child,
+html[data-read-theme="light"] .auth-divider,
+html[data-read-theme="light"] .auth-form label,
+html[data-read-theme="light"] .auth-switch {
+  color: #667085;
+}
+
+html[data-read-theme="light"] .landing-pillars article,
+html[data-read-theme="light"] .auth-card {
+  border-color: var(--read-border-subtle);
+  background: var(--read-surface-card);
+  box-shadow: var(--read-shadow-card);
+}
+
+html[data-read-theme="light"] .auth-brand-panel {
+  border-color: var(--read-border-subtle);
+  background:
+    radial-gradient(
+      circle at 15% 30%,
+      rgba(103, 87, 200, 0.11),
+      transparent 27rem
+    ),
+    rgba(255, 255, 255, 0.2);
+}
+
+html[data-read-theme="light"] .auth-divider::before,
+html[data-read-theme="light"] .auth-divider::after {
+  background: rgba(35, 40, 56, 0.09);
+}
+
 html[data-read-theme="light"] .app-brand,
 html[data-read-theme="light"] .mobile-brand,
 html[data-read-theme="light"] .brand-link {
