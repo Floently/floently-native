@@ -31,6 +31,7 @@ struct ReadBrowserView: View {
             } else {
                 ZStack(alignment: .bottom) {
                     ReadWebView(controller: controller)
+                        .id(controller.webViewGeneration)
                         .ignoresSafeArea(edges: .bottom)
 
                     readStrip
