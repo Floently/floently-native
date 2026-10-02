@@ -214,6 +214,17 @@ class ReadNativeAudioCache(
     private fun prune(
         additionallyProtected: Set<String> = emptySet()
     ) {
+        val now = System.currentTimeMillis()
+        root.listFiles()?.forEach { file ->
+            if (
+                file.isFile
+                && file.name.contains(".partial-")
+                && now - file.lastModified() > 60L * 60L * 1_000L
+            ) {
+                runCatching { file.delete() }
+            }
+        }
+
         val files = root.listFiles()?.toList().orEmpty()
             .filter {
                 it.isFile
