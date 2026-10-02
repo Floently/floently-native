@@ -8,7 +8,12 @@ data class ReadPlaybackResumeSnapshot(
     val revisionId: String,
     val logicalTimeMs: Long,
     val playbackSpeed: Float,
-    val updatedAtMs: Long
+    val updatedAtMs: Long,
+    val sourceScalarOffset: Int? = null,
+    val sourceSegmentId: String? = null,
+    val sourceSegmentIndex: Int? = null,
+    val voiceId: String? = null,
+    val renditionId: String? = null
 )
 
 class ReadPlaybackResumeStore(
@@ -42,7 +47,25 @@ class ReadPlaybackResumeStore(
                 updatedAtMs = json.optLong(
                     "updated_at_ms",
                     0L
-                )
+                ),
+                sourceScalarOffset =
+                    json.optIntOrNull(
+                        "source_scalar_offset"
+                    ),
+                sourceSegmentId =
+                    json.optStringOrNull(
+                        "source_segment_id"
+                    ),
+                sourceSegmentIndex =
+                    json.optIntOrNull(
+                        "source_segment_index"
+                    ),
+                voiceId =
+                    json.optStringOrNull("voice_id"),
+                renditionId =
+                    json.optStringOrNull(
+                        "rendition_id"
+                    )
             )
 
             snapshot.takeIf {
@@ -66,6 +89,22 @@ class ReadPlaybackResumeStore(
             )
             .put("updated_at_ms", snapshot.updatedAtMs)
 
+        snapshot.sourceScalarOffset?.let {
+            json.put("source_scalar_offset", it)
+        }
+        snapshot.sourceSegmentId?.let {
+            json.put("source_segment_id", it)
+        }
+        snapshot.sourceSegmentIndex?.let {
+            json.put("source_segment_index", it)
+        }
+        snapshot.voiceId?.let {
+            json.put("voice_id", it)
+        }
+        snapshot.renditionId?.let {
+            json.put("rendition_id", it)
+        }
+
         preferences.edit()
             .putString(
                 key(
@@ -85,6 +124,24 @@ class ReadPlaybackResumeStore(
             .remove(key(documentId, revisionId))
             .apply()
     }
+
+    private fun JSONObject.optStringOrNull(
+        key: String
+    ): String? =
+        if (has(key) && !isNull(key)) {
+            optString(key).takeIf { it.isNotBlank() }
+        } else {
+            null
+        }
+
+    private fun JSONObject.optIntOrNull(
+        key: String
+    ): Int? =
+        if (has(key) && !isNull(key)) {
+            optInt(key)
+        } else {
+            null
+        }
 
     private fun key(
         documentId: String,
