@@ -346,7 +346,7 @@ describe("BrowserReadingBridge", () => {
     let resolveManifest:
       | ((manifest: ReadingManifestSummary) => void)
       | null = null;
-    core.buildManifestOverride = (input) =>
+    core.buildManifestOverride = (_input) =>
       new Promise((resolve) => {
         resolveManifest = resolve;
       });
