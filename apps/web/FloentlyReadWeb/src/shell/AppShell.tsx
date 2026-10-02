@@ -110,7 +110,7 @@ export function AppShell({
           </span>
           <span>
             <strong>{accountLabel}</strong>
-            <small>{user.readPlan || user.plan}</small>
+            <small>{user.readPolicy?.plan || user.readPlan || user.plan}</small>
           </span>
         </a>
       </aside>
