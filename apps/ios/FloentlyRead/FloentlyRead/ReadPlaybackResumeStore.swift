@@ -6,6 +6,35 @@ struct ReadPlaybackResumeSnapshot: Codable, Equatable {
     let logicalTime: TimeInterval
     let playbackRate: Float
     let updatedAt: Date
+    let sourceScalarOffset: Int?
+    let sourceSegmentId: String?
+    let sourceSegmentIndex: Int?
+    let voiceId: String?
+    let renditionId: String?
+
+    init(
+        documentId: String,
+        revisionId: String,
+        logicalTime: TimeInterval,
+        playbackRate: Float,
+        updatedAt: Date,
+        sourceScalarOffset: Int? = nil,
+        sourceSegmentId: String? = nil,
+        sourceSegmentIndex: Int? = nil,
+        voiceId: String? = nil,
+        renditionId: String? = nil
+    ) {
+        self.documentId = documentId
+        self.revisionId = revisionId
+        self.logicalTime = logicalTime
+        self.playbackRate = playbackRate
+        self.updatedAt = updatedAt
+        self.sourceScalarOffset = sourceScalarOffset
+        self.sourceSegmentId = sourceSegmentId
+        self.sourceSegmentIndex = sourceSegmentIndex
+        self.voiceId = voiceId
+        self.renditionId = renditionId
+    }
 }
 
 @MainActor
@@ -53,15 +82,43 @@ final class ReadPlaybackResumeStore {
             return
         }
 
-        guard let data = try? JSONEncoder().encode(snapshot) else {
+        // PlaybackSession may still write time/rate-only snapshots. Preserve
+        // a previously recorded source anchor until a newer source-aware
+        // writer explicitly replaces it.
+        let existing = load(
+            documentId: snapshot.documentId,
+            revisionId: snapshot.revisionId
+        )
+        let resolved = ReadPlaybackResumeSnapshot(
+            documentId: snapshot.documentId,
+            revisionId: snapshot.revisionId,
+            logicalTime: snapshot.logicalTime,
+            playbackRate: snapshot.playbackRate,
+            updatedAt: snapshot.updatedAt,
+            sourceScalarOffset:
+                snapshot.sourceScalarOffset
+                ?? existing?.sourceScalarOffset,
+            sourceSegmentId:
+                snapshot.sourceSegmentId
+                ?? existing?.sourceSegmentId,
+            sourceSegmentIndex:
+                snapshot.sourceSegmentIndex
+                ?? existing?.sourceSegmentIndex,
+            voiceId: snapshot.voiceId ?? existing?.voiceId,
+            renditionId:
+                snapshot.renditionId
+                ?? existing?.renditionId
+        )
+
+        guard let data = try? JSONEncoder().encode(resolved) else {
             return
         }
 
         defaults.set(
             data,
             forKey: key(
-                documentId: snapshot.documentId,
-                revisionId: snapshot.revisionId
+                documentId: resolved.documentId,
+                revisionId: resolved.revisionId
             )
         )
     }
