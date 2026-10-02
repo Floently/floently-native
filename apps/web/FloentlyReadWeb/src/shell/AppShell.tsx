@@ -20,6 +20,7 @@ const PRIMARY_NAV: NavItem[] = [
 
 const SECONDARY_NAV: NavItem[] = [
   { href: "/app/preferences", label: "Preferences", glyph: "P" },
+  { href: "/app/subscription", label: "Plan", glyph: "$" },
   { href: "/app/account", label: "Account", glyph: "A" },
 ];
 
@@ -109,7 +110,7 @@ export function AppShell({
           </span>
           <span>
             <strong>{accountLabel}</strong>
-            <small>{user.readPlan || user.plan}</small>
+            <small>{user.readPolicy?.plan || user.readPlan || user.plan}</small>
           </span>
         </a>
       </aside>

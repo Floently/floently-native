@@ -55,7 +55,8 @@ Protected:
 - `/app/reader` — current document reader
 - `/app/browser` — Browser V2 migration boundary
 - `/app/preferences` — persistent theme, speed, voice, highlight and semantic-reader presentation controls
-- `/app/account` — shared Floently account/session
+- `/app/account` — shared Floently account, Read entitlement and current-period quota
+- `/app/subscription` — backend-authoritative regional Read pricing and checkout
 
 Protected redirects accept only same-origin `/app/*` `returnTo` values.
 
@@ -71,6 +72,22 @@ The product shell reuses the existing Read/Learn auth contract:
 - `POST /api/v1/auth/login/google`
 
 Session bootstrap is cookie-first, with bearer fallback for compatibility. The TTS adapter resolves the currently authenticated bearer token lazily at request time.
+
+## Read entitlement, quota and billing
+
+The web app keeps identity and payment authority outside the browser:
+
+- shared Floently/Learn auth remains the session authority;
+- Read entitlement is normalized from backend session policy rather than inferred from UI state;
+- `GET /api/v1/read/usage` supplies current-period usage and limits;
+- `GET /api/v1/billing/read-pricing` supplies regional Reader/Creator pricing;
+- `POST /api/v1/billing/read-checkout` creates the authenticated checkout session;
+- checkout URLs must be valid HTTPS URLs returned by the backend;
+- the optional configured customer-portal URL is also accepted only when it is valid HTTPS.
+
+The frontend never grants itself a paid plan and never constructs a Stripe Checkout
+session URL. An optional existing-subscriber portal can be configured with
+`VITE_STRIPE_READ_BILLING_PORTAL_URL`.
 
 ## Document and playback lifetime
 
@@ -249,6 +266,7 @@ Key variables:
 - `VITE_AUTH_API_URL` — explicit shared auth API base for non-production hosts
 - `VITE_API_URL` — general fallback API base
 - `VITE_READ_API_BASE_URL` — TTS/voice API base
+- `VITE_STRIPE_READ_BILLING_PORTAL_URL` — optional HTTPS customer billing portal
 
 Known production host routing mirrors the existing web app: `floently.com` can use same-origin auth proxying while `read.floently.com`, `learn.floently.com` and `create.floently.com` resolve auth to `https://learn-api.floently.com`.
 
@@ -281,7 +299,7 @@ A green CI build does **not** authorize replacing the current production READ we
 - PDF/EPUB/document ingestion;
 - cloud library/project synchronization;
 - full Browser V2 page-preserving reader migration;
-- account/billing/subscription feature parity;
+- live account/quota/regional-pricing/checkout and billing-portal qualification;
 - accessibility/i18n;
 - Playwright route/auth/import/library/reader flows;
 - long-session browser/device testing;
