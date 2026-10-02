@@ -441,13 +441,22 @@ class ReadPlaybackService : MediaSessionService() {
                     player = player
                 )
 
+                if (player.isDocumentEnded()) {
+                    coordinator?.replaceProtectedSegments(
+                        emptyList()
+                    )
+                    return@launch
+                }
+
                 val highestPrepared =
                     preparedSegments.keys.maxOrNull()
                         ?: continue
                 val nextIndex = highestPrepared + 1
 
                 if (nextIndex >= manifest.segments.size) {
-                    return@launch
+                    // Keep the loop alive as a lightweight lease updater so
+                    // past audio becomes evictable while playback advances.
+                    continue
                 }
 
                 val logicalPosition =
