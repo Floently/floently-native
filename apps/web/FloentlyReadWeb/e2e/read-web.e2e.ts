@@ -283,7 +283,7 @@ test("pasted text opens through the real Rust/WASM synced reader", async ({
 
   await expect(page).toHaveURL(/\/app\/project\/e2e-paste$/);
   await expect(
-    page.getByRole("heading", { name: pastedProject.title }),
+    page.getByRole("heading", { name: pastedProject.title, level: 1 }),
   ).toBeVisible();
   await expect(page.locator(".reader-surface")).toBeVisible();
   await expect(
