@@ -2,6 +2,7 @@ import type { ReadAuthSession } from "./authStore";
 import {
   hasAppOnlyAccess,
   hasFullAccess,
+  hasReaderAccess,
   normalizePlanName,
 } from "./planAccess";
 
@@ -50,7 +51,8 @@ export function getReadEntitlement(
   if (policy) {
     const normalizedTier = normalizePlanName(policy.tier);
     const normalizedPlan = normalizePlanName(policy.plan);
-    const isPaid = normalizedTier === "paid" || normalizedPlan !== "free";
+    const isPaid =
+      normalizedTier === "paid" || hasReaderAccess(normalizedPlan);
     const tiers = policy.voiceAccess.allowedTiers.length > 0
       ? policy.voiceAccess.allowedTiers
       : [policy.voiceAccess.defaultTier];
