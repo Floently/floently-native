@@ -331,7 +331,7 @@ describe("BrowserReadingBridge", () => {
     expect(bridge.getSnapshot().status).toBe("extracting");
 
     bridge.invalidate("The web page changed.");
-    resolveExtraction?.(pageDocument());
+    resolveExtraction!(pageDocument());
     await pending;
 
     expect(core.builtText).toBeNull();
@@ -357,7 +357,7 @@ describe("BrowserReadingBridge", () => {
     expect(core.builtText).toBe("First sentence.\n\nSecond sentence.");
 
     bridge.invalidate("The web page changed.");
-    resolveManifest?.(
+    resolveManifest!(
       manifestFor({
         documentId: "browser:page-1",
         revisionId: "rev-1",
