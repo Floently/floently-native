@@ -1831,8 +1831,15 @@ button:disabled,
 }
 
 @media (max-width: 820px) {
+  :root {
+    --read-shell-gutter: 14px;
+  }
+
   .public-shell {
-    width: min(100% - 28px, 720px);
+    width: min(
+      calc(100% - 2 * var(--read-shell-gutter)),
+      720px
+    );
   }
 
   .landing-hero {
@@ -1865,10 +1872,6 @@ button:disabled,
 
   .app-sidebar {
     display: none;
-  }
-
-  :root {
-    --read-shell-gutter: 14px;
   }
 
   .app-main {
@@ -1964,7 +1967,7 @@ button:disabled,
 
   .auth-brand-panel,
   .auth-form-panel {
-    padding: 24px 20px;
+    padding: var(--read-space-6) var(--read-space-5);
   }
 
   .auth-brand-panel {
