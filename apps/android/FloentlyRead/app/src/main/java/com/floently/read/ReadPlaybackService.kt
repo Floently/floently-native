@@ -759,6 +759,13 @@ class ReadPlaybackService : MediaSessionService() {
             revisionId = manifest.revisionId
         ) ?: return boundedRequested
 
+        saved.sourceScalarOffset?.let { sourceScalarOffset ->
+            return manifest.segments.indexOfFirst {
+                sourceScalarOffset < it.scalarEnd
+            }.takeIf { it >= 0 }
+                ?: manifest.segments.lastIndex
+        }
+
         return manifest.segments.indexOfFirst {
             saved.logicalTimeMs < it.logicalEndMs
         }.takeIf { it >= 0 }
@@ -819,21 +826,36 @@ class ReadPlaybackService : MediaSessionService() {
             return
         }
 
+        val logicalTimeMs =
+            player.currentLogicalPositionMs()
+                .coerceIn(
+                    0L,
+                    document.logicalDurationMs
+                        .coerceAtLeast(0L)
+                )
+        val sourceSegment = activeManifest
+            ?.segments
+            ?.firstOrNull {
+                logicalTimeMs < it.logicalEndMs
+            }
+            ?: activeManifest?.segments?.lastOrNull()
+
         store.save(
             ReadPlaybackResumeSnapshot(
                 documentId = document.id,
                 revisionId = document.revisionId,
-                logicalTimeMs =
-                    player.currentLogicalPositionMs()
-                        .coerceIn(
-                            0L,
-                            document.logicalDurationMs
-                                .coerceAtLeast(0L)
-                        ),
+                logicalTimeMs = logicalTimeMs,
                 playbackSpeed =
                     player.currentPlaybackSpeed(),
                 updatedAtMs =
-                    System.currentTimeMillis()
+                    System.currentTimeMillis(),
+                sourceScalarOffset =
+                    sourceSegment?.scalarStart,
+                sourceSegmentId =
+                    sourceSegment?.id,
+                sourceSegmentIndex =
+                    sourceSegment?.index,
+                voiceId = activeVoiceId
             )
         )
     }
