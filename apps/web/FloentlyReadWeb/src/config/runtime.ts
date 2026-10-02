@@ -52,3 +52,11 @@ export function getReadApiBaseUrl(): string | undefined {
   const explicit = normalizeBaseUrl(envValue("VITE_READ_API_BASE_URL"));
   return explicit || undefined;
 }
+
+export function getReadBillingPortalUrl(): string | null {
+  return (
+    envValue("VITE_STRIPE_READ_BILLING_PORTAL_URL")
+    || envValue("VITE_STRIPE_BILLING_PORTAL_URL")
+    || null
+  );
+}
