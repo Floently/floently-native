@@ -16,9 +16,22 @@ final class ReadBrowserController: ObservableObject {
     @Published var extractedLanguage: String = "auto"
     @Published var selectionText: String = ""
     @Published var selectionLanguage: String = "auto"
+    @Published private(set) var webViewGeneration = 0
+    @Published private(set) var lastJavaScriptError: String?
 
     weak var webView: WKWebView?
     private var pendingURL: URL?
+    private var navigationGeneration = 0
+    private var extractionGeneration = 0
+    private var rendererCrashURL: URL?
+    private var rendererCrashCount = 0
+    private var lastRendererCrashAt: Date?
+
+    private struct ExtractionRequest {
+        let navigationGeneration: Int
+        let requestGeneration: Int
+        let url: String
+    }
 
     static let protectedAuthenticationHosts: Set<String> = [
         "accounts.google.com",
@@ -59,12 +72,9 @@ final class ReadBrowserController: ObservableObject {
             return
         }
 
+        invalidateReadableSource()
         addressText = url.absoluteString
         currentURL = url
-        extractedText = ""
-        extractedLanguage = "auto"
-        selectionText = ""
-        selectionLanguage = "auto"
         readingStatus = "Loading…"
 
         guard let webView else {
@@ -76,19 +86,92 @@ final class ReadBrowserController: ObservableObject {
     }
 
     func goBack() {
+        invalidateReadableSource()
         webView?.goBack()
     }
 
     func goForward() {
+        invalidateReadableSource()
         webView?.goForward()
     }
 
     func reload() {
-        webView?.reload()
+        rendererCrashURL = nil
+        rendererCrashCount = 0
+        lastRendererCrashAt = nil
+        hardRestartPreservingPage(status: "Reloading page…")
     }
 
     func stopLoading() {
         webView?.stopLoading()
+        isLoading = false
+    }
+
+    func navigationDidStart(from webView: WKWebView) {
+        invalidateReadableSource()
+        readingStatus = "Loading…"
+        refreshNavigationState(from: webView)
+    }
+
+    func recoverFromWebContentTermination(url: URL?) {
+        let target = url ?? webView?.url ?? currentURL
+        let now = Date()
+
+        if
+            target != nil,
+            target == rendererCrashURL,
+            let lastRendererCrashAt,
+            now.timeIntervalSince(lastRendererCrashAt) < 30
+        {
+            rendererCrashCount += 1
+        } else {
+            rendererCrashURL = target
+            rendererCrashCount = 1
+        }
+        lastRendererCrashAt = now
+
+        if rendererCrashCount >= 3 {
+            invalidateReadableSource()
+            webView?.stopLoading()
+            webView = nil
+            pendingURL = target
+            isLoading = false
+            estimatedProgress = 0
+            readingStatus =
+                "This page repeatedly stopped the web renderer. "
+                + "Tap Reload to start a fresh browser process."
+            return
+        }
+
+        hardRestartPreservingPage(
+            status: "The page renderer restarted. Restoring the page…"
+        )
+    }
+
+    func markPageHealthy() {
+        rendererCrashURL = nil
+        rendererCrashCount = 0
+        lastRendererCrashAt = nil
+    }
+
+    private func hardRestartPreservingPage(status: String) {
+        let target = webView?.url ?? currentURL ?? pendingURL
+        invalidateReadableSource()
+        webView?.stopLoading()
+        webView = nil
+        pendingURL = target
+
+        if let target {
+            currentURL = target
+            addressText = target.absoluteString
+            isLoading = true
+        } else {
+            isLoading = false
+        }
+
+        estimatedProgress = 0
+        readingStatus = status
+        webViewGeneration &+= 1
     }
 
     func refreshNavigationState(from webView: WKWebView) {
@@ -108,29 +191,60 @@ final class ReadBrowserController: ObservableObject {
             return
         }
 
+        let request = beginExtraction(for: url)
+        let script = Self.guardedExtractionJavaScript(
+            Self.pageExtractionJavaScript,
+            expectedURL: url
+        )
+
         readingStatus = "Finding the main reading area…"
-        webView.evaluateJavaScript(Self.pageExtractionJavaScript) { [weak self] result, error in
+        webView.evaluateJavaScript(script) { [weak self] result, error in
             Task { @MainActor in
                 guard let self else { return }
+                guard self.isCurrentExtraction(request) else { return }
+
                 if let error {
-                    self.readingStatus = "Could not read this page: \(error.localizedDescription)"
-                    return
-                }
-                guard
-                    let json = result as? String,
-                    let data = json.data(using: .utf8),
-                    let payload = try? JSONDecoder().decode(ReadBrowserExtraction.self, from: data),
-                    !payload.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                else {
-                    self.readingStatus = "No readable lesson or article text was found on the visible page."
+                    self.lastJavaScriptError = error.localizedDescription
+                    self.readingStatus =
+                        "Could not read this page: "
+                        + error.localizedDescription
                     return
                 }
 
-                self.extractedText = payload.text
+                guard
+                    let json = result as? String,
+                    let data = json.data(using: .utf8),
+                    let payload = try? JSONDecoder().decode(
+                        ReadBrowserExtraction.self,
+                        from: data
+                    ),
+                    self.isCurrentExtraction(
+                        request,
+                        payloadURL: payload.url
+                    )
+                else {
+                    return
+                }
+
+                let text = payload.text.trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+                guard !text.isEmpty else {
+                    self.readingStatus =
+                        "No readable lesson or article text "
+                        + "was found on the visible page."
+                    return
+                }
+
+                self.lastJavaScriptError = nil
+                self.extractedText = text
                 self.extractedLanguage =
                     payload.language.isEmpty ? "auto" : payload.language
-                self.pageTitle = payload.title.isEmpty ? self.pageTitle : payload.title
-                self.readingStatus = "Ready to read \(payload.wordCount) words from the live page."
+                self.pageTitle =
+                    payload.title.isEmpty ? self.pageTitle : payload.title
+                self.readingStatus =
+                    "Ready to read \(payload.wordCount) words "
+                    + "from the live page."
             }
         }
     }
@@ -142,27 +256,41 @@ final class ReadBrowserController: ObservableObject {
             return
         }
 
-        webView.evaluateJavaScript(Self.selectionExtractionJavaScript) { [weak self] result, error in
+        let request = beginExtraction(for: url)
+        let script = Self.guardedExtractionJavaScript(
+            Self.selectionExtractionJavaScript,
+            expectedURL: url
+        )
+
+        webView.evaluateJavaScript(script) { [weak self] result, error in
             Task { @MainActor in
                 guard let self else { return }
+                guard self.isCurrentExtraction(request) else { return }
+
                 if let error {
-                    self.readingStatus = "Could not read the selection: \(error.localizedDescription)"
+                    self.lastJavaScriptError = error.localizedDescription
+                    self.readingStatus =
+                        "Could not read the selection: "
+                        + error.localizedDescription
                     return
                 }
+
                 guard
                     let json = result as? String,
                     let data = json.data(using: .utf8),
                     let payload = try? JSONDecoder().decode(
                         ReadBrowserExtraction.self,
                         from: data
+                    ),
+                    self.isCurrentExtraction(
+                        request,
+                        payloadURL: payload.url
                     )
                 else {
-                    self.selectionText = ""
-                    self.selectionLanguage = "auto"
-                    self.readingStatus = "Select text on the page first."
                     return
                 }
 
+                self.lastJavaScriptError = nil
                 let text = payload.text.trimmingCharacters(
                     in: .whitespacesAndNewlines
                 )
@@ -183,15 +311,22 @@ final class ReadBrowserController: ObservableObject {
         active: Bool,
         pulse: Bool = false
     ) {
-        guard let webView else { return }
+        guard let webView, let pageURL = webView.url else { return }
 
         let activeValue = active ? "true" : "false"
         let pulseValue = pulse ? "true" : "false"
+        let expectedURL = Self.javaScriptLiteral(
+            pageURL.absoluteString
+        )
+        let generation = navigationGeneration
 
         let script = """
         (() => {
-          const active = (activeValue);
-          const pulse = (pulseValue);
+          const expectedUrl = \(expectedURL);
+          if (location.href !== expectedUrl) return;
+
+          const active = \(activeValue);
+          const pulse = \(pulseValue);
           const root = document.querySelector(
             "[data-floently-read-root='true']"
           );
@@ -265,7 +400,100 @@ final class ReadBrowserController: ObservableObject {
         })();
         """
 
-        webView.evaluateJavaScript(script)
+        webView.evaluateJavaScript(script) { [weak self] _, error in
+            Task { @MainActor in
+                guard
+                    let self,
+                    generation == self.navigationGeneration
+                else {
+                    return
+                }
+
+                if let error {
+                    self.lastJavaScriptError =
+                        error.localizedDescription
+                } else {
+                    self.lastJavaScriptError = nil
+                }
+            }
+        }
+    }
+
+    private func invalidateReadableSource() {
+        navigationGeneration &+= 1
+        extractionGeneration &+= 1
+        extractedText = ""
+        extractedLanguage = "auto"
+        selectionText = ""
+        selectionLanguage = "auto"
+        lastJavaScriptError = nil
+    }
+
+    private func beginExtraction(
+        for url: URL
+    ) -> ExtractionRequest {
+        extractionGeneration &+= 1
+        return ExtractionRequest(
+            navigationGeneration: navigationGeneration,
+            requestGeneration: extractionGeneration,
+            url: url.absoluteString
+        )
+    }
+
+    private func isCurrentExtraction(
+        _ request: ExtractionRequest,
+        payloadURL: String? = nil
+    ) -> Bool {
+        guard
+            request.navigationGeneration == navigationGeneration,
+            request.requestGeneration == extractionGeneration,
+            webView?.url?.absoluteString == request.url
+        else {
+            return false
+        }
+
+        if let payloadURL, !payloadURL.isEmpty {
+            return payloadURL == request.url
+        }
+
+        return true
+    }
+
+    private static func guardedExtractionJavaScript(
+        _ body: String,
+        expectedURL: URL
+    ) -> String {
+        let expected = javaScriptLiteral(
+            expectedURL.absoluteString
+        )
+
+        return """
+        (() => {
+          const expectedUrl = \(expected);
+          if (location.href !== expectedUrl) {
+            return JSON.stringify({
+              title: "",
+              url: location.href,
+              language: "",
+              text: "",
+              wordCount: 0
+            });
+          }
+          return (\(body));
+        })();
+        """
+    }
+
+    private static func javaScriptLiteral(
+        _ value: String
+    ) -> String {
+        guard
+            let data = try? JSONEncoder().encode(value),
+            let literal = String(data: data, encoding: .utf8)
+        else {
+            return """"
+        }
+        return literal
     }
 
     static func isProtectedAuthenticationURL(_ url: URL) -> Bool {
