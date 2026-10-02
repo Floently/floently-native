@@ -91,7 +91,8 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                     manifest: manifest,
                     startingAt: effectiveIndex,
                     voiceId: voiceId,
-                    accessToken: accessToken
+                    accessToken: accessToken,
+                    maxSegments: 1
                 )
 
                 guard !Task.isCancelled else { return }
@@ -194,7 +195,8 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                     manifest: manifest,
                     startingAt: targetIndex,
                     voiceId: newVoice,
-                    accessToken: activeAccessToken
+                    accessToken: activeAccessToken,
+                    maxSegments: 1
                 )
 
                 guard !Task.isCancelled else { return }
@@ -238,7 +240,8 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                         manifest: manifest,
                         startingAt: targetIndex,
                         voiceId: previousVoice,
-                        accessToken: activeAccessToken
+                        accessToken: activeAccessToken,
+                        maxSegments: 1
                     )
 
                     guard !Task.isCancelled else { return }
@@ -350,7 +353,8 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                     manifest: manifest,
                     startingAt: targetIndex,
                     voiceId: voiceId,
-                    accessToken: accessToken
+                    accessToken: accessToken,
+                    maxSegments: 1
                 )
 
                 guard !Task.isCancelled else { return }
@@ -402,6 +406,9 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         refillTask = Task { [weak self, weak playback] in
             guard let self, let playback else { return }
 
+            // The first playable segment is already published. Keep forward
+            // refill on the existing periodic scheduler until ordinary queue
+            // expansion is append-only and acoustically qualified.
             while !Task.isCancelled {
                 do {
                     try await Task.sleep(
