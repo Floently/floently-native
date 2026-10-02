@@ -737,11 +737,36 @@ private fun ReadBrowserScreen(
                                 readingStatus = "Finish signing in before using Read on this page."
                                 return@ReadStrip
                             }
+                            val expectedSourceGeneration =
+                                sourceGeneration
+                            extractionRequestGeneration += 1
+                            val requestGeneration =
+                                extractionRequestGeneration
+                            val expectedUrl = url
+
                             readingStatus = "Finding the main reading area…"
                             view.evaluateJavascript(
                                 ReadBrowserPolicy.pageExtractionJavaScript
-                            ) { result ->
+                            ) extraction@ { result ->
+                                if (
+                                    sourceGeneration
+                                        != expectedSourceGeneration
+                                    || extractionRequestGeneration
+                                        != requestGeneration
+                                    || view.url != expectedUrl
+                                ) {
+                                    return@extraction
+                                }
+
                                 val payload = decodeExtraction(result)
+                                if (
+                                    payload != null
+                                    && payload.url.isNotBlank()
+                                    && payload.url != expectedUrl
+                                ) {
+                                    return@extraction
+                                }
+
                                 val text = payload?.text
                                     ?.trim()
                                     .orEmpty()
@@ -782,10 +807,35 @@ private fun ReadBrowserScreen(
                                 readingStatus = "Finish signing in before using Read on this page."
                                 return@ReadStrip
                             }
+                            val expectedSourceGeneration =
+                                sourceGeneration
+                            extractionRequestGeneration += 1
+                            val requestGeneration =
+                                extractionRequestGeneration
+                            val expectedUrl = url
+
                             view.evaluateJavascript(
                                 ReadBrowserPolicy.selectionExtractionJavaScript
-                            ) { result ->
+                            ) extraction@ { result ->
+                                if (
+                                    sourceGeneration
+                                        != expectedSourceGeneration
+                                    || extractionRequestGeneration
+                                        != requestGeneration
+                                    || view.url != expectedUrl
+                                ) {
+                                    return@extraction
+                                }
+
                                 val payload = decodeExtraction(result)
+                                if (
+                                    payload != null
+                                    && payload.url.isNotBlank()
+                                    && payload.url != expectedUrl
+                                ) {
+                                    return@extraction
+                                }
+
                                 selectedText =
                                     payload?.text?.trim().orEmpty()
                                 selectedLanguage =
