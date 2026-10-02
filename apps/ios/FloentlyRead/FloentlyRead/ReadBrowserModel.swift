@@ -175,8 +175,20 @@ final class ReadBrowserController: ObservableObject {
     }
 
     func refreshNavigationState(from webView: WKWebView) {
-        currentURL = webView.url
-        addressText = webView.url?.absoluteString ?? addressText
+        let nextURL = webView.url
+
+        if
+            let currentURL,
+            let nextURL,
+            currentURL.absoluteString != nextURL.absoluteString
+        {
+            // Covers redirects and same-document/SPA URL changes that may
+            // not produce a new provisional navigation callback.
+            invalidateReadableSource()
+        }
+
+        currentURL = nextURL
+        addressText = nextURL?.absoluteString ?? addressText
         pageTitle = webView.title ?? ""
         canGoBack = webView.canGoBack
         canGoForward = webView.canGoForward
