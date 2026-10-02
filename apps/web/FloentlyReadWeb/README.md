@@ -288,6 +288,25 @@ The script:
 
 Generated WASM bindings are build artifacts and are not committed.
 
+## Deterministic browser qualification
+
+The web workspace includes Playwright journeys that exercise the built application
+against intercepted backend contracts. They cover protected auth routing, safe
+`returnTo` handling, core signed-in navigation, account/quota/subscription
+presentation, source-preserving PDF fail-open behavior, and the mobile shell.
+
+After the production bundle has been built:
+
+```bash
+cd apps/web/FloentlyReadWeb
+npx playwright install chromium
+npm run test:e2e
+```
+
+CI downloads the already-built web artifact into a separate `read-web-e2e` job,
+installs Chromium, and runs the same journeys. No production credentials, live
+checkout, or live TTS service is used by these deterministic tests.
+
 ## Qualification still required before cutover
 
 A green CI build does **not** authorize replacing the current production READ web app. Remaining qualification includes:
@@ -301,6 +320,6 @@ A green CI build does **not** authorize replacing the current production READ we
 - full Browser V2 page-preserving reader migration;
 - live account/quota/regional-pricing/checkout and billing-portal qualification;
 - accessibility/i18n;
-- Playwright route/auth/import/library/reader flows;
+- physical Safari/Chrome/Firefox and authenticated deployed-service qualification;
 - long-session browser/device testing;
 - migration/cutover checklist with rollback.
