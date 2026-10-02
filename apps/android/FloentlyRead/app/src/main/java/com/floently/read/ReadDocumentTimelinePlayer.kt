@@ -89,8 +89,7 @@ class ReadDocumentTimelinePlayer(
                 previous.segments.size
             )
             val wasEnded =
-                physicalPlayer.playbackState
-                    == Player.STATE_ENDED
+                physicalPlayer.playbackState == Player.STATE_ENDED
             val shouldResume =
                 physicalPlayer.playWhenReady
 
@@ -366,8 +365,7 @@ class ReadDocumentTimelinePlayer(
         }
 
         return updated.segments
-            .take(previous.segments.size)
-            == previous.segments
+            .take(previous.segments.size) == previous.segments
     }
 
     private fun mediaItemForSegment(
