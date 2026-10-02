@@ -48,8 +48,15 @@ export function AccountPage() {
 
   useEffect(() => {
     let cancelled = false;
+    setQuota(null);
     setQuotaStatus("loading");
     setQuotaError(null);
+
+    if (!user) {
+      return () => {
+        cancelled = true;
+      };
+    }
 
     void fetchReadUsageQuota()
       .then((next) => {
