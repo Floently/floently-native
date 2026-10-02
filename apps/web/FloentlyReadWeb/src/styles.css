@@ -1313,7 +1313,7 @@ button:disabled,
   display: flex;
   height: 100vh;
   flex-direction: column;
-  padding: 22px 16px;
+  padding: var(--read-space-5) var(--read-space-4);
   border-right: 1px solid rgba(255,255,255,0.075);
   background: rgba(10, 12, 18, 0.86);
   backdrop-filter: blur(24px);
@@ -1634,7 +1634,7 @@ button:disabled,
   min-height: 470px;
   place-items: center;
   align-content: center;
-  padding: 30px;
+  padding: var(--read-card-padding);
   text-align: center;
 }
 
@@ -1655,8 +1655,8 @@ button:disabled,
 
 .import-editor-card {
   display: grid;
-  gap: 15px;
-  padding: 22px;
+  gap: var(--read-space-4);
+  padding: var(--read-card-padding);
 }
 
 .import-editor-card textarea {
@@ -1860,8 +1860,12 @@ button:disabled,
     display: none;
   }
 
+  :root {
+    --read-shell-gutter: 14px;
+  }
+
   .app-main {
-    padding: 0 14px 18px;
+    padding: 0 var(--read-shell-gutter) 18px;
   }
 
   .app-mobile-header {
@@ -1871,8 +1875,8 @@ button:disabled,
     top: 0;
     align-items: center;
     justify-content: space-between;
-    margin: 0 -14px;
-    padding: 10px 14px;
+    margin: 0 calc(-1 * var(--read-shell-gutter));
+    padding: 10px var(--read-shell-gutter);
     border-bottom: 1px solid rgba(255,255,255,0.07);
     background: rgba(9,11,16,0.92);
     backdrop-filter: blur(20px);
@@ -3100,8 +3104,8 @@ html[data-read-theme="light"] .browser-vnc-target {
   box-shadow: var(--read-shadow-card);
 }
 .subscription-card.current {
-  border-color: rgba(149,135,255,0.34);
-  background: rgba(149,135,255,0.055);
+  border-color: rgba(149, 135, 255, 0.34);
+  background: var(--read-accent-soft);
 }
 .subscription-card-heading {
   display: flex;
