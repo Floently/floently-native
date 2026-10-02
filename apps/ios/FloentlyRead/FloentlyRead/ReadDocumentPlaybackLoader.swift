@@ -91,7 +91,8 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                     manifest: manifest,
                     startingAt: effectiveIndex,
                     voiceId: voiceId,
-                    accessToken: accessToken
+                    accessToken: accessToken,
+                    maxSegments: 1
                 )
 
                 guard !Task.isCancelled else { return }
@@ -194,7 +195,8 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                     manifest: manifest,
                     startingAt: targetIndex,
                     voiceId: newVoice,
-                    accessToken: activeAccessToken
+                    accessToken: activeAccessToken,
+                    maxSegments: 1
                 )
 
                 guard !Task.isCancelled else { return }
@@ -238,7 +240,8 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                         manifest: manifest,
                         startingAt: targetIndex,
                         voiceId: previousVoice,
-                        accessToken: activeAccessToken
+                        accessToken: activeAccessToken,
+                        maxSegments: 1
                     )
 
                     guard !Task.isCancelled else { return }
@@ -350,7 +353,8 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                     manifest: manifest,
                     startingAt: targetIndex,
                     voiceId: voiceId,
-                    accessToken: accessToken
+                    accessToken: accessToken,
+                    maxSegments: 1
                 )
 
                 guard !Task.isCancelled else { return }
@@ -402,6 +406,17 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         refillTask = Task { [weak self, weak playback] in
             guard let self, let playback else { return }
 
+            // The current segment has already been published. Start filling
+            // the forward horizon immediately instead of waiting for the
+            // first periodic refill tick.
+            await refillIfNeeded(
+                manifest: manifest,
+                voiceId: voiceId,
+                accessToken: accessToken,
+                playback: playback,
+                force: true
+            )
+
             while !Task.isCancelled {
                 do {
                     try await Task.sleep(
@@ -437,11 +452,15 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         manifest: ReadingManifestV1,
         voiceId: String,
         accessToken: String?,
-        playback: ReadPlaybackSession
+        playback: ReadPlaybackSession,
+        force: Bool = false
     ) async {
         guard
             let coordinator,
             !manifest.segments.isEmpty,
+            let current = playback.document,
+            current.id == manifest.documentId,
+            current.revisionId == manifest.revisionId,
             Date() >= nextRefillAllowedAt
         else {
             return
@@ -465,7 +484,8 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         }
 
         guard
-            prefixExhausted
+            force
+            || prefixExhausted
             || playback.bufferedAhead <= refillLowWatermark
         else {
             return
