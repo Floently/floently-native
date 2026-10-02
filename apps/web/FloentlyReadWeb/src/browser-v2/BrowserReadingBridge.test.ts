@@ -87,6 +87,15 @@ class FakeCore {
   builtText: string | null = null;
   dropped: string[] = [];
   scalarRequests: number[] = [];
+  buildManifestOverride:
+    | ((input: {
+        documentId: string;
+        revisionId: string;
+        title: string;
+        language: string;
+        text: string;
+      }) => Promise<ReadingManifestSummary>)
+    | null = null;
 
   async buildManifest(input: {
     documentId: string;
@@ -96,6 +105,9 @@ class FakeCore {
     text: string;
   }): Promise<ReadingManifestSummary> {
     this.builtText = input.text;
+    if (this.buildManifestOverride) {
+      return this.buildManifestOverride(input);
+    }
     return manifestFor(input);
   }
 
@@ -207,9 +219,15 @@ class FakeAdapter implements BrowserReadingAdapter {
     revision: "rev-1",
   };
   extractionCount = 0;
+  extractDocumentOverride:
+    | (() => Promise<BrowserReadingDocument>)
+    | null = null;
 
   async extractDocument(): Promise<BrowserReadingDocument> {
     this.extractionCount += 1;
+    if (this.extractDocumentOverride) {
+      return this.extractDocumentOverride();
+    }
     if (this.extractionCount > 1 && this.reextractDocument) {
       return this.reextractDocument;
     }
@@ -294,6 +312,66 @@ describe("BrowserReadingBridge", () => {
     expect(
       Object.values(bridge.getSnapshot()).join(" "),
     ).not.toContain("First sentence");
+  });
+
+  it("ignores a late extraction after navigation invalidates the browser generation", async () => {
+    const { bridge, adapter, core, playback } = harness();
+
+    let resolveExtraction:
+      | ((document: BrowserReadingDocument) => void)
+      | null = null;
+    adapter.extractDocumentOverride = () =>
+      new Promise((resolve) => {
+        resolveExtraction = resolve;
+      });
+
+    const pending = bridge.startReading("cloud-tab-1");
+    await tick();
+
+    expect(bridge.getSnapshot().status).toBe("extracting");
+
+    bridge.invalidate("The web page changed.");
+    resolveExtraction?.(pageDocument());
+    await pending;
+
+    expect(core.builtText).toBeNull();
+    expect(playback.getSnapshot().documentId).toBeNull();
+    expect(bridge.getSnapshot().status).toBe("stale");
+    expect(bridge.getSnapshot().error).toBe("The web page changed.");
+  });
+
+  it("drops a late manifest build instead of attaching it after invalidation", async () => {
+    const { bridge, core, playback } = harness();
+
+    let resolveManifest:
+      | ((manifest: ReadingManifestSummary) => void)
+      | null = null;
+    core.buildManifestOverride = (input) =>
+      new Promise((resolve) => {
+        resolveManifest = resolve;
+      });
+
+    const pending = bridge.startReading("cloud-tab-1");
+    await tick();
+
+    expect(core.builtText).toBe("First sentence.\n\nSecond sentence.");
+
+    bridge.invalidate("The web page changed.");
+    resolveManifest?.(
+      manifestFor({
+        documentId: "browser:page-1",
+        revisionId: "rev-1",
+        title: "Article",
+        language: "en",
+        text: "First sentence.\n\nSecond sentence.",
+      }),
+    );
+    await pending;
+    await tick();
+
+    expect(playback.getSnapshot().documentId).toBeNull();
+    expect(core.dropped).toContain("browser:page-1:rev-1");
+    expect(bridge.getSnapshot().status).toBe("stale");
   });
 
   it("highlights the visible page from the document-wide scalar cursor without forcing follow", async () => {
