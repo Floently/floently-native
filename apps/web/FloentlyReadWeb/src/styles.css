@@ -699,7 +699,7 @@ h2 {
   padding: 24px clamp(20px, 5vw, 72px);
   border-top: 1px solid rgba(255, 255, 255, 0.055);
   color: #c8ced9;
-  cursor: text;
+  cursor: pointer;
   transition:
     background 140ms ease,
     color 140ms ease,
@@ -713,6 +713,12 @@ h2 {
 .reader-region:hover {
   background: rgba(255, 255, 255, 0.035);
   color: #edf0f6;
+}
+
+.reader-region:focus-visible {
+  z-index: 1;
+  outline: 3px solid #9587ff;
+  outline-offset: -3px;
 }
 
 .reader-region-active {
@@ -2884,6 +2890,10 @@ html[data-read-theme="light"] .reader-region {
 html[data-read-theme="light"] .reader-region:hover {
   background: rgba(82, 70, 180, 0.035);
   color: #202330;
+}
+
+html[data-read-theme="light"] .reader-region:focus-visible {
+  outline-color: #6757c8;
 }
 
 html[data-read-theme="light"] .reader-region-active {
