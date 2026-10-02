@@ -20,6 +20,7 @@ const PRIMARY_NAV: NavItem[] = [
 
 const SECONDARY_NAV: NavItem[] = [
   { href: "/app/preferences", label: "Preferences", glyph: "P" },
+  { href: "/app/subscription", label: "Plan", glyph: "$" },
   { href: "/app/account", label: "Account", glyph: "A" },
 ];
 

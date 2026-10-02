@@ -9,12 +9,32 @@ import {
 
 const TOKEN_STORAGE_KEY = "floently.read.web.vnext.auth-token";
 
+export interface ReadPolicy {
+  product: string;
+  tier: string;
+  plan: string;
+  legacyPlan?: string | null;
+  features: Record<string, boolean>;
+  voiceAccess: {
+    defaultTier: string;
+    allowedTiers: string[];
+    premiumStudioAllowed: boolean;
+    [key: string]: unknown;
+  };
+  limits: Record<string, number>;
+}
+
 export interface ReadAuthUser {
   id: string;
   email: string;
   name: string | null;
   plan: string;
   readPlan: string | null;
+  readAccess: boolean | null;
+  readFullAccess: boolean | null;
+  requiresUserApiKey: boolean | null;
+  readPolicy: ReadPolicy | null;
+  readStripeCustomerId: string | null;
   avatarDataUrl: string | null;
 }
 
@@ -73,6 +93,66 @@ function unwrapData(value: unknown): Record<string, unknown> {
   return current;
 }
 
+function firstBoolean(...values: unknown[]): boolean | null {
+  for (const value of values) {
+    if (typeof value === "boolean") return value;
+  }
+  return null;
+}
+
+function normalizeBooleanRecord(value: unknown): Record<string, boolean> {
+  return Object.fromEntries(
+    Object.entries(record(value)).filter(
+      (entry): entry is [string, boolean] => typeof entry[1] === "boolean",
+    ),
+  );
+}
+
+function normalizeNumberRecord(value: unknown): Record<string, number> {
+  return Object.fromEntries(
+    Object.entries(record(value)).filter(
+      (entry): entry is [string, number] =>
+        typeof entry[1] === "number" && Number.isFinite(entry[1]),
+    ),
+  );
+}
+
+export function normalizeReadPolicy(value: unknown): ReadPolicy | null {
+  const source = record(value);
+  if (Object.keys(source).length === 0) return null;
+
+  const voiceAccess = record(source.voiceAccess ?? source.voice_access);
+  const defaultTier =
+    firstString(voiceAccess.defaultTier, voiceAccess.default_tier)
+    ?? "standard_reader";
+  const rawAllowed = voiceAccess.allowedTiers ?? voiceAccess.allowed_tiers;
+  const allowedTiers = Array.isArray(rawAllowed)
+    ? rawAllowed
+        .filter((tier): tier is string =>
+          typeof tier === "string" && Boolean(tier.trim()))
+        .map((tier) => tier.trim())
+    : [];
+
+  return {
+    product: firstString(source.product) ?? "read",
+    tier: firstString(source.tier) ?? "free",
+    plan: firstString(source.plan) ?? "free",
+    legacyPlan: firstString(source.legacyPlan, source.legacy_plan),
+    features: normalizeBooleanRecord(source.features),
+    voiceAccess: {
+      ...voiceAccess,
+      defaultTier,
+      allowedTiers: allowedTiers.length > 0 ? allowedTiers : [defaultTier],
+      premiumStudioAllowed:
+        firstBoolean(
+          voiceAccess.premiumStudioAllowed,
+          voiceAccess.premium_studio_allowed,
+        ) ?? allowedTiers.includes("premium_studio"),
+    },
+    limits: normalizeNumberRecord(source.limits),
+  };
+}
+
 export function normalizeAuthSession(
   value: unknown,
   fallbackToken: string | null = null,
@@ -118,7 +198,42 @@ export function normalizeAuthSession(
           source.plan,
           source.subscription_tier,
         ) ?? "free",
-      readPlan: firstString(user.readPlan, user.read_plan, source.readPlan),
+      readPlan: firstString(
+        user.readPlan,
+        user.read_plan,
+        source.readPlan,
+        source.read_plan,
+      ),
+      readAccess: firstBoolean(
+        user.readAccess,
+        user.read_access,
+        source.readAccess,
+        source.read_access,
+      ),
+      readFullAccess: firstBoolean(
+        user.readFullAccess,
+        user.read_full_access,
+        source.readFullAccess,
+        source.read_full_access,
+      ),
+      requiresUserApiKey: firstBoolean(
+        user.requiresUserApiKey,
+        user.requires_user_api_key,
+        source.requiresUserApiKey,
+        source.requires_user_api_key,
+      ),
+      readPolicy: normalizeReadPolicy(
+        user.readPolicy
+        ?? user.read_policy
+        ?? source.readPolicy
+        ?? source.read_policy,
+      ),
+      readStripeCustomerId: firstString(
+        user.readStripeCustomerId,
+        user.read_stripe_customer_id,
+        source.readStripeCustomerId,
+        source.read_stripe_customer_id,
+      ),
       avatarDataUrl: firstString(
         user.avatarDataUrl,
         user.avatar_data_url,

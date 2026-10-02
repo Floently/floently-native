@@ -21,6 +21,11 @@ describe("normalizeAuthSession", () => {
         name: "Reader",
         plan: "full",
         readPlan: null,
+        readAccess: null,
+        readFullAccess: null,
+        requiresUserApiKey: null,
+        readPolicy: null,
+        readStripeCustomerId: null,
         avatarDataUrl: null,
       },
     });
@@ -34,6 +39,19 @@ describe("normalizeAuthSession", () => {
           email: "learn@example.com",
           subscription_tier: "pro",
           readPlan: "full",
+          readAccess: true,
+          readPolicy: {
+            product: "read",
+            tier: "paid",
+            plan: "creator",
+            features: { canExportAudio: true },
+            voiceAccess: {
+              defaultTier: "natural_reader",
+              allowedTiers: ["standard_reader", "natural_reader"],
+              premiumStudioAllowed: false,
+            },
+            limits: { standardReadingSeconds: 9000 },
+          },
         },
         tokens: {
           access_token: "learn-token",
@@ -47,6 +65,18 @@ describe("normalizeAuthSession", () => {
       email: "learn@example.com",
       plan: "pro",
       readPlan: "full",
+      readAccess: true,
+      readPolicy: {
+        plan: "creator",
+        tier: "paid",
+        features: { canExportAudio: true },
+        limits: { standardReadingSeconds: 9000 },
+        voiceAccess: {
+          defaultTier: "natural_reader",
+          allowedTiers: ["standard_reader", "natural_reader"],
+          premiumStudioAllowed: false,
+        },
+      },
     });
   });
 
