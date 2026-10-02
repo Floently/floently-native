@@ -255,7 +255,18 @@ The provider adapter currently reuses the existing Read Render contract:
 - `GET /api/voices/unified`
 - optional authenticated bearer header
 
-The audio cache uses Cache Storage + IndexedDB metadata and remains bounded. Media Session publishes one logical document item even while hidden synthesis assets change underneath it.
+The audio cache uses Cache Storage + IndexedDB metadata and remains bounded by
+bytes rather than a tiny file-count assumption. The default policy begins
+pruning above 96 MiB and evicts least-recently-used, inactive assets toward a
+72 MiB target. Active object-URL leases protect assets currently handed to the
+player; releasing the last lease schedules another prune pass. Legacy metadata
+without a byte size is hydrated from Cache Storage and treated conservatively
+if it cannot be measured. A broad 256-entry metadata guard remains only as a
+secondary cardinality bound. Cache APIs are still an optimization: direct media
+playback remains the fallback when browser storage is unavailable.
+
+Media Session publishes one logical document item even while hidden synthesis
+assets change underneath it.
 
 ## Runtime variables
 
