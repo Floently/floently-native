@@ -1,5 +1,6 @@
 import type { ReadAuthUser } from "../auth/authStore";
 import { AccountPage } from "../account/AccountPage";
+import { SubscriptionPage } from "../billing/SubscriptionPage";
 import { ImportPage } from "../import/ImportPage";
 import { LibraryPage } from "../library/LibraryPage";
 import { PreferencesPage } from "../preferences/PreferencesPage";
@@ -72,6 +73,10 @@ function RouteContent({ pathname }: { pathname: string }) {
 
   if (pathname === "/app/account") {
     return <AccountPage />;
+  }
+
+  if (pathname === "/app/subscription") {
+    return <SubscriptionPage />;
   }
 
   return (
