@@ -93,10 +93,7 @@ export function PreferencesPage() {
 
   const selectedLanguage =
     preferences.selectedVoiceLanguage
-    ?? voiceLanguage(currentVoice ?? ({
-      language: "",
-      locale: "",
-    } as ReadVoice))
+    ?? (currentVoice ? voiceLanguage(currentVoice) : null)
     ?? languages[0]
     ?? "";
 
