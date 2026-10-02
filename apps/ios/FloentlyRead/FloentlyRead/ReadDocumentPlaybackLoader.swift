@@ -36,6 +36,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
     private var activeManifest: ReadingManifestV1?
     private var activeAccessToken: String?
     private var lastUnderrunBoundaryIndex: Int?
+    private var lastAnchoredSegmentIndex: Int?
     private var nextRefillAllowedAt = Date.distantPast
 
     init() {
@@ -59,6 +60,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         activeLanguage = manifest.language
         activeAccessToken = sessionStore.session?.token
         lastUnderrunBoundaryIndex = nil
+        lastAnchoredSegmentIndex = nil
         nextRefillAllowedAt = .distantPast
         refillTelemetry = ReadProgressiveRefillTelemetry()
 
@@ -124,6 +126,9 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                 }
 
                 state = .ready
+                updateSourceResumeAnchor(
+                    playback: playback
+                )
                 startRefillLoop(
                     manifest: manifest,
                     voiceId: voiceId,
@@ -165,6 +170,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         cancelTasks()
         preparedSegments.removeAll()
         lastUnderrunBoundaryIndex = nil
+        lastAnchoredSegmentIndex = nil
         nextRefillAllowedAt = .distantPast
         activeVoiceId = newVoice
         state = .preparing
@@ -212,6 +218,9 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
 
                 playback.refresh(document)
                 state = .ready
+                updateSourceResumeAnchor(
+                    playback: playback
+                )
 
                 startRefillLoop(
                     manifest: manifest,
@@ -256,6 +265,9 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
 
                     playback.refresh(document)
                     state = .ready
+                    updateSourceResumeAnchor(
+                        playback: playback
+                    )
 
                     bindUnpreparedSeek(
                         manifest: manifest,
@@ -284,6 +296,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         activeLanguage = "auto"
         activeAccessToken = nil
         lastUnderrunBoundaryIndex = nil
+        lastAnchoredSegmentIndex = nil
         nextRefillAllowedAt = .distantPast
         boundPlayback?.onUnpreparedSeek = nil
         boundPlayback = nil
@@ -340,6 +353,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         } ?? manifest.segments.indices.last ?? 0
 
         state = .preparing
+        lastAnchoredSegmentIndex = nil
         refillTelemetry.refillAttempts += 1
 
         seekTask = Task { [weak self, weak playback] in
@@ -368,6 +382,9 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                 guard !Task.isCancelled else { return }
 
                 playback.refresh(document)
+                updateSourceResumeAnchor(
+                    playback: playback
+                )
                 refillTelemetry.refillSuccesses += 1
                 refillTelemetry.lastFailure = nil
                 state = .ready
@@ -422,6 +439,10 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                 if playback.state == .ended {
                     return
                 }
+
+                updateSourceResumeAnchor(
+                    playback: playback
+                )
 
                 await refillIfNeeded(
                     manifest: manifest,
@@ -509,6 +530,56 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         }
     }
 
+    private func updateSourceResumeAnchor(
+        playback: ReadPlaybackSession
+    ) {
+        guard
+            let manifest = activeManifest,
+            !manifest.segments.isEmpty
+        else {
+            return
+        }
+
+        let cursorMs = Int64(
+            max(0, playback.elapsedTime) * 1_000
+        )
+        let segment =
+            playback.activeSegmentIndex.flatMap { activeIndex in
+                manifest.segments.first {
+                    $0.index == activeIndex
+                }
+            }
+            ?? manifest.segments.first {
+                cursorMs < $0.logicalEndMs
+            }
+            ?? manifest.segments.last
+
+        guard
+            let segment,
+            segment.index != lastAnchoredSegmentIndex
+        else {
+            return
+        }
+
+        lastAnchoredSegmentIndex = segment.index
+        resumeStore.save(
+            ReadPlaybackResumeSnapshot(
+                documentId: manifest.documentId,
+                revisionId: manifest.revisionId,
+                logicalTime: min(
+                    max(0, playback.elapsedTime),
+                    max(0, playback.duration)
+                ),
+                playbackRate: playback.playbackRate,
+                updatedAt: Date(),
+                sourceScalarOffset: segment.scalarStart,
+                sourceSegmentId: segment.id,
+                sourceSegmentIndex: segment.index,
+                voiceId: activeVoiceId
+            )
+        )
+    }
+
     private func cancelTasks() {
         task?.cancel()
         task = nil
@@ -531,6 +602,14 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
             !manifest.segments.isEmpty
         else {
             return requestedIndex
+        }
+
+        if let sourceScalarOffset =
+            snapshot.sourceScalarOffset
+        {
+            return manifest.segments.firstIndex {
+                sourceScalarOffset < $0.scalarEnd
+            } ?? manifest.segments.indices.last ?? 0
         }
 
         let cursorMs = Int64(
