@@ -174,10 +174,14 @@ enum ReadNativeTtsError: LocalizedError {
 actor ReadNativeAudioCache {
     private let root: URL
     private let session: URLSession
+    private let fileManager: FileManager
+    private let maximumBytes: Int64
+    private var protectedPaths: Set<String> = []
 
     init(
         fileManager: FileManager = .default,
-        session: URLSession = .shared
+        session: URLSession = .shared,
+        maximumBytes: Int64 = 256 * 1024 * 1024
     ) throws {
         let cacheRoot = try fileManager.url(
             for: .cachesDirectory,
@@ -190,6 +194,11 @@ actor ReadNativeAudioCache {
             directoryHint: .isDirectory
         )
         self.session = session
+        self.fileManager = fileManager
+        self.maximumBytes = max(
+            16 * 1024 * 1024,
+            maximumBytes
+        )
         try fileManager.createDirectory(
             at: root,
             withIntermediateDirectories: true
@@ -208,10 +217,13 @@ actor ReadNativeAudioCache {
             + extensionName
         let destination = root.appending(path: fileName)
 
-        if FileManager.default.fileExists(atPath: destination.path) {
-            try? FileManager.default.setAttributes(
+        if fileManager.fileExists(atPath: destination.path) {
+            try? fileManager.setAttributes(
                 [.modificationDate: Date()],
                 ofItemAtPath: destination.path
+            )
+            try prune(
+                additionallyProtecting: [destination.path]
             )
             return destination
         }
@@ -225,37 +237,92 @@ actor ReadNativeAudioCache {
             throw ReadNativeTtsError.invalidResponse
         }
 
-        try? FileManager.default.removeItem(at: destination)
-        try FileManager.default.moveItem(
+        try? fileManager.removeItem(at: destination)
+        try fileManager.moveItem(
             at: temporaryURL,
             to: destination
         )
 
-        try prune(maximumFiles: 32)
+        try prune(
+            additionallyProtecting: [destination.path]
+        )
         return destination
     }
 
-    private func prune(maximumFiles: Int) throws {
-        let urls = try FileManager.default.contentsOfDirectory(
+    func replaceProtectedURLs(
+        _ urls: [URL]
+    ) throws {
+        protectedPaths = Set(
+            urls.map { $0.standardizedFileURL.path }
+        )
+        try prune()
+    }
+
+    private func prune(
+        additionallyProtecting extraPaths: Set<String> = []
+    ) throws {
+        let keys: Set<URLResourceKey> = [
+            .isRegularFileKey,
+            .fileSizeKey,
+            .contentModificationDateKey
+        ]
+        let urls = try fileManager.contentsOfDirectory(
             at: root,
-            includingPropertiesForKeys: [.contentModificationDateKey],
+            includingPropertiesForKeys: Array(keys),
             options: [.skipsHiddenFiles]
         )
 
-        guard urls.count > maximumFiles else { return }
+        let entries: [(url: URL, size: Int64, modified: Date)] =
+            urls.compactMap { url in
+                guard
+                    let values = try? url.resourceValues(
+                        forKeys: keys
+                    ),
+                    values.isRegularFile == true
+                else {
+                    return nil
+                }
 
-        let sorted = urls.sorted { lhs, rhs in
-            let l = try? lhs.resourceValues(
-                forKeys: [.contentModificationDateKey]
-            ).contentModificationDate
-            let r = try? rhs.resourceValues(
-                forKeys: [.contentModificationDateKey]
-            ).contentModificationDate
-            return (l ?? .distantPast) > (r ?? .distantPast)
+                return (
+                    url: url,
+                    size: Int64(max(0, values.fileSize ?? 0)),
+                    modified:
+                        values.contentModificationDate
+                        ?? .distantPast
+                )
+            }
+
+        var totalBytes = entries.reduce(Int64(0)) {
+            $0 + $1.size
         }
+        guard totalBytes > maximumBytes else { return }
 
-        for url in sorted.dropFirst(maximumFiles) {
-            try? FileManager.default.removeItem(at: url)
+        let protected = protectedPaths.union(
+            extraPaths.map {
+                URL(fileURLWithPath: $0)
+                    .standardizedFileURL.path
+            }
+        )
+
+        for entry in entries.sorted(
+            by: { $0.modified < $1.modified }
+        ) {
+            if totalBytes <= maximumBytes {
+                break
+            }
+
+            let path = entry.url.standardizedFileURL.path
+            guard !protected.contains(path) else {
+                continue
+            }
+
+            do {
+                try fileManager.removeItem(at: entry.url)
+                totalBytes -= entry.size
+            } catch {
+                // Cache pressure must never interrupt active playback.
+                continue
+            }
         }
     }
 
