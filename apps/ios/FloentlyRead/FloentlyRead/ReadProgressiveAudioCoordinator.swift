@@ -72,6 +72,14 @@ actor ReadProgressiveAudioCoordinator {
         return result
     }
 
+    func replaceProtectedSegments(
+        _ segments: [ReadPlayableSegment]
+    ) async {
+        try? await cache.replaceProtectedURLs(
+            segments.map(\.url)
+        )
+    }
+
     func playableDocument(
         manifest: ReadingManifestV1,
         segments: [ReadPlayableSegment],
