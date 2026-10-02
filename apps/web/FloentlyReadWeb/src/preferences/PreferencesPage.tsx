@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useReadRuntime } from "../runtime/ReadRuntimeContext";
+import {
+  readMessage,
+  setReadLocale,
+  useReadLocale,
+} from "../i18n/readLocale";
 import { useWebPlaybackSnapshot } from "../playback/useWebPlaybackSnapshot";
 import type { ReadVoice } from "../tts/readTtsProvider";
 import {
@@ -42,6 +47,7 @@ export function PreferencesPage() {
   const runtime = useReadRuntime();
   const playback = useWebPlaybackSnapshot(runtime?.playback);
   const preferences = useReadPreferences();
+  const locale = useReadLocale();
   const [voices, setVoices] = useState<ReadVoice[]>([]);
   const [voiceStatus, setVoiceStatus] =
     useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -157,6 +163,28 @@ export function PreferencesPage() {
       </header>
 
       <div className="settings-grid preference-grid">
+        <article className="settings-card">
+          <div className="preference-card-heading">
+            <span aria-hidden="true">文</span>
+            <div>
+              <h2>{readMessage(locale, "preferences.uiLanguage")}</h2>
+              <p>{readMessage(locale, "preferences.uiLanguageDescription")}</p>
+            </div>
+          </div>
+
+          <label className="settings-field" htmlFor="read-interface-language">
+            {readMessage(locale, "preferences.uiLanguage")}
+            <select
+              id="read-interface-language"
+              value={locale}
+              onChange={(event) => setReadLocale(event.target.value)}
+            >
+              <option value="en">English</option>
+              <option value="fi">Suomi</option>
+            </select>
+          </label>
+        </article>
+
         <article className="settings-card">
           <div className="preference-card-heading">
             <span aria-hidden="true">◐</span>

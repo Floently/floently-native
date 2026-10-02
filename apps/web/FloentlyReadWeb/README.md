@@ -307,6 +307,28 @@ CI downloads the already-built web artifact into a separate `read-web-e2e` job,
 installs Chromium, and runs the same journeys. No production credentials, live
 checkout, or live TTS service is used by these deterministic tests.
 
+## Accessibility and interface localization
+
+The protected Read shell has an explicit keyboard/screen-reader foundation:
+
+- a keyboard-visible skip link targets the protected app's main landmark;
+- route changes restore focus to that main landmark instead of leaving keyboard
+  focus on controls from the previous page;
+- focus-visible styling remains strong in both Read light and dark themes;
+- non-essential animation and transitions respect `prefers-reduced-motion`;
+- playback failures are announced as meaningful errors rather than silent visual
+  state.
+
+Interface language is app-owned and independent of document language and voice
+language. English is the fallback locale and Finnish is the first additional
+interface locale. The selected locale persists in versioned browser storage,
+updates `<html lang>`, synchronizes across tabs, and uses locale-aware plural
+rules. Original PDFs and Browser V2 remain source-authoritative surfaces; locale
+and accessibility chrome do not replace or restyle their source contents.
+
+Physical VoiceOver/NVDA and cross-browser assistive-technology qualification is
+still required before production cutover.
+
 ## Qualification still required before cutover
 
 A green CI build does **not** authorize replacing the current production READ web app. Remaining qualification includes:

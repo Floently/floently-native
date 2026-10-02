@@ -10,6 +10,7 @@ import {
 } from "./routing/navigation";
 import { ProductApp } from "./shell/ProductApp";
 import { startReadPreferencesEnvironment } from "./preferences/readPreferencesStore";
+import { startReadLocaleEnvironment } from "./i18n/readLocale";
 import "./styles.css";
 
 function AppLoading({ label }: { label: string }) {
@@ -58,7 +59,13 @@ export default function App() {
 
   useEffect(() => {
     void initializeAuth();
-    return startReadPreferencesEnvironment();
+    const stopPreferences = startReadPreferencesEnvironment();
+    const stopLocale = startReadLocaleEnvironment();
+
+    return () => {
+      stopPreferences();
+      stopLocale();
+    };
   }, []);
 
   if (

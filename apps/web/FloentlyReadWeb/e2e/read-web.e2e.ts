@@ -249,6 +249,51 @@ test("authenticated app navigation reaches the core Read product surfaces", asyn
   await expect(page.getByText("€19.99")).toBeVisible();
 });
 
+test("keyboard users can skip to content and route focus follows navigation", async ({
+  page,
+}) => {
+  await installBackend(page);
+  await page.goto("/app/library");
+
+  await expect(
+    page.getByRole("heading", { name: "Library", exact: true }),
+  ).toBeVisible();
+
+  const skipLink = page.getByRole("link", { name: "Skip to content" });
+  await page.keyboard.press("Tab");
+  await expect(skipLink).toBeFocused();
+
+  await skipLink.press("Enter");
+  const main = page.locator("#read-main-content");
+  await expect(main).toBeFocused();
+
+  await page.getByRole("link", { name: "Preferences", exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/preferences$/);
+  await expect(main).toBeFocused();
+});
+
+test("interface language persists and updates protected shell labels", async ({
+  page,
+}) => {
+  await installBackend(page);
+  await page.goto("/app/preferences");
+
+  const language = page.getByLabel("Interface language");
+  await language.selectOption("fi");
+
+  await expect(
+    page.getByRole("link", { name: "Kirjasto", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("lang", "fi");
+
+  await page.reload();
+
+  await expect(page.locator("#read-interface-language")).toHaveValue("fi");
+  await expect(
+    page.getByRole("link", { name: "Kirjasto", exact: true }),
+  ).toBeVisible();
+});
+
 test("reading preferences persist through a real browser reload", async ({
   page,
 }) => {

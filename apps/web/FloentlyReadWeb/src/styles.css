@@ -3251,3 +3251,73 @@ html[data-read-theme="light"] .account-quota-card i b {
   background: #6757c8;
 }
 
+
+
+/* Accessibility foundation ---------------------------------------------- */
+.skip-link {
+  position: fixed;
+  z-index: 1000;
+  top: 12px;
+  left: 12px;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  padding: 0 14px;
+  background: #f3f1ff;
+  color: #15121f;
+  font-weight: 800;
+  text-decoration: none;
+  transform: translateY(calc(-100% - 24px));
+  transition: transform 120ms ease;
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid #b6adff;
+  outline-offset: 3px;
+}
+
+#read-main-content:focus-visible {
+  outline: none;
+}
+
+html[data-read-theme="light"] .skip-link {
+  border-color: rgba(35, 40, 56, 0.14);
+  background: #28243a;
+  color: #ffffff;
+}
+
+html[data-read-theme="light"] a:focus-visible,
+html[data-read-theme="light"] button:focus-visible,
+html[data-read-theme="light"] input:focus-visible,
+html[data-read-theme="light"] select:focus-visible,
+html[data-read-theme="light"] textarea:focus-visible,
+html[data-read-theme="light"] [tabindex]:focus-visible {
+  outline-color: #6757c8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .skip-link {
+    transition: none;
+  }
+}

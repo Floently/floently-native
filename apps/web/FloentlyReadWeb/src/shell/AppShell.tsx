@@ -1,5 +1,10 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import type { ReadAuthUser } from "../auth/authStore";
+import {
+  readMessage,
+  useReadLocale,
+  type ReadMessageKey,
+} from "../i18n/readLocale";
 import { useReadRuntime } from "../runtime/ReadRuntimeContext";
 import { useWebPlaybackSnapshot } from "../playback/useWebPlaybackSnapshot";
 import { PlaybackDock } from "../reader/PlaybackDock";
@@ -7,21 +12,21 @@ import { navigateTo } from "../routing/navigation";
 
 interface NavItem {
   href: string;
-  label: string;
+  labelKey: ReadMessageKey;
   glyph: string;
 }
 
 const PRIMARY_NAV: NavItem[] = [
-  { href: "/app/library", label: "Library", glyph: "L" },
-  { href: "/app/import", label: "Import", glyph: "+" },
-  { href: "/app/reader", label: "Reader", glyph: "R" },
-  { href: "/app/browser", label: "Browser", glyph: "B" },
+  { href: "/app/library", labelKey: "shell.library", glyph: "L" },
+  { href: "/app/import", labelKey: "shell.import", glyph: "+" },
+  { href: "/app/reader", labelKey: "shell.reader", glyph: "R" },
+  { href: "/app/browser", labelKey: "shell.browser", glyph: "B" },
 ];
 
 const SECONDARY_NAV: NavItem[] = [
-  { href: "/app/preferences", label: "Preferences", glyph: "P" },
-  { href: "/app/subscription", label: "Plan", glyph: "$" },
-  { href: "/app/account", label: "Account", glyph: "A" },
+  { href: "/app/preferences", labelKey: "shell.preferences", glyph: "P" },
+  { href: "/app/subscription", labelKey: "shell.plan", glyph: "$" },
+  { href: "/app/account", labelKey: "shell.account", glyph: "A" },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -31,9 +36,11 @@ function isActive(pathname: string, href: string): boolean {
 function NavLink({
   item,
   pathname,
+  label,
 }: {
   item: NavItem;
   pathname: string;
+  label: string;
 }) {
   const active = isActive(pathname, item.href);
 
@@ -48,7 +55,7 @@ function NavLink({
       }}
     >
       <span aria-hidden="true">{item.glyph}</span>
-      {item.label}
+      {label}
     </a>
   );
 }
@@ -63,12 +70,31 @@ export function AppShell({
   children: ReactNode;
 }) {
   const runtime = useReadRuntime();
+  const locale = useReadLocale();
   const playback = useWebPlaybackSnapshot(runtime?.playback);
   const accountLabel = user.name || user.email;
   const accountInitial = accountLabel.slice(0, 1).toUpperCase();
+  const previousPathnameRef = useRef(pathname);
+
+  useEffect(() => {
+    if (previousPathnameRef.current === pathname) return;
+    previousPathnameRef.current = pathname;
+
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById("read-main-content")?.focus({
+        preventScroll: true,
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [pathname]);
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#read-main-content">
+        {readMessage(locale, "shell.skipToContent")}
+      </a>
+
       <aside className="app-sidebar">
         <a
           className="app-brand"
@@ -85,15 +111,31 @@ export function AppShell({
           </span>
         </a>
 
-        <nav className="app-nav" aria-label="Read">
+        <nav
+          className="app-nav"
+          aria-label={readMessage(locale, "shell.primaryNavigation")}
+        >
           {PRIMARY_NAV.map((item) => (
-            <NavLink item={item} pathname={pathname} key={item.href} />
+            <NavLink
+              item={item}
+              pathname={pathname}
+              label={readMessage(locale, item.labelKey)}
+              key={item.href}
+            />
           ))}
         </nav>
 
-        <nav className="app-nav app-nav-secondary" aria-label="Settings">
+        <nav
+          className="app-nav app-nav-secondary"
+          aria-label={readMessage(locale, "shell.settingsNavigation")}
+        >
           {SECONDARY_NAV.map((item) => (
-            <NavLink item={item} pathname={pathname} key={item.href} />
+            <NavLink
+              item={item}
+              pathname={pathname}
+              label={readMessage(locale, item.labelKey)}
+              key={item.href}
+            />
           ))}
         </nav>
 
@@ -130,11 +172,17 @@ export function AppShell({
             className="mobile-import"
             onClick={() => navigateTo("/app/import")}
           >
-            Import
+            {readMessage(locale, "shell.import")}
           </button>
         </header>
 
-        <div className="app-content">{children}</div>
+        <main
+          id="read-main-content"
+          className="app-content"
+          tabIndex={-1}
+        >
+          {children}
+        </main>
 
         {runtime && playback.documentId ? (
           <PlaybackDock

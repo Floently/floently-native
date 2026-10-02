@@ -850,7 +850,7 @@ export function BrowserWorkspace({
       </header>
 
       <div className="browser-reader-strip">
-        <span className="browser-connection-state">
+        <span className="browser-connection-state" role="status" aria-live="polite" aria-atomic="true">
           <i data-ready={mediaReady} />
           {lifecycleLabel}
         </span>

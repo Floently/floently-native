@@ -180,7 +180,7 @@ export function ProjectReaderPage({
   if (!runtime) {
     return (
       <section className="product-page">
-        <div className="page-loading">Starting the Read engine…</div>
+        <div className="page-loading" role="status" aria-live="polite">Starting the Read engine…</div>
       </section>
     );
   }
@@ -241,7 +241,7 @@ export function ProjectReaderPage({
           snapshot={playback}
         />
       ) : (
-        <div className="page-loading">
+        <div className="page-loading" role="status" aria-live="polite">
           Loading the synced document and building its reading timeline…
         </div>
       )}
