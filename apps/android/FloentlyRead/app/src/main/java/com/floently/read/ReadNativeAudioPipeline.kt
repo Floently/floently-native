@@ -8,6 +8,7 @@ import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 import java.security.MessageDigest
 
@@ -109,12 +110,16 @@ class ReadNativeTtsClient(
 }
 
 class ReadNativeAudioCache(
-    context: Context
+    context: Context,
+    private val maximumBytes: Long =
+        256L * 1024L * 1024L
 ) {
     private val root = File(
         context.applicationContext.cacheDir,
         "floently-read-audio-v1"
     ).apply { mkdirs() }
+    private val protectionLock = Any()
+    private var protectedPaths: Set<String> = emptySet()
 
     suspend fun localFile(
         asset: ReadNativeTtsAsset
@@ -134,6 +139,10 @@ class ReadNativeAudioCache(
 
         if (destination.exists()) {
             destination.setLastModified(System.currentTimeMillis())
+            prune(
+                additionallyProtected =
+                    setOf(destination.canonicalPath)
+            )
             return@withContext destination
         }
 
@@ -172,23 +181,80 @@ class ReadNativeAudioCache(
                 temporary.delete()
             }
 
-            prune(maximumFiles = 32)
+            prune(
+                additionallyProtected =
+                    setOf(destination.canonicalPath)
+            )
             destination
         } finally {
             connection.disconnect()
         }
     }
 
-    private fun prune(maximumFiles: Int) {
-        val files = root.listFiles()?.toList().orEmpty()
-            .filter { it.isFile && !it.name.contains(".partial-") }
+    suspend fun replaceProtectedUris(
+        audioUris: Collection<String>
+    ) = withContext(Dispatchers.IO) {
+        val resolved = audioUris.mapNotNull { value ->
+            runCatching {
+                val uri = URI(value)
+                if (uri.scheme != "file") {
+                    return@runCatching null
+                }
+                File(uri).canonicalPath
+            }.getOrNull()
+        }.toSet()
 
-        if (files.size <= maximumFiles) return
+        synchronized(protectionLock) {
+            protectedPaths = resolved
+        }
+
+        prune()
+    }
+
+    private fun prune(
+        additionallyProtected: Set<String> = emptySet()
+    ) {
+        val files = root.listFiles()?.toList().orEmpty()
+            .filter {
+                it.isFile
+                    && !it.name.contains(".partial-")
+            }
+
+        var totalBytes = files.sumOf {
+            it.length().coerceAtLeast(0L)
+        }
+        val budget = maximumBytes.coerceAtLeast(
+            16L * 1024L * 1024L
+        )
+        if (totalBytes <= budget) return
+
+        val protected = synchronized(protectionLock) {
+            protectedPaths.toSet()
+        } + additionallyProtected
 
         files
-            .sortedByDescending { it.lastModified() }
-            .drop(maximumFiles)
-            .forEach { runCatching { it.delete() } }
+            .sortedBy { it.lastModified() }
+            .forEach { file ->
+                if (totalBytes <= budget) {
+                    return@forEach
+                }
+
+                val canonicalPath = runCatching {
+                    file.canonicalPath
+                }.getOrElse {
+                    file.absolutePath
+                }
+                if (canonicalPath in protected) {
+                    return@forEach
+                }
+
+                val size = file.length()
+                    .coerceAtLeast(0L)
+                if (runCatching { file.delete() }
+                        .getOrDefault(false)) {
+                    totalBytes -= size
+                }
+            }
     }
 
     private fun sha256Hex(value: String): String =
