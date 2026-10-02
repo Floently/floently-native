@@ -2,6 +2,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent,
 } from "react";
 import type { ReadCoreWorkerClient } from "../readCore.client";
@@ -191,6 +192,18 @@ export function ReaderSurface({
     void session.seek(targetMs);
   }
 
+  function seekFromRegionKeyboard(
+    event: ReactKeyboardEvent<HTMLElement>,
+    segment: ReadingSegmentDescriptor,
+  ): void {
+    if (event.key !== "Enter" && event.key !== " ") return;
+
+    event.preventDefault();
+    setIsFollowingPlayback(true);
+    setViewingCenterIndex(segment.index);
+    void session.seek(segment.logicalStartMs);
+  }
+
   const canBrowseEarlier = Boolean(
     windowValue && windowValue.startIndex > 0,
   );
@@ -282,8 +295,11 @@ export function ReaderSurface({
                   : "reader-region"
               }
               key={segment.id}
+              role="button"
+              tabIndex={0}
               aria-current={isActive ? "location" : undefined}
               onClick={(event) => seekFromRegion(event, segment)}
+              onKeyDown={(event) => seekFromRegionKeyboard(event, segment)}
             >
               {showActiveHighlight ? (
                 <span className="reader-region-current">
