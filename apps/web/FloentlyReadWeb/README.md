@@ -299,6 +299,23 @@ The script:
 
 Generated WASM bindings are build artifacts and are not committed.
 
+## Protected-app visual system
+
+Floently-owned Read chrome uses one CSS token vocabulary for product geometry:
+spacing, shell gutters/content width, card/control radii, subtle borders, card
+surfaces/elevation, muted text, accent state and motion duration. The token layer
+has dark and light values while retaining the reduced-motion behavior described
+below.
+
+Library, Import, Preferences, Account and Subscription cards share the same
+surface/padding/gap geometry instead of defining independent card systems.
+Responsive qualification checks those core routes at desktop and phone widths
+for horizontal overflow.
+
+These tokens apply only to Floently UI. Original PDF iframe contents and the
+Browser V2 remote webpage remain source-authoritative and are not restyled by
+the Read visual system.
+
 ## Deterministic browser qualification
 
 The web workspace includes Playwright journeys that exercise the built application

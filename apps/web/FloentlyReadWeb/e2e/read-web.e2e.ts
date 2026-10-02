@@ -185,6 +185,19 @@ async function installBackend(
   }
 }
 
+async function expectNoHorizontalOverflow(page: Page): Promise<void> {
+  const metrics = await page.evaluate(() => ({
+    viewportWidth: window.innerWidth,
+    documentWidth: document.documentElement.scrollWidth,
+    bodyWidth: document.body.scrollWidth,
+  }));
+
+  expect(metrics.documentWidth).toBeLessThanOrEqual(
+    metrics.viewportWidth + 1,
+  );
+  expect(metrics.bodyWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1);
+}
+
 test("protected routing preserves a safe returnTo and rejects an external one", async ({
   page,
 }) => {
@@ -247,6 +260,36 @@ test("authenticated app navigation reaches the core Read product surfaces", asyn
   ).toBeVisible();
   await expect(page.getByText("€9.99")).toBeVisible();
   await expect(page.getByText("€19.99")).toBeVisible();
+});
+
+test("core product card layouts stay inside desktop and mobile viewports", async ({
+  page,
+}) => {
+  await installBackend(page);
+
+  const routes = [
+    ["/app/library", "Library"],
+    ["/app/import", "Import"],
+    ["/app/preferences", "Preferences"],
+    ["/app/account", "Account"],
+    ["/app/subscription", "Plan and billing"],
+  ] as const;
+
+  for (const viewport of [
+    { width: 1440, height: 1000 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+
+    for (const [route, heading] of routes) {
+      await page.goto(route);
+      await expect(
+        page.getByRole("heading", { name: heading, level: 1 }),
+      ).toBeVisible();
+      await expect(page.locator(".product-page")).toBeVisible();
+      await expectNoHorizontalOverflow(page);
+    }
+  }
 });
 
 test("keyboard users can skip to content and route focus follows navigation", async ({
