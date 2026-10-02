@@ -892,7 +892,7 @@ export function BrowserWorkspace({
                   const speed = Number(event.target.value);
                   setReadSpeedPreference(speed);
                   runtime?.playback.setSpeed(speed);
-                }
+                }}
               >
                 {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3].map(
                   (speed) => (
@@ -922,7 +922,7 @@ export function BrowserWorkspace({
                     voiceId,
                     { language },
                   );
-                }
+                }}
               >
                 {voices.length === 0 ? (
                   <option value={playback.voiceId}>
