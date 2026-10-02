@@ -1794,8 +1794,8 @@ button:disabled,
 
 .app-main > .player-dock {
   position: sticky;
-  bottom: 16px;
-  width: min(1180px, 100%);
+  bottom: var(--read-space-4);
+  width: min(var(--read-content-max), 100%);
   margin: -102px auto 0;
 }
 
@@ -1813,8 +1813,9 @@ button:disabled,
     transform: none;
   }
 
-  .app-shell {
-    grid-template-columns: 210px minmax(0, 1fr);
+  :root {
+    --read-sidebar-width: 210px;
+    --read-shell-gutter: 20px;
   }
 
   .library-grid {
