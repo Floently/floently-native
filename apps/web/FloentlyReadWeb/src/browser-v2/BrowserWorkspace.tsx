@@ -23,6 +23,11 @@ import type {
   ViewportPoint,
 } from "./transport/browserContracts";
 import type { ReadVoice } from "../tts/readTtsProvider";
+import {
+  normalizeReadLanguage,
+  setReadSpeedPreference,
+  setReadVoicePreference,
+} from "../preferences/readPreferencesStore";
 
 function normalizeTarget(value: string): string | null {
   const trimmed = value.trim();
@@ -883,9 +888,11 @@ export function BrowserWorkspace({
               <span>Speed</span>
               <select
                 value={playback.speed}
-                onChange={(event) =>
-                  runtime?.playback.setSpeed(Number(event.target.value))
-                }
+                onChange={(event) => {
+                  const speed = Number(event.target.value);
+                  setReadSpeedPreference(speed);
+                  runtime?.playback.setSpeed(speed);
+                }}
               >
                 {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3].map(
                   (speed) => (
@@ -902,9 +909,20 @@ export function BrowserWorkspace({
               <select
                 value={playback.voiceId}
                 disabled={voicesLoading || voices.length === 0}
-                onChange={(event) =>
-                  void runtime?.playback.setVoice(event.target.value)
-                }
+                onChange={(event) => {
+                  const voiceId = event.target.value;
+                  const voice = voices.find(
+                    (candidate) => candidate.id === voiceId,
+                  );
+                  const language = normalizeReadLanguage(
+                    voice?.language || voice?.locale,
+                  );
+                  setReadVoicePreference(voiceId, language);
+                  void runtime?.playback.setVoice(
+                    voiceId,
+                    { language },
+                  );
+                }}
               >
                 {voices.length === 0 ? (
                   <option value={playback.voiceId}>

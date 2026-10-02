@@ -77,10 +77,16 @@ export function ProjectReaderPage({
 
         const progress = nextProject.progress;
         if (progress?.playbackRate) {
-          runtime.playback.setSpeed(progress.playbackRate);
+          runtime.playback.setSpeed(
+            progress.playbackRate,
+            { updatePreference: false },
+          );
         }
         if (progress?.voiceId) {
-          await runtime.playback.setVoice(progress.voiceId);
+          await runtime.playback.setVoice(
+            progress.voiceId,
+            { updatePreference: false },
+          );
         }
 
         if (

@@ -14,6 +14,11 @@ import { getReadApiBaseUrl } from "../config/runtime";
 import { ReadDocumentSession } from "./readDocumentSession";
 import { BrowserV2CloudClient } from "../browser-v2/BrowserV2CloudClient";
 import { BrowserReadingBridge } from "../browser-v2/BrowserReadingBridge";
+import {
+  effectiveReadHighlightMode,
+  getReadPreferencesSnapshot,
+  subscribeReadPreferences,
+} from "../preferences/readPreferencesStore";
 
 export interface ReadWebRuntime {
   core: ReadCoreWorkerClient;
@@ -36,10 +41,16 @@ export function ReadRuntimeProvider({ children }: PropsWithChildren) {
       getAccessToken: getAuthAccessToken,
     });
     const cache = new ReadAudioCache();
+    const preferences = getReadPreferencesSnapshot();
     const playback = new WebPlaybackSession({
       core,
       tts,
       cache,
+      initialPreferences: {
+        speed: preferences.speed,
+        voiceId: preferences.selectedVoiceId,
+        voiceLanguage: preferences.selectedVoiceLanguage,
+      },
     });
     const documents = new ReadDocumentSession(core, playback);
     const browser = new BrowserV2CloudClient();
@@ -48,6 +59,19 @@ export function ReadRuntimeProvider({ children }: PropsWithChildren) {
       core,
       playback,
     );
+
+    const applyHighlightPreference = () => {
+      const current = getReadPreferencesSnapshot();
+      browserReading.setHighlightEnabled(
+        effectiveReadHighlightMode(
+          current.highlightMode,
+          false,
+        ) !== "none",
+      );
+    };
+    applyHighlightPreference();
+    const unsubscribePreferences =
+      subscribeReadPreferences(applyHighlightPreference);
 
     const nextRuntime: ReadWebRuntime = {
       core,
@@ -61,6 +85,7 @@ export function ReadRuntimeProvider({ children }: PropsWithChildren) {
     setRuntime(nextRuntime);
 
     return () => {
+      unsubscribePreferences();
       browserReading.destroy();
       void browser.stop().catch(() => undefined);
       documents.destroy();

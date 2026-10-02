@@ -215,7 +215,13 @@ interface Harness {
   engine: FakeEngine;
 }
 
-function createHarness(): Harness {
+function createHarness(
+  initialPreferences?: {
+    speed?: number;
+    voiceId?: string | null;
+    voiceLanguage?: string | null;
+  },
+): Harness {
   const core = new FakeCore();
   const tts = new FakeTts();
   const cache = new FakeCache();
@@ -225,6 +231,7 @@ function createHarness(): Harness {
     core,
     tts,
     cache,
+    initialPreferences,
     engineFactory: (callbacks) => {
       engine = new FakeEngine(callbacks);
       return engine;
@@ -357,6 +364,81 @@ describe("WebPlaybackSession document-wide contract", () => {
       canonicalScalarCursor: 150,
       elapsedMs: 15_000,
     });
+
+    session.destroy();
+  });
+
+  it("can change the preferred voice before any document is loaded", async () => {
+    const { session } = createHarness();
+
+    await session.setVoice(
+      "voice:future-en",
+      { language: "en-US" },
+    );
+
+    expect(session.getSnapshot()).toMatchObject({
+      status: "idle",
+      documentId: null,
+      voiceId: "voice:future-en",
+    });
+
+    session.loadDocument(makeManifest());
+    expect(session.getSnapshot().voiceId).toBe("voice:future-en");
+
+    session.destroy();
+  });
+
+  it("starts a fresh session from persisted speed and same-language voice defaults", () => {
+    const { session } = createHarness({
+      speed: 1.75,
+      voiceId: "voice:persistent-en",
+      voiceLanguage: "en-US",
+    });
+
+    session.loadDocument(makeManifest());
+
+    expect(session.getSnapshot()).toMatchObject({
+      speed: 1.75,
+      voiceId: "voice:persistent-en",
+    });
+
+    session.destroy();
+  });
+
+  it("does not use a persisted voice for a different document language", () => {
+    const { session } = createHarness({
+      speed: 2,
+      voiceId: "voice:persistent-en",
+      voiceLanguage: "en",
+    });
+
+    session.loadDocument({
+      ...makeManifest(),
+      language: "fi-FI",
+    });
+
+    expect(session.getSnapshot().speed).toBe(2);
+    expect(session.getSnapshot().voiceId).not.toBe("voice:persistent-en");
+
+    session.destroy();
+  });
+
+  it("keeps a document-specific resume speed from replacing the session default", () => {
+    const { session } = createHarness({
+      speed: 1.5,
+    });
+
+    session.loadDocument(makeManifest());
+    session.setSpeed(2.5, { updatePreference: false });
+    session.clear();
+    session.loadDocument({
+      ...makeManifest(),
+      documentId: "next",
+      revisionId: "next-rev",
+      handle: "next:next-rev",
+    });
+
+    expect(session.getSnapshot().speed).toBe(1.5);
 
     session.destroy();
   });

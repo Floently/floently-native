@@ -91,6 +91,7 @@ export class BrowserReadingBridge {
   private lastHighlightedAnchor: BrowserReadingAnchor | null = null;
   private pendingHighlight: PendingHighlight | null = null;
   private highlightRunning = false;
+  private highlightEnabled = true;
   private snapshot: BrowserReadingBridgeSnapshot = EMPTY_SNAPSHOT;
 
   constructor(
@@ -241,6 +242,24 @@ export class BrowserReadingBridge {
 
   toggleFollow(): void {
     this.setFollow(!this.snapshot.follow);
+  }
+
+  setHighlightEnabled(enabled: boolean): void {
+    if (this.highlightEnabled === enabled) return;
+
+    this.highlightEnabled = enabled;
+    this.pendingHighlight = null;
+    this.lastHighlightedAnchor = null;
+
+    const tabId = this.snapshot.tabId;
+    if (!enabled) {
+      if (tabId) {
+        void this.adapter.clearHighlights(tabId).catch(() => undefined);
+      }
+      return;
+    }
+
+    this.handlePlaybackSnapshot(this.playback.getSnapshot());
   }
 
   async readFromHere(point: BrowserViewportPoint): Promise<boolean> {
@@ -395,7 +414,11 @@ export class BrowserReadingBridge {
 
   private enqueueHighlight(anchor: BrowserReadingAnchor): void {
     const tabId = this.snapshot.tabId;
-    if (!tabId || this.snapshot.status !== "ready") return;
+    if (
+      !this.highlightEnabled
+      || !tabId
+      || this.snapshot.status !== "ready"
+    ) return;
 
     this.pendingHighlight = {
       generation: this.generation,
@@ -416,7 +439,8 @@ export class BrowserReadingBridge {
         this.pendingHighlight = null;
 
         if (
-          pending.generation !== this.generation
+          !this.highlightEnabled
+          || pending.generation !== this.generation
           || pending.tabId !== this.snapshot.tabId
           || this.snapshot.status !== "ready"
         ) {
@@ -430,7 +454,8 @@ export class BrowserReadingBridge {
           );
 
           if (
-            pending.generation !== this.generation
+            !this.highlightEnabled
+            || pending.generation !== this.generation
             || pending.tabId !== this.snapshot.tabId
             || this.snapshot.status !== "ready"
           ) {
