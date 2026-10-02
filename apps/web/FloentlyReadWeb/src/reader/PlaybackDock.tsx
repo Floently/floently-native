@@ -157,7 +157,7 @@ export function PlaybackDock({
           ))}
         </select>
         {snapshot.error ? (
-          <span className="player-error" title={snapshot.error}>
+          <span className="player-error" title={snapshot.error} role="alert">
             Playback error
           </span>
         ) : null}
