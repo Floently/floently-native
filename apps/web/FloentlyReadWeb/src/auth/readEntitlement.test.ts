@@ -50,6 +50,30 @@ describe("getReadEntitlement", () => {
     });
   });
 
+  it("does not grant paid access for an unknown free-tier policy plan", () => {
+    const entitlement = getReadEntitlement(makeSession({
+      readPolicy: {
+        product: "read",
+        tier: "free",
+        plan: "future_unknown_plan",
+        legacyPlan: null,
+        features: {},
+        voiceAccess: {
+          defaultTier: "standard_reader",
+          allowedTiers: ["standard_reader"],
+          premiumStudioAllowed: false,
+        },
+        limits: {},
+      },
+    }));
+
+    expect(entitlement).toMatchObject({
+      isPaid: false,
+      plan: "free",
+      canExportAudio: false,
+    });
+  });
+
   it("supports legacy full-access sessions during migration", () => {
     expect(getReadEntitlement(makeSession({ readPlan: "full-access" })))
       .toMatchObject({ isPaid: true, plan: "full_access", canRecord: true });
