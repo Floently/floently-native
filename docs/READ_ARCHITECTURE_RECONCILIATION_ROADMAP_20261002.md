@@ -1036,8 +1036,10 @@ Initial implementation goal:
 
 1. initial document/seek/voice window publishes the current segment as soon as it is ready;
 2. playback can start from that verified first segment;
-3. forward refill begins immediately afterward;
+3. the existing forward-refill scheduler continues independently after publication;
 4. later refill failure does not turn an already playing document into initial-load failure;
 5. current session ownership and whole-document public timeline remain unchanged.
+
+Do **not** force an immediate physical queue refresh on current main merely to begin prefetch sooner: ordinary refill still rebuilds the hidden queue until Package 3 / PR #40 is repaired and qualified. Once append-only queue growth is integrated, the forward horizon can be filled more aggressively without trading startup speed for an immediate queue reset.
 
 After that slice is green, continue Package 1 source fencing and Package 3 queue qualification with careful PR reconciliation.
