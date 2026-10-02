@@ -415,14 +415,10 @@ class ReadPlaybackService : MediaSessionService() {
         refillJob?.cancel()
 
         refillJob = serviceScope.launch {
-            var firstPass = true
-
             while (isActive) {
-                if (!firstPass) {
-                    delay(1_000L)
-                }
-                val forceRefill = firstPass
-                firstPass = false
+                // Keep refill on the existing cadence until ordinary queue
+                // growth is append-only and acoustically qualified.
+                delay(1_000L)
 
                 val player = documentPlayer ?: return@launch
                 val current = player.currentDocument()
@@ -472,8 +468,7 @@ class ReadPlaybackService : MediaSessionService() {
                         .coerceAtLeast(0L)
 
                 if (
-                    !forceRefill
-                    && !exhausted
+                    !exhausted
                     && bufferedAhead > refillLowWatermarkMs
                 ) {
                     continue
