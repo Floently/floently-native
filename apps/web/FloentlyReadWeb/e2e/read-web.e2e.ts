@@ -198,6 +198,59 @@ async function expectNoHorizontalOverflow(page: Page): Promise<void> {
   expect(metrics.bodyWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1);
 }
 
+test("landing and auth layouts stay inside desktop and mobile viewports", async ({
+  page,
+}) => {
+  await installBackend(page, { authenticated: false });
+
+  for (const viewport of [
+    { width: 1440, height: 1000 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+
+    await page.goto("/");
+    await expect(
+      page.getByRole("heading", {
+        name: "Listen to long documents as one continuous reading experience.",
+        level: 1,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Start reading", exact: true }),
+    ).toBeVisible();
+    await expect(page.locator(".landing-reader-preview")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+
+    await page.goto("/login");
+    await expect(
+      page.getByRole("heading", {
+        name: "Continue where you left off.",
+        level: 1,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Sign in to Read", level: 2 }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Email")).toBeVisible();
+    await expect(page.getByLabel("Password")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+
+    await page.goto("/signup");
+    await expect(
+      page.getByRole("heading", {
+        name: "Create your Floently account.",
+        level: 1,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Start with Read", level: 2 }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Confirm password")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  }
+});
+
 test("protected routing preserves a safe returnTo and rejects an external one", async ({
   page,
 }) => {

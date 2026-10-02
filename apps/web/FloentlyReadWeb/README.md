@@ -299,7 +299,7 @@ The script:
 
 Generated WASM bindings are build artifacts and are not committed.
 
-## Protected-app visual system
+## Web visual system
 
 Floently-owned Read chrome uses one CSS token vocabulary for product geometry:
 spacing, shell gutters/content width, card/control radii, subtle borders, card
@@ -307,10 +307,12 @@ surfaces/elevation, muted text, accent state and motion duration. The token laye
 has dark and light values while retaining the reduced-motion behavior described
 below.
 
-Library, Import, Preferences, Account and Subscription cards share the same
-surface/padding/gap geometry instead of defining independent card systems.
-Responsive qualification checks those core routes at desktop and phone widths
-for horizontal overflow.
+Landing, sign-in, sign-up, Library, Import, Preferences, Account and
+Subscription now share the same geometry vocabulary rather than defining
+separate card systems. The auth form is a deliberate card surface, while the
+landing reader preview and principle cards reuse the same radius/spacing system
+without losing their editorial roles. Responsive qualification checks public
+and protected routes at desktop and phone widths for horizontal overflow.
 
 These tokens apply only to Floently UI. Original PDF iframe contents and the
 Browser V2 remote webpage remain source-authoritative and are not restyled by
@@ -319,9 +321,10 @@ the Read visual system.
 ## Deterministic browser qualification
 
 The web workspace includes Playwright journeys that exercise the built application
-against intercepted backend contracts. They cover protected auth routing, safe
-`returnTo` handling, core signed-in navigation, account/quota/subscription
-presentation, source-preserving PDF fail-open behavior, and the mobile shell.
+against intercepted backend contracts. They cover landing/login/signup geometry,
+protected auth routing, safe `returnTo` handling, core signed-in navigation,
+account/quota/subscription presentation, source-preserving PDF fail-open behavior,
+accessibility/localization persistence, and desktop/phone layout containment.
 
 After the production bundle has been built:
 
@@ -364,12 +367,10 @@ A green CI build does **not** authorize replacing the current production READ we
 - live authenticated login/register/Google flows against deployed auth;
 - live authenticated TTS and voice catalog;
 - Safari/Chrome/Firefox cache and Media Session testing;
-- long-document transition-gap measurement;
-- PDF/EPUB/document ingestion;
-- cloud library/project synchronization;
-- full Browser V2 page-preserving reader migration;
+- long-document transition-gap measurement with real synthesized audio;
+- live PDF/EPUB/document ingestion and cloud project synchronization against deployed services;
+- live Browser V2 remote-session/page-preservation/reconnect qualification across supported browsers;
 - live account/quota/regional-pricing/checkout and billing-portal qualification;
-- accessibility/i18n;
-- physical Safari/Chrome/Firefox and authenticated deployed-service qualification;
-- long-session browser/device testing;
-- migration/cutover checklist with rollback.
+- physical VoiceOver/NVDA and multilingual interface review;
+- long-session browser/device testing, including background/system-media behavior;
+- migration/cutover checklist with rollback and production host routing validation.
