@@ -255,8 +255,12 @@ test("keyboard users can skip to content and route focus follows navigation", as
   await installBackend(page);
   await page.goto("/app/library");
 
-  await page.keyboard.press("Tab");
+  await expect(
+    page.getByRole("heading", { name: "Library", exact: true }),
+  ).toBeVisible();
+
   const skipLink = page.getByRole("link", { name: "Skip to content" });
+  await page.keyboard.press("Tab");
   await expect(skipLink).toBeFocused();
 
   await skipLink.press("Enter");
