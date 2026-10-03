@@ -143,3 +143,16 @@ V1 does not:
 - persist fake progress;
 - rewrite the YKI engine in mobile code;
 - introduce Rust merely for state management.
+
+
+## Durable event sync boundary
+
+Native Learn now includes transport adapters for:
+
+`POST /api/v1/learning/events`
+
+using the canonical `learning.v1` event contract.
+
+The app-level state owners expose an explicit outbox flush method, but automatic flushing is intentionally **disabled** until the additive backend learner-event SQL table/API has completed its production database qualification.
+
+This prevents a native release from silently depending on an endpoint whose source exists but whose production storage migration has not yet been applied.

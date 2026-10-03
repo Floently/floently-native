@@ -22,6 +22,7 @@ final class LearnAppModel: ObservableObject {
     let learningSession: LearningSessionStateV1
     let eventOutbox: LearningEventOutboxV1
     let overviewService: LearnOverviewService
+    let eventSyncService: LearnEventSyncService
 
     private let api: FloentlyAPIClient
     private let authService: FloentlyAuthService
@@ -42,6 +43,7 @@ final class LearnAppModel: ObservableObject {
         self.authService = FloentlyAuthService(api: client, store: store)
         self.accessService = FloentlyAccessService(api: client)
         self.overviewService = LearnOverviewService(api: client)
+        self.eventSyncService = LearnEventSyncService(api: client)
     }
 
     var user: FloentlyUser? {
@@ -145,6 +147,22 @@ final class LearnAppModel: ObservableObject {
             accessStatus = nil
             accessNotice = "Your access status is temporarily unavailable."
         }
+    }
+
+    /// Prepared for the durable learning.v1 backend boundary.
+    ///
+    /// This is intentionally not called automatically until the learner-event
+    /// database migration/API in the backend is production-qualified.
+    func flushPendingLearningEvents() async throws -> Int {
+        var acknowledged = 0
+
+        for event in eventOutbox.pending {
+            _ = try await eventSyncService.record(event)
+            eventOutbox.acknowledge(eventId: event.eventId)
+            acknowledged += 1
+        }
+
+        return acknowledged
     }
 
     func logout() async {

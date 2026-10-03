@@ -7,6 +7,7 @@ cd "$ROOT"
 required_files=(
   "docs/LEARN_NEXT_GENERATION_GOVERNING_RULE.md"
   "docs/LEARN_SESSION_ARCHITECTURE_V1.md"
+  "docs/LEARN_CONTRACT_AUTHORITY.md"
   "docs/design/KIELIVALMIS_CARD_AND_LAYOUT_SYSTEM_V1.md"
   "docs/design/KIELIVALMIS_HOME_BLUEPRINT_V1.md"
   "docs/design/KIELIVALMIS_AUTH_BLUEPRINT_V1.md"
@@ -18,6 +19,7 @@ required_files=(
   "apps/ios/FloentlyLearn/FloentlyLearn/Home/KieliValmisEverydayOverviewView.swift"
   "apps/ios/FloentlyLearn/FloentlyLearn/Home/KieliValmisPathwayOverviewViews.swift"
   "apps/ios/FloentlyShared/Sources/FloentlyShared/Learn/LearnContractsV1.swift"
+  "apps/ios/FloentlyShared/Sources/FloentlyShared/Learn/LearnEventSyncService.swift"
   "apps/ios/FloentlyShared/Sources/FloentlyShared/Learn/LearnOverviewService.swift"
   "apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/design/KieliValmisDesign.kt"
   "apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/state/LearnAppViewModel.kt"
@@ -26,9 +28,12 @@ required_files=(
   "apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/home/KieliValmisEverydayOverviewScreen.kt"
   "apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/home/KieliValmisPathwayOverviewScreens.kt"
   "apps/android/shared/src/main/java/com/floently/shared/learn/LearnContractsV1.kt"
+  "apps/android/shared/src/main/java/com/floently/shared/learn/LearnEventSyncService.kt"
   "apps/android/shared/src/main/java/com/floently/shared/learn/LearnOverviewService.kt"
   "shared/api-contracts/learn/v1/activity-definition.schema.json"
   "shared/api-contracts/learn/v1/learning-session-plan.schema.json"
+  "shared/api-contracts/learn/v1/task-descriptor.schema.json"
+  "shared/api-contracts/learn/v1/practice-session-manifest.schema.json"
   "shared/api-contracts/learn/v1/learning-event.schema.json"
 )
 
@@ -102,3 +107,19 @@ if grep -R -nE "Native build foundation|being connected to the existing backend|
 fi
 
 echo "KieliValmis clean rebuild static verification: PASS"
+
+
+# Canonical learner-event authority must remain learning.v1 and camelCase.
+grep -q '"schemaVersion"' shared/api-contracts/learn/v1/learning-event.schema.json
+grep -q '"learning.v1"' shared/api-contracts/learn/v1/learning-event.schema.json
+if grep -q '"schema_version"' shared/api-contracts/learn/v1/learning-event.schema.json; then
+  echo "Legacy incompatible snake-case learner event contract returned." >&2
+  exit 1
+fi
+
+grep -q 'schemaVersion: String = "learning.v1"' apps/ios/FloentlyShared/Sources/FloentlyShared/Learn/LearnContractsV1.swift
+grep -q 'schemaVersion: String = "learning.v1"' apps/android/shared/src/main/java/com/floently/shared/learn/LearnContractsV1.kt
+
+# Native event sync transport exists but is not automatically invoked during bootstrap.
+grep -q '/api/v1/learning/events' apps/ios/FloentlyShared/Sources/FloentlyShared/Learn/LearnEventSyncService.swift
+grep -q '/api/v1/learning/events' apps/android/shared/src/main/java/com/floently/shared/learn/LearnEventSyncService.kt

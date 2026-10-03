@@ -10,6 +10,7 @@ import com.floently.shared.auth.FloentlySecureSessionStore
 import com.floently.shared.auth.FloentlyUser
 import com.floently.shared.billing.FloentlyAccessService
 import com.floently.shared.billing.FloentlyAccessStatus
+import com.floently.shared.learn.LearnEventSyncService
 import com.floently.shared.learn.LearnOverviewService
 import com.floently.shared.learn.LearningEventOutboxV1
 import com.floently.shared.learn.LearningSessionStateV1
@@ -47,6 +48,7 @@ class LearnAppViewModel(application: Application) : AndroidViewModel(application
     private val authService = FloentlyAuthService(api, sessionStore)
     private val accessService = FloentlyAccessService(api)
     val overviewService = LearnOverviewService(api)
+    val eventSyncService = LearnEventSyncService(api)
 
     private val _uiState = MutableStateFlow(LearnAppUiState())
     val uiState: StateFlow<LearnAppUiState> = _uiState.asStateFlow()
@@ -218,6 +220,25 @@ class LearnAppViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
         }
+    }
+
+    /**
+     * Prepared for the durable learning.v1 backend boundary.
+     *
+     * Do not call automatically until the backend learner-event table/API is
+     * production-qualified.
+     */
+    suspend fun flushPendingLearningEvents(): Int {
+        var acknowledged = 0
+        val snapshot = eventOutbox.pending.value
+
+        for (event in snapshot) {
+            eventSyncService.record(event)
+            eventOutbox.acknowledge(event.eventId)
+            acknowledged += 1
+        }
+
+        return acknowledged
     }
 
     fun logout() {
