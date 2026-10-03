@@ -116,6 +116,53 @@ class ReadNativeTtsClient(
         )
     }
 
+    private fun verifyContentHash(
+        file: File,
+        expected: String?
+    ): Boolean {
+        val normalized = normalizeSha256(expected)
+            ?: return true
+
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().buffered().use { input ->
+            val buffer = ByteArray(256 * 1024)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                if (count > 0) {
+                    digest.update(buffer, 0, count)
+                }
+            }
+        }
+
+        val actual = digest.digest()
+            .joinToString("") { "%02x".format(it) }
+        return actual == normalized
+    }
+
+    private fun normalizeSha256(
+        value: String?
+    ): String? {
+        val raw = value
+            ?.trim()
+            ?.lowercase()
+            ?.takeIf { it.isNotBlank() }
+            ?: return null
+        val hex = if (raw.startsWith("sha256:")) {
+            raw.removePrefix("sha256:")
+        } else {
+            raw
+        }
+
+        return hex.takeIf {
+            it.length == 64
+                && it.all { character ->
+                    character in '0'..'9'
+                        || character in 'a'..'f'
+                }
+        }
+    }
+
     private fun sha256Hex(value: String): String =
         MessageDigest.getInstance("SHA-256")
             .digest(value.toByteArray(Charsets.UTF_8))
@@ -151,12 +198,24 @@ class ReadNativeAudioCache(
         )
 
         if (destination.exists()) {
-            destination.setLastModified(System.currentTimeMillis())
-            prune(
-                additionallyProtected =
-                    setOf(destination.canonicalPath)
-            )
-            return@withContext destination
+            if (verifyContentHash(
+                    destination,
+                    asset.contentHash
+                )
+            ) {
+                destination.setLastModified(
+                    System.currentTimeMillis()
+                )
+                prune(
+                    additionallyProtected =
+                        setOf(destination.canonicalPath)
+                )
+                return@withContext destination
+            }
+
+            // Never serve a cached file that failed a checksum asserted by
+            // the backend. Delete it and perform one clean download.
+            runCatching { destination.delete() }
         }
 
         val connection = URL(asset.audioUri)
@@ -184,6 +243,17 @@ class ReadNativeAudioCache(
                 FileOutputStream(temporary).use { output ->
                     input.copyTo(output)
                 }
+            }
+
+            if (!verifyContentHash(
+                    temporary,
+                    asset.contentHash
+                )
+            ) {
+                temporary.delete()
+                throw IllegalStateException(
+                    "Downloaded Read audio did not match its verified content hash."
+                )
             }
 
             if (destination.exists()) {
