@@ -36,7 +36,7 @@ data class ProfessionalOverview(
 )
 
 class LearnOverviewService(
-    private val api: FloentlyApiClient
+    internal val api: FloentlyApiClient
 ) {
     suspend fun fetchYkiOverview(
         levelBand: String = "B1-B2"
@@ -130,4 +130,56 @@ private fun JSONObject.stringList(key: String): List<String> {
                 ?.let(::add)
         }
     }
+}
+
+
+data class LearnCardPreview(
+    val id: String,
+    val contentType: String,
+    val levelBand: String,
+    val frontText: String,
+    val backPrompt: String,
+    val tags: List<String>,
+    val profession: String?
+)
+
+data class LearnCardDeckResponse(
+    val cards: List<LearnCardPreview>
+)
+
+suspend fun LearnOverviewService.fetchEverydayDeck(
+    contentType: String = "vocabulary_card",
+    levelBand: String = "B1_B2",
+    uiLanguage: String = "en"
+): LearnCardDeckResponse {
+    val payload = api.get(
+        path = "/api/v1/cards/deck",
+        query = mapOf(
+            "domain" to "general",
+            "content_type" to contentType,
+            "level" to levelBand,
+            "ui_language" to uiLanguage
+        )
+    )
+    val array = payload.optJSONArray("cards")
+    val cards = buildList {
+        if (array != null) {
+            for (index in 0 until array.length()) {
+                val card = array.optJSONObject(index) ?: continue
+                add(
+                    LearnCardPreview(
+                        id = card.optString("id"),
+                        contentType = card.optString("content_type"),
+                        levelBand = card.optString("level_band"),
+                        frontText = card.optString("front_text"),
+                        backPrompt = card.optString("back_prompt"),
+                        tags = card.stringList("tags"),
+                        profession = card.optString("profession")
+                            .takeIf { it.isNotBlank() && it != "none" }
+                    )
+                )
+            }
+        }
+    }
+    return LearnCardDeckResponse(cards = cards)
 }

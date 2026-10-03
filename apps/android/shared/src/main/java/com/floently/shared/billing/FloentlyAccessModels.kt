@@ -2,6 +2,13 @@ package com.floently.shared.billing
 
 import org.json.JSONObject
 
+data class FloentlyFeatureAccess(
+    val available: Boolean,
+    val limit: Int?,
+    val unit: String?,
+    val message: String?
+)
+
 data class FloentlyAccessStatus(
     val billingTier: String?,
     val subscriptionStatus: String?,
@@ -19,10 +26,18 @@ data class FloentlyAccessStatus(
     val hasPaymentIssue: Boolean,
     val paymentIssueMessage: String?,
     val accessibleProfessions: List<String>,
-    val selectedProfessions: List<String>
+    val selectedProfessions: List<String>,
+    val features: Map<String, FloentlyFeatureAccess>
 ) {
+    val generalFinnishAccess: Boolean
+        get() = isInternalAllAccess || features["general_finnish"]?.available == true
+
     val hasLearnAccess: Boolean
-        get() = ykiAccess || professionalAccess || combinedAccess || isInternalAllAccess
+        get() = generalFinnishAccess ||
+            ykiAccess ||
+            professionalAccess ||
+            combinedAccess ||
+            isInternalAllAccess
 }
 
 private fun JSONObject.stringList(key: String): List<String> {
@@ -33,6 +48,24 @@ private fun JSONObject.stringList(key: String): List<String> {
                 .trim()
                 .takeIf { it.isNotEmpty() }
                 ?.let(::add)
+        }
+    }
+}
+
+private fun JSONObject.featureMap(): Map<String, FloentlyFeatureAccess> {
+    val objectValue = optJSONObject("features") ?: return emptyMap()
+    return buildMap {
+        objectValue.keys().forEach { key ->
+            val item = objectValue.optJSONObject(key) ?: return@forEach
+            put(
+                key,
+                FloentlyFeatureAccess(
+                    available = item.optBoolean("available"),
+                    limit = if (item.has("limit")) item.optInt("limit") else null,
+                    unit = item.optString("unit").takeIf { it.isNotBlank() },
+                    message = item.optString("message").takeIf { it.isNotBlank() }
+                )
+            )
         }
     }
 }
@@ -52,6 +85,11 @@ fun accessStatusFromJson(json: JSONObject): FloentlyAccessStatus {
         else -> null
     }
 
+    val internalAllAccess = json.optBoolean(
+        "is_internal_all_access",
+        json.optBoolean("isInternalAllAccess")
+    )
+
     return FloentlyAccessStatus(
         billingTier = json.optString(
             "billing_tier",
@@ -68,11 +106,12 @@ fun accessStatusFromJson(json: JSONObject): FloentlyAccessStatus {
             ?: (pathway.equals("combined", ignoreCase = true) || (ykiAccess && professionalAccess)),
         readAccess = json.optBoolean("read_access", json.optBoolean("readAccess")),
         createAccess = json.optBoolean("create_access", json.optBoolean("createAccess")),
-        isInternalAllAccess = json.optBoolean(
-            "is_internal_all_access",
-            json.optBoolean("isInternalAllAccess")
-        ),
-        isActive = json.optBoolean("is_active", json.optBoolean("isActive")),
+        isInternalAllAccess = internalAllAccess,
+        isActive = if (json.has("is_active")) {
+            json.optBoolean("is_active")
+        } else {
+            json.optBoolean("isActive", internalAllAccess)
+        },
         trialAlreadyUsed = json.optBoolean(
             "trial_already_used",
             json.optBoolean("trialAlreadyUsed")
@@ -96,6 +135,7 @@ fun accessStatusFromJson(json: JSONObject): FloentlyAccessStatus {
         accessibleProfessions = json.stringList("accessible_professions")
             .ifEmpty { json.stringList("accessibleProfessions") },
         selectedProfessions = json.stringList("selected_professions")
-            .ifEmpty { json.stringList("selectedProfessions") }
+            .ifEmpty { json.stringList("selectedProfessions") },
+        features = json.featureMap()
     )
 }

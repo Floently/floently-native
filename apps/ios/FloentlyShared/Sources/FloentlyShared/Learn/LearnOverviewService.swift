@@ -88,3 +88,47 @@ public final class LearnOverviewService {
         )
     }
 }
+
+
+public struct LearnCardPreview: Codable, Equatable, Identifiable {
+    public let id: String
+    public let contentType: String
+    public let levelBand: String
+    public let frontText: String
+    public let backPrompt: String
+    public let tags: [String]
+    public let profession: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case contentType = "content_type"
+        case levelBand = "level_band"
+        case frontText = "front_text"
+        case backPrompt = "back_prompt"
+        case tags
+        case profession
+    }
+}
+
+public struct LearnCardDeckResponse: Codable, Equatable {
+    public let cards: [LearnCardPreview]
+}
+
+public extension LearnOverviewService {
+    func fetchEverydayDeck(
+        contentType: String = "vocabulary_card",
+        levelBand: String = "B1_B2",
+        uiLanguage: String = "en"
+    ) async throws -> LearnCardDeckResponse {
+        try await api.get(
+            "/api/v1/cards/deck",
+            queryItems: [
+                URLQueryItem(name: "domain", value: "general"),
+                URLQueryItem(name: "content_type", value: contentType),
+                URLQueryItem(name: "level", value: levelBand),
+                URLQueryItem(name: "ui_language", value: uiLanguage)
+            ],
+            as: LearnCardDeckResponse.self
+        )
+    }
+}
