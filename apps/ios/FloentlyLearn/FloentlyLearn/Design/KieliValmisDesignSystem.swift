@@ -35,6 +35,10 @@ enum KieliValmisColor {
     static let textSecondary = Color(red: 185.0 / 255.0, green: 177.0 / 255.0, blue: 196.0 / 255.0)
     static let textTertiary = Color(red: 129.0 / 255.0, green: 120.0 / 255.0, blue: 141.0 / 255.0)
     static let borderSoft = Color(red: 36.0 / 255.0, green: 30.0 / 255.0, blue: 44.0 / 255.0)
+    static let border = Color(red: 48.0 / 255.0, green: 38.0 / 255.0, blue: 58.0 / 255.0)
+    static let success = Color(red: 103.0 / 255.0, green: 216.0 / 255.0, blue: 168.0 / 255.0)
+    static let warning = Color(red: 243.0 / 255.0, green: 198.0 / 255.0, blue: 111.0 / 255.0)
+    static let danger = Color(red: 1.0, green: 113.0 / 255.0, blue: 141.0 / 255.0)
 }
 
 enum KieliValmisCardStyle {
@@ -242,5 +246,93 @@ struct KieliValmisReviewCard: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
+    }
+}
+
+
+struct KieliValmisFieldShell<Content: View>: View {
+    let label: String
+    let isFocused: Bool
+    private let content: Content
+
+    init(
+        label: String,
+        isFocused: Bool,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.label = label
+        self.isFocused = isFocused
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: KieliValmisSpacing.s) {
+            Text(label)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(KieliValmisColor.textPrimary)
+
+            HStack(spacing: KieliValmisSpacing.s) {
+                content
+            }
+            .padding(.horizontal, KieliValmisSpacing.m)
+            .frame(height: 52)
+            .background(
+                RoundedRectangle(cornerRadius: KieliValmisRadius.m, style: .continuous)
+                    .fill(isFocused ? KieliValmisColor.brandTint.opacity(0.66) : KieliValmisColor.surface1)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: KieliValmisRadius.m, style: .continuous)
+                            .stroke(
+                                isFocused ? KieliValmisColor.brand : KieliValmisColor.border,
+                                lineWidth: 1
+                            )
+                    )
+            )
+        }
+    }
+}
+
+struct KieliValmisSegmentedControl<Option: Hashable>: View {
+    let options: [(Option, String)]
+    @Binding var selection: Option
+
+    var body: some View {
+        HStack(spacing: KieliValmisSpacing.xs) {
+            ForEach(Array(options.enumerated()), id: \.offset) { _, option in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        selection = option.0
+                    }
+                } label: {
+                    Text(option.1)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(
+                            selection == option.0
+                                ? KieliValmisColor.textPrimary
+                                : KieliValmisColor.textSecondary
+                        )
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 40)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(
+                                    selection == option.0
+                                        ? KieliValmisColor.surface3
+                                        : Color.clear
+                                )
+                        )
+                }
+                .buttonStyle(.plain)
+                .frame(minHeight: 48)
+            }
+        }
+        .padding(KieliValmisSpacing.xs)
+        .background(
+            RoundedRectangle(cornerRadius: KieliValmisRadius.m, style: .continuous)
+                .fill(KieliValmisColor.surface1)
+                .overlay(
+                    RoundedRectangle(cornerRadius: KieliValmisRadius.m, style: .continuous)
+                        .stroke(KieliValmisColor.borderSoft, lineWidth: 1)
+                )
+        )
     }
 }
