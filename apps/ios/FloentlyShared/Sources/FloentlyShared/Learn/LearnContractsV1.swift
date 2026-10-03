@@ -33,6 +33,21 @@ public enum LearnTaskHealthV1: String, Codable {
     case unavailable
 }
 
+public enum LearnTaskCompletionV1: String, Codable, CaseIterable {
+    case completed
+    case skipped
+    case abandoned
+    case failed
+}
+
+public enum LearnEvidenceTypeV1: String, Codable, CaseIterable {
+    case exposure
+    case retrieval
+    case production
+    case correction
+    case retry
+}
+
 public enum LearnEventKindV1: String, Codable, CaseIterable {
     case taskStarted = "task_started"
     case taskCompleted = "task_completed"
@@ -200,6 +215,63 @@ public struct PracticeSessionManifestV1: Codable, Equatable, Identifiable {
     public let composerVersion: String
 
     public var id: String { sessionId }
+}
+
+public struct TaskResultV1: Codable, Equatable {
+    public let schemaVersion: String
+    public let taskId: String
+    public let contentVersion: String
+    public let attemptId: String
+    public let completion: LearnTaskCompletionV1
+    public let startedAt: String
+    public let completedAt: String?
+    public let score: Double?
+    public let maxScore: Double?
+    public let retrySuggested: Bool?
+    public let metadata: [String: LearnMetadataValue]?
+
+    public init(
+        schemaVersion: String = "learning.v1",
+        taskId: String,
+        contentVersion: String,
+        attemptId: String,
+        completion: LearnTaskCompletionV1,
+        startedAt: String,
+        completedAt: String? = nil,
+        score: Double? = nil,
+        maxScore: Double? = nil,
+        retrySuggested: Bool? = nil,
+        metadata: [String: LearnMetadataValue]? = nil
+    ) {
+        self.schemaVersion = schemaVersion
+        self.taskId = taskId
+        self.contentVersion = contentVersion
+        self.attemptId = attemptId
+        self.completion = completion
+        self.startedAt = startedAt
+        self.completedAt = completedAt
+        self.score = score
+        self.maxScore = maxScore
+        self.retrySuggested = retrySuggested
+        self.metadata = metadata
+    }
+}
+
+public struct SkillEvidenceV1: Codable, Equatable, Identifiable {
+    public let schemaVersion: String
+    public let evidenceId: String
+    public let learnerId: String
+    public let sourceEventId: String
+    public let observedAt: String
+    public let skill: LearnSkillV1
+    public let levelBand: String
+    public let evidenceType: LearnEvidenceTypeV1
+    public let score: Double?
+    public let maxScore: Double?
+    public let pathway: LearnPathwayV1
+    public let profession: String?
+
+    public var id: String { evidenceId }
 }
 
 public struct LearnerEventV1: Codable, Equatable, Identifiable {

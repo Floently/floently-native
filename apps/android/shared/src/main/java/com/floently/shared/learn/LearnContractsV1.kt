@@ -39,6 +39,21 @@ enum class LearnTaskHealthV1(val wireValue: String) {
     Unavailable("unavailable")
 }
 
+enum class LearnTaskCompletionV1(val wireValue: String) {
+    Completed("completed"),
+    Skipped("skipped"),
+    Abandoned("abandoned"),
+    Failed("failed")
+}
+
+enum class LearnEvidenceTypeV1(val wireValue: String) {
+    Exposure("exposure"),
+    Retrieval("retrieval"),
+    Production("production"),
+    Correction("correction"),
+    Retry("retry")
+}
+
 enum class LearnEventKindV1(val wireValue: String) {
     TaskStarted("task_started"),
     TaskCompleted("task_completed"),
@@ -109,6 +124,35 @@ data class PracticeSessionManifestV1(
     val targetMinutes: Int,
     val tasks: List<PracticeSessionTaskV1>,
     val composerVersion: String
+)
+
+data class TaskResultV1(
+    val schemaVersion: String = "learning.v1",
+    val taskId: String,
+    val contentVersion: String,
+    val attemptId: String,
+    val completion: LearnTaskCompletionV1,
+    val startedAt: String,
+    val completedAt: String? = null,
+    val score: Double? = null,
+    val maxScore: Double? = null,
+    val retrySuggested: Boolean? = null,
+    val metadata: Map<String, Any>? = null
+)
+
+data class SkillEvidenceV1(
+    val schemaVersion: String = "learning.v1",
+    val evidenceId: String,
+    val learnerId: String,
+    val sourceEventId: String,
+    val observedAt: String,
+    val skill: LearnSkillV1,
+    val levelBand: String,
+    val evidenceType: LearnEvidenceTypeV1,
+    val score: Double? = null,
+    val maxScore: Double? = null,
+    val pathway: LearnPathwayV1,
+    val profession: String? = null
 )
 
 data class LearnerEventV1(

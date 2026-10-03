@@ -25,6 +25,55 @@ class LearnEventSyncService(
             inserted = data.optBoolean("inserted")
         )
     }
+
+    suspend fun listEvidence(
+        pathway: LearnPathwayV1? = null,
+        skill: LearnSkillV1? = null,
+        since: String? = null,
+        limit: Int = 200
+    ): List<SkillEvidenceV1> {
+        val query = linkedMapOf(
+            "limit" to limit.coerceIn(1, 500).toString()
+        )
+        pathway?.let { query["pathway"] = it.wireValue }
+        skill?.let { query["skill"] = it.wireValue }
+        since?.let { query["since"] = it }
+
+        val data = api.get(
+            path = "/api/v1/learning/evidence",
+            query = query
+        )
+        val array = data.optJSONArray("evidence") ?: JSONArray()
+
+        return buildList {
+            for (index in 0 until array.length()) {
+                val item = array.optJSONObject(index) ?: continue
+                add(
+                    SkillEvidenceV1(
+                        schemaVersion = item.optString("schemaVersion", "learning.v1"),
+                        evidenceId = item.optString("evidenceId"),
+                        learnerId = item.optString("learnerId"),
+                        sourceEventId = item.optString("sourceEventId"),
+                        observedAt = item.optString("observedAt"),
+                        skill = LearnSkillV1.entries.first {
+                            it.wireValue == item.optString("skill")
+                        },
+                        levelBand = item.optString("levelBand"),
+                        evidenceType = LearnEvidenceTypeV1.entries.first {
+                            it.wireValue == item.optString("evidenceType")
+                        },
+                        score = item.optDouble("score").takeUnless { it.isNaN() },
+                        maxScore = item.optDouble("maxScore").takeUnless { it.isNaN() },
+                        pathway = LearnPathwayV1.entries.first {
+                            it.wireValue == item.optString("pathway")
+                        },
+                        profession = item.optString("profession")
+                            .takeIf { it.isNotBlank() && it != "null" }
+                    )
+                )
+            }
+        }
+    }
 }
 
 private fun learnerEventToJson(

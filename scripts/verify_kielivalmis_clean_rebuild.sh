@@ -33,6 +33,8 @@ required_files=(
   "shared/api-contracts/learn/v1/activity-definition.schema.json"
   "shared/api-contracts/learn/v1/learning-session-plan.schema.json"
   "shared/api-contracts/learn/v1/task-descriptor.schema.json"
+  "shared/api-contracts/learn/v1/task-result.schema.json"
+  "shared/api-contracts/learn/v1/skill-evidence.schema.json"
   "shared/api-contracts/learn/v1/practice-session-manifest.schema.json"
   "shared/api-contracts/learn/v1/learning-event.schema.json"
 )
@@ -123,5 +125,9 @@ grep -q 'schemaVersion: String = "learning.v1"' apps/android/shared/src/main/jav
 # Native event sync transport exists but is not automatically invoked during bootstrap.
 grep -q '/api/v1/learning/events' apps/ios/FloentlyShared/Sources/FloentlyShared/Learn/LearnEventSyncService.swift
 grep -q '/api/v1/learning/events' apps/android/shared/src/main/java/com/floently/shared/learn/LearnEventSyncService.kt
+grep -q '/api/v1/learning/evidence' apps/ios/FloentlyShared/Sources/FloentlyShared/Learn/LearnEventSyncService.swift
+grep -q '/api/v1/learning/evidence' apps/android/shared/src/main/java/com/floently/shared/learn/LearnEventSyncService.kt
+grep -q 'SkillEvidenceV1' apps/ios/FloentlyShared/Sources/FloentlyShared/Learn/LearnContractsV1.swift
+grep -q 'SkillEvidenceV1' apps/android/shared/src/main/java/com/floently/shared/learn/LearnContractsV1.kt
 
 echo "KieliValmis clean rebuild static verification: PASS"

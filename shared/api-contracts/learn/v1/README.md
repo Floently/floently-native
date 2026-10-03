@@ -13,8 +13,10 @@ This directory mirrors the canonical concepts needed by the clean native rebuild
 Current mirrors:
 
 - `task-descriptor.schema.json`
-- `practice-session-manifest.schema.json`
+- `task-result.schema.json`
 - `learning-event.schema.json`
+- `skill-evidence.schema.json`
+- `practice-session-manifest.schema.json`
 
 Temporary compatibility filenames:
 
