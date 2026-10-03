@@ -1,6 +1,7 @@
 import SwiftUI
 
 private enum KieliValmisDestination: Hashable {
+    case everyday
     case yki
     case professional
     case speaking
@@ -112,7 +113,24 @@ struct KieliValmisHomeView: View {
         VStack(alignment: .leading, spacing: KieliValmisSpacing.m) {
             KieliValmisSectionHeader(title: "Your pathways")
 
-            LazyVGrid(columns: pathwayColumns, spacing: KieliValmisSpacing.m) {
+            VStack(spacing: KieliValmisSpacing.m) {
+                KieliValmisPathwayCard(
+                    symbol: "book.pages",
+                    title: "Everyday Finnish",
+                    subtitle: everydayPathwaySubtitle
+                ) {
+                    path.append(.everyday)
+                }
+
+                LazyVGrid(columns: pathwayColumns, spacing: KieliValmisSpacing.m) {
+                    KieliValmisPathwayCard(
+                    symbol: "book.pages",
+                    title: "Everyday Finnish",
+                    subtitle: "Vocabulary, grammar and useful Finnish."
+                ) {
+                    onSelect(.everyday)
+                }
+
                 KieliValmisPathwayCard(
                     symbol: "checkmark.seal",
                     title: "YKI preparation",
@@ -121,12 +139,13 @@ struct KieliValmisHomeView: View {
                     path.append(.yki)
                 }
 
-                KieliValmisPathwayCard(
-                    symbol: "briefcase",
-                    title: "Work in Finland",
-                    subtitle: professionalPathwaySubtitle
-                ) {
-                    path.append(.professional)
+                    KieliValmisPathwayCard(
+                        symbol: "briefcase",
+                        title: "Work in Finland",
+                        subtitle: professionalPathwaySubtitle
+                    ) {
+                        path.append(.professional)
+                    }
                 }
             }
         }
@@ -206,6 +225,18 @@ struct KieliValmisHomeView: View {
         }
     }
 
+    private var everydayPathwaySubtitle: String {
+        guard let access = appModel.accessStatus else {
+            return "Vocabulary, grammar and useful Finnish for daily life."
+        }
+
+        if access.generalFinnishAccess {
+            return "Vocabulary, grammar and useful Finnish for daily life."
+        }
+
+        return "Everyday Finnish access is not active for this account."
+    }
+
     private var ykiPathwaySubtitle: String {
         guard let access = appModel.accessStatus else {
             return "Reading, listening, writing and speaking practice."
@@ -243,6 +274,17 @@ struct KieliValmisHomeView: View {
     @ViewBuilder
     private func destinationView(_ destination: KieliValmisDestination) -> some View {
         switch destination {
+        case .everyday:
+            KieliValmisEverydayOverviewView(
+                service: appModel.overviewService,
+                accessState: pathwayAccessState(
+                    allowed: appModel.accessStatus?.generalFinnishAccess == true,
+                    lockedMessage: "Everyday Finnish access is not active for this account."
+                ),
+                retryAccess: {
+                    Task { await appModel.refreshAccess() }
+                }
+            )
         case .yki:
             KieliValmisYKIOverviewView(
                 service: appModel.overviewService,
