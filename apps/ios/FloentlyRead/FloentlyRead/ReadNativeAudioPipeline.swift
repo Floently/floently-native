@@ -173,6 +173,7 @@ enum ReadNativeTtsError: LocalizedError {
     case emptyText
     case invalidResponse
     case missingAudioURL
+    case contentHashMismatch
     case server(String)
 
     var errorDescription: String? {
@@ -183,6 +184,8 @@ enum ReadNativeTtsError: LocalizedError {
             return "Read TTS returned an invalid response."
         case .missingAudioURL:
             return "Read TTS returned no playable audio URL."
+        case .contentHashMismatch:
+            return "Downloaded Read audio did not match its verified content hash."
         case .server(let message):
             return message
         }
@@ -236,14 +239,23 @@ actor ReadNativeAudioCache {
         let destination = root.appending(path: fileName)
 
         if fileManager.fileExists(atPath: destination.path) {
-            try? fileManager.setAttributes(
-                [.modificationDate: Date()],
-                ofItemAtPath: destination.path
-            )
-            try prune(
-                additionallyProtecting: [destination.path]
-            )
-            return destination
+            if try verifyContentHash(
+                of: destination,
+                expected: asset.contentHash
+            ) {
+                try? fileManager.setAttributes(
+                    [.modificationDate: Date()],
+                    ofItemAtPath: destination.path
+                )
+                try prune(
+                    additionallyProtecting: [destination.path]
+                )
+                return destination
+            }
+
+            // A known bad cached asset must never be reused. Remove it and
+            // perform one clean download below.
+            try? fileManager.removeItem(at: destination)
         }
 
         let (temporaryURL, response) = try await session.download(
@@ -253,6 +265,14 @@ actor ReadNativeAudioCache {
         guard let http = response as? HTTPURLResponse,
               (200..<300).contains(http.statusCode) else {
             throw ReadNativeTtsError.invalidResponse
+        }
+
+        guard try verifyContentHash(
+            of: temporaryURL,
+            expected: asset.contentHash
+        ) else {
+            try? fileManager.removeItem(at: temporaryURL)
+            throw ReadNativeTtsError.contentHashMismatch
         }
 
         try? fileManager.removeItem(at: destination)
@@ -342,6 +362,75 @@ actor ReadNativeAudioCache {
                 continue
             }
         }
+    }
+
+    private func verifyContentHash(
+        of url: URL,
+        expected: String?
+    ) throws -> Bool {
+        guard
+            let expected = Self.normalizedSHA256(expected)
+        else {
+            // The backend has not asserted a byte checksum. Preserve the
+            // distinction between "unknown" and "verified" rather than
+            // inventing content identity from the synthesis request.
+            return true
+        }
+
+        let handle = try FileHandle(forReadingFrom: url)
+        defer {
+            try? handle.close()
+        }
+
+        var hasher = SHA256()
+        while true {
+            let data = try handle.read(
+                upToCount: 256 * 1024
+            ) ?? Data()
+            if data.isEmpty {
+                break
+            }
+            hasher.update(data: data)
+        }
+
+        let actual = hasher.finalize()
+            .map { String(format: "%02x", $0) }
+            .joined()
+
+        return actual == expected
+    }
+
+    private static func normalizedSHA256(
+        _ value: String?
+    ) -> String? {
+        guard let raw = value?
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+            .lowercased(),
+            !raw.isEmpty
+        else {
+            return nil
+        }
+
+        let hex =
+            raw.hasPrefix("sha256:")
+            ? String(raw.dropFirst("sha256:".count))
+            : raw
+
+        guard
+            hex.count == 64,
+            hex.allSatisfy({
+                $0.isNumber
+                || ("a"..."f").contains(String($0))
+            })
+        else {
+            // Unknown hash algorithms/formats are metadata, not something
+            // this SHA-256 verifier can truthfully validate.
+            return nil
+        }
+
+        return hex
     }
 
     private static func safeFileName(_ value: String) -> String {
