@@ -15,6 +15,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "shared/api-contracts/read/fixtures/reading-manifest-v1.sample.json"
+UNICODE_FIXTURE = ROOT / "shared/api-contracts/read/fixtures/unicode-scalar-offsets-v1.json"
 
 
 def fail(message: str) -> None:
@@ -94,9 +95,32 @@ def main() -> int:
     if expected_logical_start != manifest["estimatedSourceDurationMs"]:
         fail("document estimated duration does not equal final logical end")
 
+    unicode_fixture = json.loads(
+        UNICODE_FIXTURE.read_text(encoding="utf-8")
+    )
+    if unicode_fixture.get("schemaVersion") != 1:
+        fail("unicode scalar fixture must use schemaVersion 1")
+
+    for case in unicode_fixture.get("cases", []):
+        text = case["text"]
+        scalar_length = len(text)
+        utf16_length = len(text.encode("utf-16-le")) // 2
+
+        if scalar_length != case["scalarLength"]:
+            fail(
+                f"unicode scalar length mismatch for {case['id']}: "
+                f"expected {case['scalarLength']}, got {scalar_length}"
+            )
+        if utf16_length != case["utf16Length"]:
+            fail(
+                f"utf16 length mismatch for {case['id']}: "
+                f"expected {case['utf16Length']}, got {utf16_length}"
+            )
+
     print(
         f"ReadingManifest fixture valid: {len(segments)} segments, "
-        f"{total_words} words, {manifest['estimatedSourceDurationMs']} ms"
+        f"{total_words} words, {manifest['estimatedSourceDurationMs']} ms; "
+        f"{len(unicode_fixture.get('cases', []))} Unicode scalar cases"
     )
     return 0
 
