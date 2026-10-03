@@ -57,7 +57,27 @@ public final class FloentlyAPIClient {
     }
 
     public func get<T: Decodable>(_ path: String, as type: T.Type) async throws -> T {
-        try await request(path: path, method: "GET", body: Optional<Data>.none, as: type)
+        try await request(
+            path: path,
+            method: "GET",
+            body: Optional<Data>.none,
+            queryItems: [],
+            as: type
+        )
+    }
+
+    public func get<T: Decodable>(
+        _ path: String,
+        queryItems: [URLQueryItem],
+        as type: T.Type
+    ) async throws -> T {
+        try await request(
+            path: path,
+            method: "GET",
+            body: Optional<Data>.none,
+            queryItems: queryItems,
+            as: type
+        )
     }
 
     public func post<RequestBody: Encodable, ResponseBody: Decodable>(
@@ -66,16 +86,23 @@ public final class FloentlyAPIClient {
         as type: ResponseBody.Type
     ) async throws -> ResponseBody {
         let encoded = try JSONEncoder().encode(body)
-        return try await request(path: path, method: "POST", body: encoded, as: type)
+        return try await request(
+            path: path,
+            method: "POST",
+            body: encoded,
+            queryItems: [],
+            as: type
+        )
     }
 
     private func request<T: Decodable>(
         path: String,
         method: String,
         body: Data?,
+        queryItems: [URLQueryItem],
         as type: T.Type
     ) async throws -> T {
-        let url = try makeURL(path: path)
+        let url = try makeURL(path: path, queryItems: queryItems)
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
@@ -124,7 +151,10 @@ public final class FloentlyAPIClient {
         throw FloentlyAPIError(code: "HTTP_\(http.statusCode)", message: "Request failed with status \(http.statusCode).")
     }
 
-    private func makeURL(path: String) throws -> URL {
+    private func makeURL(
+        path: String,
+        queryItems: [URLQueryItem]
+    ) throws -> URL {
         guard var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
             throw FloentlyAPIError(code: "BAD_BASE_URL", message: "Invalid API base URL.")
         }
@@ -136,6 +166,10 @@ public final class FloentlyAPIClient {
             components.path = normalized
         } else {
             components.path = "/" + basePath + normalized
+        }
+
+        if !queryItems.isEmpty {
+            components.queryItems = queryItems
         }
 
         guard let url = components.url else {
