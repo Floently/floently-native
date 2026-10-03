@@ -4,6 +4,7 @@ import Foundation
 struct ReadNativeTtsAsset: Equatable {
     let audioURL: URL
     let cacheKey: String
+    let lookupKey: String
     let requestHash: String
     let contentHash: String?
     let duration: TimeInterval?
@@ -19,6 +20,29 @@ struct ReadNativeTtsRequest: Encodable {
 }
 
 actor ReadNativeTtsClient {
+    nonisolated static func lookupKey(
+        text: String,
+        language: String,
+        voiceId: String
+    ) -> String {
+        let identity = [
+            text.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            ),
+            language.isEmpty ? "auto" : language,
+            voiceId,
+            "read-tts-lookup-v1"
+        ].joined(separator: "\u{1f}")
+
+        let digest = SHA256.hash(
+            data: Data(identity.utf8)
+        )
+        .map { String(format: "%02x", $0) }
+        .joined()
+
+        return "sha256:\(digest)"
+    }
+
     private let baseURL: URL
     private let session: URLSession
 
@@ -92,6 +116,12 @@ actor ReadNativeTtsClient {
             ?? (source["voice_id"] as? String)
             ?? voiceId
 
+        let lookupKey = Self.lookupKey(
+            text: value,
+            language: language,
+            voiceId: voiceId
+        )
+
         let resolvedProvider =
             (source["provider"] as? String)?
                 .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -142,6 +172,7 @@ actor ReadNativeTtsClient {
         return ReadNativeTtsAsset(
             audioURL: audioURL,
             cacheKey: cacheKey,
+            lookupKey: lookupKey,
             requestHash: requestHash,
             contentHash: contentHash,
             duration: explicitDuration,
@@ -192,8 +223,29 @@ enum ReadNativeTtsError: LocalizedError {
     }
 }
 
+private struct ReadCachedAudioIndex: Codable {
+    let fileName: String
+    let duration: TimeInterval?
+    let voiceId: String
+    let provider: String?
+    let model: String?
+    let requestHash: String
+    let contentHash: String?
+}
+
+struct ReadCachedAudioAsset: Equatable {
+    let localURL: URL
+    let duration: TimeInterval?
+    let voiceId: String
+    let provider: String?
+    let model: String?
+    let requestHash: String
+    let contentHash: String?
+}
+
 actor ReadNativeAudioCache {
     private let root: URL
+    private let indexRoot: URL
     private let session: URLSession
     private let fileManager: FileManager
     private let maximumBytes: Int64
@@ -214,6 +266,10 @@ actor ReadNativeAudioCache {
             path: "FloentlyReadAudioV1",
             directoryHint: .isDirectory
         )
+        indexRoot = root.appending(
+            path: "index",
+            directoryHint: .isDirectory
+        )
         self.session = session
         self.fileManager = fileManager
         self.maximumBytes = max(
@@ -223,6 +279,61 @@ actor ReadNativeAudioCache {
         try fileManager.createDirectory(
             at: root,
             withIntermediateDirectories: true
+        )
+        try fileManager.createDirectory(
+            at: indexRoot,
+            withIntermediateDirectories: true
+        )
+    }
+
+    func cachedAsset(
+        lookupKey: String
+    ) throws -> ReadCachedAudioAsset? {
+        let metadataURL = indexURL(
+            forLookupKey: lookupKey
+        )
+        guard
+            let data = try? Data(contentsOf: metadataURL),
+            let metadata = try? JSONDecoder().decode(
+                ReadCachedAudioIndex.self,
+                from: data
+            )
+        else {
+            return nil
+        }
+
+        let audioURL = root.appending(
+            path: metadata.fileName
+        )
+        guard fileManager.fileExists(
+            atPath: audioURL.path
+        ) else {
+            try? fileManager.removeItem(at: metadataURL)
+            return nil
+        }
+
+        guard try verifyContentHash(
+            of: audioURL,
+            expected: metadata.contentHash
+        ) else {
+            try? fileManager.removeItem(at: audioURL)
+            try? fileManager.removeItem(at: metadataURL)
+            return nil
+        }
+
+        try? fileManager.setAttributes(
+            [.modificationDate: Date()],
+            ofItemAtPath: audioURL.path
+        )
+
+        return ReadCachedAudioAsset(
+            localURL: audioURL,
+            duration: metadata.duration,
+            voiceId: metadata.voiceId,
+            provider: metadata.provider,
+            model: metadata.model,
+            requestHash: metadata.requestHash,
+            contentHash: metadata.contentHash
         )
     }
 
@@ -246,6 +357,10 @@ actor ReadNativeAudioCache {
                 try? fileManager.setAttributes(
                     [.modificationDate: Date()],
                     ofItemAtPath: destination.path
+                )
+                try writeIndex(
+                    asset: asset,
+                    fileName: destination.lastPathComponent
                 )
                 try prune(
                     additionallyProtecting: [destination.path]
@@ -279,6 +394,10 @@ actor ReadNativeAudioCache {
         try fileManager.moveItem(
             at: temporaryURL,
             to: destination
+        )
+        try writeIndex(
+            asset: asset,
+            fileName: destination.lastPathComponent
         )
 
         try prune(
@@ -362,6 +481,34 @@ actor ReadNativeAudioCache {
                 continue
             }
         }
+    }
+
+    private func writeIndex(
+        asset: ReadNativeTtsAsset,
+        fileName: String
+    ) throws {
+        let metadata = ReadCachedAudioIndex(
+            fileName: fileName,
+            duration: asset.duration,
+            voiceId: asset.voiceId,
+            provider: asset.provider,
+            model: asset.model,
+            requestHash: asset.requestHash,
+            contentHash: asset.contentHash
+        )
+        let data = try JSONEncoder().encode(metadata)
+        try data.write(
+            to: indexURL(forLookupKey: asset.lookupKey),
+            options: .atomic
+        )
+    }
+
+    private func indexURL(
+        forLookupKey lookupKey: String
+    ) -> URL {
+        indexRoot.appending(
+            path: Self.safeFileName(lookupKey) + ".json"
+        )
     }
 
     private func verifyContentHash(
