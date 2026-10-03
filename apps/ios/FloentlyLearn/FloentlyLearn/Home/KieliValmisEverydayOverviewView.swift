@@ -37,7 +37,7 @@ struct KieliValmisEverydayOverviewView: View {
                             .font(.system(size: 34, weight: .heavy))
                             .foregroundStyle(KieliValmisColor.textPrimary)
 
-                        Text("Build practical Finnish through vocabulary, sentences and grammar drawn from the canonical card bank.")
+                        Text("Build practical Finnish through carefully structured vocabulary, sentence and grammar practice.")
                             .font(.system(size: 16))
                             .foregroundStyle(KieliValmisColor.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -188,7 +188,7 @@ struct KieliValmisEverydayOverviewView: View {
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(KieliValmisColor.textPrimary)
 
-                Text("Material is loaded from the server-owned KieliValmis card bank for the selected level.")
+                Text("Explore Finnish material for the selected level and activity type.")
                     .font(.system(size: 14))
                     .foregroundStyle(KieliValmisColor.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)

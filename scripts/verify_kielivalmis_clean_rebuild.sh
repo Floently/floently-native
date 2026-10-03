@@ -15,6 +15,7 @@ required_files=(
   "apps/ios/FloentlyLearn/FloentlyLearn/State/LearnAppModel.swift"
   "apps/ios/FloentlyLearn/FloentlyLearn/Auth/LearnAuthView.swift"
   "apps/ios/FloentlyLearn/FloentlyLearn/Home/KieliValmisHomeView.swift"
+  "apps/ios/FloentlyLearn/FloentlyLearn/Home/KieliValmisEverydayOverviewView.swift"
   "apps/ios/FloentlyLearn/FloentlyLearn/Home/KieliValmisPathwayOverviewViews.swift"
   "apps/ios/FloentlyShared/Sources/FloentlyShared/Learn/LearnContractsV1.swift"
   "apps/ios/FloentlyShared/Sources/FloentlyShared/Learn/LearnOverviewService.swift"
@@ -22,6 +23,7 @@ required_files=(
   "apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/state/LearnAppViewModel.kt"
   "apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/auth/LearnAuthScreen.kt"
   "apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/home/KieliValmisHomeScreen.kt"
+  "apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/home/KieliValmisEverydayOverviewScreen.kt"
   "apps/android/FloentlyLearn/app/src/main/java/com/floently/learn/home/KieliValmisPathwayOverviewScreens.kt"
   "apps/android/shared/src/main/java/com/floently/shared/learn/LearnContractsV1.kt"
   "apps/android/shared/src/main/java/com/floently/shared/learn/LearnOverviewService.kt"
@@ -69,7 +71,14 @@ grep -q "LearningEventOutboxV1" apps/ios/FloentlyShared/Sources/FloentlyShared/L
 grep -q "LearningSessionStateV1" apps/android/shared/src/main/java/com/floently/shared/learn/LearnContractsV1.kt
 grep -q "LearningEventOutboxV1" apps/android/shared/src/main/java/com/floently/shared/learn/LearnContractsV1.kt
 
-# The first real content slice must stay bound to existing backend endpoints.
+# Access decoding must include the real feature map used by Everyday Finnish.
+grep -q "generalFinnishAccess" apps/ios/FloentlyShared/Sources/FloentlyShared/Billing/FloentlyAccessModels.swift
+grep -q "accessibleProfessions" apps/ios/FloentlyShared/Sources/FloentlyShared/Billing/FloentlyAccessModels.swift
+grep -q "generalFinnishAccess" apps/android/shared/src/main/java/com/floently/shared/billing/FloentlyAccessModels.kt
+
+# The first real content slices must stay bound to existing backend endpoints.
+grep -q "/api/v1/cards/deck" apps/ios/FloentlyShared/Sources/FloentlyShared/Learn/LearnOverviewService.swift
+grep -q "/api/v1/cards/deck" apps/android/shared/src/main/java/com/floently/shared/learn/LearnOverviewService.kt
 grep -q "/api/v1/yki-practice/overview" apps/ios/FloentlyShared/Sources/FloentlyShared/Learn/LearnOverviewService.swift
 grep -q "/api/v1/professional/overview" apps/ios/FloentlyShared/Sources/FloentlyShared/Learn/LearnOverviewService.swift
 grep -q "/api/v1/yki-practice/overview" apps/android/shared/src/main/java/com/floently/shared/learn/LearnOverviewService.kt

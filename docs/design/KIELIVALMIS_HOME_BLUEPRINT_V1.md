@@ -31,6 +31,7 @@ safe area
 |-- Continue hero
 |
 |-- Pathways
+|     |-- Everyday Finnish
 |     |-- YKI preparation
 |     |-- Work in Finland
 |
@@ -86,6 +87,7 @@ When a real session is available, this card becomes data-driven.
 
 Initial paths:
 
+- Everyday Finnish
 - YKI preparation
 - Work in Finland / Professional Finnish
 
@@ -101,7 +103,7 @@ Each card:
 - short capability description
 - no fake percentage
 
-Everyday Finnish may be introduced as its own pathway when the final information architecture is frozen; the new app is not required to mirror legacy route grouping.
+Everyday Finnish is a first-class pathway. Its initial native surface exposes real server-backed vocabulary, sentence, and grammar material by level without inventing learner progress.
 
 ## 6. Skill cards
 

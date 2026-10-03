@@ -124,7 +124,7 @@ fun KieliValmisEverydayOverviewScreen(
                     fontWeight = FontWeight.ExtraBold
                 )
                 Text(
-                    text = "Build practical Finnish through vocabulary, sentences and grammar from the canonical card bank.",
+                    text = "Build practical Finnish through carefully structured vocabulary, sentence and grammar practice.",
                     color = KVColor.TextSecondary,
                     fontSize = 16.sp,
                     lineHeight = 24.sp
@@ -234,7 +234,7 @@ fun KieliValmisEverydayOverviewScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Material comes from the server-owned KieliValmis card bank for the selected level.",
+                                text = "Explore Finnish material for the selected level and activity type.",
                                 color = KVColor.TextSecondary,
                                 fontSize = 14.sp,
                                 lineHeight = 20.sp
