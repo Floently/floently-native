@@ -21,6 +21,7 @@ final class LearnAppModel: ObservableObject {
     let sessionStore: FloentlySessionStore
     let learningSession: LearningSessionStateV1
     let eventOutbox: LearningEventOutboxV1
+    let overviewService: LearnOverviewService
 
     private let api: FloentlyAPIClient
     private let authService: FloentlyAuthService
@@ -40,6 +41,7 @@ final class LearnAppModel: ObservableObject {
         self.api = client
         self.authService = FloentlyAuthService(api: client, store: store)
         self.accessService = FloentlyAccessService(api: client)
+        self.overviewService = LearnOverviewService(api: client)
     }
 
     var user: FloentlyUser? {

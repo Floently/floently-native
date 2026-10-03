@@ -244,10 +244,8 @@ struct KieliValmisHomeView: View {
     private func destinationView(_ destination: KieliValmisDestination) -> some View {
         switch destination {
         case .yki:
-            KieliValmisCapabilityView(
-                title: "YKI preparation",
-                subtitle: "Practice reading, listening, writing and speaking in one structured pathway.",
-                symbol: "checkmark.seal",
+            KieliValmisYKIOverviewView(
+                service: appModel.overviewService,
                 accessState: pathwayAccessState(
                     allowed: appModel.accessStatus?.ykiAccess == true
                         || appModel.accessStatus?.combinedAccess == true
@@ -259,10 +257,8 @@ struct KieliValmisHomeView: View {
                 }
             )
         case .professional:
-            KieliValmisCapabilityView(
-                title: "Work in Finland",
-                subtitle: "Profession-specific language, workplace communication and real-world scenarios.",
-                symbol: "briefcase",
+            KieliValmisProfessionalOverviewView(
+                service: appModel.overviewService,
                 accessState: pathwayAccessState(
                     allowed: appModel.accessStatus?.professionalAccess == true
                         || appModel.accessStatus?.combinedAccess == true
@@ -346,7 +342,7 @@ private struct KieliValmisPathPicker: View {
     }
 }
 
-private enum KieliValmisCapabilityAccessState {
+enum KieliValmisCapabilityAccessState {
     case available
     case locked(String)
     case unknown
