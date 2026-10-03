@@ -138,97 +138,6 @@ class ReadNativeTtsClient(
         )
     }
 
-    private fun writeIndex(
-        asset: ReadNativeTtsAsset,
-        fileName: String
-    ) {
-        val json = JSONObject()
-            .put("fileName", fileName)
-            .put("voiceId", asset.voiceId)
-            .put("requestHash", asset.requestHash)
-
-        asset.durationMs?.let {
-            json.put("durationMs", it)
-        }
-        asset.provider?.let {
-            json.put("provider", it)
-        }
-        asset.model?.let {
-            json.put("model", it)
-        }
-        asset.contentHash?.let {
-            json.put("contentHash", it)
-        }
-
-        val target = indexFile(asset.lookupKey)
-        val temporary = File(
-            indexRoot,
-            target.name + ".partial-" + System.nanoTime()
-        )
-        temporary.writeText(json.toString())
-        if (target.exists()) {
-            target.delete()
-        }
-        if (!temporary.renameTo(target)) {
-            temporary.copyTo(target, overwrite = true)
-            temporary.delete()
-        }
-    }
-
-    private fun indexFile(
-        lookupKey: String
-    ): File = File(
-        indexRoot,
-        sha256Hex(lookupKey) + ".json"
-    )
-
-    private fun verifyContentHash(
-        file: File,
-        expected: String?
-    ): Boolean {
-        val normalized = normalizeSha256(expected)
-            ?: return true
-
-        val digest = MessageDigest.getInstance("SHA-256")
-        file.inputStream().buffered().use { input ->
-            val buffer = ByteArray(256 * 1024)
-            while (true) {
-                val count = input.read(buffer)
-                if (count < 0) break
-                if (count > 0) {
-                    digest.update(buffer, 0, count)
-                }
-            }
-        }
-
-        val actual = digest.digest()
-            .joinToString("") { "%02x".format(it) }
-        return actual == normalized
-    }
-
-    private fun normalizeSha256(
-        value: String?
-    ): String? {
-        val raw = value
-            ?.trim()
-            ?.lowercase()
-            ?.takeIf { it.isNotBlank() }
-            ?: return null
-        val hex = if (raw.startsWith("sha256:")) {
-            raw.removePrefix("sha256:")
-        } else {
-            raw
-        }
-
-        return hex.takeIf {
-            it.length == 64
-                && it.all { character ->
-                    character in '0'..'9'
-                        || character in 'a'..'f'
-                }
-        }
-    }
-
     private fun sha256Hex(value: String): String =
         MessageDigest.getInstance("SHA-256")
             .digest(value.toByteArray(Charsets.UTF_8))
@@ -272,6 +181,15 @@ class ReadNativeAudioCache(
         val json = runCatching {
             JSONObject(metadataFile.readText())
         }.getOrNull() ?: return@withContext null
+
+        val schemaVersion = if (json.has("schemaVersion")) {
+            json.optInt("schemaVersion", 0)
+        } else {
+            0
+        }
+        if (schemaVersion !in 0..CACHE_INDEX_SCHEMA_VERSION) {
+            return@withContext null
+        }
 
         val fileName = json.optString("fileName")
             .takeIf { it.isNotBlank() }
@@ -486,6 +404,102 @@ class ReadNativeAudioCache(
                     totalBytes -= size
                 }
             }
+    }
+
+    private fun writeIndex(
+        asset: ReadNativeTtsAsset,
+        fileName: String
+    ) {
+        val json = JSONObject()
+            .put("schemaVersion", CACHE_INDEX_SCHEMA_VERSION)
+            .put("fileName", fileName)
+            .put("voiceId", asset.voiceId)
+            .put("requestHash", asset.requestHash)
+
+        asset.durationMs?.let {
+            json.put("durationMs", it)
+        }
+        asset.provider?.let {
+            json.put("provider", it)
+        }
+        asset.model?.let {
+            json.put("model", it)
+        }
+        asset.contentHash?.let {
+            json.put("contentHash", it)
+        }
+
+        val target = indexFile(asset.lookupKey)
+        val temporary = File(
+            indexRoot,
+            target.name + ".partial-" + System.nanoTime()
+        )
+        temporary.writeText(json.toString())
+        if (target.exists()) {
+            target.delete()
+        }
+        if (!temporary.renameTo(target)) {
+            temporary.copyTo(target, overwrite = true)
+            temporary.delete()
+        }
+    }
+
+    private fun indexFile(
+        lookupKey: String
+    ): File = File(
+        indexRoot,
+        sha256Hex(lookupKey) + ".json"
+    )
+
+    private fun verifyContentHash(
+        file: File,
+        expected: String?
+    ): Boolean {
+        val normalized = normalizeSha256(expected)
+            ?: return true
+
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().buffered().use { input ->
+            val buffer = ByteArray(256 * 1024)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                if (count > 0) {
+                    digest.update(buffer, 0, count)
+                }
+            }
+        }
+
+        val actual = digest.digest()
+            .joinToString("") { "%02x".format(it) }
+        return actual == normalized
+    }
+
+    private fun normalizeSha256(
+        value: String?
+    ): String? {
+        val raw = value
+            ?.trim()
+            ?.lowercase()
+            ?.takeIf { it.isNotBlank() }
+            ?: return null
+        val hex = if (raw.startsWith("sha256:")) {
+            raw.removePrefix("sha256:")
+        } else {
+            raw
+        }
+
+        return hex.takeIf {
+            it.length == 64
+                && it.all { character ->
+                    character in '0'..'9'
+                        || character in 'a'..'f'
+                }
+        }
+    }
+
+    private companion object {
+        const val CACHE_INDEX_SCHEMA_VERSION = 1
     }
 
     private fun sha256Hex(value: String): String =
