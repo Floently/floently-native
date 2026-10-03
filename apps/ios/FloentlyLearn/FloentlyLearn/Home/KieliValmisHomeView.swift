@@ -374,10 +374,7 @@ private struct KieliValmisCapabilityView: View {
 
                     switch accessState {
                     case .available:
-                        KieliValmisStatusBanner(
-                            message: "This pathway is available for your account. Native learning activities are being connected to the existing backend.",
-                            tone: .success
-                        )
+                        EmptyView()
 
                     case .locked(let message):
                         KieliValmisStatusBanner(

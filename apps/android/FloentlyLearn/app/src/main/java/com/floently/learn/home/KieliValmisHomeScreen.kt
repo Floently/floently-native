@@ -428,12 +428,7 @@ private fun KieliValmisCapabilityScreen(
 
 
             when (accessState) {
-                CapabilityAccessState.Available -> {
-                    KieliValmisStatusBanner(
-                        message = "This pathway is available for your account. Native learning activities are being connected to the existing backend.",
-                        tone = KVStatusTone.Success
-                    )
-                }
+                CapabilityAccessState.Available -> Unit
                 is CapabilityAccessState.Locked -> {
                     KieliValmisStatusBanner(
                         message = accessState.message,
