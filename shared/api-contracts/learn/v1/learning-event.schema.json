@@ -1,68 +1,90 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://floently.com/contracts/learn/v1/learning-event.schema.json",
-  "title": "LearningEventV1",
+  "$id": "https://floently.com/contracts/learn/v1/learner-event.schema.json",
+  "title": "LearnerEvent",
+  "description": "Mirror of packages/core/schemas/learning.ts LearnerEvent.",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schema_version",
-    "event_id",
-    "learner_id",
-    "session_id",
-    "event_type",
+    "schemaVersion",
+    "eventId",
+    "learnerId",
+    "occurredAt",
+    "eventKind",
+    "taskId",
+    "contentVersion",
     "pathway",
-    "occurred_at",
-    "idempotency_key",
-    "evidence"
+    "runtime",
+    "skills",
+    "levelBand"
   ],
   "properties": {
-    "schema_version": { "const": 1 },
-    "event_id": { "type": "string", "minLength": 1 },
-    "learner_id": { "type": "string", "minLength": 1 },
-    "session_id": { "type": "string", "minLength": 1 },
-    "activity_id": { "type": ["string", "null"] },
-    "event_type": {
+    "schemaVersion": { "const": "learning.v1" },
+    "eventId": { "type": "string", "minLength": 1 },
+    "learnerId": { "type": "string", "minLength": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "eventKind": {
       "type": "string",
       "enum": [
-        "card_shown",
-        "card_answered",
-        "card_correct",
-        "card_incorrect",
-        "confidence_captured",
-        "review_scheduled",
-        "review_completed",
-        "vocabulary_mastered",
-        "grammar_activity",
-        "reading_task",
-        "listening_task",
+        "task_started",
+        "task_completed",
+        "task_skipped",
+        "task_abandoned",
+        "answer_submitted",
+        "answer_corrected",
+        "retry_completed",
         "writing_submitted",
-        "writing_feedback",
-        "speaking_session",
-        "roleplay_turn",
-        "roleplay_completed",
-        "yki_task_attempt",
-        "yki_skill_result",
-        "professional_scenario_attempt",
-        "professional_mission_completed",
-        "phrase_captured",
-        "phrase_reviewed",
-        "learner_correction",
-        "qualified_activity"
+        "writing_retried",
+        "speaking_submitted",
+        "reading_completed",
+        "listening_completed"
       ]
     },
+    "taskId": { "type": "string", "minLength": 1 },
+    "contentVersion": { "type": "string", "minLength": 1 },
+    "attemptId": { "type": "string", "minLength": 1 },
     "pathway": {
       "type": "string",
-      "enum": ["everyday", "yki", "professional"]
+      "enum": ["everyday", "professional", "yki"]
     },
-    "skill": {
-      "type": ["string", "null"],
-      "enum": [null, "vocabulary", "grammar", "listening", "speaking", "reading", "writing"]
+    "runtime": {
+      "type": "string",
+      "enum": [
+        "cards",
+        "roleplay",
+        "reading",
+        "writing",
+        "listening",
+        "yki",
+        "professional_mission",
+        "grammar"
+      ]
     },
-    "occurred_at": { "type": "string", "format": "date-time" },
-    "idempotency_key": { "type": "string", "minLength": 1 },
-    "evidence": {
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "vocabulary",
+          "grammar",
+          "listening",
+          "speaking",
+          "reading",
+          "writing"
+        ]
+      }
+    },
+    "levelBand": { "type": "string", "minLength": 1 },
+    "profession": { "type": "string", "minLength": 1 },
+    "contextId": { "type": "string", "minLength": 1 },
+    "score": { "type": "number" },
+    "maxScore": { "type": "number", "minimum": 0 },
+    "metadata": {
       "type": "object",
-      "additionalProperties": true
+      "additionalProperties": {
+        "type": ["string", "number", "boolean"]
+      }
     }
   }
 }

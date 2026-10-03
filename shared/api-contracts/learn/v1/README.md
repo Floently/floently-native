@@ -1,25 +1,31 @@
-# KieliValmis Learn Contracts V1
+# KieliValmis Learn Contract Mirrors
 
-These schemas begin the versioned semantic boundary for the clean native rebuild.
+The canonical cross-feature learning contract already exists in:
 
-Current V1 definitions:
+`Floently/floently-finnish/packages/core/schemas/learning.ts`
 
-- `activity-definition.schema.json`
-- `learning-session-plan.schema.json`
+and is versioned as:
+
+`learning.v1`
+
+This directory mirrors the canonical concepts needed by the clean native rebuild.
+
+Current mirrors:
+
+- `task-descriptor.schema.json`
+- `practice-session-manifest.schema.json`
 - `learning-event.schema.json`
+
+Temporary compatibility filenames:
+
+- `activity-definition.schema.json` -> TaskDescriptor
+- `learning-session-plan.schema.json` -> PracticeSessionManifest
 
 Rules:
 
-- mobile/web UI is not the source of learner truth;
-- learner events are idempotent;
-- session plans are bounded delivery contracts, not copies of the canonical bank;
-- backend-owned card/YKI material remains authoritative;
-- schemas are language-neutral and may generate Swift/Kotlin/TypeScript/Python models later.
-
-Planned next V1 contracts:
-
-- `EvaluationResultV1`
-- `LearnerSnapshotV1`
-- `ProgressProjectionV1`
-- `RecommendationV1`
-- `SpeechTurnV1`
+- do not invent a second learner-event wire format;
+- server authentication owns learner identity verification;
+- backend learner-event persistence is authoritative;
+- mobile event outboxes are transport/retry state, not progress authority;
+- backend-owned card/YKI content remains canonical;
+- native Swift/Kotlin models must serialize compatibly with `learning.v1`.

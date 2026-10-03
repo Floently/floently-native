@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://floently.com/contracts/learn/v1/learning-session-plan.schema.json",
-  "title": "PracticeSessionManifestCompatibilityAlias",
+  "$id": "https://floently.com/contracts/learn/v1/practice-session-manifest.schema.json",
+  "title": "PracticeSessionManifest",
   "description": "Mirror of packages/core/schemas/learning.ts PracticeSessionManifest.",
   "type": "object",
   "additionalProperties": false,

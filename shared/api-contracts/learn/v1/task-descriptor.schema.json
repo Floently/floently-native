@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://floently.com/contracts/learn/v1/activity-definition.schema.json",
-  "title": "TaskDescriptorCompatibilityAlias",
+  "$id": "https://floently.com/contracts/learn/v1/task-descriptor.schema.json",
+  "title": "TaskDescriptor",
   "description": "Mirror of packages/core/schemas/learning.ts TaskDescriptor.",
   "type": "object",
   "additionalProperties": false,
