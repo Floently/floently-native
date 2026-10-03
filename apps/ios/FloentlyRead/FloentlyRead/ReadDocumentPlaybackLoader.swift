@@ -123,6 +123,9 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                     )
                 }
 
+                await updateCacheProtection(
+                    playback: playback
+                )
                 state = .ready
                 startRefillLoop(
                     manifest: manifest,
@@ -211,6 +214,9 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                 guard !Task.isCancelled else { return }
 
                 playback.refresh(document)
+                await updateCacheProtection(
+                    playback: playback
+                )
                 state = .ready
 
                 startRefillLoop(
@@ -255,6 +261,9 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                     guard !Task.isCancelled else { return }
 
                     playback.refresh(document)
+                    await updateCacheProtection(
+                        playback: playback
+                    )
                     state = .ready
 
                     bindUnpreparedSeek(
@@ -368,6 +377,9 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                 guard !Task.isCancelled else { return }
 
                 playback.refresh(document)
+                await updateCacheProtection(
+                    playback: playback
+                )
                 refillTelemetry.refillSuccesses += 1
                 refillTelemetry.lastFailure = nil
                 state = .ready
@@ -420,8 +432,15 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                 }
 
                 if playback.state == .ended {
+                    await coordinator?.replaceProtectedSegments(
+                        []
+                    )
                     return
                 }
+
+                await updateCacheProtection(
+                    playback: playback
+                )
 
                 await refillIfNeeded(
                     manifest: manifest,
@@ -495,6 +514,9 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
             guard !Task.isCancelled else { return }
 
             playback.refresh(document)
+            await updateCacheProtection(
+                playback: playback
+            )
             refillTelemetry.refillSuccesses += 1
             refillTelemetry.lastFailure = nil
             nextRefillAllowedAt = .distantPast
@@ -507,6 +529,25 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
             nextRefillAllowedAt = Date()
                 .addingTimeInterval(5)
         }
+    }
+
+    private func updateCacheProtection(
+        playback: ReadPlaybackSession
+    ) async {
+        guard let coordinator else { return }
+
+        let floorIndex =
+            playback.activeSegmentIndex
+            ?? preparedSegments.keys.min()
+            ?? 0
+
+        let protected = preparedSegments.values
+            .filter { $0.index >= floorIndex }
+            .sorted { $0.index < $1.index }
+
+        await coordinator.replaceProtectedSegments(
+            protected
+        )
     }
 
     private func cancelTasks() {
