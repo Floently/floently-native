@@ -218,7 +218,7 @@ private struct YKISkillAvailabilityRow: View {
     let count: Int
 
     private var title: String {
-        skill.prefix(1).uppercased() + skill.dropFirst()
+        skill.prefix(1).uppercased() + String(skill.dropFirst())
     }
 
     private var symbol: String {
@@ -356,7 +356,7 @@ struct KieliValmisProfessionalOverviewView: View {
                             Text(
                                 track.coreTasks
                                     .prefix(3)
-                                    .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+                                    .map { $0.prefix(1).uppercased() + String($0.dropFirst()) }
                                     .joined(separator: " · ")
                             )
                             .font(.system(size: 14))

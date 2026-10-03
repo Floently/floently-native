@@ -366,8 +366,8 @@ enum KieliValmisStatusTone {
 struct KieliValmisStatusBanner: View {
     let message: String
     let tone: KieliValmisStatusTone
-    var actionTitle: String?
-    var action: (() -> Void)?
+    var actionTitle: String? = nil
+    var action: (() -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .center, spacing: KieliValmisSpacing.sm) {
