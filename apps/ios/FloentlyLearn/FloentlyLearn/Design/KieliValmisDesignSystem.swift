@@ -336,3 +336,102 @@ struct KieliValmisSegmentedControl<Option: Hashable>: View {
         )
     }
 }
+
+
+enum KieliValmisStatusTone {
+    case info
+    case warning
+    case danger
+    case success
+
+    var accent: Color {
+        switch self {
+        case .info: return KieliValmisColor.brandBright
+        case .warning: return KieliValmisColor.warning
+        case .danger: return KieliValmisColor.danger
+        case .success: return KieliValmisColor.success
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .info: return "info.circle.fill"
+        case .warning: return "exclamationmark.triangle.fill"
+        case .danger: return "exclamationmark.circle.fill"
+        case .success: return "checkmark.circle.fill"
+        }
+    }
+}
+
+struct KieliValmisStatusBanner: View {
+    let message: String
+    let tone: KieliValmisStatusTone
+    var actionTitle: String?
+    var action: (() -> Void)?
+
+    var body: some View {
+        HStack(alignment: .center, spacing: KieliValmisSpacing.sm) {
+            Image(systemName: tone.symbol)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(tone.accent)
+                .frame(width: 24, height: 24)
+                .accessibilityHidden(true)
+
+            Text(message)
+                .font(.system(size: 14))
+                .foregroundStyle(KieliValmisColor.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: KieliValmisSpacing.s)
+
+            if let actionTitle, let action {
+                Button(actionTitle, action: action)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(KieliValmisColor.textPrimary)
+                    .frame(minHeight: 48)
+            }
+        }
+        .padding(.horizontal, KieliValmisSpacing.sm)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: KieliValmisRadius.m, style: .continuous)
+                .fill(KieliValmisColor.surface1)
+                .overlay(
+                    RoundedRectangle(cornerRadius: KieliValmisRadius.m, style: .continuous)
+                        .stroke(KieliValmisColor.borderSoft, lineWidth: 1)
+                )
+        )
+        .accessibilityElement(children: .combine)
+    }
+}
+
+struct KieliValmisSecondaryButton: View {
+    let title: String
+    var destructive: Bool = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(
+                    destructive ? KieliValmisColor.danger : KieliValmisColor.textPrimary
+                )
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(
+                    RoundedRectangle(cornerRadius: KieliValmisRadius.l, style: .continuous)
+                        .fill(KieliValmisColor.surface1)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: KieliValmisRadius.l, style: .continuous)
+                                .stroke(
+                                    destructive ? KieliValmisColor.danger.opacity(0.55) : KieliValmisColor.border,
+                                    lineWidth: 1
+                                )
+                        )
+                )
+        }
+        .buttonStyle(.plain)
+    }
+}

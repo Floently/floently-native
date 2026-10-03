@@ -12,6 +12,8 @@ private enum KieliValmisDestination: Hashable {
 }
 
 struct KieliValmisHomeView: View {
+    @EnvironmentObject private var appModel: LearnAppModel
+
     @State private var path: [KieliValmisDestination] = []
     @State private var showPathPicker = false
 
@@ -28,6 +30,7 @@ struct KieliValmisHomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: KieliValmisSpacing.xl) {
                     header
+                    statusBanners
                     continueHero
                     pathways
                     skills
@@ -113,7 +116,7 @@ struct KieliValmisHomeView: View {
                 KieliValmisPathwayCard(
                     symbol: "checkmark.seal",
                     title: "YKI preparation",
-                    subtitle: "Reading, listening, writing and speaking practice."
+                    subtitle: ykiPathwaySubtitle
                 ) {
                     path.append(.yki)
                 }
@@ -121,7 +124,7 @@ struct KieliValmisHomeView: View {
                 KieliValmisPathwayCard(
                     symbol: "briefcase",
                     title: "Work in Finland",
-                    subtitle: "Professional Finnish and workplace communication."
+                    subtitle: professionalPathwaySubtitle
                 ) {
                     path.append(.professional)
                 }
@@ -179,19 +182,96 @@ struct KieliValmisHomeView: View {
     }
 
     @ViewBuilder
+    private var statusBanners: some View {
+        if let connectionNotice = appModel.connectionNotice {
+            KieliValmisStatusBanner(
+                message: connectionNotice,
+                tone: .warning,
+                actionTitle: "Retry",
+                action: {
+                    Task { await appModel.refreshAccess() }
+                }
+            )
+        }
+
+        if let accessNotice = appModel.accessNotice {
+            KieliValmisStatusBanner(
+                message: accessNotice,
+                tone: .info,
+                actionTitle: "Retry",
+                action: {
+                    Task { await appModel.refreshAccess() }
+                }
+            )
+        }
+    }
+
+    private var ykiPathwaySubtitle: String {
+        guard let access = appModel.accessStatus else {
+            return "Reading, listening, writing and speaking practice."
+        }
+
+        if access.ykiAccess || access.combinedAccess || access.isInternalAllAccess {
+            return "Reading, listening, writing and speaking practice."
+        }
+
+        return "YKI access is not active for this account."
+    }
+
+    private var professionalPathwaySubtitle: String {
+        guard let access = appModel.accessStatus else {
+            return "Professional Finnish and workplace communication."
+        }
+
+        if access.professionalAccess || access.combinedAccess || access.isInternalAllAccess {
+            return "Professional Finnish and workplace communication."
+        }
+
+        return "Professional Finnish access is not active for this account."
+    }
+
+    private func pathwayAccessState(
+        allowed: Bool,
+        lockedMessage: String
+    ) -> KieliValmisCapabilityAccessState {
+        guard appModel.accessStatus != nil else {
+            return .unknown
+        }
+        return allowed ? .available : .locked(lockedMessage)
+    }
+
+    @ViewBuilder
     private func destinationView(_ destination: KieliValmisDestination) -> some View {
         switch destination {
         case .yki:
             KieliValmisCapabilityView(
                 title: "YKI preparation",
                 subtitle: "Practice reading, listening, writing and speaking in one structured pathway.",
-                symbol: "checkmark.seal"
+                symbol: "checkmark.seal",
+                accessState: pathwayAccessState(
+                    allowed: appModel.accessStatus?.ykiAccess == true
+                        || appModel.accessStatus?.combinedAccess == true
+                        || appModel.accessStatus?.isInternalAllAccess == true,
+                    lockedMessage: "YKI access is not active for this account."
+                ),
+                retryAccess: {
+                    Task { await appModel.refreshAccess() }
+                }
             )
         case .professional:
             KieliValmisCapabilityView(
                 title: "Work in Finland",
                 subtitle: "Profession-specific language, workplace communication and real-world scenarios.",
-                symbol: "briefcase"
+                symbol: "briefcase",
+                accessState: pathwayAccessState(
+                    allowed: appModel.accessStatus?.professionalAccess == true
+                        || appModel.accessStatus?.combinedAccess == true
+                        || appModel.accessStatus?.isInternalAllAccess == true,
+                    lockedMessage: "Professional Finnish access is not active for this account."
+                ),
+                retryAccess: {
+                    Task { await appModel.refreshAccess() }
+                }
             )
         case .speaking:
             KieliValmisCapabilityView(
@@ -224,11 +304,7 @@ struct KieliValmisHomeView: View {
                 symbol: "arrow.triangle.2.circlepath"
             )
         case .profile:
-            KieliValmisCapabilityView(
-                title: "Profile",
-                subtitle: "Account, preferences and access settings will live here.",
-                symbol: "person.crop.circle"
-            )
+            KieliValmisProfileView(appModel: appModel)
         }
     }
 }
@@ -270,31 +346,161 @@ private struct KieliValmisPathPicker: View {
     }
 }
 
+private enum KieliValmisCapabilityAccessState {
+    case available
+    case locked(String)
+    case unknown
+}
+
 private struct KieliValmisCapabilityView: View {
     let title: String
     let subtitle: String
     let symbol: String
+    var accessState: KieliValmisCapabilityAccessState = .available
+    var retryAccess: (() -> Void)?
 
     var body: some View {
         ZStack {
             KieliValmisColor.canvas.ignoresSafeArea()
 
-            VStack(alignment: .leading, spacing: KieliValmisSpacing.l) {
-                KieliValmisIconTile(symbol: symbol)
+            ScrollView {
+                VStack(alignment: .leading, spacing: KieliValmisSpacing.l) {
+                    KieliValmisIconTile(symbol: symbol)
 
-                Text(title)
-                    .font(.system(size: 34, weight: .heavy))
-                    .foregroundStyle(KieliValmisColor.textPrimary)
+                    Text(title)
+                        .font(.system(size: 34, weight: .heavy))
+                        .foregroundStyle(KieliValmisColor.textPrimary)
 
-                Text(subtitle)
-                    .font(.system(size: 16))
-                    .foregroundStyle(KieliValmisColor.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    Text(subtitle)
+                        .font(.system(size: 16))
+                        .foregroundStyle(KieliValmisColor.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                Spacer()
+                    switch accessState {
+                    case .available:
+                        KieliValmisStatusBanner(
+                            message: "This pathway is available for your account. Native learning activities are being connected to the existing backend.",
+                            tone: .success
+                        )
+
+                    case .locked(let message):
+                        KieliValmisStatusBanner(
+                            message: message,
+                            tone: .warning
+                        )
+
+                    case .unknown:
+                        KieliValmisStatusBanner(
+                            message: "We cannot confirm your pathway access right now.",
+                            tone: .info,
+                            actionTitle: retryAccess == nil ? nil : "Retry",
+                            action: retryAccess
+                        )
+                    }
+
+                    Spacer(minLength: KieliValmisSpacing.xl)
+                }
+                .padding(.horizontal, KieliValmisSpacing.ml)
+                .padding(.top, KieliValmisSpacing.xl)
+                .padding(.bottom, KieliValmisSpacing.xl)
             }
-            .padding(.horizontal, KieliValmisSpacing.ml)
-            .padding(.top, KieliValmisSpacing.xl)
+        }
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct KieliValmisProfileView: View {
+    @ObservedObject var appModel: LearnAppModel
+
+    private var accessSummary: String {
+        guard let access = appModel.accessStatus else {
+            return "Access status unavailable"
+        }
+
+        if access.isInternalAllAccess {
+            return "Internal all-access"
+        }
+        if access.ykiAccess && access.professionalAccess {
+            return "YKI + Professional Finnish"
+        }
+        if access.ykiAccess {
+            return "YKI"
+        }
+        if access.professionalAccess {
+            return "Professional Finnish"
+        }
+        return "No active Learn pathway"
+    }
+
+    var body: some View {
+        ZStack {
+            KieliValmisColor.canvas.ignoresSafeArea()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: KieliValmisSpacing.xl) {
+                    KieliValmisIconTile(symbol: "person.crop.circle")
+
+                    VStack(alignment: .leading, spacing: KieliValmisSpacing.s) {
+                        Text("Profile")
+                            .font(.system(size: 34, weight: .heavy))
+                            .foregroundStyle(KieliValmisColor.textPrimary)
+
+                        if let user = appModel.user {
+                            Text(user.name?.isEmpty == false ? user.name! : user.email)
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(KieliValmisColor.textPrimary)
+
+                            if user.name?.isEmpty == false {
+                                Text(user.email)
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(KieliValmisColor.textSecondary)
+                            }
+                        }
+                    }
+
+                    KieliValmisCardSurface(style: .compact) {
+                        Text("Access")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(KieliValmisColor.textTertiary)
+
+                        Text(accessSummary)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(KieliValmisColor.textPrimary)
+
+                        if let professions = appModel.accessStatus?.accessibleProfessions,
+                           !professions.isEmpty {
+                            Text(
+                                professions
+                                    .map { $0.replacingOccurrences(of: "_", with: " ").capitalized }
+                                    .joined(separator: " · ")
+                            )
+                            .font(.system(size: 14))
+                            .foregroundStyle(KieliValmisColor.textSecondary)
+                        }
+                    }
+
+                    if let accessNotice = appModel.accessNotice {
+                        KieliValmisStatusBanner(
+                            message: accessNotice,
+                            tone: .info,
+                            actionTitle: "Retry",
+                            action: {
+                                Task { await appModel.refreshAccess() }
+                            }
+                        )
+                    }
+
+                    KieliValmisSecondaryButton(
+                        title: "Sign out",
+                        destructive: true
+                    ) {
+                        Task { await appModel.logout() }
+                    }
+                }
+                .padding(.horizontal, KieliValmisSpacing.ml)
+                .padding(.top, KieliValmisSpacing.xl)
+                .padding(.bottom, KieliValmisSpacing.xl)
+            }
         }
         .navigationBarTitleDisplayMode(.inline)
     }
