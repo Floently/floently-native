@@ -224,6 +224,7 @@ enum ReadNativeTtsError: LocalizedError {
 }
 
 private struct ReadCachedAudioIndex: Codable {
+    let schemaVersion: Int?
     let fileName: String
     let duration: TimeInterval?
     let voiceId: String
@@ -244,6 +245,8 @@ struct ReadCachedAudioAsset: Equatable {
 }
 
 actor ReadNativeAudioCache {
+    private static let cacheIndexSchemaVersion = 1
+
     private let root: URL
     private let indexRoot: URL
     private let session: URLSession
@@ -298,6 +301,13 @@ actor ReadNativeAudioCache {
                 ReadCachedAudioIndex.self,
                 from: data
             )
+        else {
+            return nil
+        }
+
+        guard
+            metadata.schemaVersion == nil
+                || metadata.schemaVersion == Self.cacheIndexSchemaVersion
         else {
             return nil
         }
@@ -488,6 +498,7 @@ actor ReadNativeAudioCache {
         fileName: String
     ) throws {
         let metadata = ReadCachedAudioIndex(
+            schemaVersion: Self.cacheIndexSchemaVersion,
             fileName: fileName,
             duration: asset.duration,
             voiceId: asset.voiceId,
