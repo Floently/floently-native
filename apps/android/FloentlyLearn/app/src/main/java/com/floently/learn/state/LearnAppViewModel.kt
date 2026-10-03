@@ -9,6 +9,8 @@ import com.floently.shared.auth.FloentlyAuthService
 import com.floently.shared.auth.FloentlySecureSessionStore
 import com.floently.shared.billing.FloentlyAccessService
 import com.floently.shared.billing.FloentlyAccessStatus
+import com.floently.shared.learn.LearningEventOutboxV1
+import com.floently.shared.learn.LearningSessionStateV1
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,6 +35,9 @@ data class LearnAppUiState(
 
 class LearnAppViewModel(application: Application) : AndroidViewModel(application) {
     private val sessionStore = FloentlySecureSessionStore(application)
+
+    val learningSession = LearningSessionStateV1()
+    val eventOutbox = LearningEventOutboxV1()
 
     private val api = FloentlyApiClient(
         tokenProvider = { sessionStore.session?.token }
@@ -211,6 +216,8 @@ class LearnAppViewModel(application: Application) : AndroidViewModel(application
     fun logout() {
         viewModelScope.launch {
             authService.logout()
+            learningSession.clear()
+            eventOutbox.clear()
             _uiState.value = LearnAppUiState(
                 phase = LearnAppPhase.SignedOut
             )

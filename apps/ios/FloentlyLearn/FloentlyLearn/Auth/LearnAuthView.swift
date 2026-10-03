@@ -1,4 +1,5 @@
 import SwiftUI
+import FloentlyShared
 
 struct LearnAuthView: View {
     enum Mode: Hashable {

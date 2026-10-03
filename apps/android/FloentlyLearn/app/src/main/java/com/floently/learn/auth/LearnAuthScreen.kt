@@ -176,9 +176,6 @@ fun LearnAuthScreen(
                 onSelect = {
                     mode = it
                     appState.clearAuthError()
-                    if (it == AuthMode.Create && name.isEmpty()) {
-                        nameFocus.requestFocus()
-                    }
                 }
             )
 

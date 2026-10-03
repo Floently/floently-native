@@ -19,6 +19,8 @@ final class LearnAppModel: ObservableObject {
     @Published var accessNotice: String?
 
     let sessionStore: FloentlySessionStore
+    let learningSession: LearningSessionStateV1
+    let eventOutbox: LearningEventOutboxV1
 
     private let api: FloentlyAPIClient
     private let authService: FloentlyAuthService
@@ -27,6 +29,8 @@ final class LearnAppModel: ObservableObject {
     init() {
         let store = FloentlySessionStore()
         self.sessionStore = store
+        self.learningSession = LearningSessionStateV1()
+        self.eventOutbox = LearningEventOutboxV1()
 
         let client = FloentlyAPIClient(
             tokenProvider: {
@@ -142,6 +146,8 @@ final class LearnAppModel: ObservableObject {
 
     func logout() async {
         await authService.logout()
+        learningSession.clear()
+        eventOutbox.clear()
         accessStatus = nil
         authError = nil
         accessNotice = nil
