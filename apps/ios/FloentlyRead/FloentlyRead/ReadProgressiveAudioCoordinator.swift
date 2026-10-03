@@ -45,6 +45,32 @@ actor ReadProgressiveAudioCoordinator {
         result.reserveCapacity(selected.count)
 
         for segment in selected {
+            let lookupKey = ReadNativeTtsClient.lookupKey(
+                text: segment.text,
+                language: manifest.language,
+                voiceId: voiceId
+            )
+
+            if let cached = try await cache.cachedAsset(
+                lookupKey: lookupKey
+            ) {
+                result.append(
+                    ReadPlayableSegment(
+                        id: segment.id,
+                        index: segment.index,
+                        url: cached.localURL,
+                        logicalStartTime: TimeInterval(
+                            segment.logicalStartMs
+                        ) / 1_000,
+                        logicalEndTime: TimeInterval(
+                            segment.logicalEndMs
+                        ) / 1_000,
+                        physicalDuration: cached.duration
+                    )
+                )
+                continue
+            }
+
             let asset = try await tts.synthesize(
                 text: segment.text,
                 language: manifest.language,
@@ -70,6 +96,14 @@ actor ReadProgressiveAudioCoordinator {
         }
 
         return result
+    }
+
+    func replaceProtectedSegments(
+        _ segments: [ReadPlayableSegment]
+    ) async {
+        try? await cache.replaceProtectedURLs(
+            segments.map(\.url)
+        )
     }
 
     func playableDocument(
