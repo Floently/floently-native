@@ -443,6 +443,44 @@ mod tests {
     }
 
     #[test]
+    fn counts_unicode_scalars_not_utf16_units_or_graphemes() {
+        let cases = [
+            ("Floently Read", 13usize),
+            ("Hyvää päivää", 11usize),
+            ("e\u{0301}", 2usize),
+            ("🙂", 1usize),
+            ("👩‍💻", 3usize),
+            ("🇫🇮", 2usize),
+            ("مرحبا", 5usize),
+            ("日本語", 3usize),
+            ("A🙂e\u{0301}日本", 6usize),
+        ];
+
+        for (text, expected_scalars) in cases {
+            let manifest = build_manifest(
+                "unicode",
+                "rev-1",
+                "Unicode",
+                "und",
+                text,
+                600,
+            );
+
+            assert_eq!(
+                manifest.text_scalar_length,
+                expected_scalars,
+                "wrong scalar length for {text:?}"
+            );
+
+            if let segment = manifest.segments.first() {
+                assert_eq!(segment.scalar_start, 0);
+                assert_eq!(segment.scalar_end, expected_scalars);
+                assert_eq!(segment.text.chars().count(), expected_scalars);
+            }
+        }
+    }
+
+    #[test]
     fn normalizes_line_endings_before_indexing() {
         let manifest = build_manifest(
             "d1",
