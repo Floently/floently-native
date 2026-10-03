@@ -123,3 +123,5 @@ grep -q 'schemaVersion: String = "learning.v1"' apps/android/shared/src/main/jav
 # Native event sync transport exists but is not automatically invoked during bootstrap.
 grep -q '/api/v1/learning/events' apps/ios/FloentlyShared/Sources/FloentlyShared/Learn/LearnEventSyncService.swift
 grep -q '/api/v1/learning/events' apps/android/shared/src/main/java/com/floently/shared/learn/LearnEventSyncService.kt
+
+echo "KieliValmis clean rebuild static verification: PASS"
