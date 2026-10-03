@@ -15,6 +15,7 @@ import java.security.MessageDigest
 data class ReadNativeTtsAsset(
     val audioUri: String,
     val cacheKey: String,
+    val lookupKey: String,
     val requestHash: String,
     val contentHash: String?,
     val durationMs: Long?,
@@ -26,6 +27,20 @@ data class ReadNativeTtsAsset(
 class ReadNativeTtsClient(
     private val baseUrl: String = "https://flowreader-api.onrender.com"
 ) {
+    fun lookupKey(
+        text: String,
+        language: String,
+        voiceId: String
+    ): String {
+        val identity = listOf(
+            text.trim(),
+            language.ifBlank { "auto" },
+            voiceId,
+            "read-tts-lookup-v1"
+        ).joinToString("\u001f")
+
+        return "sha256:" + sha256Hex(identity)
+    }
     suspend fun synthesize(
         text: String,
         language: String,
@@ -61,6 +76,12 @@ class ReadNativeTtsClient(
         val resolvedVoice = source.optString("voiceId")
             .ifBlank { source.optString("voice_id") }
             .ifBlank { voiceId }
+
+        val lookupKey = lookupKey(
+            text = value,
+            language = language,
+            voiceId = voiceId
+        )
 
         val resolvedProvider = source.optString("provider")
             .trim()
@@ -107,6 +128,7 @@ class ReadNativeTtsClient(
         return ReadNativeTtsAsset(
             audioUri = audioUri,
             cacheKey = cacheKey,
+            lookupKey = lookupKey,
             requestHash = requestHash,
             contentHash = contentHash,
             durationMs = durationMs,
@@ -115,6 +137,50 @@ class ReadNativeTtsClient(
             model = resolvedModel
         )
     }
+
+    private fun writeIndex(
+        asset: ReadNativeTtsAsset,
+        fileName: String
+    ) {
+        val json = JSONObject()
+            .put("fileName", fileName)
+            .put("voiceId", asset.voiceId)
+            .put("requestHash", asset.requestHash)
+
+        asset.durationMs?.let {
+            json.put("durationMs", it)
+        }
+        asset.provider?.let {
+            json.put("provider", it)
+        }
+        asset.model?.let {
+            json.put("model", it)
+        }
+        asset.contentHash?.let {
+            json.put("contentHash", it)
+        }
+
+        val target = indexFile(asset.lookupKey)
+        val temporary = File(
+            indexRoot,
+            target.name + ".partial-" + System.nanoTime()
+        )
+        temporary.writeText(json.toString())
+        if (target.exists()) {
+            target.delete()
+        }
+        if (!temporary.renameTo(target)) {
+            temporary.copyTo(target, overwrite = true)
+            temporary.delete()
+        }
+    }
+
+    private fun indexFile(
+        lookupKey: String
+    ): File = File(
+        indexRoot,
+        sha256Hex(lookupKey) + ".json"
+    )
 
     private fun verifyContentHash(
         file: File,
@@ -169,6 +235,16 @@ class ReadNativeTtsClient(
             .joinToString("") { "%02x".format(it) }
 }
 
+data class ReadCachedAudioAsset(
+    val localFile: File,
+    val durationMs: Long?,
+    val voiceId: String,
+    val provider: String?,
+    val model: String?,
+    val requestHash: String,
+    val contentHash: String?
+)
+
 class ReadNativeAudioCache(
     context: Context,
     private val maximumBytes: Long =
@@ -178,8 +254,61 @@ class ReadNativeAudioCache(
         context.applicationContext.cacheDir,
         "floently-read-audio-v1"
     ).apply { mkdirs() }
+    private val indexRoot = File(
+        root,
+        "index"
+    ).apply { mkdirs() }
     private val protectionLock = Any()
     private var protectedPaths: Set<String> = emptySet()
+
+    suspend fun cachedAsset(
+        lookupKey: String
+    ): ReadCachedAudioAsset? = withContext(Dispatchers.IO) {
+        val metadataFile = indexFile(lookupKey)
+        if (!metadataFile.exists()) {
+            return@withContext null
+        }
+
+        val json = runCatching {
+            JSONObject(metadataFile.readText())
+        }.getOrNull() ?: return@withContext null
+
+        val fileName = json.optString("fileName")
+            .takeIf { it.isNotBlank() }
+            ?: return@withContext null
+        val audioFile = File(root, fileName)
+        if (!audioFile.exists()) {
+            metadataFile.delete()
+            return@withContext null
+        }
+
+        val contentHash = json.optString("contentHash")
+            .takeIf { it.isNotBlank() }
+        if (!verifyContentHash(audioFile, contentHash)) {
+            audioFile.delete()
+            metadataFile.delete()
+            return@withContext null
+        }
+
+        audioFile.setLastModified(System.currentTimeMillis())
+
+        ReadCachedAudioAsset(
+            localFile = audioFile,
+            durationMs = if (json.has("durationMs")
+                && !json.isNull("durationMs")) {
+                json.optLong("durationMs")
+            } else {
+                null
+            },
+            voiceId = json.optString("voiceId"),
+            provider = json.optString("provider")
+                .takeIf { it.isNotBlank() },
+            model = json.optString("model")
+                .takeIf { it.isNotBlank() },
+            requestHash = json.optString("requestHash"),
+            contentHash = contentHash
+        )
+    }
 
     suspend fun localFile(
         asset: ReadNativeTtsAsset
@@ -205,6 +334,10 @@ class ReadNativeAudioCache(
             ) {
                 destination.setLastModified(
                     System.currentTimeMillis()
+                )
+                writeIndex(
+                    asset = asset,
+                    fileName = destination.name
                 )
                 prune(
                     additionallyProtected =
@@ -263,6 +396,10 @@ class ReadNativeAudioCache(
                 temporary.copyTo(destination, overwrite = true)
                 temporary.delete()
             }
+            writeIndex(
+                asset = asset,
+                fileName = destination.name
+            )
 
             prune(
                 additionallyProtected =
