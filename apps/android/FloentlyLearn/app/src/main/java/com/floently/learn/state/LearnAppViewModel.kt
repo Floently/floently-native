@@ -10,6 +10,7 @@ import com.floently.shared.auth.FloentlySecureSessionStore
 import com.floently.shared.auth.FloentlyUser
 import com.floently.shared.billing.FloentlyAccessService
 import com.floently.shared.billing.FloentlyAccessStatus
+import com.floently.shared.learn.LearnOverviewService
 import com.floently.shared.learn.LearningEventOutboxV1
 import com.floently.shared.learn.LearningSessionStateV1
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,6 +46,7 @@ class LearnAppViewModel(application: Application) : AndroidViewModel(application
     )
     private val authService = FloentlyAuthService(api, sessionStore)
     private val accessService = FloentlyAccessService(api)
+    val overviewService = LearnOverviewService(api)
 
     private val _uiState = MutableStateFlow(LearnAppUiState())
     val uiState: StateFlow<LearnAppUiState> = _uiState.asStateFlow()

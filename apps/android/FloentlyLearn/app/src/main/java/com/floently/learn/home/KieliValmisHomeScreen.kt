@@ -77,35 +77,56 @@ fun KieliValmisHomeScreen(
     var destination by remember { mutableStateOf<KieliValmisDestination?>(null) }
     var showPathPicker by remember { mutableStateOf(false) }
 
-    destination?.let {
-        if (it == KieliValmisDestination.Profile) {
-            KieliValmisProfileScreen(
-                appState = appState,
-                onBack = { destination = null }
+    destination?.let { target ->
+        val accessState = when (target) {
+            KieliValmisDestination.Yki -> pathwayAccessState(
+                accessKnown = ui.accessStatus != null,
+                allowed = ui.accessStatus?.let { access ->
+                    access.ykiAccess || access.combinedAccess || access.isInternalAllAccess
+                } == true,
+                lockedMessage = "YKI access is not active for this account."
             )
-        } else {
-            KieliValmisCapabilityScreen(
-                destination = it,
-                accessState = when (it) {
-                    KieliValmisDestination.Yki -> pathwayAccessState(
-                        accessKnown = ui.accessStatus != null,
-                        allowed = ui.accessStatus?.let { access ->
-                            access.ykiAccess || access.combinedAccess || access.isInternalAllAccess
-                        } == true,
-                        lockedMessage = "YKI access is not active for this account."
-                    )
-                    KieliValmisDestination.Professional -> pathwayAccessState(
-                        accessKnown = ui.accessStatus != null,
-                        allowed = ui.accessStatus?.let { access ->
-                            access.professionalAccess || access.combinedAccess || access.isInternalAllAccess
-                        } == true,
-                        lockedMessage = "Professional Finnish access is not active for this account."
-                    )
-                    else -> CapabilityAccessState.Available
-                },
-                retryAccess = appState::refreshAccess,
-                onBack = { destination = null }
+            KieliValmisDestination.Professional -> pathwayAccessState(
+                accessKnown = ui.accessStatus != null,
+                allowed = ui.accessStatus?.let { access ->
+                    access.professionalAccess || access.combinedAccess || access.isInternalAllAccess
+                } == true,
+                lockedMessage = "Professional Finnish access is not active for this account."
             )
+            else -> CapabilityAccessState.Available
+        }
+
+        when (target) {
+            KieliValmisDestination.Profile -> {
+                KieliValmisProfileScreen(
+                    appState = appState,
+                    onBack = { destination = null }
+                )
+            }
+            KieliValmisDestination.Yki -> {
+                KieliValmisYkiOverviewScreen(
+                    service = appState.overviewService,
+                    accessState = accessState,
+                    retryAccess = appState::refreshAccess,
+                    onBack = { destination = null }
+                )
+            }
+            KieliValmisDestination.Professional -> {
+                KieliValmisProfessionalOverviewScreen(
+                    service = appState.overviewService,
+                    accessState = accessState,
+                    retryAccess = appState::refreshAccess,
+                    onBack = { destination = null }
+                )
+            }
+            else -> {
+                KieliValmisCapabilityScreen(
+                    destination = target,
+                    accessState = accessState,
+                    retryAccess = appState::refreshAccess,
+                    onBack = { destination = null }
+                )
+            }
         }
         return
     }
@@ -432,7 +453,7 @@ private fun KieliValmisCapabilityScreen(
     }
 }
 
-private sealed interface CapabilityAccessState {
+sealed interface CapabilityAccessState {
     data object Available : CapabilityAccessState
     data object Unknown : CapabilityAccessState
     data class Locked(val message: String) : CapabilityAccessState
