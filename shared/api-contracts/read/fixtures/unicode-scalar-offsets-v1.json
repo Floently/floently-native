@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "ascii",
+      "text": "Floently Read",
+      "scalarLength": 13,
+      "utf16Length": 13
+    },
+    {
+      "id": "precomposed-finnish",
+      "text": "Hyvää päivää",
+      "scalarLength": 11,
+      "utf16Length": 11
+    },
+    {
+      "id": "combining-accent",
+      "text": "é",
+      "scalarLength": 2,
+      "utf16Length": 2
+    },
+    {
+      "id": "emoji-single",
+      "text": "🙂",
+      "scalarLength": 1,
+      "utf16Length": 2
+    },
+    {
+      "id": "emoji-zwj",
+      "text": "👩‍💻",
+      "scalarLength": 3,
+      "utf16Length": 5
+    },
+    {
+      "id": "flag-finland",
+      "text": "🇫🇮",
+      "scalarLength": 2,
+      "utf16Length": 4
+    },
+    {
+      "id": "arabic",
+      "text": "مرحبا",
+      "scalarLength": 5,
+      "utf16Length": 5
+    },
+    {
+      "id": "cjk",
+      "text": "日本語",
+      "scalarLength": 3,
+      "utf16Length": 3
+    },
+    {
+      "id": "mixed",
+      "text": "A🙂é日本",
+      "scalarLength": 6,
+      "utf16Length": 7
+    }
+  ]
+}
