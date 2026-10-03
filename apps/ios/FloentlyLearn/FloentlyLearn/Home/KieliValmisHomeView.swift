@@ -122,22 +122,17 @@ struct KieliValmisHomeView: View {
                     path.append(.everyday)
                 }
 
-                LazyVGrid(columns: pathwayColumns, spacing: KieliValmisSpacing.m) {
+                LazyVGrid(
+                    columns: pathwayColumns,
+                    spacing: KieliValmisSpacing.m
+                ) {
                     KieliValmisPathwayCard(
-                    symbol: "book.pages",
-                    title: "Everyday Finnish",
-                    subtitle: "Vocabulary, grammar and useful Finnish."
-                ) {
-                    onSelect(.everyday)
-                }
-
-                KieliValmisPathwayCard(
-                    symbol: "checkmark.seal",
-                    title: "YKI preparation",
-                    subtitle: ykiPathwaySubtitle
-                ) {
-                    path.append(.yki)
-                }
+                        symbol: "checkmark.seal",
+                        title: "YKI preparation",
+                        subtitle: ykiPathwaySubtitle
+                    ) {
+                        path.append(.yki)
+                    }
 
                     KieliValmisPathwayCard(
                         symbol: "briefcase",
@@ -354,32 +349,42 @@ private struct KieliValmisPathPicker: View {
         ZStack {
             KieliValmisColor.surface1.ignoresSafeArea()
 
-            VStack(alignment: .leading, spacing: KieliValmisSpacing.m) {
-                Text("Choose a pathway")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(KieliValmisColor.textPrimary)
+            ScrollView {
+                VStack(alignment: .leading, spacing: KieliValmisSpacing.m) {
+                    Text("Choose a pathway")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(KieliValmisColor.textPrimary)
 
-                Text("Start with the area you want to work on now.")
-                    .font(.system(size: 14))
-                    .foregroundStyle(KieliValmisColor.textSecondary)
+                    Text("Start with the area you want to work on now.")
+                        .font(.system(size: 14))
+                        .foregroundStyle(KieliValmisColor.textSecondary)
 
-                KieliValmisPathwayCard(
-                    symbol: "checkmark.seal",
-                    title: "YKI preparation",
-                    subtitle: "Practice all four YKI skills."
-                ) {
-                    onSelect(.yki)
+                    KieliValmisPathwayCard(
+                        symbol: "book.pages",
+                        title: "Everyday Finnish",
+                        subtitle: "Vocabulary, grammar and useful Finnish."
+                    ) {
+                        onSelect(.everyday)
+                    }
+
+                    KieliValmisPathwayCard(
+                        symbol: "checkmark.seal",
+                        title: "YKI preparation",
+                        subtitle: "Practice all four YKI skills."
+                    ) {
+                        onSelect(.yki)
+                    }
+
+                    KieliValmisPathwayCard(
+                        symbol: "briefcase",
+                        title: "Work in Finland",
+                        subtitle: "Professional and workplace Finnish."
+                    ) {
+                        onSelect(.professional)
+                    }
                 }
-
-                KieliValmisPathwayCard(
-                    symbol: "briefcase",
-                    title: "Work in Finland",
-                    subtitle: "Professional and workplace Finnish."
-                ) {
-                    onSelect(.professional)
-                }
+                .padding(KieliValmisSpacing.ml)
             }
-            .padding(KieliValmisSpacing.ml)
         }
     }
 }

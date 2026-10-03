@@ -56,7 +56,7 @@ struct KieliValmisEverydayOverviewView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
-        .task(id: "(levelBand)|(contentType)") {
+        .task(id: "\\(levelBand)|\\(contentType)") {
             guard case .available = accessState else { return }
             await load()
         }
@@ -184,7 +184,7 @@ struct KieliValmisEverydayOverviewView: View {
                     .tracking(1)
                     .foregroundStyle(KieliValmisColor.brandBright)
 
-                Text("(deck.cards.count) items available")
+                Text("\\(deck.cards.count) items available")
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(KieliValmisColor.textPrimary)
 
