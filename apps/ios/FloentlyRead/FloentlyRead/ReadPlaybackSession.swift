@@ -137,10 +137,50 @@ final class ReadPlaybackSession: ObservableObject {
             state == .playing
             || shouldResumeAfterBuffering
             || pendingSeekShouldResume
-        shouldResumeAfterBuffering = false
-        pendingSeekShouldResume = false
         let cursor = elapsedTime
         let currentRate = playbackRate
+
+        if isAppendOnlyExpansion(
+            from: current,
+            to: updated
+        ) {
+            let appended = Array(
+                updated.segments.dropFirst(
+                    current.segments.count
+                )
+            )
+
+            document = updated
+            duration = max(
+                updated.estimatedDuration,
+                updated.segments.last?.logicalEndTime ?? 0
+            )
+
+            appendQueueItems(appended)
+
+            elapsedTime = min(cursor, duration)
+            playbackRate = currentRate
+
+            if state == .preparing {
+                state = resume ? .playing : .paused
+                if resume {
+                    activateAudioSession()
+                    player.playImmediately(
+                        atRate: playbackRate
+                    )
+                }
+            }
+
+            shouldResumeAfterBuffering = false
+            pendingSeekShouldResume = false
+            updateCurrentLogicalTime()
+            persistResume(force: true)
+            publishNowPlaying()
+            return
+        }
+
+        shouldResumeAfterBuffering = false
+        pendingSeekShouldResume = false
         document = updated
         duration = max(
             updated.estimatedDuration,
@@ -159,7 +199,10 @@ final class ReadPlaybackSession: ObservableObject {
             return
         }
 
-        guard let target = segmentAndOffset(for: cursor, in: updated) else {
+        guard let target = segmentAndOffset(
+            for: cursor,
+            in: updated
+        ) else {
             return
         }
 
@@ -319,6 +362,40 @@ final class ReadPlaybackSession: ObservableObject {
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
             state = .failed("Audio session activation failed: \(error.localizedDescription)")
+        }
+    }
+
+    private func isAppendOnlyExpansion(
+        from current: ReadPlayableDocument,
+        to updated: ReadPlayableDocument
+    ) -> Bool {
+        guard
+            updated.segments.count >= current.segments.count,
+            !updated.segments.isEmpty
+        else {
+            return false
+        }
+
+        let prefix = Array(
+            updated.segments.prefix(
+                current.segments.count
+            )
+        )
+
+        return prefix == current.segments
+    }
+
+    private func appendQueueItems(
+        _ segments: [ReadPlayableSegment]
+    ) {
+        guard !segments.isEmpty else { return }
+
+        for segment in segments {
+            let item = AVPlayerItem(url: segment.url)
+            segmentByItemId[
+                ObjectIdentifier(item)
+            ] = segment
+            player.insert(item, after: nil)
         }
     }
 
