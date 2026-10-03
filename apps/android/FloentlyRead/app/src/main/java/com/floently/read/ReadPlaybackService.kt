@@ -326,6 +326,10 @@ class ReadPlaybackService : MediaSessionService() {
                     resumePositionMs = saved?.logicalTimeMs,
                     resumeSpeed = saved?.playbackSpeed
                 )
+                updateCacheProtection(
+                    manifest = request.manifest,
+                    player = player
+                )
                 persistResume()
 
                 future.set(
@@ -432,13 +436,27 @@ class ReadPlaybackService : MediaSessionService() {
                     return@launch
                 }
 
+                updateCacheProtection(
+                    manifest = manifest,
+                    player = player
+                )
+
+                if (player.isDocumentEnded()) {
+                    coordinator?.replaceProtectedSegments(
+                        emptyList()
+                    )
+                    return@launch
+                }
+
                 val highestPrepared =
                     preparedSegments.keys.maxOrNull()
                         ?: continue
                 val nextIndex = highestPrepared + 1
 
                 if (nextIndex >= manifest.segments.size) {
-                    return@launch
+                    // Keep the loop alive as a lightweight lease updater so
+                    // past audio becomes evictable while playback advances.
+                    continue
                 }
 
                 val logicalPosition =
@@ -499,6 +517,10 @@ class ReadPlaybackService : MediaSessionService() {
                         ?: return@launch
 
                     player.loadDocument(value = updated)
+                    updateCacheProtection(
+                        manifest = manifest,
+                        player = player
+                    )
                     refillTelemetry.refillSuccesses += 1
                     refillTelemetry.lastFailure = null
                     nextRefillAllowedAtMs = 0L
@@ -569,6 +591,10 @@ class ReadPlaybackService : MediaSessionService() {
                 player.loadDocument(
                     value = updated,
                     overridePositionMs = bounded
+                )
+                updateCacheProtection(
+                    manifest = manifest,
+                    player = player
                 )
 
                 refillTelemetry.refillSuccesses += 1
@@ -689,6 +715,10 @@ class ReadPlaybackService : MediaSessionService() {
                     value = updated,
                     overridePositionMs = cursor
                 )
+                updateCacheProtection(
+                    manifest = manifest,
+                    player = player
+                )
 
                 startRefillLoop(
                     manifest = manifest,
@@ -738,6 +768,33 @@ class ReadPlaybackService : MediaSessionService() {
         }
 
         return future
+    }
+
+    private suspend fun updateCacheProtection(
+        manifest: ReadingManifestV1,
+        player: ReadDocumentTimelinePlayer
+    ) {
+        val audioCoordinator = coordinator ?: return
+        if (preparedSegments.isEmpty()) {
+            audioCoordinator.replaceProtectedSegments(
+                emptyList()
+            )
+            return
+        }
+
+        val cursor = player.currentLogicalPositionMs()
+        val activeIndex = manifest.segments.indexOfFirst {
+            cursor < it.logicalEndMs
+        }.takeIf { it >= 0 }
+            ?: manifest.segments.lastIndex
+
+        val protected = preparedSegments.values
+            .filter { it.index >= activeIndex }
+            .sortedBy { it.index }
+
+        audioCoordinator.replaceProtectedSegments(
+            protected
+        )
     }
 
     private fun resolvedStartingIndex(
