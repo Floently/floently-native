@@ -4,7 +4,9 @@ import Foundation
 struct ReadNativeTtsAsset: Equatable {
     let audioURL: URL
     let cacheKey: String
-    let contentHash: String
+    let lookupKey: String
+    let requestHash: String
+    let contentHash: String?
     let duration: TimeInterval?
     let voiceId: String
     let provider: String?
@@ -18,6 +20,29 @@ struct ReadNativeTtsRequest: Encodable {
 }
 
 actor ReadNativeTtsClient {
+    nonisolated static func lookupKey(
+        text: String,
+        language: String,
+        voiceId: String
+    ) -> String {
+        let identity = [
+            text.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            ),
+            language.isEmpty ? "auto" : language,
+            voiceId,
+            "read-tts-lookup-v1"
+        ].joined(separator: "\u{1f}")
+
+        let digest = SHA256.hash(
+            data: Data(identity.utf8)
+        )
+        .map { String(format: "%02x", $0) }
+        .joined()
+
+        return "sha256:\(digest)"
+    }
+
     private let baseURL: URL
     private let session: URLSession
 
@@ -91,20 +116,42 @@ actor ReadNativeTtsClient {
             ?? (source["voice_id"] as? String)
             ?? voiceId
 
-        let hashInput = [
+        let lookupKey = Self.lookupKey(
+            text: value,
+            language: language,
+            voiceId: voiceId
+        )
+
+        let resolvedProvider =
+            (source["provider"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedModel =
+            (source["model"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let requestIdentity = [
             value,
-            language,
+            language.isEmpty ? "auto" : language,
             resolvedVoice,
-            "render-read-prerender"
+            resolvedProvider ?? "unknown-provider",
+            resolvedModel ?? "unknown-model",
+            "read-tts-request-v2"
         ].joined(separator: "\u{1f}")
-        let digest = SHA256.hash(data: Data(hashInput.utf8))
-            .map { String(format: "%02x", $0) }
-            .joined()
+        let requestDigest = SHA256.hash(
+            data: Data(requestIdentity.utf8)
+        )
+        .map { String(format: "%02x", $0) }
+        .joined()
+        let requestHash = "sha256:\(requestDigest)"
+
+        let contentHash =
+            (source["contentHash"] as? String)
+            ?? (source["content_hash"] as? String)
 
         let cacheKey =
             (source["cacheKey"] as? String)
             ?? (source["cache_key"] as? String)
-            ?? "read-tts:sha256:\(digest)"
+            ?? "read-tts:req:\(requestHash)"
 
         let explicitDuration: TimeInterval? = {
             if let ms = source["durationMs"] as? NSNumber {
@@ -125,11 +172,13 @@ actor ReadNativeTtsClient {
         return ReadNativeTtsAsset(
             audioURL: audioURL,
             cacheKey: cacheKey,
-            contentHash: "sha256:\(digest)",
+            lookupKey: lookupKey,
+            requestHash: requestHash,
+            contentHash: contentHash,
             duration: explicitDuration,
             voiceId: resolvedVoice,
-            provider: source["provider"] as? String,
-            model: source["model"] as? String
+            provider: resolvedProvider,
+            model: resolvedModel
         )
     }
 
@@ -155,6 +204,7 @@ enum ReadNativeTtsError: LocalizedError {
     case emptyText
     case invalidResponse
     case missingAudioURL
+    case contentHashMismatch
     case server(String)
 
     var errorDescription: String? {
@@ -165,19 +215,46 @@ enum ReadNativeTtsError: LocalizedError {
             return "Read TTS returned an invalid response."
         case .missingAudioURL:
             return "Read TTS returned no playable audio URL."
+        case .contentHashMismatch:
+            return "Downloaded Read audio did not match its verified content hash."
         case .server(let message):
             return message
         }
     }
 }
 
+private struct ReadCachedAudioIndex: Codable {
+    let fileName: String
+    let duration: TimeInterval?
+    let voiceId: String
+    let provider: String?
+    let model: String?
+    let requestHash: String
+    let contentHash: String?
+}
+
+struct ReadCachedAudioAsset: Equatable {
+    let localURL: URL
+    let duration: TimeInterval?
+    let voiceId: String
+    let provider: String?
+    let model: String?
+    let requestHash: String
+    let contentHash: String?
+}
+
 actor ReadNativeAudioCache {
     private let root: URL
+    private let indexRoot: URL
     private let session: URLSession
+    private let fileManager: FileManager
+    private let maximumBytes: Int64
+    private var protectedPaths: Set<String> = []
 
     init(
         fileManager: FileManager = .default,
-        session: URLSession = .shared
+        session: URLSession = .shared,
+        maximumBytes: Int64 = 256 * 1024 * 1024
     ) throws {
         let cacheRoot = try fileManager.url(
             for: .cachesDirectory,
@@ -189,10 +266,74 @@ actor ReadNativeAudioCache {
             path: "FloentlyReadAudioV1",
             directoryHint: .isDirectory
         )
+        indexRoot = root.appending(
+            path: "index",
+            directoryHint: .isDirectory
+        )
         self.session = session
+        self.fileManager = fileManager
+        self.maximumBytes = max(
+            16 * 1024 * 1024,
+            maximumBytes
+        )
         try fileManager.createDirectory(
             at: root,
             withIntermediateDirectories: true
+        )
+        try fileManager.createDirectory(
+            at: indexRoot,
+            withIntermediateDirectories: true
+        )
+    }
+
+    func cachedAsset(
+        lookupKey: String
+    ) throws -> ReadCachedAudioAsset? {
+        let metadataURL = indexURL(
+            forLookupKey: lookupKey
+        )
+        guard
+            let data = try? Data(contentsOf: metadataURL),
+            let metadata = try? JSONDecoder().decode(
+                ReadCachedAudioIndex.self,
+                from: data
+            )
+        else {
+            return nil
+        }
+
+        let audioURL = root.appending(
+            path: metadata.fileName
+        )
+        guard fileManager.fileExists(
+            atPath: audioURL.path
+        ) else {
+            try? fileManager.removeItem(at: metadataURL)
+            return nil
+        }
+
+        guard try verifyContentHash(
+            of: audioURL,
+            expected: metadata.contentHash
+        ) else {
+            try? fileManager.removeItem(at: audioURL)
+            try? fileManager.removeItem(at: metadataURL)
+            return nil
+        }
+
+        try? fileManager.setAttributes(
+            [.modificationDate: Date()],
+            ofItemAtPath: audioURL.path
+        )
+
+        return ReadCachedAudioAsset(
+            localURL: audioURL,
+            duration: metadata.duration,
+            voiceId: metadata.voiceId,
+            provider: metadata.provider,
+            model: metadata.model,
+            requestHash: metadata.requestHash,
+            contentHash: metadata.contentHash
         )
     }
 
@@ -208,12 +349,28 @@ actor ReadNativeAudioCache {
             + extensionName
         let destination = root.appending(path: fileName)
 
-        if FileManager.default.fileExists(atPath: destination.path) {
-            try? FileManager.default.setAttributes(
-                [.modificationDate: Date()],
-                ofItemAtPath: destination.path
-            )
-            return destination
+        if fileManager.fileExists(atPath: destination.path) {
+            if try verifyContentHash(
+                of: destination,
+                expected: asset.contentHash
+            ) {
+                try? fileManager.setAttributes(
+                    [.modificationDate: Date()],
+                    ofItemAtPath: destination.path
+                )
+                try writeIndex(
+                    asset: asset,
+                    fileName: destination.lastPathComponent
+                )
+                try prune(
+                    additionallyProtecting: [destination.path]
+                )
+                return destination
+            }
+
+            // A known bad cached asset must never be reused. Remove it and
+            // perform one clean download below.
+            try? fileManager.removeItem(at: destination)
         }
 
         let (temporaryURL, response) = try await session.download(
@@ -225,38 +382,202 @@ actor ReadNativeAudioCache {
             throw ReadNativeTtsError.invalidResponse
         }
 
-        try? FileManager.default.removeItem(at: destination)
-        try FileManager.default.moveItem(
+        guard try verifyContentHash(
+            of: temporaryURL,
+            expected: asset.contentHash
+        ) else {
+            try? fileManager.removeItem(at: temporaryURL)
+            throw ReadNativeTtsError.contentHashMismatch
+        }
+
+        try? fileManager.removeItem(at: destination)
+        try fileManager.moveItem(
             at: temporaryURL,
             to: destination
         )
+        try writeIndex(
+            asset: asset,
+            fileName: destination.lastPathComponent
+        )
 
-        try prune(maximumFiles: 32)
+        try prune(
+            additionallyProtecting: [destination.path]
+        )
         return destination
     }
 
-    private func prune(maximumFiles: Int) throws {
-        let urls = try FileManager.default.contentsOfDirectory(
+    func replaceProtectedURLs(
+        _ urls: [URL]
+    ) throws {
+        protectedPaths = Set(
+            urls.map { $0.standardizedFileURL.path }
+        )
+        try prune()
+    }
+
+    private func prune(
+        additionallyProtecting extraPaths: Set<String> = []
+    ) throws {
+        let keys: Set<URLResourceKey> = [
+            .isRegularFileKey,
+            .fileSizeKey,
+            .contentModificationDateKey
+        ]
+        let urls = try fileManager.contentsOfDirectory(
             at: root,
-            includingPropertiesForKeys: [.contentModificationDateKey],
+            includingPropertiesForKeys: Array(keys),
             options: [.skipsHiddenFiles]
         )
 
-        guard urls.count > maximumFiles else { return }
+        let entries: [(url: URL, size: Int64, modified: Date)] =
+            urls.compactMap { url in
+                guard
+                    let values = try? url.resourceValues(
+                        forKeys: keys
+                    ),
+                    values.isRegularFile == true
+                else {
+                    return nil
+                }
 
-        let sorted = urls.sorted { lhs, rhs in
-            let l = try? lhs.resourceValues(
-                forKeys: [.contentModificationDateKey]
-            ).contentModificationDate
-            let r = try? rhs.resourceValues(
-                forKeys: [.contentModificationDateKey]
-            ).contentModificationDate
-            return (l ?? .distantPast) > (r ?? .distantPast)
+                return (
+                    url: url,
+                    size: Int64(max(0, values.fileSize ?? 0)),
+                    modified:
+                        values.contentModificationDate
+                        ?? .distantPast
+                )
+            }
+
+        var totalBytes = entries.reduce(Int64(0)) {
+            $0 + $1.size
+        }
+        guard totalBytes > maximumBytes else { return }
+
+        let protected = protectedPaths.union(
+            extraPaths.map {
+                URL(fileURLWithPath: $0)
+                    .standardizedFileURL.path
+            }
+        )
+
+        for entry in entries.sorted(
+            by: { $0.modified < $1.modified }
+        ) {
+            if totalBytes <= maximumBytes {
+                break
+            }
+
+            let path = entry.url.standardizedFileURL.path
+            guard !protected.contains(path) else {
+                continue
+            }
+
+            do {
+                try fileManager.removeItem(at: entry.url)
+                totalBytes -= entry.size
+            } catch {
+                // Cache pressure must never interrupt active playback.
+                continue
+            }
+        }
+    }
+
+    private func writeIndex(
+        asset: ReadNativeTtsAsset,
+        fileName: String
+    ) throws {
+        let metadata = ReadCachedAudioIndex(
+            fileName: fileName,
+            duration: asset.duration,
+            voiceId: asset.voiceId,
+            provider: asset.provider,
+            model: asset.model,
+            requestHash: asset.requestHash,
+            contentHash: asset.contentHash
+        )
+        let data = try JSONEncoder().encode(metadata)
+        try data.write(
+            to: indexURL(forLookupKey: asset.lookupKey),
+            options: .atomic
+        )
+    }
+
+    private func indexURL(
+        forLookupKey lookupKey: String
+    ) -> URL {
+        indexRoot.appending(
+            path: Self.safeFileName(lookupKey) + ".json"
+        )
+    }
+
+    private func verifyContentHash(
+        of url: URL,
+        expected: String?
+    ) throws -> Bool {
+        guard
+            let expected = Self.normalizedSHA256(expected)
+        else {
+            // The backend has not asserted a byte checksum. Preserve the
+            // distinction between "unknown" and "verified" rather than
+            // inventing content identity from the synthesis request.
+            return true
         }
 
-        for url in sorted.dropFirst(maximumFiles) {
-            try? FileManager.default.removeItem(at: url)
+        let handle = try FileHandle(forReadingFrom: url)
+        defer {
+            try? handle.close()
         }
+
+        var hasher = SHA256()
+        while true {
+            let data = try handle.read(
+                upToCount: 256 * 1024
+            ) ?? Data()
+            if data.isEmpty {
+                break
+            }
+            hasher.update(data: data)
+        }
+
+        let actual = hasher.finalize()
+            .map { String(format: "%02x", $0) }
+            .joined()
+
+        return actual == expected
+    }
+
+    private static func normalizedSHA256(
+        _ value: String?
+    ) -> String? {
+        guard let raw = value?
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+            .lowercased(),
+            !raw.isEmpty
+        else {
+            return nil
+        }
+
+        let hex =
+            raw.hasPrefix("sha256:")
+            ? String(raw.dropFirst("sha256:".count))
+            : raw
+
+        guard
+            hex.count == 64,
+            hex.allSatisfy({
+                $0.isNumber
+                || ("a"..."f").contains(String($0))
+            })
+        else {
+            // Unknown hash algorithms/formats are metadata, not something
+            // this SHA-256 verifier can truthfully validate.
+            return nil
+        }
+
+        return hex
     }
 
     private static func safeFileName(_ value: String) -> String {
