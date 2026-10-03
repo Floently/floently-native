@@ -47,7 +47,7 @@ public final class FloentlyAPIClient {
     private let tokenProvider: () -> String?
 
     public init(
-        baseURL: URL = URL(string: "https://learn.floently.com")!,
+        baseURL: URL = URL(string: "https://learn-api.floently.com")!,
         session: URLSession = .shared,
         tokenProvider: @escaping () -> String? = { nil }
     ) {

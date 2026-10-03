@@ -14,7 +14,7 @@ data class FloentlyApiError(
 ) : Exception(message)
 
 class FloentlyApiClient(
-    private val baseUrl: String = "https://learn.floently.com",
+    private val baseUrl: String = "https://learn-api.floently.com",
     private val tokenProvider: () -> String? = { null }
 ) {
     suspend fun get(path: String): JSONObject =

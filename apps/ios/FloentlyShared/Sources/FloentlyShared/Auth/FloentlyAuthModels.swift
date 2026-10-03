@@ -118,6 +118,13 @@ public struct PasswordResetRequest: Encodable {
 public struct PasswordResetConfirmRequest: Encodable {
     public let token: String
     public let password: String
+    public let confirmPassword: String
+
+    enum CodingKeys: String, CodingKey {
+        case token
+        case password
+        case confirmPassword = "confirm_password"
+    }
 }
 
 public struct GoogleAuthRequest: Encodable {
