@@ -2,7 +2,9 @@ package com.floently.learn.design
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,18 +19,29 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -67,6 +80,10 @@ object KVColor {
     val TextSecondary = Color(0xFFB9B1C4)
     val TextTertiary = Color(0xFF81788D)
     val BorderSoft = Color(0xFF241E2C)
+    val Border = Color(0xFF30263A)
+    val Success = Color(0xFF67D8A8)
+    val Warning = Color(0xFFF3C66F)
+    val Danger = Color(0xFFFF718D)
 }
 
 enum class KVCardStyle {
@@ -144,13 +161,17 @@ fun KieliValmisIconTile(
 fun KieliValmisPrimaryButton(
     title: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Button(
         onClick = onClick,
+        enabled = enabled,
         colors = ButtonDefaults.buttonColors(
             containerColor = KVColor.Brand,
-            contentColor = Color.White
+            contentColor = Color.White,
+            disabledContainerColor = KVColor.Surface3,
+            disabledContentColor = KVColor.TextTertiary
         ),
         shape = RoundedCornerShape(KVRadius.l),
         contentPadding = PaddingValues(horizontal = KVSpacing.ml),
@@ -175,6 +196,131 @@ fun KieliValmisSectionHeader(title: String) {
         lineHeight = 28.sp,
         fontWeight = FontWeight.Bold
     )
+}
+
+@Composable
+fun <T> KieliValmisSegmentedControl(
+    options: List<Pair<T, String>>,
+    selection: T,
+    onSelect: (T) -> Unit
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(KVSpacing.xs),
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 48.dp)
+            .background(KVColor.Surface1, RoundedCornerShape(KVRadius.m))
+            .border(1.dp, KVColor.BorderSoft, RoundedCornerShape(KVRadius.m))
+            .padding(KVSpacing.xs)
+    ) {
+        options.forEach { (value, label) ->
+            val selected = selection == value
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(40.dp)
+                    .background(
+                        if (selected) KVColor.Surface3 else Color.Transparent,
+                        RoundedCornerShape(12.dp)
+                    )
+                    .clickable(
+                        role = Role.Tab,
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        onSelect(value)
+                    }
+            ) {
+                Text(
+                    text = label,
+                    color = if (selected) KVColor.TextPrimary else KVColor.TextSecondary,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun KieliValmisTextField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    trailing: (@Composable () -> Unit)? = null
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(KVRadius.m)
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(KVSpacing.s),
+        modifier = modifier
+    ) {
+        Text(
+            text = label,
+            color = KVColor.TextPrimary,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            visualTransformation = visualTransformation,
+            keyboardOptions = keyboardOptions,
+            keyboardActions = keyboardActions,
+            cursorBrush = SolidColor(KVColor.BrandBright),
+            textStyle = TextStyle(
+                color = KVColor.TextPrimary,
+                fontSize = 16.sp,
+                lineHeight = 24.sp
+            ),
+            decorationBox = { innerTextField ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Box(
+                        contentAlignment = Alignment.CenterStart,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        if (value.isEmpty()) {
+                            Text(
+                                text = placeholder,
+                                color = KVColor.TextTertiary,
+                                fontSize = 16.sp
+                            )
+                        }
+                        innerTextField()
+                    }
+                    trailing?.invoke()
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .onFocusChanged { isFocused = it.isFocused }
+                .background(
+                    if (isFocused) KVColor.BrandTint.copy(alpha = 0.66f) else KVColor.Surface1,
+                    shape
+                )
+                .border(
+                    1.dp,
+                    if (isFocused) KVColor.Brand else KVColor.Border,
+                    shape
+                )
+                .padding(start = KVSpacing.m, end = if (trailing == null) KVSpacing.m else KVSpacing.xs)
+        )
+    }
 }
 
 @Composable
