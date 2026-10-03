@@ -33,13 +33,26 @@ class FloentlyAuthService(
     suspend fun confirmPasswordReset(token: String, password: String) {
         api.post(
             "/api/v1/auth/password-reset/confirm",
-            JSONObject().put("token", token).put("password", password)
+            JSONObject()
+                .put("token", token)
+                .put("password", password)
+                .put("confirm_password", password)
         )
     }
 
     suspend fun restoreSession(): FloentlyAuthSession {
+        val existing = store.session
+            ?.takeIf { it.token.isNotBlank() }
+            ?: throw IllegalStateException("No stored session is available.")
+
         val response = api.get("/api/v1/auth/session")
-        return authSessionFromJson(response).also { store.save(it) }
+        val snapshot = authSessionFromJson(response)
+        val restored = snapshot.copy(
+            token = snapshot.token.ifBlank { existing.token },
+            refreshToken = snapshot.refreshToken ?: existing.refreshToken
+        )
+        store.save(restored)
+        return restored
     }
 
     suspend fun logout() {

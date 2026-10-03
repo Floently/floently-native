@@ -1,41 +1,49 @@
 import SwiftUI
-import FloentlyShared
 
 @main
 struct FloentlyLearnApp: App {
+    @StateObject private var appModel = LearnAppModel()
+
     var body: some Scene {
         WindowGroup {
-            LearnHomeView()
+            Group {
+                switch appModel.phase {
+                case .bootstrapping:
+                    KieliValmisBootstrapView()
+                case .signedOut:
+                    LearnAuthView(appModel: appModel)
+                case .signedIn:
+                    KieliValmisHomeView()
+                        .environmentObject(appModel)
+                }
+            }
+            .preferredColorScheme(.dark)
+            .task {
+                await appModel.bootstrap()
+            }
         }
     }
 }
 
-struct LearnHomeView: View {
+private struct KieliValmisBootstrapView: View {
     var body: some View {
-        FloentlyScreen(product: .learn) {
-            VStack(alignment: .leading, spacing: 24) {
-                Spacer()
+        ZStack {
+            KieliValmisColor.canvas.ignoresSafeArea()
 
-                Text("Floently Learn")
-                    .font(.system(size: 38, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+            VStack(spacing: KieliValmisSpacing.m) {
+                ProgressView()
+                    .tint(KieliValmisColor.brandBright)
 
-                Text("YKI, professional Finnish, speaking practice, and progress — rebuilt natively without touching the old app.")
-                    .font(.title3)
-                    .foregroundStyle(.white.opacity(0.72))
+                Text("KieliValmis")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(KieliValmisColor.textPrimary)
 
-                FloentlyCard(product: .learn) {
-                    Text("Native Learn foundation")
-                        .font(.title2.weight(.semibold))
-                        .foregroundStyle(.white)
-                    Text("This app will consume YKI and card-bank content from the existing backend API. The card bank remains server-owned.")
-                        .foregroundStyle(.white.opacity(0.72))
-                }
-
-                FloentlyPrimaryButton("Continue", product: .learn) {}
-
-                Spacer()
+                Text("Checking your session…")
+                    .font(.system(size: 14))
+                    .foregroundStyle(KieliValmisColor.textSecondary)
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("KieliValmis. Checking your session.")
     }
 }

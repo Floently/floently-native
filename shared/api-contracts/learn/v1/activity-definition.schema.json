@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://floently.com/contracts/learn/v1/activity-definition.schema.json",
+  "title": "TaskDescriptorCompatibilityAlias",
+  "description": "Mirror of packages/core/schemas/learning.ts TaskDescriptor.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "taskId",
+    "contentVersion",
+    "runtime",
+    "pathway",
+    "skills",
+    "levelBand",
+    "estimatedMinutes",
+    "modality",
+    "requiredEntitlements",
+    "launch",
+    "health"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "learning.v1" },
+    "taskId": { "type": "string", "minLength": 1 },
+    "contentVersion": { "type": "string", "minLength": 1 },
+    "runtime": {
+      "type": "string",
+      "enum": [
+        "cards",
+        "roleplay",
+        "reading",
+        "writing",
+        "listening",
+        "yki",
+        "professional_mission",
+        "grammar"
+      ]
+    },
+    "pathway": {
+      "type": "string",
+      "enum": ["everyday", "professional", "yki"]
+    },
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "vocabulary",
+          "grammar",
+          "listening",
+          "speaking",
+          "reading",
+          "writing"
+        ]
+      }
+    },
+    "levelBand": { "type": "string", "minLength": 1 },
+    "estimatedMinutes": { "type": "integer", "minimum": 0 },
+    "modality": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "audio": { "type": "boolean" },
+        "microphone": { "type": "boolean" },
+        "keyboard": { "type": "boolean" },
+        "visual": { "type": "boolean" }
+      }
+    },
+    "requiredEntitlements": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "launch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route"],
+      "properties": {
+        "route": { "type": "string", "minLength": 1 },
+        "params": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "health": {
+      "type": "string",
+      "enum": ["available", "degraded", "unavailable"]
+    },
+    "featureFlag": { "type": "string" },
+    "profession": { "type": "string" },
+    "topic": { "type": "string" },
+    "contextId": { "type": "string" },
+    "prerequisites": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "ykiMode": {
+      "type": "string",
+      "enum": ["practice", "mock", "full_exam"]
+    }
+  }
+}
