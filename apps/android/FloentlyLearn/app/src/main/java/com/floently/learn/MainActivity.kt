@@ -67,7 +67,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     LearnAppPhase.SignedIn -> {
-                        KieliValmisHomeScreen()
+                        KieliValmisHomeScreen(appState = appState)
                     }
                 }
             }

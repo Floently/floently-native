@@ -30,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.floently.learn.design.KVCardStyle
 import com.floently.learn.design.KVColor
+import com.floently.learn.design.KVStatusTone
 import com.floently.learn.design.KVSpacing
 import com.floently.learn.design.KieliValmisCardSurface
 import com.floently.learn.design.KieliValmisIconTile
@@ -49,7 +51,10 @@ import com.floently.learn.design.KieliValmisPathwayCard
 import com.floently.learn.design.KieliValmisPrimaryButton
 import com.floently.learn.design.KieliValmisReviewCard
 import com.floently.learn.design.KieliValmisSectionHeader
+import com.floently.learn.design.KieliValmisSecondaryButton
 import com.floently.learn.design.KieliValmisSkillCard
+import com.floently.learn.design.KieliValmisStatusBanner
+import com.floently.learn.state.LearnAppViewModel
 
 enum class KieliValmisDestination {
     Yki,
@@ -64,15 +69,44 @@ enum class KieliValmisDestination {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun KieliValmisHomeScreen() {
+fun KieliValmisHomeScreen(
+    appState: LearnAppViewModel
+) {
+    val ui by appState.uiState.collectAsState()
+
     var destination by remember { mutableStateOf<KieliValmisDestination?>(null) }
     var showPathPicker by remember { mutableStateOf(false) }
 
     destination?.let {
-        KieliValmisCapabilityScreen(
-            destination = it,
-            onBack = { destination = null }
-        )
+        if (it == KieliValmisDestination.Profile) {
+            KieliValmisProfileScreen(
+                appState = appState,
+                onBack = { destination = null }
+            )
+        } else {
+            KieliValmisCapabilityScreen(
+                destination = it,
+                accessState = when (it) {
+                    KieliValmisDestination.Yki -> pathwayAccessState(
+                        accessKnown = ui.accessStatus != null,
+                        allowed = ui.accessStatus?.let { access ->
+                            access.ykiAccess || access.combinedAccess || access.isInternalAllAccess
+                        } == true,
+                        lockedMessage = "YKI access is not active for this account."
+                    )
+                    KieliValmisDestination.Professional -> pathwayAccessState(
+                        accessKnown = ui.accessStatus != null,
+                        allowed = ui.accessStatus?.let { access ->
+                            access.professionalAccess || access.combinedAccess || access.isInternalAllAccess
+                        } == true,
+                        lockedMessage = "Professional Finnish access is not active for this account."
+                    )
+                    else -> CapabilityAccessState.Available
+                },
+                retryAccess = appState::refreshAccess,
+                onBack = { destination = null }
+            )
+        }
         return
     }
 
@@ -120,6 +154,24 @@ fun KieliValmisHomeScreen() {
                 }
             }
 
+            ui.connectionNotice?.let {
+                KieliValmisStatusBanner(
+                    message = it,
+                    tone = KVStatusTone.Warning,
+                    actionTitle = "Retry",
+                    onAction = appState::refreshAccess
+                )
+            }
+
+            ui.accessNotice?.let {
+                KieliValmisStatusBanner(
+                    message = it,
+                    tone = KVStatusTone.Info,
+                    actionTitle = "Retry",
+                    onAction = appState::refreshAccess
+                )
+            }
+
             KieliValmisCardSurface(style = KVCardStyle.Hero) {
                 Text(
                     text = "CONTINUE",
@@ -160,7 +212,7 @@ fun KieliValmisHomeScreen() {
                         KieliValmisPathwayCard(
                             icon = Icons.Rounded.Badge,
                             title = "YKI preparation",
-                            subtitle = "Reading, listening, writing and speaking practice.",
+                            subtitle = ykiPathwaySubtitle(ui.accessStatus),
                             onClick = { destination = KieliValmisDestination.Yki },
                             modifier = modifier
                         )
@@ -169,7 +221,7 @@ fun KieliValmisHomeScreen() {
                         KieliValmisPathwayCard(
                             icon = Icons.Rounded.BusinessCenter,
                             title = "Work in Finland",
-                            subtitle = "Professional Finnish and workplace communication.",
+                            subtitle = professionalPathwaySubtitle(ui.accessStatus),
                             onClick = { destination = KieliValmisDestination.Professional },
                             modifier = modifier
                         )
@@ -311,6 +363,8 @@ private fun ResponsivePair(
 @Composable
 private fun KieliValmisCapabilityScreen(
     destination: KieliValmisDestination,
+    accessState: CapabilityAccessState,
+    retryAccess: () -> Unit,
     onBack: () -> Unit
 ) {
     val spec = capabilitySpec(destination)
@@ -349,6 +403,188 @@ private fun KieliValmisCapabilityScreen(
                 color = KVColor.TextSecondary,
                 fontSize = 16.sp,
                 lineHeight = 24.sp
+            )
+
+
+            when (accessState) {
+                CapabilityAccessState.Available -> {
+                    KieliValmisStatusBanner(
+                        message = "This pathway is available for your account. Native learning activities are being connected to the existing backend.",
+                        tone = KVStatusTone.Success
+                    )
+                }
+                is CapabilityAccessState.Locked -> {
+                    KieliValmisStatusBanner(
+                        message = accessState.message,
+                        tone = KVStatusTone.Warning
+                    )
+                }
+                CapabilityAccessState.Unknown -> {
+                    KieliValmisStatusBanner(
+                        message = "We cannot confirm your pathway access right now.",
+                        tone = KVStatusTone.Info,
+                        actionTitle = "Retry",
+                        onAction = retryAccess
+                    )
+                }
+            }
+        }
+    }
+}
+
+private sealed interface CapabilityAccessState {
+    data object Available : CapabilityAccessState
+    data object Unknown : CapabilityAccessState
+    data class Locked(val message: String) : CapabilityAccessState
+}
+
+private fun pathwayAccessState(
+    accessKnown: Boolean,
+    allowed: Boolean,
+    lockedMessage: String
+): CapabilityAccessState {
+    if (!accessKnown) return CapabilityAccessState.Unknown
+    return if (allowed) {
+        CapabilityAccessState.Available
+    } else {
+        CapabilityAccessState.Locked(lockedMessage)
+    }
+}
+
+private fun ykiPathwaySubtitle(
+    access: com.floently.shared.billing.FloentlyAccessStatus?
+): String {
+    if (access == null) {
+        return "Reading, listening, writing and speaking practice."
+    }
+    return if (access.ykiAccess || access.combinedAccess || access.isInternalAllAccess) {
+        "Reading, listening, writing and speaking practice."
+    } else {
+        "YKI access is not active for this account."
+    }
+}
+
+private fun professionalPathwaySubtitle(
+    access: com.floently.shared.billing.FloentlyAccessStatus?
+): String {
+    if (access == null) {
+        return "Professional Finnish and workplace communication."
+    }
+    return if (access.professionalAccess || access.combinedAccess || access.isInternalAllAccess) {
+        "Professional Finnish and workplace communication."
+    } else {
+        "Professional Finnish access is not active for this account."
+    }
+}
+
+@Composable
+private fun KieliValmisProfileScreen(
+    appState: LearnAppViewModel,
+    onBack: () -> Unit
+) {
+    val ui by appState.uiState.collectAsState()
+    val user = appState.currentUser
+    val access = ui.accessStatus
+
+    val accessSummary = when {
+        access == null -> "Access status unavailable"
+        access.isInternalAllAccess -> "Internal all-access"
+        access.ykiAccess && access.professionalAccess -> "YKI + Professional Finnish"
+        access.ykiAccess -> "YKI"
+        access.professionalAccess -> "Professional Finnish"
+        else -> "No active Learn pathway"
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(KVColor.Canvas)
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(KVSpacing.l),
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = KVSpacing.ml)
+                .padding(top = KVSpacing.m, bottom = KVSpacing.xl)
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.Rounded.ArrowBack,
+                    contentDescription = "Back",
+                    tint = KVColor.TextPrimary
+                )
+            }
+
+            KieliValmisIconTile(Icons.Rounded.Person)
+
+            Text(
+                text = "Profile",
+                color = KVColor.TextPrimary,
+                fontSize = 34.sp,
+                lineHeight = 40.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+
+            user?.let {
+                Text(
+                    text = it.name?.takeIf { name -> name.isNotBlank() } ?: it.email,
+                    color = KVColor.TextPrimary,
+                    fontSize = 18.sp,
+                    lineHeight = 24.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                if (!it.name.isNullOrBlank()) {
+                    Text(
+                        text = it.email,
+                        color = KVColor.TextSecondary,
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp
+                    )
+                }
+            }
+
+            KieliValmisCardSurface(style = KVCardStyle.Compact) {
+                Text(
+                    text = "Access",
+                    color = KVColor.TextTertiary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = accessSummary,
+                    color = KVColor.TextPrimary,
+                    fontSize = 18.sp,
+                    lineHeight = 24.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                if (!access?.accessibleProfessions.isNullOrEmpty()) {
+                    Text(
+                        text = access!!.accessibleProfessions.joinToString(" · ") {
+                            it.replace("_", " ").split(" ").joinToString(" ") { part ->
+                                part.replaceFirstChar { char -> char.uppercase() }
+                            }
+                        },
+                        color = KVColor.TextSecondary,
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp
+                    )
+                }
+            }
+
+            ui.accessNotice?.let {
+                KieliValmisStatusBanner(
+                    message = it,
+                    tone = KVStatusTone.Info,
+                    actionTitle = "Retry",
+                    onAction = appState::refreshAccess
+                )
+            }
+
+            KieliValmisSecondaryButton(
+                title = "Sign out",
+                destructive = true,
+                onClick = appState::logout
             )
         }
     }

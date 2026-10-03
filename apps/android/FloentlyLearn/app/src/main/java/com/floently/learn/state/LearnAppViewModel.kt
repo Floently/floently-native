@@ -7,6 +7,7 @@ import com.floently.shared.api.FloentlyApiClient
 import com.floently.shared.api.FloentlyApiError
 import com.floently.shared.auth.FloentlyAuthService
 import com.floently.shared.auth.FloentlySecureSessionStore
+import com.floently.shared.auth.FloentlyUser
 import com.floently.shared.billing.FloentlyAccessService
 import com.floently.shared.billing.FloentlyAccessStatus
 import com.floently.shared.learn.LearningEventOutboxV1
@@ -47,6 +48,9 @@ class LearnAppViewModel(application: Application) : AndroidViewModel(application
 
     private val _uiState = MutableStateFlow(LearnAppUiState())
     val uiState: StateFlow<LearnAppUiState> = _uiState.asStateFlow()
+
+    val currentUser: FloentlyUser?
+        get() = sessionStore.session?.user
 
     init {
         bootstrap()
@@ -189,7 +193,8 @@ class LearnAppViewModel(application: Application) : AndroidViewModel(application
                         it.copy(
                             accessStatus = status,
                             isRefreshingAccess = false,
-                            accessNotice = null
+                            accessNotice = null,
+                            connectionNotice = null
                         )
                     }
                 }

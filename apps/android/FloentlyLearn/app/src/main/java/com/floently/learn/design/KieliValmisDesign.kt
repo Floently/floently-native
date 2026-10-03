@@ -24,7 +24,13 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Error
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -416,5 +422,103 @@ fun KieliValmisReviewCard(
                 )
             }
         }
+    }
+}
+
+
+enum class KVStatusTone {
+    Info,
+    Warning,
+    Danger,
+    Success
+}
+
+@Composable
+fun KieliValmisStatusBanner(
+    message: String,
+    tone: KVStatusTone,
+    actionTitle: String? = null,
+    onAction: (() -> Unit)? = null
+) {
+    val accent = when (tone) {
+        KVStatusTone.Info -> KVColor.BrandBright
+        KVStatusTone.Warning -> KVColor.Warning
+        KVStatusTone.Danger -> KVColor.Danger
+        KVStatusTone.Success -> KVColor.Success
+    }
+    val icon = when (tone) {
+        KVStatusTone.Info -> Icons.Rounded.Info
+        KVStatusTone.Warning -> Icons.Rounded.Warning
+        KVStatusTone.Danger -> Icons.Rounded.Error
+        KVStatusTone.Success -> Icons.Rounded.CheckCircle
+    }
+
+    Surface(
+        color = KVColor.Surface1,
+        shape = RoundedCornerShape(KVRadius.m),
+        border = BorderStroke(1.dp, KVColor.BorderSoft),
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 48.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(KVSpacing.sm),
+            modifier = Modifier.padding(horizontal = KVSpacing.sm, vertical = 10.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(20.dp)
+            )
+
+            Text(
+                text = message,
+                color = KVColor.TextSecondary,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                modifier = Modifier.weight(1f)
+            )
+
+            if (actionTitle != null && onAction != null) {
+                androidx.compose.material3.TextButton(onClick = onAction) {
+                    Text(
+                        text = actionTitle,
+                        color = KVColor.TextPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun KieliValmisSecondaryButton(
+    title: String,
+    destructive: Boolean = false,
+    onClick: () -> Unit
+) {
+    OutlinedButton(
+        onClick = onClick,
+        border = BorderStroke(
+            1.dp,
+            if (destructive) KVColor.Danger.copy(alpha = 0.55f) else KVColor.Border
+        ),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = if (destructive) KVColor.Danger else KVColor.TextPrimary
+        ),
+        shape = RoundedCornerShape(KVRadius.l),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp)
+    ) {
+        Text(
+            text = title,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }

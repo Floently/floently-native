@@ -128,6 +128,7 @@ final class LearnAppModel: ObservableObject {
 
         do {
             accessStatus = try await accessService.fetchStatus()
+            connectionNotice = nil
         } catch let error as FloentlyAPIError {
             if isAuthenticationFailure(error) {
                 sessionStore.clear()
