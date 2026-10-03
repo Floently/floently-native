@@ -57,6 +57,7 @@ import com.floently.learn.design.KieliValmisStatusBanner
 import com.floently.learn.state.LearnAppViewModel
 
 enum class KieliValmisDestination {
+    Everyday,
     Yki,
     Professional,
     Speaking,
@@ -79,6 +80,11 @@ fun KieliValmisHomeScreen(
 
     destination?.let { target ->
         val accessState = when (target) {
+            KieliValmisDestination.Everyday -> pathwayAccessState(
+                accessKnown = ui.accessStatus != null,
+                allowed = ui.accessStatus?.generalFinnishAccess == true,
+                lockedMessage = "Everyday Finnish access is not active for this account."
+            )
             KieliValmisDestination.Yki -> pathwayAccessState(
                 accessKnown = ui.accessStatus != null,
                 allowed = ui.accessStatus?.let { access ->
@@ -100,6 +106,14 @@ fun KieliValmisHomeScreen(
             KieliValmisDestination.Profile -> {
                 KieliValmisProfileScreen(
                     appState = appState,
+                    onBack = { destination = null }
+                )
+            }
+            KieliValmisDestination.Everyday -> {
+                KieliValmisEverydayOverviewScreen(
+                    service = appState.overviewService,
+                    accessState = accessState,
+                    retryAccess = appState::refreshAccess,
                     onBack = { destination = null }
                 )
             }
@@ -228,6 +242,13 @@ fun KieliValmisHomeScreen(
             Column(verticalArrangement = Arrangement.spacedBy(KVSpacing.m)) {
                 KieliValmisSectionHeader("Your pathways")
 
+                KieliValmisPathwayCard(
+                    icon = Icons.Rounded.MenuBook,
+                    title = "Everyday Finnish",
+                    subtitle = everydayPathwaySubtitle(ui.accessStatus),
+                    onClick = { destination = KieliValmisDestination.Everyday }
+                )
+
                 ResponsivePair(
                     first = { modifier ->
                         KieliValmisPathwayCard(
@@ -329,6 +350,16 @@ fun KieliValmisHomeScreen(
                     color = KVColor.TextSecondary,
                     fontSize = 14.sp,
                     lineHeight = 20.sp
+                )
+
+                KieliValmisPathwayCard(
+                    icon = Icons.Rounded.MenuBook,
+                    title = "Everyday Finnish",
+                    subtitle = "Vocabulary, grammar and useful Finnish.",
+                    onClick = {
+                        showPathPicker = false
+                        destination = KieliValmisDestination.Everyday
+                    }
                 )
 
                 KieliValmisPathwayCard(
@@ -464,6 +495,19 @@ private fun pathwayAccessState(
         CapabilityAccessState.Available
     } else {
         CapabilityAccessState.Locked(lockedMessage)
+    }
+}
+
+private fun everydayPathwaySubtitle(
+    access: com.floently.shared.billing.FloentlyAccessStatus?
+): String {
+    if (access == null) {
+        return "Vocabulary, grammar and useful Finnish for daily life."
+    }
+    return if (access.generalFinnishAccess) {
+        "Vocabulary, grammar and useful Finnish for daily life."
+    } else {
+        "Everyday Finnish access is not active for this account."
     }
 }
 
@@ -613,6 +657,11 @@ private data class CapabilitySpec(
 )
 
 private fun capabilitySpec(destination: KieliValmisDestination): CapabilitySpec = when (destination) {
+    KieliValmisDestination.Everyday -> CapabilitySpec(
+        "Everyday Finnish",
+        "Vocabulary, grammar and useful Finnish for daily life.",
+        Icons.Rounded.MenuBook
+    )
     KieliValmisDestination.Yki -> CapabilitySpec(
         "YKI preparation",
         "Practice reading, listening, writing and speaking in one structured pathway.",
