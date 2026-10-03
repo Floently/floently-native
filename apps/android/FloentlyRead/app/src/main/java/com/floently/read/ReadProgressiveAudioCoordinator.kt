@@ -38,23 +38,51 @@ class ReadProgressiveAudioCoordinator(
         }
 
         return selected.map { segment ->
-            val asset = tts.synthesize(
+            val lookupKey = tts.lookupKey(
                 text = segment.text,
                 language = manifest.language,
-                voiceId = voiceId,
-                accessToken = accessToken
+                voiceId = voiceId
             )
-            val local = cache.localFile(asset)
+            val cached = cache.cachedAsset(lookupKey)
 
-            ReadPlaybackSegment(
-                id = segment.id,
-                index = segment.index,
-                logicalStartMs = segment.logicalStartMs,
-                logicalEndMs = segment.logicalEndMs,
-                audioUri = local.toURI().toString(),
-                actualDurationMs = asset.durationMs
-            )
+            if (cached != null) {
+                ReadPlaybackSegment(
+                    id = segment.id,
+                    index = segment.index,
+                    logicalStartMs = segment.logicalStartMs,
+                    logicalEndMs = segment.logicalEndMs,
+                    audioUri = cached.localFile
+                        .toURI()
+                        .toString(),
+                    actualDurationMs = cached.durationMs
+                )
+            } else {
+                val asset = tts.synthesize(
+                    text = segment.text,
+                    language = manifest.language,
+                    voiceId = voiceId,
+                    accessToken = accessToken
+                )
+                val local = cache.localFile(asset)
+
+                ReadPlaybackSegment(
+                    id = segment.id,
+                    index = segment.index,
+                    logicalStartMs = segment.logicalStartMs,
+                    logicalEndMs = segment.logicalEndMs,
+                    audioUri = local.toURI().toString(),
+                    actualDurationMs = asset.durationMs
+                )
+            }
         }
+    }
+
+    suspend fun replaceProtectedSegments(
+        segments: Collection<ReadPlaybackSegment>
+    ) {
+        cache.replaceProtectedUris(
+            segments.mapNotNull { it.audioUri }
+        )
     }
 
     fun playableDocument(
