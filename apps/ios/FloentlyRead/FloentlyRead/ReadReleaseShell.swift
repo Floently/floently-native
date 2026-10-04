@@ -666,12 +666,8 @@ struct ReadMainShell: View {
         }
         .fileImporter(
             isPresented: $showingFileImporter,
-            allowedContentTypes: [
-                .pdf,
-                .plainText,
-                .rtf,
-                .data
-            ],
+            allowedContentTypes:
+                Self.supportedFileImportTypes,
             allowsMultipleSelection: false
         ) { result in
             importFile(result)
@@ -680,6 +676,28 @@ struct ReadMainShell: View {
             ReadProjectReaderView(project: project)
         }
     }
+
+    private static let supportedFileImportTypes: [UTType] = {
+        var values: [UTType] = [
+            .pdf,
+            .plainText,
+            .rtf,
+            .html
+        ]
+
+        values.append(
+            contentsOf: [
+                "docx",
+                "epub",
+                "md",
+                "markdown"
+            ].compactMap {
+                UTType(filenameExtension: $0)
+            }
+        )
+
+        return values
+    }()
 
     private func importFile(
         _ result: Result<[URL], Error>
