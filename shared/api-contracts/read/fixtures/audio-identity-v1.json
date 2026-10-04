@@ -33,6 +33,22 @@
       "logicalEndMs": 16800,
       "physicalDurationMs": null,
       "expectedTimingMapId": "sha256:f3aa60c168f08308f17629e179a9c9b56eab180ae63a115ca85a95b941c10150"
+    },
+    {
+      "id": "canonical-whitespace-and-negative-duration",
+      "documentId": "doc-space",
+      "revisionId": "rev-1",
+      "language": "   ",
+      "voiceId": "  en-US-voice  ",
+      "provider": " provider-x ",
+      "model": " model-y ",
+      "expectedRenditionId": "sha256:e31ce5d6b94b1987fa7927b432bd4d5ba482cbe5e285f1a2e50787c3679a7bcc",
+      "segmentId": "seg-space",
+      "segmentIndex": 0,
+      "logicalStartMs": 0,
+      "logicalEndMs": 1000,
+      "physicalDurationMs": -5,
+      "expectedTimingMapId": "sha256:91711785299dcf429283d22998c7c3ea6349c40cabe461e15de51f1b4e803366"
     }
   ]
 }
