@@ -309,7 +309,9 @@ fun ReadBrowserScreen(
         }.getOrNull()
     }
 
-    fun toggleNativeReading() {
+    fun toggleNativeReading(
+        ensurePlaying: Boolean = false
+    ) {
         val url = currentUrl ?: return
         val generation = sourceGeneration
         val selection = selectedText.trim()
@@ -362,7 +364,14 @@ fun ReadBrowserScreen(
                         manifest.revisionId == lastLoadedRevisionId
 
                 if (sameReading && playbackController.snapshot.visible) {
-                    playbackController.togglePlayPause()
+                    if (
+                        ensurePlaying
+                        && !playbackController.snapshot.isPlaying
+                    ) {
+                        playbackController.togglePlayPause()
+                    } else if (!ensurePlaying) {
+                        playbackController.togglePlayPause()
+                    }
                     readingStatus =
                         if (playbackController.snapshot.isPlaying) {
                             "Reading the live page."
@@ -730,6 +739,10 @@ fun ReadBrowserScreen(
                         onPlayPause = ::toggleNativeReading,
                         onReadPage = {
                             activeReadingManifest = null
+                            selectedText = ""
+                            selectedLanguage = "auto"
+                            extractedText = ""
+                            extractedLanguage = "auto"
                             webView?.evaluateJavascript(
                                 ReadBrowserPolicy.readingVisualJavaScript(
                                     active = false,
@@ -791,15 +804,22 @@ fun ReadBrowserScreen(
                                         ?: text.split(Regex("\\s+"))
                                             .count { it.isNotBlank() }
 
-                                readingStatus = if (words == 0) {
-                                    "No readable lesson or article text was found on the visible page."
+                                if (words == 0 || text.isBlank()) {
+                                    readingStatus =
+                                        "No readable lesson or article text was found on the visible page."
                                 } else {
-                                    "Ready to read $words words from the live page."
+                                    readingStatus =
+                                        "Starting Read for $words words while the live page stays visible."
+                                    toggleNativeReading(
+                                        ensurePlaying = true
+                                    )
                                 }
                             }
                         },
                         onReadSelection = {
                             activeReadingManifest = null
+                            selectedText = ""
+                            selectedLanguage = "auto"
                             webView?.evaluateJavascript(
                                 ReadBrowserPolicy.readingVisualJavaScript(
                                     active = false,
@@ -851,12 +871,16 @@ fun ReadBrowserScreen(
                                     pageTitle = payload.title
                                 }
 
-                                readingStatus =
-                                    if (selectedText.isBlank()) {
+                                if (selectedText.isBlank()) {
+                                    readingStatus =
                                         "Select text on the page first."
-                                    } else {
-                                        "Selection ready to read."
-                                    }
+                                } else {
+                                    readingStatus =
+                                        "Starting Read for the selected text while the live page stays visible."
+                                    toggleNativeReading(
+                                        ensurePlaying = true
+                                    )
+                                }
                             }
                         },
                         modifier = Modifier
