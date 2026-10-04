@@ -859,12 +859,14 @@ export function BrowserWorkspace({
           <>
             <button
               type="button"
+              disabled={!ownsBrowserPlayback}
               onClick={() => void runtime?.browserReading.moveBySentence(-1)}
             >
               Previous
             </button>
             <button
               type="button"
+              disabled={!ownsBrowserPlayback}
               onClick={() => void runtime?.browserReading.moveBySentence(1)}
             >
               Next
@@ -878,7 +880,7 @@ export function BrowserWorkspace({
             </button>
             <button
               type="button"
-              disabled={!lastPoint}
+              disabled={!lastPoint || !ownsBrowserPlayback}
               onClick={() => void readFromHere()}
             >
               Read from here
@@ -888,6 +890,7 @@ export function BrowserWorkspace({
               <span>Speed</span>
               <select
                 value={playback.speed}
+                disabled={!ownsBrowserPlayback}
                 onChange={(event) => {
                   const speed = Number(event.target.value);
                   setReadSpeedPreference(speed);
@@ -908,7 +911,11 @@ export function BrowserWorkspace({
               <span>Voice</span>
               <select
                 value={playback.voiceId}
-                disabled={voicesLoading || voices.length === 0}
+                disabled={
+                  !ownsBrowserPlayback
+                  || voicesLoading
+                  || voices.length === 0
+                }
                 onChange={(event) => {
                   const voiceId = event.target.value;
                   const voice = voices.find(
