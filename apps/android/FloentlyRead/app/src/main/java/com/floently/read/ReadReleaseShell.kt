@@ -28,9 +28,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -671,6 +674,7 @@ private fun ReadMainShell(
     var tab by remember { mutableStateOf(ReadReleaseTab.Home) }
     var showAddSheet by remember { mutableStateOf(false) }
     var showPasteSheet by remember { mutableStateOf(false) }
+    var showUrlSheet by remember { mutableStateOf(false) }
     var browserOpen by remember { mutableStateOf(false) }
     var browserUrl by remember { mutableStateOf<String?>(null) }
     var activeProject by remember {
@@ -870,6 +874,10 @@ private fun ReadMainShell(
                     showAddSheet = false
                     showPasteSheet = true
                 },
+                onLink = {
+                    showAddSheet = false
+                    showUrlSheet = true
+                },
                 onWebsite = {
                     showAddSheet = false
                     browserOpen = true
@@ -893,6 +901,27 @@ private fun ReadMainShell(
                 projectStore = projectStore,
                 onCreated = {
                     showPasteSheet = false
+                    activeProject = it
+                }
+            )
+        }
+    }
+
+    if (showUrlSheet) {
+        val sheetState = rememberModalBottomSheetState(
+            skipPartiallyExpanded = false
+        )
+        ModalBottomSheet(
+            onDismissRequest = {
+                showUrlSheet = false
+            },
+            sheetState = sheetState
+        ) {
+            ReadUrlImportSheet(
+                sessionStore = sessionStore,
+                projectStore = projectStore,
+                onCreated = {
+                    showUrlSheet = false
                     activeProject = it
                 }
             )
@@ -1175,6 +1204,9 @@ private fun ReadLibraryScreen(
     val palette = floentlyPalette(FloentlyProduct.Read)
     val scope = rememberCoroutineScope()
     var search by remember { mutableStateOf("") }
+    var pendingDelete by remember {
+        mutableStateOf<ReadContentProject?>(null)
+    }
 
     val filtered = remember(
         projectStore.projects,
@@ -1289,6 +1321,9 @@ private fun ReadLibraryScreen(
                                 project = it,
                                 onClick = {
                                     onOpenProject(it)
+                                },
+                                onDelete = {
+                                    pendingDelete = it
                                 }
                             )
                         }
@@ -1319,78 +1354,185 @@ private fun ReadLibraryScreen(
             }
         }
     }
+
+    pendingDelete?.let { project ->
+        AlertDialog(
+            onDismissRequest = {
+                pendingDelete = null
+            },
+            title = {
+                Text("Remove this reading?")
+            },
+            text = {
+                Text(
+                    "“" + project.title +
+                        "” will be removed from your synced Read library."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingDelete = null
+                        val token =
+                            sessionStore.session?.token
+                        if (token == null) {
+                            projectStore.errorMessage =
+                                "Sign in again to change your library."
+                        } else {
+                            scope.launch {
+                                runCatching {
+                                    projectStore.delete(
+                                        project = project,
+                                        accessToken = token
+                                    )
+                                }.onFailure {
+                                    projectStore.errorMessage =
+                                        it.message
+                                            ?: "Could not remove this reading."
+                                }
+                            }
+                        }
+                    }
+                ) {
+                    Text(
+                        "Remove",
+                        color = Color(0xFFFF8A80)
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        pendingDelete = null
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 private fun ReadProjectRow(
     project: ReadContentProject,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDelete: (() -> Unit)? = null
 ) {
     val palette = floentlyPalette(FloentlyProduct.Read)
+    var menuOpen by remember { mutableStateOf(false) }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 11.dp)
+            .padding(vertical = 5.dp)
     ) {
-        Surface(
-            color = palette.backgroundBottom,
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.size(
-                width = 48.dp,
-                height = 62.dp
-            )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .weight(1f)
+                .clickable(onClick = onClick)
+                .padding(vertical = 6.dp)
         ) {
-            Box(
-                contentAlignment = Alignment.Center
+            Surface(
+                color = palette.backgroundBottom,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.size(
+                    width = 48.dp,
+                    height = 62.dp
+                )
             ) {
+                Box(
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        when (
+                            project.sourceType.lowercase()
+                        ) {
+                            "pdf" -> "PDF"
+                            "web", "website", "url" -> "◎"
+                            else -> "Aa"
+                        },
+                        color = palette.accent,
+                        style =
+                            MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    when (
-                        project.sourceType.lowercase()
-                    ) {
-                        "pdf" -> "PDF"
-                        "web", "website" -> "◎"
-                        else -> "Aa"
-                    },
-                    color = palette.accent,
+                    project.title,
+                    color = palette.text,
                     style =
-                        MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold
+                        MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2
+                )
+                Spacer(Modifier.height(5.dp))
+                Text(
+                    buildString {
+                        append(project.displaySource)
+                        if (project.wordCount > 0) {
+                            append("  •  ")
+                            append(project.wordCount)
+                            append(" words")
+                        }
+                    },
+                    color = palette.muted,
+                    style =
+                        MaterialTheme.typography.bodySmall,
+                    maxLines = 1
                 )
             }
+
+            Text(
+                "›",
+                color = palette.muted,
+                style = MaterialTheme.typography.titleLarge
+            )
         }
 
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                project.title,
-                color = palette.text,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 2
-            )
-            Spacer(Modifier.height(5.dp))
-            Text(
-                buildString {
-                    append(project.displaySource)
-                    if (project.wordCount > 0) {
-                        append("  •  ")
-                        append(project.wordCount)
-                        append(" words")
+        if (onDelete != null) {
+            Box {
+                TextButton(
+                    onClick = {
+                        menuOpen = true
+                    },
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier
+                        .width(42.dp)
+                        .height(48.dp)
+                ) {
+                    Text(
+                        "⋯",
+                        color = palette.muted,
+                        style =
+                            MaterialTheme.typography.titleLarge
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = menuOpen,
+                    onDismissRequest = {
+                        menuOpen = false
                     }
-                },
-                color = palette.muted,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1
-            )
+                ) {
+                    DropdownMenuItem(
+                        text = {
+                            Text("Remove from Library")
+                        },
+                        onClick = {
+                            menuOpen = false
+                            onDelete()
+                        }
+                    )
+                }
+            }
         }
-        Text(
-            "›",
-            color = palette.muted,
-            style = MaterialTheme.typography.titleLarge
-        )
     }
 }
 
@@ -1555,6 +1697,7 @@ private fun ReadSettingsScreen(
 private fun ReadAddSourceSheet(
     onFiles: () -> Unit,
     onPaste: () -> Unit,
+    onLink: () -> Unit,
     onWebsite: () -> Unit
 ) {
     Column(
@@ -1592,6 +1735,13 @@ private fun ReadAddSourceSheet(
             subtitle =
                 "Turn notes or copied text into a saved project",
             onClick = onPaste
+        )
+        SourceChoice(
+            glyph = "↗",
+            title = "Import link",
+            subtitle =
+                "Save an article or public page into your library",
+            onClick = onLink
         )
         SourceChoice(
             glyph = "◎",
@@ -1647,6 +1797,100 @@ private fun SourceChoice(
                 )
             }
             Text("›")
+        }
+    }
+}
+
+@Composable
+private fun ReadUrlImportSheet(
+    sessionStore: FloentlySecureSessionStore,
+    projectStore: ReadProjectStore,
+    onCreated: (ReadContentProject) -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var title by remember { mutableStateOf("") }
+    var sourceUrl by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    Column(
+        verticalArrangement =
+            Arrangement.spacedBy(14.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = 20.dp,
+                end = 20.dp,
+                bottom = 28.dp
+            )
+    ) {
+        Text(
+            "Import link",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            "Save a public article or page as a library reading. For signed-in or interactive sites, use Live website instead.",
+            color = MaterialTheme.colorScheme
+                .onSurfaceVariant
+        )
+
+        ReadTextField(
+            value = title,
+            onValueChange = { title = it },
+            label = "Title optional"
+        )
+
+        ReadTextField(
+            value = sourceUrl,
+            onValueChange = { sourceUrl = it },
+            label = "https://example.com/article",
+            keyboardType = KeyboardType.Uri
+        )
+
+        error?.let {
+            Text(
+                it,
+                color = Color(0xFFFF8A80),
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+
+        Button(
+            enabled = !busy && sourceUrl.isNotBlank(),
+            onClick = {
+                val token = sessionStore.session?.token
+                if (token == null) {
+                    error = "Sign in again to save this link."
+                    return@Button
+                }
+
+                busy = true
+                error = null
+
+                scope.launch {
+                    runCatching {
+                        projectStore.addUrl(
+                            title = title,
+                            sourceUrl = sourceUrl,
+                            accessToken = token
+                        )
+                    }
+                        .onSuccess(onCreated)
+                        .onFailure {
+                            error = it.message
+                                ?: "Could not import this link."
+                        }
+                    busy = false
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+        ) {
+            Text(
+                if (busy) "Importing…" else "Save and open"
+            )
         }
     }
 }
