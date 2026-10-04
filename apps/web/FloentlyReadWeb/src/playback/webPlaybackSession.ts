@@ -223,7 +223,7 @@ export class WebPlaybackSession {
       options.monotonicNow
       ?? (() => (
         typeof performance !== "undefined"
-          ? this.monotonicNow()
+          ? performance.now()
           : Date.now()
       ));
 
