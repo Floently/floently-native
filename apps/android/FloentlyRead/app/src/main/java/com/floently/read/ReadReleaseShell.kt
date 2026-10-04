@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -55,14 +57,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.floently.shared.api.FloentlyApiClient
 import com.floently.shared.api.FloentlyApiError
 import com.floently.shared.auth.FloentlyAuthService
@@ -2757,6 +2763,9 @@ private fun ReadProjectReaderScreen(
     var offlineError by remember {
         mutableStateOf<String?>(null)
     }
+    var readerMenuExpanded by remember {
+        mutableStateOf(false)
+    }
     val originalPdfFile = remember(
         project.id
     ) {
@@ -2794,6 +2803,87 @@ private fun ReadProjectReaderScreen(
                 email = it.email
             )
         }
+
+    fun startListening() {
+        val value = manifest ?: return
+        val voice = offlineVoiceId ?: return
+
+        playbackController.loadManifest(
+            manifest = value,
+            voiceId = voice,
+            autoplay = true
+        )
+    }
+
+    fun toggleOffline() {
+        val value = manifest ?: return
+        val voice = offlineVoiceId ?: return
+        val identity =
+            offlineAccountIdentity ?: return
+        val token =
+            sessionStore.session?.token
+                ?: return
+
+        scope.launch {
+            offlineBusy = true
+            offlineError = null
+
+            try {
+                if (offlineSaved) {
+                    if (
+                        playbackController
+                            .activeDocumentId
+                            == value.documentId
+                        && playbackController
+                            .activeRevisionId
+                            == value.revisionId
+                        && playbackController
+                            .activeVoiceId
+                            == voice
+                    ) {
+                        offlineError =
+                            "This offline voice is currently in use. Open another reading or stop the current session before removing it."
+                    } else {
+                        offlineCoordinator
+                            .removeOffline(
+                                manifest = value,
+                                voiceId = voice,
+                                accountIdentity =
+                                    identity
+                            )
+                        offlineSaved = false
+                    }
+                } else {
+                    offlineCoordinator
+                        .saveOffline(
+                            manifest = value,
+                            voiceId = voice,
+                            accessToken = token,
+                            accountIdentity =
+                                identity
+                        )
+                    offlineSaved =
+                        offlineCoordinator
+                            .isAvailableOffline(
+                                manifest = value,
+                                voiceId = voice,
+                                accountIdentity =
+                                    identity
+                            )
+                }
+            } catch (
+                error: CancellationException
+            ) {
+                throw error
+            } catch (error: Exception) {
+                offlineError =
+                    error.localizedMessage
+                        ?: "Could not save this document offline."
+            } finally {
+                offlineBusy = false
+            }
+        }
+    }
 
     LaunchedEffect(
         manifest?.revisionId,
@@ -2882,184 +2972,112 @@ private fun ReadProjectReaderScreen(
             .background(palette.backgroundTop)
     ) {
         Row(
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment =
+                Alignment.CenterVertically,
+            horizontalArrangement =
+                Arrangement.spacedBy(
+                    FloentlyDesignTokens
+                        .Space
+                        .s2
+                ),
             modifier = Modifier
                 .fillMaxWidth()
-                .background(palette.backgroundBottom)
+                .height(56.dp)
+                .background(
+                    FloentlyDesignTokens
+                        .Colors
+                        .surface1
+                )
                 .padding(
-                    horizontal = 10.dp,
-                    vertical = 5.dp
+                    horizontal =
+                        FloentlyDesignTokens
+                            .Space
+                            .s1
                 )
         ) {
-            Button(
-                onClick = onExit,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.Transparent
-                ),
-                contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.size(48.dp)
-            ) {
-                Text(
-                    "‹",
-                    color = palette.text,
-                    style = MaterialTheme.typography.headlineSmall
-                )
-            }
+            ReadReaderToolbarButton(
+                symbol =
+                    ReadReaderToolbarSymbol
+                        .Back,
+                contentDescription = "Back",
+                onClick = onExit
+            )
 
             Text(
                 project.title,
                 color = palette.text,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight =
+                    FontWeight.SemiBold,
+                style =
+                    MaterialTheme.typography
+                        .titleMedium,
                 maxLines = 1,
                 modifier = Modifier.weight(1f)
             )
 
-            Button(
-                enabled =
-                    manifest != null
-                    && offlineVoiceId != null
-                    && offlineAccountIdentity != null
-                    && !offlineBusy,
-                onClick = {
-                    val value = manifest
-                        ?: return@Button
-                    val voice = offlineVoiceId
-                        ?: return@Button
-                    val identity =
-                        offlineAccountIdentity
-                            ?: return@Button
-                    val token =
-                        sessionStore.session?.token
-                            ?: return@Button
-
-                    scope.launch {
-                        offlineBusy = true
-                        offlineError = null
-
-                        try {
-                            if (offlineSaved) {
-                                if (
-                                    playbackController
-                                        .activeDocumentId
-                                        == value.documentId
-                                    && playbackController
-                                        .activeRevisionId
-                                        == value.revisionId
-                                    && playbackController
-                                        .activeVoiceId
-                                        == voice
-                                ) {
-                                    offlineError =
-                                        "This offline voice is currently in use. Open another reading or stop the current session before removing it."
-                                } else {
-                                    offlineCoordinator
-                                        .removeOffline(
-                                            manifest = value,
-                                            voiceId = voice,
-                                            accountIdentity =
-                                                identity
-                                        )
-                                    offlineSaved = false
-                                }
-                            } else {
-                                offlineCoordinator
-                                    .saveOffline(
-                                        manifest = value,
-                                        voiceId = voice,
-                                        accessToken = token,
-                                        accountIdentity =
-                                            identity
-                                    )
-                                offlineSaved =
-                                    offlineCoordinator
-                                        .isAvailableOffline(
-                                            manifest = value,
-                                            voiceId = voice,
-                                            accountIdentity =
-                                                identity
-                                        )
-                            }
-                        } catch (
-                            error: CancellationException
-                        ) {
-                            throw error
-                        } catch (error: Exception) {
-                            offlineError =
-                                error.localizedMessage
-                                    ?: "Could not save this document offline."
-                        } finally {
-                            offlineBusy = false
-                        }
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor =
-                        palette.backgroundBottom
-                ),
-                shape = RoundedCornerShape(14.dp),
-                contentPadding = PaddingValues(
-                    horizontal = 10.dp,
-                    vertical = 0.dp
-                ),
-                modifier = Modifier.height(42.dp)
-            ) {
-                if (offlineBusy) {
-                    CircularProgressIndicator(
-                        strokeWidth = 2.dp,
-                        color = palette.accent,
-                        modifier = Modifier.size(18.dp)
-                    )
-                } else {
-                    Text(
-                        if (offlineSaved) {
-                            "✓ Offline"
-                        } else {
-                            "↓ Offline"
-                        },
-                        color =
-                            if (offlineSaved) {
-                                palette.accent
-                            } else {
-                                palette.text
-                            },
-                        style =
-                            MaterialTheme.typography
-                                .labelMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
+            Box {
+                ReadReaderToolbarButton(
+                    symbol =
+                        ReadReaderToolbarSymbol
+                            .More,
+                    contentDescription =
+                        "Reader options"
+                ) {
+                    readerMenuExpanded = true
                 }
-            }
 
-            Spacer(Modifier.width(8.dp))
+                DropdownMenu(
+                    expanded =
+                        readerMenuExpanded,
+                    onDismissRequest = {
+                        readerMenuExpanded = false
+                    }
+                ) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                if (preparing) {
+                                    "Preparing audio…"
+                                } else {
+                                    "Listen"
+                                }
+                            )
+                        },
+                        enabled =
+                            manifest != null
+                            && !preparing,
+                        onClick = {
+                            readerMenuExpanded = false
+                            startListening()
+                        }
+                    )
 
-            Button(
-                enabled = manifest != null && !preparing,
-                onClick = {
-                    val value = manifest
-                        ?: return@Button
-                    val voice = offlineVoiceId
-                        ?: return@Button
-                    playbackController.loadManifest(
-                        manifest = value,
-                        voiceId = voice,
-                        autoplay = true
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                if (offlineBusy) {
+                                    "Updating offline copy…"
+                                } else if (
+                                    offlineSaved
+                                ) {
+                                    "Remove offline download"
+                                } else {
+                                    "Save for offline listening"
+                                }
+                            )
+                        },
+                        enabled =
+                            manifest != null
+                            && offlineVoiceId
+                                != null
+                            && offlineAccountIdentity
+                                != null
+                            && !offlineBusy,
+                        onClick = {
+                            readerMenuExpanded = false
+                            toggleOffline()
+                        }
                     )
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = palette.accent
-                ),
-                shape = CircleShape,
-                contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.size(48.dp)
-            ) {
-                if (preparing) {
-                    CircularProgressIndicator(
-                        strokeWidth = 2.dp,
-                        color = Color.White,
-                        modifier = Modifier.size(22.dp)
-                    )
-                } else {
-                    Text("▶")
                 }
             }
         }
@@ -3088,10 +3106,17 @@ private fun ReadProjectReaderScreen(
                     0f
                 }
             },
-            color = palette.accent,
+            color =
+                FloentlyDesignTokens
+                    .Colors
+                    .brand,
+            trackColor =
+                FloentlyDesignTokens
+                    .Colors
+                    .borderSoft,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(3.dp)
+                .height(2.dp)
         )
 
         errorMessage?.let {
@@ -3192,26 +3217,145 @@ private fun ReadProjectReaderScreen(
                     .ifEmpty { listOf(text) }
             }
 
-            LazyColumn(
-                verticalArrangement =
-                    Arrangement.spacedBy(18.dp),
-                contentPadding = PaddingValues(
-                    start = 24.dp,
-                    end = 24.dp,
-                    top = 28.dp,
-                    bottom = 120.dp
-                ),
+            Box(
+                contentAlignment =
+                    Alignment.TopCenter,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
             ) {
-                items(paragraphs) { paragraph ->
-                    Text(
-                        paragraph,
-                        color = palette.text,
-                        style =
-                            MaterialTheme.typography.bodyLarge
+                LazyColumn(
+                    verticalArrangement =
+                        Arrangement.spacedBy(
+                            18.dp
+                        ),
+                    contentPadding =
+                        PaddingValues(
+                            start = 24.dp,
+                            end = 24.dp,
+                            top = 28.dp,
+                            bottom = 120.dp
+                        ),
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .widthIn(
+                            max = 680.dp
+                        )
+                ) {
+                    items(paragraphs) {
+                        paragraph ->
+                        Text(
+                            paragraph,
+                            color = palette.text,
+                            style =
+                                MaterialTheme
+                                    .typography
+                                    .bodyLarge
+                                    .copy(
+                                        fontSize =
+                                            20.sp,
+                                        lineHeight =
+                                            32.sp
+                                    )
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private enum class ReadReaderToolbarSymbol {
+    Back,
+    More
+}
+
+@Composable
+private fun ReadReaderToolbarButton(
+    symbol: ReadReaderToolbarSymbol,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
+    val color =
+        FloentlyDesignTokens
+            .Colors
+            .textPrimary
+
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults
+            .buttonColors(
+                containerColor =
+                    Color.Transparent,
+                contentColor = color
+            ),
+        contentPadding =
+            PaddingValues(0.dp),
+        modifier = Modifier
+            .size(
+                FloentlyDesignTokens
+                    .Control
+                    .iconTarget
+            )
+            .semantics {
+                this.contentDescription =
+                    contentDescription
+            }
+    ) {
+        Canvas(
+            modifier = Modifier.size(
+                22.dp
+            )
+        ) {
+            val stroke = 2.dp.toPx()
+            val cy = size.height / 2f
+
+            when (symbol) {
+                ReadReaderToolbarSymbol
+                    .Back -> {
+                    drawLine(
+                        color = color,
+                        start = Offset(
+                            size.width * 0.62f,
+                            size.height * 0.22f
+                        ),
+                        end = Offset(
+                            size.width * 0.34f,
+                            cy
+                        ),
+                        strokeWidth = stroke
                     )
+                    drawLine(
+                        color = color,
+                        start = Offset(
+                            size.width * 0.34f,
+                            cy
+                        ),
+                        end = Offset(
+                            size.width * 0.62f,
+                            size.height * 0.78f
+                        ),
+                        strokeWidth = stroke
+                    )
+                }
+
+                ReadReaderToolbarSymbol
+                    .More -> {
+                    listOf(
+                        size.width * 0.30f,
+                        size.width * 0.50f,
+                        size.width * 0.70f
+                    ).forEach { x ->
+                        drawCircle(
+                            color = color,
+                            radius =
+                                stroke * 0.9f,
+                            center = Offset(
+                                x,
+                                cy
+                            )
+                        )
+                    }
                 }
             }
         }
