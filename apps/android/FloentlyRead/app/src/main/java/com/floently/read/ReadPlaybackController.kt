@@ -46,6 +46,9 @@ class ReadPlaybackController(
     var activeRevisionId by mutableStateOf<String?>(null)
         private set
 
+    var activeManifest by mutableStateOf<ReadingManifestV1?>(null)
+        private set
+
     private val applicationContext = context.applicationContext
     private val mainHandler = Handler(Looper.getMainLooper())
     private val mainExecutor = Executor { command ->
@@ -131,6 +134,7 @@ class ReadPlaybackController(
         activeVoiceId = voiceId
         activeDocumentId = manifest.documentId
         activeRevisionId = manifest.revisionId
+        activeManifest = manifest
 
         val request = ReadManifestLoadRequest(
             manifest = manifest,
@@ -162,6 +166,7 @@ class ReadPlaybackController(
         pendingManifestLoad = null
         activeDocumentId = document.id
         activeRevisionId = document.revisionId
+        activeManifest = null
 
         val player = controller
         if (player == null) {
@@ -261,6 +266,7 @@ class ReadPlaybackController(
         activeLanguage = "auto"
         activeDocumentId = null
         activeRevisionId = null
+        activeManifest = null
 
         val player = controller
         if (player == null) {
@@ -309,6 +315,7 @@ class ReadPlaybackController(
         activeLanguage = "auto"
         activeDocumentId = null
         activeRevisionId = null
+        activeManifest = null
         mainHandler.removeCallbacks(refreshRunnable)
 
         val value = controller
