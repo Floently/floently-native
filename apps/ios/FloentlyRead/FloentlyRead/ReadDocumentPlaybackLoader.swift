@@ -699,6 +699,10 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
 
         lastAnchoredScalarBucket =
             scalarBucket
+        let preparedSegment =
+            preparedSegments[
+                anchor.segmentIndex
+            ]
         resumeStore.save(
             ReadPlaybackResumeSnapshot(
                 documentId:
@@ -718,6 +722,12 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                     anchor.segmentIndex,
                 voiceId:
                     activeVoiceId,
+                renditionId:
+                    preparedSegment
+                        ?.renditionId,
+                timingMapId:
+                    preparedSegment
+                        ?.timingMapId,
                 sourceAnchorQuote:
                     anchor.quote,
                 sourceAnchorPrefixContext:
