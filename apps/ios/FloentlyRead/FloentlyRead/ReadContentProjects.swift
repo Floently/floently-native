@@ -606,6 +606,7 @@ final class ReadProjectStore: ObservableObject {
     private let client = ReadContentProjectClient()
     private let originalStore = ReadOriginalDocumentStore.shared
     private let snapshotStore = ReadProjectSnapshotStore.shared
+    private let progressOutbox = ReadProgressOutboxStore.shared
     private var snapshotAccountIdentity: String?
     private var progressSyncTail: Task<Void, Never>?
     private var progressSyncGeneration = 0
@@ -645,6 +646,10 @@ final class ReadProjectStore: ObservableObject {
             projects = mergeRemoteProjects(
                 remote,
                 cached: cached
+            )
+            await flushPendingProgress(
+                accessToken: accessToken,
+                remoteProjects: remote
             )
             await persistSnapshotIfBound()
             activity = .idle
@@ -733,6 +738,11 @@ final class ReadProjectStore: ObservableObject {
                         snapshotAccountIdentity,
                     documentId: project.id
                 )
+            await progressOutbox.removeProject(
+                accountIdentity:
+                    snapshotAccountIdentity,
+                projectId: project.id
+            )
         }
         projects.removeAll { $0.id == project.id }
         await persistSnapshotIfBound()
@@ -786,6 +796,41 @@ final class ReadProjectStore: ObservableObject {
         let generation = progressSyncGeneration
         progressSyncSequence &+= 1
         let sequence = progressSyncSequence
+        let accountIdentity = snapshotAccountIdentity
+        let baseServerUpdatedAt =
+            projects.first {
+                $0.id == projectId
+            }?.progress?.updatedAt
+        let pending = ReadPendingProgressWrite(
+            nonce: UUID().uuidString,
+            projectId: projectId,
+            currentSegmentIndex:
+                max(0, currentSegmentIndex),
+            currentCharacterOffset:
+                max(0, currentCharacterOffset),
+            progressPercent:
+                min(100, max(0, progressPercent)),
+            voiceId: voiceId,
+            playbackRate:
+                playbackRate?.isFinite == true
+                ? min(
+                    3,
+                    max(0.5, playbackRate!)
+                )
+                : nil,
+            baseServerUpdatedAt:
+                baseServerUpdatedAt,
+            createdAt: Date()
+        )
+
+        if let accountIdentity {
+            try? await progressOutbox.save(
+                accountIdentity:
+                    accountIdentity,
+                write: pending
+            )
+        }
+
         let previous = progressSyncTail
         let task = Task { [weak self] in
             if let previous {
@@ -804,30 +849,55 @@ final class ReadProjectStore: ObservableObject {
             do {
                 let progress = try await self.client.updateProgress(
                     projectId: projectId,
-                    currentSegmentIndex: currentSegmentIndex,
-                    currentCharacterOffset: currentCharacterOffset,
-                    progressPercent: progressPercent,
-                    voiceId: voiceId,
-                    playbackRate: playbackRate,
+                    currentSegmentIndex:
+                        pending.currentSegmentIndex,
+                    currentCharacterOffset:
+                        pending.currentCharacterOffset,
+                    progressPercent:
+                        pending.progressPercent,
+                    voiceId: pending.voiceId,
+                    playbackRate:
+                        pending.playbackRate,
                     accessToken: accessToken
                 )
+
+                if let accountIdentity {
+                    await self.progressOutbox
+                        .removeIfMatches(
+                            accountIdentity:
+                                accountIdentity,
+                            projectId: projectId,
+                            nonce: pending.nonce
+                        )
+                }
+
                 guard
                     !Task.isCancelled,
                     generation == self.progressSyncGeneration,
-                    sequence == self.progressSyncSequence,
-                    let progress
+                    sequence == self.progressSyncSequence
                 else {
                     return
                 }
-                if let index = self.projects.firstIndex(where: {
-                    $0.id == projectId
-                }) {
+
+                if
+                    let progress,
+                    let index =
+                        self.projects
+                            .firstIndex(where: {
+                                $0.id == projectId
+                            })
+                {
                     self.projects[index] =
                         self.projects[index]
-                            .replacingProgress(progress)
+                            .replacingProgress(
+                                progress
+                            )
                 }
+            } catch is CancellationError {
+                return
             } catch {
-                // Best effort: local resume remains authoritative offline.
+                // The write-ahead outbox retains the newest cursor for
+                // reconnect. Local resume remains authoritative offline.
             }
         }
 
@@ -847,6 +917,138 @@ final class ReadProjectStore: ObservableObject {
         projects = []
         activity = .idle
         errorMessage = nil
+    }
+
+    private func flushPendingProgress(
+        accessToken: String,
+        remoteProjects: [ReadContentProject]
+    ) async {
+        guard let snapshotAccountIdentity else {
+            return
+        }
+
+        if let progressSyncTail {
+            await progressSyncTail.value
+        }
+
+        let remoteById = Dictionary(
+            uniqueKeysWithValues:
+                remoteProjects.map {
+                    ($0.id, $0)
+                }
+        )
+        let writes = await progressOutbox.entries(
+            accountIdentity:
+                snapshotAccountIdentity
+        )
+
+        for write in writes {
+            guard
+                let current =
+                    await progressOutbox
+                        .currentWrite(
+                            accountIdentity:
+                                snapshotAccountIdentity,
+                            projectId:
+                                write.projectId
+                        ),
+                current.nonce == write.nonce
+            else {
+                continue
+            }
+
+            guard
+                let remote =
+                    remoteById[write.projectId]
+            else {
+                await progressOutbox
+                    .removeIfMatches(
+                        accountIdentity:
+                            snapshotAccountIdentity,
+                        projectId:
+                            write.projectId,
+                        nonce: write.nonce
+                    )
+                continue
+            }
+
+            let remoteUpdatedAt =
+                remote.progress?
+                    .updatedAt
+                    .nilIfBlank
+            let baseUpdatedAt =
+                write.baseServerUpdatedAt?
+                    .nilIfBlank
+
+            if
+                let remoteUpdatedAt,
+                remoteUpdatedAt != baseUpdatedAt
+            {
+                // The server advanced since this offline cursor was based
+                // on it. Remote wins to prevent another device's newer
+                // progress from being overwritten by a stale replay.
+                await progressOutbox
+                    .removeIfMatches(
+                        accountIdentity:
+                            snapshotAccountIdentity,
+                        projectId:
+                            write.projectId,
+                        nonce: write.nonce
+                    )
+                continue
+            }
+
+            do {
+                let progress =
+                    try await client.updateProgress(
+                        projectId:
+                            write.projectId,
+                        currentSegmentIndex:
+                            write.currentSegmentIndex,
+                        currentCharacterOffset:
+                            write.currentCharacterOffset,
+                        progressPercent:
+                            write.progressPercent,
+                        voiceId:
+                            write.voiceId,
+                        playbackRate:
+                            write.playbackRate,
+                        accessToken:
+                            accessToken
+                    )
+
+                await progressOutbox
+                    .removeIfMatches(
+                        accountIdentity:
+                            snapshotAccountIdentity,
+                        projectId:
+                            write.projectId,
+                        nonce: write.nonce
+                    )
+
+                if
+                    let progress,
+                    let index =
+                        projects.firstIndex(
+                            where: {
+                                $0.id
+                                    == write.projectId
+                            }
+                        )
+                {
+                    projects[index] =
+                        projects[index]
+                            .replacingProgress(
+                                progress
+                            )
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                // Keep the pending write for a later online refresh.
+                continue
+            }
+        }
     }
 
     private func persistSnapshotIfBound() async {
