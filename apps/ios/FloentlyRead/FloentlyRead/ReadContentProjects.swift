@@ -731,6 +731,10 @@ final class ReadProjectStore: ObservableObject {
         await originalStore.delete(
             projectId: project.id
         )
+        await ReadEpubSourceStore.shared
+            .delete(
+                projectId: project.id
+            )
         if let snapshotAccountIdentity {
             await ReadOfflineAudioStore.shared
                 .removeDocument(
