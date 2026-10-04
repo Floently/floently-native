@@ -2,6 +2,7 @@ import type { ReadTtsAsset } from "../tts/readTtsProvider";
 import {
   DEFAULT_READ_AUDIO_CACHE_BUDGET,
   planReadAudioCacheEvictions,
+  planReadAudioCachePressureEvictions,
   resolveReadAudioCacheKey,
 } from "./readAudioCachePolicy";
 
@@ -30,9 +31,54 @@ interface AudioCacheMetadata {
 const CACHE_NAME = "floently-read-audio-v1";
 const DB_NAME = "floently-read-audio-v1";
 const STORE_NAME = "assets";
+const MIB = 1024 * 1024;
+const QUOTA_PRESSURE_MIN_HEADROOM_BYTES = 4 * MIB;
+const QUOTA_PRESSURE_MAX_HEADROOM_BYTES = 16 * MIB;
 
 function hasCacheStorage(): boolean {
   return typeof caches !== "undefined";
+}
+
+function isQuotaExceededError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+
+  const value = error as {
+    name?: unknown;
+    code?: unknown;
+  };
+  const name =
+    typeof value.name === "string"
+      ? value.name
+      : "";
+  const code =
+    typeof value.code === "number"
+      ? value.code
+      : null;
+
+  return (
+    name === "QuotaExceededError"
+    || name === "NS_ERROR_DOM_QUOTA_REACHED"
+    || code === 22
+    || code === 1014
+  );
+}
+
+function quotaPressureBytesToFree(incomingBytes: number): number {
+  const incoming = Math.max(
+    1,
+    Number.isFinite(incomingBytes)
+      ? Math.floor(incomingBytes)
+      : 1,
+  );
+  const safetyHeadroom = Math.min(
+    QUOTA_PRESSURE_MAX_HEADROOM_BYTES,
+    Math.max(
+      QUOTA_PRESSURE_MIN_HEADROOM_BYTES,
+      incoming,
+    ),
+  );
+
+  return incoming + safetyHeadroom;
 }
 
 function syntheticCacheUrl(cacheKey: string): string {
@@ -221,34 +267,88 @@ export class ReadAudioCache implements ReadAudioCachePort {
         return null;
       }
 
-      const cache = await caches.open(CACHE_NAME);
-      await cache.put(cacheUrl, response.clone());
-
+      const firstCacheResponse = response.clone();
       const blob = await response.blob();
-      const objectUrl = this.createLeasedObjectUrl(blob, cacheKey);
-      const now = Date.now();
 
-      await writeMetadata({
+      let cache: Cache | null = null;
+      try {
+        cache = await caches.open(CACHE_NAME);
+      } catch {
+        return this.transientPlayable(blob, asset, cacheKey);
+      }
+
+      let persisted = false;
+
+      try {
+        await cache.put(cacheUrl, firstCacheResponse);
+        persisted = true;
+      } catch (error) {
+        if (isQuotaExceededError(error)) {
+          await this.pruneForQuotaPressure(
+            cache,
+            quotaPressureBytesToFree(blob.size),
+          );
+
+          try {
+            await cache.put(
+              cacheUrl,
+              new Response(blob, {
+                status: 200,
+                headers: {
+                  "Content-Type":
+                    blob.type
+                    || response.headers.get("Content-Type")
+                    || "application/octet-stream",
+                },
+              }),
+            );
+            persisted = true;
+          } catch {
+            // A single pressure-recovery retry is enough. The fetched bytes
+            // remain playable below even when persistence is still denied.
+          }
+        }
+      }
+
+      const playable = this.transientPlayable(
+        blob,
+        asset,
         cacheKey,
-        contentHash: asset.contentHash,
-        sourceUrl: asset.audioUrl,
-        cachedAt: now,
-        lastAccessedAt: now,
-        byteSize: blob.size,
-      });
+      );
 
-      this.schedulePrune();
+      if (persisted) {
+        const now = Date.now();
+        await writeMetadata({
+          cacheKey,
+          contentHash: asset.contentHash,
+          sourceUrl: asset.audioUrl,
+          cachedAt: now,
+          lastAccessedAt: now,
+          byteSize: blob.size,
+        });
+        this.schedulePrune();
+      }
 
-      return {
-        url: objectUrl,
-        cacheKey,
-        contentHash: asset.contentHash,
-        fromBrowserCache: false,
-        release: () => this.releaseObjectUrl(objectUrl),
-      };
+      return playable;
     } catch {
       return null;
     }
+  }
+
+  private transientPlayable(
+    blob: Blob,
+    asset: ReadTtsAsset,
+    cacheKey: string,
+  ): PlayableAudioAsset {
+    const objectUrl = this.createLeasedObjectUrl(blob, cacheKey);
+
+    return {
+      url: objectUrl,
+      cacheKey,
+      contentHash: asset.contentHash,
+      fromBrowserCache: false,
+      release: () => this.releaseObjectUrl(objectUrl),
+    };
   }
 
   private createLeasedObjectUrl(
@@ -346,6 +446,38 @@ export class ReadAudioCache implements ReadAudioCachePort {
     }
 
     return hydrated;
+  }
+
+  private async pruneForQuotaPressure(
+    cache: Cache,
+    bytesToFree: number,
+  ): Promise<void> {
+    const entries = await readAllMetadata();
+    if (entries.length === 0) return;
+
+    const hydrated = await this.hydrateLegacyByteSizes(
+      cache,
+      entries,
+    );
+    const activeCacheKeys = new Set(
+      this.activeLeaseCounts.keys(),
+    );
+    const evictions = planReadAudioCachePressureEvictions(
+      hydrated.map((entry) => ({
+        cacheKey: entry.cacheKey,
+        byteSize: entry.byteSize,
+        lastAccessedAt: entry.lastAccessedAt,
+      })),
+      activeCacheKeys,
+      bytesToFree,
+    );
+
+    for (const cacheKey of evictions) {
+      await cache
+        .delete(syntheticCacheUrl(cacheKey))
+        .catch(() => false);
+      await deleteMetadata(cacheKey);
+    }
   }
 
   private async prune(): Promise<void> {

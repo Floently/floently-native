@@ -101,3 +101,36 @@ export function planReadAudioCacheEvictions(
 
   return evictions;
 }
+
+
+export function planReadAudioCachePressureEvictions(
+  entries: readonly ReadAudioCacheBudgetEntry[],
+  activeCacheKeys: ReadonlySet<string>,
+  bytesToFree: number,
+): string[] {
+  const targetBytes = Math.max(1, safeSize(bytesToFree));
+  let freedBytes = 0;
+
+  const oldestFirst = [...entries].sort(
+    (left, right) =>
+      left.lastAccessedAt - right.lastAccessedAt
+      || left.cacheKey.localeCompare(right.cacheKey),
+  );
+
+  const evictions: string[] = [];
+
+  for (const entry of oldestFirst) {
+    if (activeCacheKeys.has(entry.cacheKey)) {
+      continue;
+    }
+
+    evictions.push(entry.cacheKey);
+    freedBytes += safeSize(entry.byteSize);
+
+    if (freedBytes >= targetBytes) {
+      break;
+    }
+  }
+
+  return evictions;
+}
