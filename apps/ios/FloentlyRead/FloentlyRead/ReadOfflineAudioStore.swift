@@ -425,6 +425,8 @@ actor ReadOfflineAudioStore {
 enum ReadOfflineAudioStoreError: LocalizedError {
     case incompleteBundle
     case invalidAudioSource
+    case unavailable
+    case signedOut
 
     var errorDescription: String? {
         switch self {
@@ -432,6 +434,10 @@ enum ReadOfflineAudioStoreError: LocalizedError {
             return "Read could not finish the offline audio bundle."
         case .invalidAudioSource:
             return "Read received an invalid local audio source while saving offline."
+        case .unavailable:
+            return "Offline audio storage is unavailable on this device."
+        case .signedOut:
+            return "Sign in again before saving this document offline."
         }
     }
 }
