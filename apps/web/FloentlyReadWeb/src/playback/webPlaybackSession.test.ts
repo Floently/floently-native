@@ -112,9 +112,15 @@ class FakeTts implements ReadTtsProvider {
   readonly id = "fake-tts";
   readonly calls: ReadTtsInput[] = [];
   readonly failures = new Set<string>();
+  readonly delays = new Map<string, Promise<void>>();
 
   async synthesize(input: ReadTtsInput): Promise<ReadTtsAsset> {
     this.calls.push({ ...input });
+
+    const delay = this.delays.get(input.segmentId);
+    if (delay) {
+      await delay;
+    }
 
     if (this.failures.has(input.segmentId)) {
       throw new Error(`Synthetic TTS failure for ${input.segmentId}`);
@@ -595,6 +601,70 @@ describe("WebPlaybackSession document-wide contract", () => {
     });
 
     expect(session.getSnapshot().voiceId).not.toBe("voice:new");
+
+    session.destroy();
+  });
+
+  it("primes the earliest ready forward audio before a slower prefetch batch member finishes", async () => {
+    const { session, core, tts, engine } = createHarness();
+    core.prefetchResult = [1, 2];
+
+    let releaseSegment2!: () => void;
+    tts.delays.set(
+      "segment-2",
+      new Promise<void>((resolve) => {
+        releaseSegment2 = resolve;
+      }),
+    );
+
+    session.loadDocument(makeManifest());
+    await session.play();
+
+    await vi.waitFor(() => {
+      expect(
+        tts.calls.some((call) => call.segmentId === "segment-2"),
+      ).toBe(true);
+      expect(engine.primed.at(-1)).toEqual([
+        "https://audio.invalid/segment-1.mp3",
+      ]);
+      expect(session.getSnapshot().bufferedAheadMs).toBe(10_000);
+    });
+
+    releaseSegment2();
+
+    await vi.waitFor(() => {
+      expect(engine.primed.at(-1)).toEqual([
+        "https://audio.invalid/segment-1.mp3",
+        "https://audio.invalid/segment-2.mp3",
+      ]);
+      expect(session.getSnapshot().bufferedAheadMs).toBe(20_000);
+    });
+
+    session.destroy();
+  });
+
+  it("does not count ready audio beyond a missing next segment as buffered ahead", async () => {
+    const { session, core, tts, engine } = createHarness();
+    core.prefetchResult = [1, 2];
+    tts.failures.add("segment-1");
+
+    session.loadDocument(makeManifest());
+    await session.play();
+
+    await vi.waitFor(() => {
+      expect(
+        tts.calls.some((call) => call.segmentId === "segment-2"),
+      ).toBe(true);
+      expect(engine.primed.at(-1)).toEqual([
+        "https://audio.invalid/segment-2.mp3",
+      ]);
+    });
+
+    expect(session.getSnapshot().bufferedAheadMs).toBe(0);
+    expect(session.getSnapshot()).toMatchObject({
+      status: "playing",
+      error: null,
+    });
 
     session.destroy();
   });
