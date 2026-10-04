@@ -610,6 +610,8 @@ describe("WebPlaybackSession document-wide contract", () => {
         "visibilityState",
         visibilityDescriptor,
       );
+    } else {
+      Reflect.deleteProperty(document, "visibilityState");
     }
 
     session.destroy();
