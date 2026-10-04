@@ -880,6 +880,9 @@ private struct ReadLibraryScreen: View {
                                     project: project,
                                     action: {
                                         openProject(project)
+                                    },
+                                    onDelete: {
+                                        pendingDelete = project
                                     }
                                 )
                             }
