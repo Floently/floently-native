@@ -531,6 +531,25 @@ describe("BrowserReadingBridge", () => {
     expect(playback.playCount).toBe(1);
   });
 
+  it("does not issue a redundant second play when Read From Here seeks active playback", async () => {
+    const { bridge, playback } = harness();
+
+    await bridge.startReading("cloud-tab-1");
+    await playback.play();
+    expect(playback.playCount).toBe(1);
+
+    const started = await bridge.readFromHere({
+      x: 120,
+      y: 250,
+      viewportRevision: 7,
+    });
+
+    expect(started).toBe(true);
+    expect(playback.seekRequests.at(-1)).toBe(1_700);
+    expect(playback.playCount).toBe(1);
+    expect(playback.getSnapshot().status).toBe("playing");
+  });
+
   it("fails closed when same-session revalidation finds changed page content", async () => {
     const { bridge, adapter, playback } = harness();
 
