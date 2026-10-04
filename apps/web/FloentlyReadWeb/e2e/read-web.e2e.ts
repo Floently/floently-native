@@ -251,6 +251,34 @@ test("landing and auth layouts stay inside desktop and mobile viewports", async 
   }
 });
 
+test("direct protected trailing-slash routes canonicalize before app routing", async ({
+  page,
+}) => {
+  await installBackend(page);
+
+  await page.goto("/app/preferences/?source=e2e#focus");
+
+  await expect(page).toHaveURL(
+    /\/app\/preferences\?source=e2e#focus$/,
+  );
+  await expect(
+    page.getByRole("heading", { name: "Preferences", exact: true }),
+  ).toBeVisible();
+});
+
+test("direct public trailing-slash routes canonicalize before auth rendering", async ({
+  page,
+}) => {
+  await installBackend(page, { authenticated: false });
+
+  await page.goto("/login/?returnTo=%2Fapp%2Flibrary%2F");
+
+  await expect(page).toHaveURL(/\/login\?returnTo=/);
+  await expect(
+    page.getByRole("heading", { name: "Sign in to Read", level: 2 }),
+  ).toBeVisible();
+});
+
 test("protected routing preserves a safe returnTo and rejects an external one", async ({
   page,
 }) => {
