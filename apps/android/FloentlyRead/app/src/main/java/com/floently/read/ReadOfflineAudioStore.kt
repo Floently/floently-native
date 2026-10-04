@@ -32,7 +32,9 @@ data class ReadOfflineAudioSummary(
 }
 
 object ReadOfflineAudioStore {
-    private const val SCHEMA_VERSION = 1
+    private const val SCHEMA_VERSION = 2
+    private val SUPPORTED_SCHEMA_VERSIONS =
+        setOf(1, SCHEMA_VERSION)
     private const val DIRECTORY_NAME =
         "read-offline-audio-v1"
 
@@ -59,7 +61,7 @@ object ReadOfflineAudioStore {
                 metadata.optInt(
                     "schemaVersion",
                     0
-                ) != SCHEMA_VERSION
+                ) !in SUPPORTED_SCHEMA_VERSIONS
                 || metadata.optString("documentId")
                     != manifest.documentId
                 || metadata.optString("revisionId")
@@ -171,7 +173,7 @@ object ReadOfflineAudioStore {
                 metadata.optInt(
                     "schemaVersion",
                     0
-                ) != SCHEMA_VERSION
+                ) !in SUPPORTED_SCHEMA_VERSIONS
                 || metadata.optString("documentId")
                     != manifest.documentId
                 || metadata.optString("revisionId")
@@ -235,6 +237,12 @@ object ReadOfflineAudioStore {
             manifest.segments.isNotEmpty()
                 && segments.size
                     == manifest.segments.size
+                && segments.all {
+                    !it.renditionId
+                        .isNullOrBlank()
+                        && !it.timingMapId
+                            .isNullOrBlank()
+                }
         ) {
             "Read could not finish the offline audio bundle."
         }
