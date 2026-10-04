@@ -1468,7 +1468,7 @@ private fun ReadSettingsScreen(
                 )
                 session?.user?.email
                     ?.takeIf {
-                        it != session.user.name
+                        it != session?.user?.name
                     }
                     ?.let {
                         Text(it, color = palette.muted)
