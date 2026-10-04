@@ -53,7 +53,7 @@ Optional public configuration:
 Run before building/deploying:
 
 ```bash
-node scripts/validate_read_web_preview_config.mjs
+cd apps/web/FloentlyReadWeb\nnpm run validate:preview-config
 ```
 
 The validator rejects missing required values, non-HTTPS URLs, URL credentials,
