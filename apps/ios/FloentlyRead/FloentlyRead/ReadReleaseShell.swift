@@ -738,6 +738,88 @@ private struct ReadAccessAccountDeletionControl: View {
         }
     }
 
+    private var offlineAccountIdentity: String? {
+        guard
+            let user =
+                sessionStore.session?.user
+        else {
+            return nil
+        }
+
+        return readAccountIdentity(
+            userId: user.id,
+            email: user.email
+        )
+    }
+
+    @ViewBuilder
+    private func settingsValueRow(
+        label: String,
+        value: String
+    ) -> some View {
+        HStack {
+            Text(label)
+                .foregroundStyle(palette.text)
+            Spacer()
+            Text(value)
+                .font(
+                    .subheadline.weight(
+                        .semibold
+                    )
+                )
+                .foregroundStyle(palette.muted)
+        }
+    }
+
+    private func refreshOfflineSummary() async {
+        guard let offlineAccountIdentity else {
+            offlineSummary = .empty
+            offlineStorageError = nil
+            return
+        }
+
+        offlineStorageBusy = true
+        offlineStorageError = nil
+        offlineSummary =
+            await ReadOfflineAudioStore.shared
+                .summary(
+                    accountIdentity:
+                        offlineAccountIdentity
+                )
+        offlineStorageBusy = false
+    }
+
+    private func clearOfflineDownloads() {
+        guard playback.document == nil else {
+            offlineStorageError =
+                "Stop playback before removing all offline downloads."
+            return
+        }
+        guard let offlineAccountIdentity else {
+            offlineStorageError =
+                "Sign in again before managing offline downloads."
+            return
+        }
+
+        offlineStorageBusy = true
+        offlineStorageError = nil
+
+        Task {
+            await ReadOfflineAudioStore.shared
+                .clearAccount(
+                    accountIdentity:
+                        offlineAccountIdentity
+                )
+            offlineSummary =
+                await ReadOfflineAudioStore.shared
+                    .summary(
+                        accountIdentity:
+                            offlineAccountIdentity
+                    )
+            offlineStorageBusy = false
+        }
+    }
+
     private func deleteAccount() {
         guard
             let token = sessionStore.session?.token,
@@ -2727,6 +2809,10 @@ private struct ReadSettingsScreen: View {
     @State private var showDeleteConfirmation = false
     @State private var deletingAccount = false
     @State private var deleteError: String?
+    @State private var offlineSummary: ReadOfflineAudioSummary?
+    @State private var offlineStorageBusy = false
+    @State private var offlineStorageError: String?
+    @State private var showClearDownloadsConfirmation = false
 
     private let palette = FloentlyPalette.read
 
@@ -2791,6 +2877,148 @@ private struct ReadSettingsScreen: View {
                         )
                         .font(.caption)
                         .foregroundStyle(palette.muted)
+                    }
+
+                    FloentlyCard(product: .read) {
+                        HStack {
+                            Text("Offline downloads")
+                                .font(.headline)
+                                .foregroundStyle(palette.text)
+
+                            Spacer()
+
+                            Button {
+                                Task {
+                                    await refreshOfflineSummary()
+                                }
+                            } label: {
+                                if offlineStorageBusy {
+                                    ProgressView()
+                                        .tint(
+                                            FloentlyDesignTokens
+                                                .Colors
+                                                .brandBright
+                                        )
+                                        .frame(
+                                            width: 32,
+                                            height: 32
+                                        )
+                                } else {
+                                    Image(
+                                        systemName:
+                                            "arrow.clockwise"
+                                    )
+                                    .frame(
+                                        width: 32,
+                                        height: 32
+                                    )
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(
+                                FloentlyDesignTokens
+                                    .Colors
+                                    .brandBright
+                            )
+                            .disabled(
+                                offlineStorageBusy
+                            )
+                            .accessibilityLabel(
+                                "Refresh offline storage"
+                            )
+                        }
+
+                        if let offlineSummary {
+                            settingsValueRow(
+                                label: "Saved documents",
+                                value:
+                                    "\(offlineSummary.documentCount)"
+                            )
+                            settingsValueRow(
+                                label: "Audio bundles",
+                                value:
+                                    "\(offlineSummary.bundleCount)"
+                            )
+                            settingsValueRow(
+                                label: "Storage",
+                                value:
+                                    ByteCountFormatter.string(
+                                        fromByteCount:
+                                            offlineSummary.bytes,
+                                        countStyle: .file
+                                    )
+                            )
+
+                            Text(
+                                "Downloads are stored privately on this device for this Floently account."
+                            )
+                            .font(.caption)
+                            .foregroundStyle(palette.muted)
+
+                            Button(role: .destructive) {
+                                if playback.document != nil {
+                                    offlineStorageError =
+                                        "Stop playback before removing all offline downloads."
+                                } else {
+                                    showClearDownloadsConfirmation = true
+                                }
+                            } label: {
+                                Text(
+                                    offlineSummary.bundleCount == 0
+                                    ? "No offline downloads"
+                                    : "Remove all downloads"
+                                )
+                                .font(
+                                    .subheadline.weight(
+                                        .semibold
+                                    )
+                                )
+                                .frame(
+                                    maxWidth: .infinity
+                                )
+                                .frame(height: 48)
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(
+                                FloentlyDesignTokens
+                                    .Colors
+                                    .danger
+                            )
+                            .disabled(
+                                offlineStorageBusy
+                                || offlineSummary.bundleCount == 0
+                            )
+                        } else {
+                            HStack(
+                                spacing:
+                                    FloentlyDesignTokens
+                                        .Space
+                                        .s2
+                            ) {
+                                ProgressView()
+                                    .tint(
+                                        FloentlyDesignTokens
+                                            .Colors
+                                            .brand
+                                    )
+                                Text(
+                                    "Checking saved audio…"
+                                )
+                                .foregroundStyle(
+                                    palette.muted
+                                )
+                            }
+                        }
+
+                        if let offlineStorageError {
+                            Text(offlineStorageError)
+                                .font(.caption)
+                                .foregroundStyle(
+                                    FloentlyDesignTokens
+                                        .Colors
+                                        .warning
+                                )
+                        }
                     }
 
                     FloentlyCard(product: .read) {
@@ -2864,6 +3092,27 @@ private struct ReadSettingsScreen: View {
                 .frame(maxWidth: 720)
                 .frame(maxWidth: .infinity, alignment: .center)
             }
+        }
+        .task(id: offlineAccountIdentity) {
+            await refreshOfflineSummary()
+        }
+        .confirmationDialog(
+            "Remove all offline downloads?",
+            isPresented:
+                $showClearDownloadsConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(
+                "Remove downloads",
+                role: .destructive
+            ) {
+                clearOfflineDownloads()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(
+                "This removes saved audio for this account from this device. Your Library items remain available."
+            )
         }
         .confirmationDialog(
             "Delete your Floently account?",
