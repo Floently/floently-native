@@ -24,6 +24,7 @@ on:
       - "docs/design/READ_MOBILE_BROWSER_UX_SPEC_0330.md"
       - "scripts/validate_read_mobile_browser_0330.sh"
       - "scripts/validate_read_manifest_contract.py"
+      - "scripts/detect_read_ci_scope.sh"
       - ".github/workflows/read-mobile-browser-ci.yml"
   push:
     branches:
@@ -49,6 +50,7 @@ on:
       - "docs/design/READ_MOBILE_BROWSER_UX_SPEC_0330.md"
       - "scripts/validate_read_mobile_browser_0330.sh"
       - "scripts/validate_read_manifest_contract.py"
+      - "scripts/detect_read_ci_scope.sh"
       - ".github/workflows/read-mobile-browser-ci.yml"
 
 concurrency:
@@ -59,6 +61,35 @@ permissions:
   contents: read
 
 jobs:
+  change-scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      android: ${{ steps.scope.outputs.android }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect native build scope
+        id: scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          PUSH_HEAD_SHA: ${{ github.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            BASE_SHA="$PR_BASE_SHA"
+            HEAD_SHA="$PR_HEAD_SHA"
+          else
+            BASE_SHA="$PUSH_BEFORE_SHA"
+            HEAD_SHA="$PUSH_HEAD_SHA"
+          fi
+
+          bash scripts/detect_read_ci_scope.sh "$BASE_SHA" "$HEAD_SHA" >> "$GITHUB_OUTPUT"
+
   read-manifest-contract:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -147,6 +178,8 @@ jobs:
         run: bash scripts/validate_read_mobile_browser_0330.sh
 
   android-read:
+    needs: change-scope
+    if: ${{ needs.change-scope.outputs.android == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
