@@ -6,10 +6,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.floently.shared.auth.FloentlySecureSessionStore
 import java.time.Instant
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 data class ReadProjectProgressPayload(
@@ -192,6 +194,7 @@ fun ReadProjectProgressSyncEffect(
     voiceSettings: ReadVoiceSettings
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var lastSyncedBucket by remember(
         project.id,
         project.revisionId
@@ -259,17 +262,19 @@ fun ReadProjectProgressSyncEffect(
                     playbackController.activeVoiceId
             )
 
-        projectStore.syncProgress(
-            projectId = project.id,
-            currentSegmentIndex =
-                payload.currentSegmentIndex,
-            currentCharacterOffset =
-                payload.currentCharacterOffset,
-            progressPercent =
-                payload.progressPercent,
-            voiceId = payload.voiceId,
-            playbackRate = payload.playbackRate,
-            accessToken = token
-        )
+        scope.launch {
+            projectStore.syncProgress(
+                projectId = project.id,
+                currentSegmentIndex =
+                    payload.currentSegmentIndex,
+                currentCharacterOffset =
+                    payload.currentCharacterOffset,
+                progressPercent =
+                    payload.progressPercent,
+                voiceId = payload.voiceId,
+                playbackRate = payload.playbackRate,
+                accessToken = token
+            )
+        }
     }
 }
