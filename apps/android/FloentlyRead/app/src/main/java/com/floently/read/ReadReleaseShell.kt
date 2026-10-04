@@ -3541,60 +3541,23 @@ private fun ReadProjectReaderScreen(
             projectId = project.id
         )
     }
-    val searchableParagraphs =
+    val searchableParagraphAnchors =
         remember(hydrated?.rawText) {
-            val source =
+            readReaderParagraphAnchors(
                 hydrated?.rawText
                     .orEmpty()
-            if (source.isBlank()) {
-                emptyList()
-            } else {
-                source.replace(
-                    "\r\n",
-                    "\n"
-                )
-                    .split(
-                        Regex(
-                            "\\n\\s*\\n"
-                        )
-                    )
-                    .map {
-                        it.trim()
-                    }
-                    .filter {
-                        it.isNotEmpty()
-                    }
-                    .ifEmpty {
-                        listOf(source)
-                    }
-            }
+            )
         }
     val searchMatches =
         remember(
-            searchableParagraphs,
+            searchableParagraphAnchors,
             searchQuery
         ) {
-            val query =
-                searchQuery.trim()
-            if (query.isBlank()) {
-                emptyList()
-            } else {
-                buildList {
-                    searchableParagraphs
-                        .forEachIndexed {
-                            index,
-                            paragraph ->
-                            repeat(
-                                readSearchOccurrenceCount(
-                                    query = query,
-                                    text = paragraph
-                                )
-                            ) {
-                                add(index)
-                            }
-                        }
-                }
-            }
+            readReaderSearchMatches(
+                query = searchQuery,
+                paragraphs =
+                    searchableParagraphAnchors
+            )
         }
     val offlineVoiceId = manifest?.let {
         value ->
@@ -3680,7 +3643,7 @@ private fun ReadProjectReaderScreen(
         val paragraphIndex =
             searchMatches[
                 searchMatchIndex
-            ]
+            ].paragraphIndex
         scope.launch {
             readerListState
                 .animateScrollToItem(
@@ -3780,7 +3743,9 @@ private fun ReadProjectReaderScreen(
                 .firstOrNull()
                 ?: return@LaunchedEffect
         readerListState
-            .animateScrollToItem(first)
+            .animateScrollToItem(
+                first.paragraphIndex
+            )
     }
 
     LaunchedEffect(
@@ -4031,7 +3996,7 @@ private fun ReadProjectReaderScreen(
                         enabled =
                             originalPdfFile == null
                             && epubPackage == null
-                            && searchableParagraphs
+                            && searchableParagraphAnchors
                                 .isNotEmpty(),
                         onClick = {
                             readerMenuExpanded = false
@@ -4316,14 +4281,14 @@ private fun ReadProjectReaderScreen(
                 ) {
                     items(
                         count =
-                            searchableParagraphs
+                            searchableParagraphAnchors
                                 .size,
                         key = { index ->
                             index
                         }
                     ) { index ->
                         val paragraph =
-                            searchableParagraphs[
+                            searchableParagraphAnchors[
                                 index
                             ]
                         val highlighted =
@@ -4331,10 +4296,13 @@ private fun ReadProjectReaderScreen(
                             && searchQuery
                                 .isNotBlank()
                             && searchMatches
-                                .contains(index)
+                                .any {
+                                    it.paragraphIndex
+                                        == index
+                                }
 
                         Text(
-                            paragraph,
+                            paragraph.text,
                             color = palette.text,
                             style =
                                 MaterialTheme
@@ -5178,35 +5146,214 @@ private fun ReadStatusBanner(
     }
 }
 
-private fun readSearchOccurrenceCount(
-    query: String,
-    text: String
-): Int {
-    val needle = query.trim()
-    if (needle.isEmpty()) {
-        return 0
+private data class ReadReaderParagraphAnchor(
+    val index: Int,
+    val text: String,
+    val sourceScalarStart: Int
+)
+
+private data class ReadReaderSearchMatch(
+    val paragraphIndex: Int,
+    val sourceScalarOffset: Int,
+    val scalarLength: Int
+)
+
+private fun readReaderParagraphAnchors(
+    rawText: String
+): List<ReadReaderParagraphAnchor> {
+    if (rawText.isBlank()) {
+        return emptyList()
     }
 
-    var count = 0
-    var start = 0
-
-    while (start < text.length) {
-        val index = text.indexOf(
-            string = needle,
-            startIndex = start,
-            ignoreCase = true
+    val separator =
+        Regex(
+            "(?:\\r\\n|\\r|\\n)[\\t ]*(?:\\r\\n|\\r|\\n)+"
         )
-        if (index < 0) {
-            break
+    val result =
+        mutableListOf<ReadReaderParagraphAnchor>()
+    var cursor = 0
+
+    fun appendChunk(
+        start: Int,
+        endExclusive: Int
+    ) {
+        if (
+            start < 0
+            || endExclusive <= start
+            || endExclusive
+                > rawText.length
+        ) {
+            return
         }
 
-        count += 1
-        start =
-            index + needle.length
-                .coerceAtLeast(1)
+        val chunk =
+            rawText.substring(
+                start,
+                endExclusive
+            )
+        val trimmed =
+            chunk.trim()
+        if (trimmed.isEmpty()) {
+            return
+        }
+
+        val localOffset =
+            chunk.indexOf(trimmed)
+        if (localOffset < 0) {
+            return
+        }
+
+        val sourceUtf16Offset =
+            start + localOffset
+        val scalarStart =
+            ReadScalarOffsets
+                .scalarOffset(
+                    text = rawText,
+                    utf16Offset =
+                        sourceUtf16Offset
+                )
+                ?: return
+
+        result +=
+            ReadReaderParagraphAnchor(
+                index = result.size,
+                text = trimmed,
+                sourceScalarStart =
+                    scalarStart
+            )
     }
 
-    return count
+    separator.findAll(rawText)
+        .forEach { match ->
+            appendChunk(
+                start = cursor,
+                endExclusive =
+                    match.range.first
+            )
+            cursor =
+                match.range.last + 1
+        }
+
+    appendChunk(
+        start = cursor,
+        endExclusive =
+            rawText.length
+    )
+
+    if (result.isEmpty()) {
+        val trimmed =
+            rawText.trim()
+        val localOffset =
+            rawText.indexOf(trimmed)
+        val scalarStart =
+            localOffset
+                .takeIf { it >= 0 }
+                ?.let {
+                    ReadScalarOffsets
+                        .scalarOffset(
+                            text = rawText,
+                            utf16Offset = it
+                        )
+                }
+
+        if (
+            trimmed.isNotEmpty()
+            && scalarStart != null
+        ) {
+            result +=
+                ReadReaderParagraphAnchor(
+                    index = 0,
+                    text = trimmed,
+                    sourceScalarStart =
+                        scalarStart
+                )
+        }
+    }
+
+    return result
+}
+
+private fun readReaderSearchMatches(
+    query: String,
+    paragraphs:
+        List<ReadReaderParagraphAnchor>
+): List<ReadReaderSearchMatch> {
+    val needle =
+        query.trim()
+    if (needle.isEmpty()) {
+        return emptyList()
+    }
+
+    return buildList {
+        paragraphs.forEach {
+            paragraph ->
+            var start = 0
+
+            while (
+                start
+                    < paragraph.text.length
+            ) {
+                val index =
+                    paragraph.text.indexOf(
+                        string = needle,
+                        startIndex = start,
+                        ignoreCase = true
+                    )
+                if (index < 0) {
+                    break
+                }
+
+                val end =
+                    index
+                    + needle.length
+                val relativeStart =
+                    ReadScalarOffsets
+                        .scalarOffset(
+                            text =
+                                paragraph.text,
+                            utf16Offset =
+                                index
+                        )
+                val relativeEnd =
+                    ReadScalarOffsets
+                        .scalarOffset(
+                            text =
+                                paragraph.text,
+                            utf16Offset =
+                                end
+                        )
+
+                if (
+                    relativeStart != null
+                    && relativeEnd != null
+                ) {
+                    add(
+                        ReadReaderSearchMatch(
+                            paragraphIndex =
+                                paragraph.index,
+                            sourceScalarOffset =
+                                paragraph
+                                    .sourceScalarStart
+                                + relativeStart,
+                            scalarLength =
+                                (
+                                    relativeEnd
+                                        - relativeStart
+                                    )
+                                    .coerceAtLeast(
+                                        0
+                                    )
+                        )
+                    )
+                }
+
+                start =
+                    index
+                    + needle.length
+                        .coerceAtLeast(1)
+            }
+        }
+    }
 }
 
 private fun accountInitial(
