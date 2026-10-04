@@ -15,6 +15,7 @@ data class ReadPlaybackResumeSnapshot(
     val sourceSegmentIndex: Int? = null,
     val voiceId: String? = null,
     val renditionId: String? = null,
+    val timingMapId: String? = null,
     val sourceAnchorQuote: String? = null,
     val sourceAnchorPrefixContext: String? = null,
     val sourceAnchorSuffixContext: String? = null,
@@ -252,6 +253,8 @@ class ReadPlaybackResumeStore(
                     previous.voiceId,
                 renditionId =
                     previous.renditionId,
+                timingMapId =
+                    previous.timingMapId,
                 sourceAnchorQuote =
                     quote,
                 sourceAnchorPrefixContext =
@@ -425,6 +428,10 @@ class ReadPlaybackResumeStore(
                     snapshot.renditionId
                         ?: existing
                             ?.renditionId,
+                timingMapId =
+                    snapshot.timingMapId
+                        ?: existing
+                            ?.timingMapId,
                 sourceAnchorQuote =
                     snapshot.sourceAnchorQuote
                         ?: existing
@@ -473,6 +480,9 @@ class ReadPlaybackResumeStore(
         }
         resolved.renditionId?.let {
             json.put("rendition_id", it)
+        }
+        resolved.timingMapId?.let {
+            json.put("timing_map_id", it)
         }
         resolved.sourceAnchorQuote?.let {
             json.put(
@@ -571,6 +581,10 @@ class ReadPlaybackResumeStore(
                 renditionId =
                     json.optStringOrNull(
                         "rendition_id"
+                    ),
+                timingMapId =
+                    json.optStringOrNull(
+                        "timing_map_id"
                     ),
                 sourceAnchorQuote =
                     json.optStringOrNull(
