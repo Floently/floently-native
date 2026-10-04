@@ -1852,6 +1852,9 @@ private struct ReadProjectReaderView: View {
     @State private var offlineAvailable = false
     @State private var offlineBusy = false
     @State private var offlineError: String?
+    @State private var showingAppearance = false
+    @StateObject private var appearance =
+        ReadReaderAppearanceSettings()
 
     private let palette = FloentlyPalette.read
 
@@ -1922,6 +1925,16 @@ private struct ReadProjectReaderView: View {
                             manifest == nil
                             || preparing
                         )
+
+                        Button {
+                            showingAppearance = true
+                        } label: {
+                            Label(
+                                "Appearance",
+                                systemImage:
+                                    "textformat.size"
+                            )
+                        }
 
                         Button {
                             Task {
@@ -2087,13 +2100,15 @@ private struct ReadProjectReaderView: View {
                                         .font(
                                             .system(
                                                 size:
-                                                    FloentlyDesignTokens
-                                                        .TypeScale
-                                                        .readerDefault,
+                                                    appearance
+                                                        .fontSize,
                                                 weight: .regular
                                             )
                                         )
-                                        .lineSpacing(8)
+                                        .lineSpacing(
+                                            appearance
+                                                .additionalLineSpacing
+                                        )
                                         .foregroundStyle(palette.text)
                                         .textSelection(.enabled)
                                 }
@@ -2127,6 +2142,20 @@ private struct ReadProjectReaderView: View {
         }
         .task(id: offlineAvailabilityKey) {
             await refreshOfflineAvailability()
+        }
+        .sheet(
+            isPresented:
+                $showingAppearance
+        ) {
+            ReadReaderAppearanceSheet(
+                settings: appearance
+            )
+            .presentationDetents(
+                [.medium]
+            )
+            .presentationDragIndicator(
+                .visible
+            )
         }
     }
 
@@ -2548,6 +2577,218 @@ private struct ReadSettingsScreen: View {
                 ?? "Active"
         }
         return "Unavailable"
+    }
+}
+
+private struct ReadReaderAppearanceSheet: View {
+    @ObservedObject var settings:
+        ReadReaderAppearanceSettings
+
+    @Environment(\.dismiss)
+    private var dismiss
+
+    private let palette = FloentlyPalette.read
+
+    var body: some View {
+        VStack(
+            alignment: .leading,
+            spacing:
+                FloentlyDesignTokens
+                    .Space
+                    .s6
+        ) {
+            HStack {
+                Text("Reader appearance")
+                    .font(
+                        .system(
+                            size:
+                                FloentlyDesignTokens
+                                    .TypeScale
+                                    .h3,
+                            weight: .bold
+                        )
+                    )
+                    .foregroundStyle(
+                        palette.text
+                    )
+
+                Spacer()
+
+                Button("Done") {
+                    dismiss()
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(
+                    FloentlyDesignTokens
+                        .Colors
+                        .brandBright
+                )
+            }
+
+            appearancePicker(
+                title: "Text size",
+                values:
+                    ReadReaderTextSize
+                        .allCases,
+                selection:
+                    $settings.textSize
+            )
+
+            appearancePicker(
+                title: "Line spacing",
+                values:
+                    ReadReaderLineRhythm
+                        .allCases,
+                selection:
+                    $settings.lineRhythm
+            )
+
+            VStack(
+                alignment: .leading,
+                spacing:
+                    FloentlyDesignTokens
+                        .Space
+                        .s2
+            ) {
+                Text("Preview")
+                    .font(
+                        .caption.weight(
+                            .semibold
+                        )
+                    )
+                    .foregroundStyle(
+                        palette.muted
+                    )
+
+                Text(
+                    "A calm reading surface keeps the words clear and the controls out of the way."
+                )
+                .font(
+                    .system(
+                        size:
+                            settings
+                                .fontSize,
+                        weight: .regular
+                    )
+                )
+                .lineSpacing(
+                    settings
+                        .additionalLineSpacing
+                )
+                .foregroundStyle(
+                    palette.text
+                )
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: 104,
+                    alignment: .topLeading
+                )
+                .padding(
+                    FloentlyDesignTokens
+                        .Space
+                        .s4
+                )
+                .background(
+                    FloentlyDesignTokens
+                        .Colors
+                        .surface1
+                )
+                .clipShape(
+                    RoundedRectangle(
+                        cornerRadius:
+                            FloentlyDesignTokens
+                                .Radius
+                                .m,
+                        style: .continuous
+                    )
+                )
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(
+            FloentlyDesignTokens
+                .Space
+                .s6
+        )
+        .background(
+            FloentlyDesignTokens
+                .Colors
+                .surface2
+        )
+    }
+
+    @ViewBuilder
+    private func appearancePicker<
+        Value
+    >(
+        title: String,
+        values: [Value],
+        selection: Binding<Value>
+    ) -> some View
+    where
+        Value: Hashable
+            & Identifiable,
+        Value.ID == String
+    {
+        VStack(
+            alignment: .leading,
+            spacing:
+                FloentlyDesignTokens
+                    .Space
+                    .s2
+        ) {
+            Text(title)
+                .font(
+                    .subheadline.weight(
+                        .semibold
+                    )
+                )
+                .foregroundStyle(
+                    palette.text
+                )
+
+            Picker(
+                title,
+                selection: selection
+            ) {
+                ForEach(values) {
+                    value in
+                    Text(
+                        appearanceLabel(
+                            value
+                        )
+                    )
+                    .tag(value)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(minHeight: 56)
+        }
+    }
+
+    private func appearanceLabel<
+        Value
+    >(
+        _ value: Value
+    ) -> String {
+        if
+            let textSize =
+                value
+                    as? ReadReaderTextSize
+        {
+            return textSize.label
+        }
+
+        if
+            let lineRhythm =
+                value
+                    as? ReadReaderLineRhythm
+        {
+            return lineRhythm.label
+        }
+
+        return ""
     }
 }
 
