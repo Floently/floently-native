@@ -15,12 +15,12 @@ object ReadProjectSnapshotStore {
 
     suspend fun load(
         context: Context,
-        accessToken: String
+        accountIdentity: String
     ): List<ReadContentProject> =
         withContext(Dispatchers.IO) {
             val file = snapshotFile(
                 context = context,
-                accessToken = accessToken
+                accountIdentity = accountIdentity
             )
             if (!file.isFile) {
                 return@withContext emptyList()
@@ -55,7 +55,7 @@ object ReadProjectSnapshotStore {
 
     suspend fun save(
         context: Context,
-        accessToken: String,
+        accountIdentity: String,
         projects: List<ReadContentProject>
     ) = withContext(Dispatchers.IO) {
         val directory = directory(context)
@@ -81,7 +81,7 @@ object ReadProjectSnapshotStore {
 
         val target = snapshotFile(
             context = context,
-            accessToken = accessToken
+            accountIdentity = accountIdentity
         )
         val temporary = File(
             directory,
@@ -307,18 +307,18 @@ object ReadProjectSnapshotStore {
 
     private fun snapshotFile(
         context: Context,
-        accessToken: String
+        accountIdentity: String
     ): File = File(
         directory(context),
-        storageKey(accessToken) + ".json"
+        storageKey(accountIdentity) + ".json"
     )
 
     private fun storageKey(
-        accessToken: String
+        accountIdentity: String
     ): String =
         MessageDigest.getInstance("SHA-256")
             .digest(
-                accessToken.toByteArray(
+                accountIdentity.toByteArray(
                     Charsets.UTF_8
                 )
             )
