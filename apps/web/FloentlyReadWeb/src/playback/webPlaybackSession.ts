@@ -843,46 +843,76 @@ export class WebPlaybackSession {
         DEFAULT_PREFETCH_HORIZON_MS,
         DEFAULT_PREFETCH_SEGMENTS,
       );
+      const selected = [...new Set(indexes)]
+        .filter((index) => index !== activeIndex)
+        .sort((left, right) => left - right);
 
-      const results = await Promise.allSettled(
-        indexes.map((index) => this.ensureAudio(index, generation)),
+      await Promise.allSettled(
+        selected.map(async (index) => {
+          try {
+            await this.ensureAudio(index, generation);
+          } finally {
+            // Do not wait for slower forward segments before priming a ready
+            // N+1 asset. Later gaps can still be cached/primed, but the public
+            // buffer metric below remains contiguous from the playhead.
+            this.refreshPrefetchState(
+              activeIndex,
+              selected,
+              generation,
+            );
+          }
+        }),
       );
 
       if (generation !== this.generation) return;
 
-      const ready = results
-        .filter(
-          (result): result is PromiseFulfilledResult<RuntimeAudio> =>
-            result.status === "fulfilled",
-        )
-        .map((result) => result.value);
-
-      this.engine.prime(
-        ready.map((runtime) => runtime.playable.url),
-      );
-
-      const bufferedAheadMs = ready.reduce(
-        (total, runtime) =>
-          total
-          + Math.max(
-            0,
-            runtime.descriptor.logicalEndMs
-              - runtime.descriptor.logicalStartMs,
-          ),
-        0,
-      );
-
-      this.replaceSnapshot({ bufferedAheadMs });
+      this.refreshPrefetchState(activeIndex, selected, generation);
       this.pruneRuntimeAudio(
         new Set([
           activeIndex,
-          ...indexes,
+          ...selected,
         ]),
       );
     } catch {
       // Prefetch failure is non-fatal. The active segment may still play and
       // the next segment will retry on demand.
     }
+  }
+
+  private refreshPrefetchState(
+    activeIndex: number,
+    selectedIndexes: readonly number[],
+    generation: number,
+  ): void {
+    if (generation !== this.generation) return;
+
+    const ready = selectedIndexes
+      .map((index) => this.audioByIndex.get(index) ?? null)
+      .filter((runtime): runtime is RuntimeAudio => runtime !== null);
+
+    this.engine.prime(
+      ready.map((runtime) => runtime.playable.url),
+    );
+
+    let bufferedAheadMs = 0;
+    let expectedIndex = activeIndex + 1;
+
+    for (const index of selectedIndexes) {
+      if (index < expectedIndex) continue;
+      if (index !== expectedIndex) break;
+
+      const runtime = this.audioByIndex.get(index);
+      if (!runtime) break;
+
+      bufferedAheadMs += Math.max(
+        0,
+        runtime.descriptor.logicalEndMs
+          - runtime.descriptor.logicalStartMs,
+      );
+      expectedIndex += 1;
+    }
+
+    this.replaceSnapshot({ bufferedAheadMs });
   }
 
   private pruneRuntimeAudio(keep: Set<number>): void {
