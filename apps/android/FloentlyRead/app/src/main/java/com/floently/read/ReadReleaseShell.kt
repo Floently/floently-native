@@ -2733,6 +2733,11 @@ private fun ReadProjectReaderScreen(
     val context = LocalContext.current
     val palette = floentlyPalette(FloentlyProduct.Read)
     val scope = rememberCoroutineScope()
+    val appearance = remember(context) {
+        ReadReaderAppearanceSettings(
+            context
+        )
+    }
     val offlineCoordinator = remember(context) {
         ReadProgressiveAudioCoordinator(
             context = context,
@@ -2764,6 +2769,9 @@ private fun ReadProjectReaderScreen(
         mutableStateOf<String?>(null)
     }
     var readerMenuExpanded by remember {
+        mutableStateOf(false)
+    }
+    var showingAppearance by remember {
         mutableStateOf(false)
     }
     val originalPdfFile = remember(
@@ -3054,6 +3062,16 @@ private fun ReadProjectReaderScreen(
 
                     DropdownMenuItem(
                         text = {
+                            Text("Appearance")
+                        },
+                        onClick = {
+                            readerMenuExpanded = false
+                            showingAppearance = true
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = {
                             Text(
                                 if (offlineBusy) {
                                     "Updating offline copy…"
@@ -3253,15 +3271,347 @@ private fun ReadProjectReaderScreen(
                                     .bodyLarge
                                     .copy(
                                         fontSize =
-                                            20.sp,
+                                            appearance
+                                                .fontSizeSp
+                                                .sp,
                                         lineHeight =
-                                            32.sp
+                                            appearance
+                                                .lineHeightSp
+                                                .sp
                                     )
                         )
                     }
                 }
             }
         }
+    }
+
+    if (showingAppearance) {
+        ReadReaderAppearanceSheet(
+            settings = appearance,
+            onDismiss = {
+                showingAppearance = false
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReadReaderAppearanceSheet(
+    settings: ReadReaderAppearanceSettings,
+    onDismiss: () -> Unit
+) {
+    val palette =
+        floentlyPalette(
+            FloentlyProduct.Read
+        )
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor =
+            FloentlyDesignTokens
+                .Colors
+                .surface2,
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 10.dp)
+                    .size(
+                        width = 36.dp,
+                        height = 4.dp
+                    )
+                    .clip(
+                        RoundedCornerShape(
+                            FloentlyDesignTokens
+                                .Radius
+                                .pill
+                        )
+                    )
+                    .background(
+                        FloentlyDesignTokens
+                            .Colors
+                            .border
+                    )
+            )
+        }
+    ) {
+        Column(
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    FloentlyDesignTokens
+                        .Space
+                        .s6
+                ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal =
+                        FloentlyDesignTokens
+                            .Space
+                            .s6
+                )
+                .padding(
+                    bottom =
+                        FloentlyDesignTokens
+                            .Space
+                            .s6
+                )
+        ) {
+            Text(
+                "Reader appearance",
+                color = palette.text,
+                style =
+                    MaterialTheme.typography
+                        .headlineSmall,
+                fontWeight =
+                    FontWeight.Bold
+            )
+
+            Text(
+                "Text size",
+                color = palette.text,
+                style =
+                    MaterialTheme.typography
+                        .titleSmall,
+                fontWeight =
+                    FontWeight.SemiBold
+            )
+
+            Row(
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        FloentlyDesignTokens
+                            .Space
+                            .s2
+                    ),
+                modifier =
+                    Modifier.fillMaxWidth()
+            ) {
+                ReadAppearanceChoice(
+                    label = "Compact",
+                    selected =
+                        settings.textSize
+                            == ReadReaderTextSize
+                                .Compact,
+                    modifier =
+                        Modifier.weight(1f)
+                ) {
+                    settings.selectTextSize(
+                        ReadReaderTextSize
+                            .Compact
+                    )
+                }
+
+                ReadAppearanceChoice(
+                    label = "Default",
+                    selected =
+                        settings.textSize
+                            == ReadReaderTextSize
+                                .Standard,
+                    modifier =
+                        Modifier.weight(1f)
+                ) {
+                    settings.selectTextSize(
+                        ReadReaderTextSize
+                            .Standard
+                    )
+                }
+
+                ReadAppearanceChoice(
+                    label = "Large",
+                    selected =
+                        settings.textSize
+                            == ReadReaderTextSize
+                                .Large,
+                    modifier =
+                        Modifier.weight(1f)
+                ) {
+                    settings.selectTextSize(
+                        ReadReaderTextSize
+                            .Large
+                    )
+                }
+            }
+
+            Text(
+                "Line spacing",
+                color = palette.text,
+                style =
+                    MaterialTheme.typography
+                        .titleSmall,
+                fontWeight =
+                    FontWeight.SemiBold
+            )
+
+            Row(
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        FloentlyDesignTokens
+                            .Space
+                            .s2
+                    ),
+                modifier =
+                    Modifier.fillMaxWidth()
+            ) {
+                ReadAppearanceChoice(
+                    label = "Tight",
+                    selected =
+                        settings.lineRhythm
+                            == ReadReaderLineRhythm
+                                .Tight,
+                    modifier =
+                        Modifier.weight(1f)
+                ) {
+                    settings.selectLineRhythm(
+                        ReadReaderLineRhythm
+                            .Tight
+                    )
+                }
+
+                ReadAppearanceChoice(
+                    label = "Standard",
+                    selected =
+                        settings.lineRhythm
+                            == ReadReaderLineRhythm
+                                .Standard,
+                    modifier =
+                        Modifier.weight(1f)
+                ) {
+                    settings.selectLineRhythm(
+                        ReadReaderLineRhythm
+                            .Standard
+                    )
+                }
+
+                ReadAppearanceChoice(
+                    label = "Relaxed",
+                    selected =
+                        settings.lineRhythm
+                            == ReadReaderLineRhythm
+                                .Relaxed,
+                    modifier =
+                        Modifier.weight(1f)
+                ) {
+                    settings.selectLineRhythm(
+                        ReadReaderLineRhythm
+                            .Relaxed
+                    )
+                }
+            }
+
+            Column(
+                verticalArrangement =
+                    Arrangement.spacedBy(
+                        FloentlyDesignTokens
+                            .Space
+                            .s2
+                    )
+            ) {
+                Text(
+                    "Preview",
+                    color = palette.muted,
+                    style =
+                        MaterialTheme.typography
+                            .labelMedium,
+                    fontWeight =
+                        FontWeight.SemiBold
+                )
+
+                Text(
+                    "A calm reading surface keeps the words clear and the controls out of the way.",
+                    color = palette.text,
+                    style =
+                        MaterialTheme.typography
+                            .bodyLarge
+                            .copy(
+                                fontSize =
+                                    settings
+                                        .fontSizeSp
+                                        .sp,
+                                lineHeight =
+                                    settings
+                                        .lineHeightSp
+                                        .sp
+                            ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(104.dp)
+                        .clip(
+                            RoundedCornerShape(
+                                FloentlyDesignTokens
+                                    .Radius
+                                    .m
+                            )
+                        )
+                        .background(
+                            FloentlyDesignTokens
+                                .Colors
+                                .surface1
+                        )
+                        .padding(
+                            FloentlyDesignTokens
+                                .Space
+                                .s4
+                        )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReadAppearanceChoice(
+    label: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults
+            .buttonColors(
+                containerColor =
+                    if (selected) {
+                        FloentlyDesignTokens
+                            .Colors
+                            .brandTint
+                    } else {
+                        FloentlyDesignTokens
+                            .Colors
+                            .surface1
+                    },
+                contentColor =
+                    if (selected) {
+                        FloentlyDesignTokens
+                            .Colors
+                            .brandBright
+                    } else {
+                        FloentlyDesignTokens
+                            .Colors
+                            .textSecondary
+                    }
+            ),
+        shape = RoundedCornerShape(
+            FloentlyDesignTokens
+                .Radius
+                .m
+        ),
+        contentPadding =
+            PaddingValues(
+                horizontal =
+                    FloentlyDesignTokens
+                        .Space
+                        .s2,
+                vertical = 0.dp
+            ),
+        modifier = modifier.height(56.dp)
+    ) {
+        Text(
+            label,
+            fontWeight =
+                FontWeight.SemiBold
+        )
     }
 }
 
