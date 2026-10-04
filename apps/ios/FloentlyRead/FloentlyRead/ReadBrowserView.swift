@@ -57,6 +57,10 @@ struct ReadBrowserView: View {
                 pulse: active
             )
         }
+        .onDisappear {
+            clearReadingVisualAssociation()
+            controller.detachBrowser()
+        }
         .onChange(
             of: playbackSession.activeSegmentIndex
         ) { previous, current in
