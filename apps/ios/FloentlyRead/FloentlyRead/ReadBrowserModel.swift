@@ -503,7 +503,7 @@ final class ReadBrowserController: ObservableObject {
             let data = try? JSONEncoder().encode(value),
             let literal = String(data: data, encoding: .utf8)
         else {
-            return """"
+            return "\"\""
         }
         return literal
     }
