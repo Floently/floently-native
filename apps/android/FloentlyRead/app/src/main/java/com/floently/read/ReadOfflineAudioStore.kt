@@ -12,7 +12,9 @@ import org.json.JSONObject
 
 data class ReadOfflineAudioAsset(
     val localFile: File,
-    val durationMs: Long?
+    val durationMs: Long?,
+    val renditionId: String?,
+    val timingMapId: String?
 )
 
 data class ReadOfflineAudioSummary(
@@ -129,7 +131,21 @@ object ReadOfflineAudioStore {
                         )
                     } else {
                         null
-                    }
+                    },
+                renditionId =
+                    resolved.optString(
+                        "renditionId"
+                    )
+                        .takeIf {
+                            it.isNotBlank()
+                        },
+                timingMapId =
+                    resolved.optString(
+                        "timingMapId"
+                    )
+                        .takeIf {
+                            it.isNotBlank()
+                        }
             )
         }
 
@@ -339,6 +355,22 @@ object ReadOfflineAudioStore {
                                 ?.let {
                                     put(
                                         "durationMs",
+                                        it
+                                    )
+                                }
+                            prepared
+                                .renditionId
+                                ?.let {
+                                    put(
+                                        "renditionId",
+                                        it
+                                    )
+                                }
+                            prepared
+                                .timingMapId
+                                ?.let {
+                                    put(
+                                        "timingMapId",
                                         it
                                     )
                                 }
