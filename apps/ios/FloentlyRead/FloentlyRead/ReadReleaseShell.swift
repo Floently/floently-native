@@ -551,6 +551,8 @@ private struct ReadAccessAccountDeletionControl: View {
                     .clearAll()
                 await ReadProjectSnapshotStore.shared
                     .clearAll()
+                await ReadOfflineAudioStore.shared
+                    .clearAll()
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -1976,6 +1978,8 @@ private struct ReadSettingsScreen: View {
                 await ReadOriginalDocumentStore.shared
                     .clearAll()
                 await ReadProjectSnapshotStore.shared
+                    .clearAll()
+                await ReadOfflineAudioStore.shared
                     .clearAll()
                 playback.clear()
             } catch {
