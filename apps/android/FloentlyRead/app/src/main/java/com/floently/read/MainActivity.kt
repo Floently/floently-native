@@ -108,11 +108,10 @@ class MainActivity : ComponentActivity() {
                             .weight(1f)
                             .fillMaxWidth()
                     ) {
-                        ReadBrowserScreen(
+                        ReadReleaseApp(
                             initialUrl = incomingUrl.value,
                             playbackController = playbackController,
-                            voiceSettings = voiceSettings,
-                            onExit = { finish() }
+                            voiceSettings = voiceSettings
                         )
                     }
 
@@ -142,7 +141,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun ReadBrowserScreen(
+fun ReadBrowserScreen(
     initialUrl: String?,
     playbackController: ReadPlaybackController,
     voiceSettings: ReadVoiceSettings,
