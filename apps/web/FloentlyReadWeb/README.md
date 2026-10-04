@@ -290,6 +290,27 @@ Key variables:
 
 Known production host routing mirrors the existing web app: `floently.com` can use same-origin auth proxying while `read.floently.com`, `learn.floently.com` and `create.floently.com` resolve auth to `https://learn-api.floently.com`.
 
+## Isolated preview qualification
+
+The next-generation web app is intended to be live-qualified on a separate
+HTTPS preview origin before any production cutover. Repository-side safety and
+qualification requirements are defined in
+`docs/READ_WEB_PREVIEW_QUALIFICATION.md`.
+
+The deployment must provide `READ_PREVIEW_ORIGIN`,
+`VITE_API_URL`, `VITE_AUTH_API_URL`, `VITE_READ_API_BASE_URL` and
+`VITE_BROWSER_V2_ORIGIN`, then run:
+
+```bash
+cd apps/web/FloentlyReadWeb
+npm run validate:preview-config
+```
+
+The validator rejects production Floently hostnames as the preview origin,
+non-HTTPS core endpoints, URL credentials and malformed Browser V2 origins.
+This contract prepares qualification only; it does not authorize production
+routing changes.
+
 ## Local build
 
 From repository root:
