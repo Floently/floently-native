@@ -9,6 +9,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
@@ -614,6 +616,7 @@ class ReadProjectStore {
     var errorMessage by mutableStateOf<String?>(null)
 
     private val client = ReadContentProjectClient()
+    private val progressSyncMutex = Mutex()
 
     suspend fun refresh(accessToken: String) {
         activity = "loading"
@@ -723,23 +726,30 @@ class ReadProjectStore {
         playbackRate: Double?,
         accessToken: String
     ) {
-        runCatching {
-            client.updateProgress(
-                projectId = projectId,
-                currentSegmentIndex = currentSegmentIndex,
-                currentCharacterOffset = currentCharacterOffset,
-                progressPercent = progressPercent,
-                voiceId = voiceId,
-                playbackRate = playbackRate,
-                accessToken = accessToken
-            )
-        }.getOrNull()?.let { progress ->
-            projects = projects.map { project ->
-                if (project.id == projectId) project.copy(progress = progress)
-                else project
+        progressSyncMutex.withLock {
+            runCatching {
+                client.updateProgress(
+                    projectId = projectId,
+                    currentSegmentIndex = currentSegmentIndex,
+                    currentCharacterOffset = currentCharacterOffset,
+                    progressPercent = progressPercent,
+                    voiceId = voiceId,
+                    playbackRate = playbackRate,
+                    accessToken = accessToken
+                )
+            }.getOrNull()?.let { progress ->
+                projects = projects.map { project ->
+                    if (project.id == projectId) {
+                        project.copy(progress = progress)
+                    } else {
+                        project
+                    }
+                }
             }
         }
         // Best effort: local resume remains authoritative offline.
+        // Serializing writes prevents an older cursor from completing after
+        // a newer one and moving cloud progress backwards.
     }
 
     fun reset() {
