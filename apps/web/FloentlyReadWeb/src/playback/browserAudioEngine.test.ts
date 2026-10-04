@@ -181,6 +181,35 @@ describe("BrowserAudioEngine prefetched handoff", () => {
     engine.destroy();
   });
 
+  it("rejects an obsolete metadata wait when a newer load takes ownership", async () => {
+    const engine = new BrowserAudioEngine(callbacks());
+    const initial = FakeAudioElement.instances[0];
+    initial.readyState = 0;
+
+    const obsolete = engine.load(
+      "https://audio.invalid/slow.mp3",
+      0,
+      1,
+    );
+
+    engine.prime(["https://audio.invalid/next.mp3"]);
+    const replacement = FakeAudioElement.instances[1];
+    replacement.readyState = 1;
+
+    const current = engine.load(
+      "https://audio.invalid/next.mp3",
+      0,
+      1,
+    );
+
+    await expect(obsolete).rejects.toThrow(
+      "Browser media load superseded.",
+    );
+    await expect(current).resolves.toBe(10_000);
+
+    engine.destroy();
+  });
+
   it("releases the active and remaining prefetched elements on destroy", () => {
     const engine = new BrowserAudioEngine(callbacks());
 
