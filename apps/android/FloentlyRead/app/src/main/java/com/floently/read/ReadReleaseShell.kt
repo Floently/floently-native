@@ -1098,6 +1098,18 @@ private fun ReadHomeScreen(
                 }
             }
 
+            if (
+                projectStore.activity != "idle"
+                && projectStore.activity != "loading"
+            ) {
+                item {
+                    Spacer(Modifier.height(16.dp))
+                    ReadImportProgress(
+                        message = projectStore.activity
+                    )
+                }
+            }
+
             projectStore.errorMessage?.let { error ->
                 item {
                     Spacer(Modifier.height(16.dp))
@@ -1232,6 +1244,16 @@ private fun ReadLibraryScreen(
                 label = "Search your library"
             )
             Spacer(Modifier.height(12.dp))
+
+            if (
+                projectStore.activity != "idle"
+                && projectStore.activity != "loading"
+            ) {
+                ReadImportProgress(
+                    message = projectStore.activity
+                )
+                Spacer(Modifier.height(12.dp))
+            }
 
             when {
                 projectStore.activity == "loading"
@@ -2012,6 +2034,37 @@ private fun SectionLabel(text: String) {
         style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.Bold
     )
+}
+
+@Composable
+private fun ReadImportProgress(
+    message: String
+) {
+    val palette = floentlyPalette(FloentlyProduct.Read)
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(9.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(palette.backgroundBottom)
+            .padding(14.dp)
+    ) {
+        Text(
+            message,
+            color = palette.text,
+            fontWeight = FontWeight.SemiBold
+        )
+        LinearProgressIndicator(
+            color = palette.accent,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Text(
+            "Read will open the document as soon as readable content is available. Audio can continue preparing afterward.",
+            color = palette.muted,
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
 }
 
 @Composable
