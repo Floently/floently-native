@@ -28,9 +28,24 @@ interface AudioCacheMetadata {
   byteSize?: number;
 }
 
-const CACHE_NAME = "floently-read-audio-v1";
-const DB_NAME = "floently-read-audio-v1";
+const CACHE_NAME_PREFIX = "floently-read-audio-v2";
+const DB_NAME_PREFIX = "floently-read-audio-v2";
 const STORE_NAME = "assets";
+
+function normalizedOwnerScope(ownerId: string | null | undefined): string {
+  const value = ownerId?.trim() || "local";
+  return encodeURIComponent(value);
+}
+
+export function readAudioCacheStorageNames(
+  ownerId?: string | null,
+): { cacheName: string; dbName: string } {
+  const scope = normalizedOwnerScope(ownerId);
+  return {
+    cacheName: `${CACHE_NAME_PREFIX}:${scope}`,
+    dbName: `${DB_NAME_PREFIX}:${scope}`,
+  };
+}
 const MIB = 1024 * 1024;
 const QUOTA_PRESSURE_MIN_HEADROOM_BYTES = 4 * MIB;
 const QUOTA_PRESSURE_MAX_HEADROOM_BYTES = 16 * MIB;
@@ -89,13 +104,15 @@ function syntheticCacheUrl(cacheKey: string): string {
   return `${origin}/__floently_read_audio_cache__/${encodeURIComponent(cacheKey)}`;
 }
 
-function openMetadataDb(): Promise<IDBDatabase | null> {
+function openMetadataDb(
+  dbName: string,
+): Promise<IDBDatabase | null> {
   if (typeof indexedDB === "undefined") {
     return Promise.resolve(null);
   }
 
   return new Promise((resolve) => {
-    const request = indexedDB.open(DB_NAME, 1);
+    const request = indexedDB.open(dbName, 1);
 
     request.onupgradeneeded = () => {
       const db = request.result;
@@ -112,8 +129,11 @@ function openMetadataDb(): Promise<IDBDatabase | null> {
   });
 }
 
-async function writeMetadata(metadata: AudioCacheMetadata): Promise<void> {
-  const db = await openMetadataDb();
+async function writeMetadata(
+  dbName: string,
+  metadata: AudioCacheMetadata,
+): Promise<void> {
+  const db = await openMetadataDb(dbName);
   if (!db) return;
 
   await new Promise<void>((resolve) => {
@@ -127,8 +147,10 @@ async function writeMetadata(metadata: AudioCacheMetadata): Promise<void> {
   db.close();
 }
 
-async function readAllMetadata(): Promise<AudioCacheMetadata[]> {
-  const db = await openMetadataDb();
+async function readAllMetadata(
+  dbName: string,
+): Promise<AudioCacheMetadata[]> {
+  const db = await openMetadataDb(dbName);
   if (!db) return [];
 
   const result = await new Promise<AudioCacheMetadata[]>((resolve) => {
@@ -143,8 +165,11 @@ async function readAllMetadata(): Promise<AudioCacheMetadata[]> {
   return result;
 }
 
-async function deleteMetadata(cacheKey: string): Promise<void> {
-  const db = await openMetadataDb();
+async function deleteMetadata(
+  dbName: string,
+  cacheKey: string,
+): Promise<void> {
+  const db = await openMetadataDb(dbName);
   if (!db) return;
 
   await new Promise<void>((resolve) => {
@@ -168,11 +193,19 @@ function hasKnownByteSize(
 }
 
 export class ReadAudioCache implements ReadAudioCachePort {
+  private readonly cacheName: string;
+  private readonly dbName: string;
   private readonly objectUrls = new Map<string, string>();
   private readonly activeLeaseCounts = new Map<string, number>();
   private pruneInProgress = false;
   private pruneRequested = false;
   private disposed = false;
+
+  constructor(options: { ownerId?: string | null } = {}) {
+    const storage = readAudioCacheStorageNames(options.ownerId);
+    this.cacheName = storage.cacheName;
+    this.dbName = storage.dbName;
+  }
 
   async resolve(asset: ReadTtsAsset): Promise<PlayableAudioAsset> {
     const cacheKey = resolveReadAudioCacheKey(
@@ -194,14 +227,14 @@ export class ReadAudioCache implements ReadAudioCachePort {
 
     if (hasCacheStorage()) {
       try {
-        const cache = await caches.open(CACHE_NAME);
+        const cache = await caches.open(this.cacheName);
         const cached = await cache.match(cacheUrl);
         if (cached) {
           const blob = await cached.blob();
           const objectUrl = this.createLeasedObjectUrl(blob, cacheKey);
           const now = Date.now();
 
-          void writeMetadata({
+          void writeMetadata(this.dbName, {
             cacheKey,
             contentHash: asset.contentHash,
             sourceUrl: asset.audioUrl,
@@ -272,7 +305,7 @@ export class ReadAudioCache implements ReadAudioCachePort {
 
       let cache: Cache | null = null;
       try {
-        cache = await caches.open(CACHE_NAME);
+        cache = await caches.open(this.cacheName);
       } catch {
         return this.transientPlayable(blob, asset, cacheKey);
       }
@@ -318,7 +351,7 @@ export class ReadAudioCache implements ReadAudioCachePort {
 
       if (persisted) {
         const now = Date.now();
-        await writeMetadata({
+        await writeMetadata(this.dbName, {
           cacheKey,
           contentHash: asset.contentHash,
           sourceUrl: asset.audioUrl,
@@ -422,7 +455,7 @@ export class ReadAudioCache implements ReadAudioCachePort {
         );
 
         if (!response) {
-          await deleteMetadata(entry.cacheKey);
+          await deleteMetadata(this.dbName, entry.cacheKey);
           continue;
         }
 
@@ -452,7 +485,7 @@ export class ReadAudioCache implements ReadAudioCachePort {
     cache: Cache,
     bytesToFree: number,
   ): Promise<void> {
-    const entries = await readAllMetadata();
+    const entries = await readAllMetadata(this.dbName);
     if (entries.length === 0) return;
 
     const hydrated = await this.hydrateLegacyByteSizes(
@@ -476,17 +509,17 @@ export class ReadAudioCache implements ReadAudioCachePort {
       await cache
         .delete(syntheticCacheUrl(cacheKey))
         .catch(() => false);
-      await deleteMetadata(cacheKey);
+      await deleteMetadata(this.dbName, cacheKey);
     }
   }
 
   private async prune(): Promise<void> {
     if (!hasCacheStorage()) return;
 
-    const cache = await caches.open(CACHE_NAME).catch(() => null);
+    const cache = await caches.open(this.cacheName).catch(() => null);
     if (!cache) return;
 
-    const entries = await readAllMetadata();
+    const entries = await readAllMetadata(this.dbName);
     if (entries.length === 0) return;
 
     const hydrated = await this.hydrateLegacyByteSizes(cache, entries);
@@ -504,7 +537,7 @@ export class ReadAudioCache implements ReadAudioCachePort {
       await cache
         .delete(syntheticCacheUrl(cacheKey))
         .catch(() => false);
-      await deleteMetadata(cacheKey);
+      await deleteMetadata(this.dbName, cacheKey);
     }
   }
 }
