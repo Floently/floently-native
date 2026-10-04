@@ -1,6 +1,13 @@
 name: Read mobile browser CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      ios_build_approved:
+        description: "Explicitly approved iOS simulator qualification"
+        required: true
+        default: false
+        type: boolean
   pull_request:
     paths:
       - "apps/ios/FloentlyRead/**"
@@ -183,6 +190,7 @@ jobs:
           retention-days: 7
 
   ios-read:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ios_build_approved == true }}
     runs-on: macos-15
     timeout-minutes: 20
     steps:

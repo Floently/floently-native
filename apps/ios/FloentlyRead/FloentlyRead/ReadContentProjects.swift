@@ -1,5 +1,45 @@
 import Foundation
 
+struct ReadProjectProgress: Equatable, Sendable {
+    let projectId: String
+    let currentSegmentIndex: Int
+    let currentCharacterOffset: Int
+    let progressPercent: Double
+    let voiceId: String?
+    let playbackRate: Double?
+    let updatedAt: String
+
+    static func decode(_ value: Any?) -> ReadProjectProgress? {
+        guard let object = value as? [String: Any] else { return nil }
+
+        func string(_ key: String) -> String {
+            object[key] as? String ?? ""
+        }
+        func integer(_ key: String) -> Int {
+            if let value = object[key] as? NSNumber {
+                return value.intValue
+            }
+            return object[key] as? Int ?? 0
+        }
+        func double(_ key: String) -> Double? {
+            if let value = object[key] as? NSNumber {
+                return value.doubleValue
+            }
+            return object[key] as? Double
+        }
+
+        return ReadProjectProgress(
+            projectId: string("projectId"),
+            currentSegmentIndex: max(0, integer("currentSegmentIndex")),
+            currentCharacterOffset: max(0, integer("currentCharacterOffset")),
+            progressPercent: min(100, max(0, double("progressPercent") ?? 0)),
+            voiceId: string("voiceId").nilIfBlank,
+            playbackRate: double("playbackRate"),
+            updatedAt: string("updatedAt")
+        )
+    }
+}
+
 struct ReadContentProject: Identifiable, Equatable, Sendable {
     let id: String
     let title: String
@@ -14,6 +54,7 @@ struct ReadContentProject: Identifiable, Equatable, Sendable {
     let createdAt: String
     let updatedAt: String
     let lastOpenedAt: String?
+    let progress: ReadProjectProgress?
     let rawText: String?
 
     var revisionId: String {
@@ -85,7 +126,28 @@ struct ReadContentProject: Identifiable, Equatable, Sendable {
             createdAt: string(["createdAt", "created_at"]),
             updatedAt: string(["updatedAt", "updated_at"]),
             lastOpenedAt: string(["lastOpenedAt", "last_opened_at"]).nilIfBlank,
+            progress: ReadProjectProgress.decode(object["progress"]),
             rawText: string(["rawText", "raw_text", "text", "content"]).nilIfBlank
+        )
+    }
+
+    func replacingProgress(_ progress: ReadProjectProgress?) -> ReadContentProject {
+        ReadContentProject(
+            id: id,
+            title: title,
+            kind: kind,
+            status: status,
+            sourceType: sourceType,
+            sourceURL: sourceURL,
+            language: language,
+            textHash: textHash,
+            wordCount: wordCount,
+            characterCount: characterCount,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            lastOpenedAt: lastOpenedAt,
+            progress: progress,
+            rawText: rawText
         )
     }
 }
@@ -286,6 +348,41 @@ actor ReadContentProjectClient {
             throw ReadProjectClientError.invalidProject
         }
         return project
+    }
+
+    func updateProgress(
+        projectId: String,
+        currentSegmentIndex: Int,
+        currentCharacterOffset: Int,
+        progressPercent: Double,
+        voiceId: String?,
+        playbackRate: Double?,
+        accessToken: String
+    ) async throws -> ReadProjectProgress? {
+        let encoded = projectId.addingPercentEncoding(
+            withAllowedCharacters: .urlPathAllowed
+        ) ?? projectId
+        var body: [String: Any] = [
+            "currentSegmentIndex": max(0, currentSegmentIndex),
+            "currentCharacterOffset": max(0, currentCharacterOffset),
+            "progressPercent": min(100, max(0, progressPercent))
+        ]
+        if let voiceId = voiceId?.nilIfBlank {
+            body["voiceId"] = voiceId
+        }
+        if let playbackRate, playbackRate.isFinite {
+            body["playbackRate"] = min(3, max(0.5, playbackRate))
+        }
+        let data = try JSONSerialization.data(withJSONObject: body)
+        let payload = try await requestJSON(
+            url: baseURL.appending(path: "/api/v1/documents/\(encoded)/progress"),
+            method: "PUT",
+            accessToken: accessToken,
+            body: data,
+            contentType: "application/json"
+        )
+        let object = unwrappedObject(payload)
+        return ReadProjectProgress.decode(object["progress"])
     }
 
     func deleteProject(
@@ -599,6 +696,34 @@ final class ReadProjectStore: ObservableObject {
         )
         upsert(project)
         return project
+    }
+
+    func syncProgress(
+        projectId: String,
+        currentSegmentIndex: Int,
+        currentCharacterOffset: Int,
+        progressPercent: Double,
+        voiceId: String?,
+        playbackRate: Double?,
+        accessToken: String
+    ) async {
+        do {
+            let progress = try await client.updateProgress(
+                projectId: projectId,
+                currentSegmentIndex: currentSegmentIndex,
+                currentCharacterOffset: currentCharacterOffset,
+                progressPercent: progressPercent,
+                voiceId: voiceId,
+                playbackRate: playbackRate,
+                accessToken: accessToken
+            )
+            guard let progress else { return }
+            if let index = projects.firstIndex(where: { $0.id == projectId }) {
+                projects[index] = projects[index].replacingProgress(progress)
+            }
+        } catch {
+            // Best effort: local resume remains authoritative offline.
+        }
     }
 
     func reset() {
