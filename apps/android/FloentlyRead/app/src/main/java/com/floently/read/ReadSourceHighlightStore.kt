@@ -290,11 +290,6 @@ object ReadSourceHighlightStore {
         val changed: Boolean
     )
 
-    private data class MigrationCandidate(
-        val scalarStart: Int,
-        val score: Int
-    )
-
     private fun migrateHighlights(
         highlights: List<ReadSourceHighlight>,
         revisionId: String,
@@ -318,21 +313,31 @@ object ReadSourceHighlightStore {
                 it.revisionId != revisionId
             }
             .forEach { value ->
-                val start =
-                    migrationScalarStart(
-                        highlight = value,
-                        sourceText = sourceText
-                    )
-                if (start == null) {
+                val resolution =
+                    runCatching {
+                        ReadCoreNative
+                            .resolveSourceAnchor(
+                                sourceText =
+                                    sourceText,
+                                quote =
+                                    value.quote,
+                                prefixContext =
+                                    value.prefixContext,
+                                suffixContext =
+                                    value.suffixContext
+                            )
+                    }
+                        .getOrNull()
+
+                if (resolution == null) {
                     retained += value
                     return@forEach
                 }
 
+                val start =
+                    resolution.scalarStart
                 val length =
-                    ReadScalarOffsets
-                        .scalarCount(
-                            value.quote
-                        )
+                    resolution.scalarLength
                 if (
                     length <= 0
                     || start + length >
@@ -409,213 +414,6 @@ object ReadSourceHighlightStore {
                 retained + current,
             changed = changed
         )
-    }
-
-    private fun migrationScalarStart(
-        highlight: ReadSourceHighlight,
-        sourceText: String
-    ): Int? {
-        if (
-            highlight.quote.isEmpty()
-            || sourceText.isEmpty()
-        ) {
-            return null
-        }
-
-        val scalarCount =
-            ReadScalarOffsets
-                .scalarCount(sourceText)
-        val quoteLength =
-            ReadScalarOffsets
-                .scalarCount(
-                    highlight.quote
-                )
-        if (
-            quoteLength <= 0
-            || quoteLength > scalarCount
-        ) {
-            return null
-        }
-
-        val candidates =
-            mutableListOf<
-                MigrationCandidate
-            >()
-        var searchStart = 0
-
-        while (searchStart <= sourceText.length) {
-            val utf16Index =
-                sourceText.indexOf(
-                    highlight.quote,
-                    startIndex =
-                        searchStart
-                )
-            if (utf16Index < 0) {
-                break
-            }
-
-            val scalarStart =
-                ReadScalarOffsets
-                    .scalarOffset(
-                        text = sourceText,
-                        utf16Offset =
-                            utf16Index
-                    )
-            if (scalarStart != null) {
-                val scalarEnd =
-                    scalarStart
-                        + quoteLength
-                val prefix =
-                    scalarSubstring(
-                        sourceText,
-                        (scalarStart - 32)
-                            .coerceAtLeast(0),
-                        scalarStart
-                    )
-                val suffix =
-                    scalarSubstring(
-                        sourceText,
-                        scalarEnd,
-                        (scalarEnd + 32)
-                            .coerceAtMost(
-                                scalarCount
-                            )
-                    )
-                val score =
-                    commonSuffixScalarCount(
-                        highlight
-                            .prefixContext,
-                        prefix
-                    ) +
-                        commonPrefixScalarCount(
-                            highlight
-                                .suffixContext,
-                            suffix
-                        )
-
-                candidates +=
-                    MigrationCandidate(
-                        scalarStart =
-                            scalarStart,
-                        score = score
-                    )
-            }
-
-            if (candidates.size > 128) {
-                return null
-            }
-
-            searchStart =
-                if (
-                    utf16Index <
-                    sourceText.length
-                ) {
-                    utf16Index +
-                        Character.charCount(
-                            sourceText
-                                .codePointAt(
-                                    utf16Index
-                                )
-                        )
-                } else {
-                    sourceText.length + 1
-                }
-        }
-
-        if (candidates.isEmpty()) {
-            return null
-        }
-
-        if (candidates.size == 1) {
-            return candidates.first()
-                .scalarStart
-        }
-
-        val ranked =
-            candidates.sortedWith(
-                compareByDescending<
-                    MigrationCandidate
-                > {
-                    it.score
-                }
-                    .thenBy {
-                        it.scalarStart
-                    }
-            )
-        val best = ranked.first()
-        val second =
-            ranked.getOrNull(1)
-        if (
-            best.score < 8
-            || (
-                second != null
-                && best.score
-                    <= second.score
-            )
-        ) {
-            return null
-        }
-
-        return best.scalarStart
-    }
-
-    private fun commonPrefixScalarCount(
-        lhs: String,
-        rhs: String
-    ): Int {
-        val left =
-            lhs.codePoints()
-                .toArray()
-        val right =
-            rhs.codePoints()
-                .toArray()
-        val limit =
-            minOf(
-                left.size,
-                right.size
-            )
-        var count = 0
-
-        while (
-            count < limit
-            && left[count]
-                == right[count]
-        ) {
-            count += 1
-        }
-
-        return count
-    }
-
-    private fun commonSuffixScalarCount(
-        lhs: String,
-        rhs: String
-    ): Int {
-        val left =
-            lhs.codePoints()
-                .toArray()
-        val right =
-            rhs.codePoints()
-                .toArray()
-        val limit =
-            minOf(
-                left.size,
-                right.size
-            )
-        var count = 0
-
-        while (
-            count < limit
-            && left[
-                left.lastIndex - count
-            ] == right[
-                right.lastIndex - count
-            ]
-        ) {
-            count += 1
-        }
-
-        return count
     }
 
     private fun load(
