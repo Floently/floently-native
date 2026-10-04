@@ -94,6 +94,28 @@ object ReadOfflineAudioStore {
 
             val resolved =
                 item ?: return@withContext null
+            val schemaVersion =
+                metadata.optInt(
+                    "schemaVersion",
+                    0
+                )
+            if (
+                schemaVersion >= 2
+                && (
+                    resolved
+                        .optString(
+                            "renditionId"
+                        )
+                        .isBlank()
+                    || resolved
+                        .optString(
+                            "timingMapId"
+                        )
+                        .isBlank()
+                )
+            ) {
+                return@withContext null
+            }
             val fileName =
                 resolved.optString("fileName")
                     .takeIf {
@@ -212,6 +234,23 @@ object ReadOfflineAudioStore {
                 if (
                     item.optString("id")
                     != segment.id
+                ) {
+                    return@all false
+                }
+
+                if (
+                    metadata.optInt(
+                        "schemaVersion",
+                        0
+                    ) >= 2
+                    && (
+                        item.optString(
+                            "renditionId"
+                        ).isBlank()
+                        || item.optString(
+                            "timingMapId"
+                        ).isBlank()
+                    )
                 ) {
                     return@all false
                 }
