@@ -1853,6 +1853,12 @@ private struct ReadProjectReaderView: View {
     @State private var offlineBusy = false
     @State private var offlineError: String?
     @State private var showingAppearance = false
+    @State private var isSearching = false
+    @State private var searchQuery = ""
+    @State private var searchMatchIndex = 0
+    @State private var readerScrollPosition: Int? = 0
+    @State private var searchReturnPosition: Int?
+    @FocusState private var searchFocused: Bool
     @StateObject private var appearance =
         ReadReaderAppearanceSettings()
 
@@ -1864,6 +1870,9 @@ private struct ReadProjectReaderView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
+                if isSearching {
+                    searchToolbar
+                } else {
                 HStack(
                     spacing:
                         FloentlyDesignTokens
@@ -1937,6 +1946,21 @@ private struct ReadProjectReaderView: View {
                         }
 
                         Button {
+                            beginSearch()
+                        } label: {
+                            Label(
+                                "Search in document",
+                                systemImage:
+                                    "magnifyingglass"
+                            )
+                        }
+                        .disabled(
+                            originalPDFURL != nil
+                            || searchableParagraphs
+                                .isEmpty
+                        )
+
+                        Button {
                             Task {
                                 await toggleOffline()
                             }
@@ -2004,6 +2028,7 @@ private struct ReadProjectReaderView: View {
                                 .borderSoft
                         )
                         .frame(height: 1)
+                }
                 }
 
                 ProgressView(
@@ -2091,11 +2116,11 @@ private struct ReadProjectReaderView: View {
                             ) {
                                 ForEach(
                                     Array(
-                                        paragraphs(text)
+                                        searchableParagraphs
                                             .enumerated()
                                     ),
                                     id: \.offset
-                                ) { _, paragraph in
+                                ) { index, paragraph in
                                     Text(paragraph)
                                         .font(
                                             .system(
@@ -2110,9 +2135,20 @@ private struct ReadProjectReaderView: View {
                                                 .additionalLineSpacing
                                         )
                                         .foregroundStyle(palette.text)
+                                        .background(
+                                            searchHighlightsParagraph(
+                                                index
+                                            )
+                                            ? FloentlyDesignTokens
+                                                .Colors
+                                                .brandTint
+                                            : Color.clear
+                                        )
                                         .textSelection(.enabled)
+                                        .id(index)
                                 }
                             }
+                            .scrollTargetLayout()
                             .frame(
                                 maxWidth: 680,
                                 alignment: .leading
@@ -2122,6 +2158,11 @@ private struct ReadProjectReaderView: View {
                             .padding(.top, 28)
                             .padding(.bottom, 120)
                         }
+                        .scrollPosition(
+                            id:
+                                $readerScrollPosition,
+                            anchor: .top
+                        )
                     }
                 } else {
                     Spacer()
@@ -2152,6 +2193,333 @@ private struct ReadProjectReaderView: View {
                 .visible
             )
         }
+    }
+
+    private var searchableParagraphs: [String] {
+        guard
+            let text =
+                hydrated?.rawText,
+            !text.isEmpty
+        else {
+            return []
+        }
+
+        return paragraphs(text)
+    }
+
+    private var searchMatches: [Int] {
+        let query = searchQuery
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+        guard !query.isEmpty else {
+            return []
+        }
+
+        return searchableParagraphs
+            .enumerated()
+            .flatMap {
+                index,
+                paragraph in
+                Array(
+                    repeating: index,
+                    count:
+                        occurrenceCount(
+                            query,
+                            in: paragraph
+                        )
+                )
+            }
+    }
+
+    private var searchToolbar: some View {
+        HStack(
+            spacing:
+                FloentlyDesignTokens
+                    .Space
+                    .s1
+        ) {
+            Button {
+                endSearch()
+            } label: {
+                Image(systemName: "xmark")
+                    .frame(
+                        width:
+                            FloentlyDesignTokens
+                                .Control
+                                .iconTarget,
+                        height:
+                            FloentlyDesignTokens
+                                .Control
+                                .iconTarget
+                    )
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(palette.text)
+            .accessibilityLabel("Close search")
+
+            TextField(
+                "Search in document",
+                text: $searchQuery
+            )
+            .focused($searchFocused)
+            .textInputAutocapitalization(
+                .never
+            )
+            .autocorrectionDisabled()
+            .padding(
+                .horizontal,
+                FloentlyDesignTokens
+                    .Space
+                    .s3
+            )
+            .frame(height: 48)
+            .background(
+                FloentlyDesignTokens
+                    .Colors
+                    .surface2
+            )
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius:
+                        FloentlyDesignTokens
+                            .Radius
+                            .m,
+                    style: .continuous
+                )
+            )
+            .onChange(
+                of: searchQuery
+            ) { _, _ in
+                searchMatchIndex = 0
+                jumpToCurrentSearchMatch()
+            }
+
+            Text(searchResultLabel)
+                .font(
+                    .caption.monospacedDigit()
+                )
+                .foregroundStyle(
+                    palette.muted
+                )
+                .frame(minWidth: 42)
+
+            searchNavigationButton(
+                systemName:
+                    "chevron.up",
+                label:
+                    "Previous search result",
+                enabled:
+                    !searchMatches.isEmpty
+            ) {
+                moveSearchResult(
+                    delta: -1
+                )
+            }
+
+            searchNavigationButton(
+                systemName:
+                    "chevron.down",
+                label:
+                    "Next search result",
+                enabled:
+                    !searchMatches.isEmpty
+            ) {
+                moveSearchResult(
+                    delta: 1
+                )
+            }
+        }
+        .padding(
+            .horizontal,
+            FloentlyDesignTokens
+                .Space
+                .s1
+        )
+        .frame(height: 56)
+        .background(
+            FloentlyDesignTokens
+                .Colors
+                .surface1
+        )
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(
+                    FloentlyDesignTokens
+                        .Colors
+                        .borderSoft
+                )
+                .frame(height: 1)
+        }
+    }
+
+    private var searchResultLabel: String {
+        guard !searchMatches.isEmpty else {
+            return "0/0"
+        }
+
+        let bounded =
+            min(
+                searchMatchIndex,
+                searchMatches.count - 1
+            )
+
+        return "\(bounded + 1)/\(searchMatches.count)"
+    }
+
+    private func searchNavigationButton(
+        systemName: String,
+        label: String,
+        enabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(
+                    .system(
+                        size: 15,
+                        weight: .semibold
+                    )
+                )
+                .frame(
+                    width:
+                        FloentlyDesignTokens
+                            .Control
+                            .iconTarget,
+                    height:
+                        FloentlyDesignTokens
+                            .Control
+                            .iconTarget
+                )
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(
+            enabled
+            ? palette.text
+            : palette.muted.opacity(0.45)
+        )
+        .disabled(!enabled)
+        .accessibilityLabel(label)
+    }
+
+    private func beginSearch() {
+        searchReturnPosition =
+            readerScrollPosition
+        isSearching = true
+
+        DispatchQueue.main.async {
+            searchFocused = true
+        }
+    }
+
+    private func endSearch() {
+        searchFocused = false
+        isSearching = false
+        searchQuery = ""
+        searchMatchIndex = 0
+
+        if let searchReturnPosition {
+            readerScrollPosition =
+                searchReturnPosition
+        }
+    }
+
+    private func moveSearchResult(
+        delta: Int
+    ) {
+        let matches = searchMatches
+        guard !matches.isEmpty else {
+            return
+        }
+
+        let count = matches.count
+        searchMatchIndex =
+            (searchMatchIndex
+                + delta
+                + count)
+            % count
+
+        jumpToCurrentSearchMatch()
+    }
+
+    private func jumpToCurrentSearchMatch() {
+        let matches = searchMatches
+        guard !matches.isEmpty else {
+            return
+        }
+
+        searchMatchIndex = min(
+            max(0, searchMatchIndex),
+            matches.count - 1
+        )
+        readerScrollPosition =
+            matches[searchMatchIndex]
+    }
+
+    private func searchHighlightsParagraph(
+        _ index: Int
+    ) -> Bool {
+        guard
+            isSearching,
+            !searchQuery
+                .trimmingCharacters(
+                    in:
+                        .whitespacesAndNewlines
+                )
+                .isEmpty
+        else {
+            return false
+        }
+
+        return searchMatches
+            .contains(index)
+    }
+
+    private func occurrenceCount(
+        _ query: String,
+        in text: String
+    ) -> Int {
+        let source = text as NSString
+        let needle =
+            query as NSString
+        guard needle.length > 0 else {
+            return 0
+        }
+
+        var count = 0
+        var location = 0
+
+        while location < source.length {
+            let range = source.range(
+                of: query,
+                options: [
+                    .caseInsensitive,
+                    .diacriticInsensitive
+                ],
+                range: NSRange(
+                    location: location,
+                    length:
+                        source.length
+                        - location
+                )
+            )
+
+            if range.location
+                == NSNotFound
+            {
+                break
+            }
+
+            count += 1
+            location =
+                range.location
+                + max(
+                    range.length,
+                    1
+                )
+        }
+
+        return count
     }
 
     private var resolvedVoiceId: String? {
