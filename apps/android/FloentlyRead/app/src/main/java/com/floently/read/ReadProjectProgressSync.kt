@@ -142,20 +142,17 @@ object ReadRemoteProjectProgressBridge {
                 playbackRate = snapshot.speed.toDouble()
             )
 
-        val segmentDuration = (
-            segment.logicalEndMs - segment.logicalStartMs
-            )
-            .coerceAtLeast(1L)
-        val localMs = (
-            elapsedMs - segment.logicalStartMs
-            )
-            .coerceIn(0L, segmentDuration)
-        val fraction = localMs.toDouble()
-            / segmentDuration.toDouble()
-        val scalarSpan = (
-            segment.scalarEnd - segment.scalarStart
-            )
-            .coerceAtLeast(0)
+        val segmentDuration =
+            (segment.logicalEndMs - segment.logicalStartMs)
+                .coerceAtLeast(1L)
+        val localMs =
+            (elapsedMs - segment.logicalStartMs)
+                .coerceIn(0L, segmentDuration)
+        val fraction =
+            localMs.toDouble() / segmentDuration.toDouble()
+        val scalarSpan =
+            (segment.scalarEnd - segment.scalarStart)
+                .coerceAtLeast(0)
         val scalarOffset = (
             segment.scalarStart
                 + (scalarSpan.toDouble() * fraction)
