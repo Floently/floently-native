@@ -75,6 +75,20 @@ public final class FloentlyAuthService {
         store.clear()
     }
 
+    public func deleteAccount(
+        deletionReason: String? = "read_native_settings"
+    ) async throws {
+        _ = try await api.post(
+            "/api/v1/auth/account/delete",
+            body: DeleteAccountRequest(
+                confirmDelete: true,
+                deletionReason: deletionReason
+            ),
+            as: FloentlyEmpty.self
+        )
+        store.clear()
+    }
+
     public func logout() async {
         _ = try? await api.post(
             "/api/v1/auth/logout",
