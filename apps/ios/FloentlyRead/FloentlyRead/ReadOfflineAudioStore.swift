@@ -89,6 +89,16 @@ actor ReadOfflineAudioStore {
             return nil
         }
 
+        if
+            metadata.schemaVersion >= 2,
+            (
+                item.renditionId?.isEmpty != false
+                || item.timingMapId?.isEmpty != false
+            )
+        {
+            return nil
+        }
+
         let file = directory.appending(
             path: item.fileName
         )
@@ -148,6 +158,16 @@ actor ReadOfflineAudioStore {
                 let item = byIndex[segment.index],
                 item.id == segment.id
             else {
+                return false
+            }
+
+            if
+                metadata.schemaVersion >= 2,
+                (
+                    item.renditionId?.isEmpty != false
+                    || item.timingMapId?.isEmpty != false
+                )
+            {
                 return false
             }
 
