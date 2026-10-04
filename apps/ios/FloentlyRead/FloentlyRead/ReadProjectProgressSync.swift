@@ -14,10 +14,10 @@ enum ReadRemoteProgressBridge {
         }
 
         let store = ReadPlaybackResumeStore()
-        let local = store.load(
-            documentId: manifest.documentId,
-            revisionId: manifest.revisionId
-        )
+        let local =
+            store.loadOrMigrate(
+                manifest: manifest
+            )
         let remoteDate = parseDate(progress.updatedAt)
 
         if let local {
@@ -106,6 +106,12 @@ enum ReadRemoteProgressBridge {
                 )
             )
         )
+        let sourceAnchor =
+            store.sourceAnchor(
+                manifest: manifest,
+                logicalTime:
+                    logicalTime
+            )
 
         store.save(
             ReadPlaybackResumeSnapshot(
@@ -120,7 +126,18 @@ enum ReadRemoteProgressBridge {
                 sourceSegmentId: segment?.id,
                 sourceSegmentIndex: segment?.index,
                 voiceId: progress.voiceId,
-                renditionId: nil
+                renditionId: nil,
+                sourceAnchorQuote:
+                    sourceAnchor?.quote,
+                sourceAnchorPrefixContext:
+                    sourceAnchor
+                        ?.prefixContext,
+                sourceAnchorSuffixContext:
+                    sourceAnchor
+                        ?.suffixContext,
+                sourceAnchorCursorOffset:
+                    sourceAnchor
+                        ?.cursorOffset
             )
         )
 
