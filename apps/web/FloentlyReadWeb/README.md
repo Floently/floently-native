@@ -274,6 +274,14 @@ Cache Storage + IndexedDB use separate per-account v2 namespaces. Normal
 sign-out does not erase that account's local resume/cache state, but another
 account in the same browser profile cannot reuse it accidentally.
 
+Browser-local documents follow the same rule. Preserved original files/PDF
+bytes, legacy local text/Markdown documents, file-to-project fingerprint
+mappings and in-flight semantic attachment ownership all use account-scoped v2
+namespaces. Direct local document routes resolve only inside the authenticated
+owner's namespace. Pre-isolation unscoped browser stores are left untouched but
+are not auto-imported into an account because their historical owner cannot be
+proven safely; affected local-only sources must be re-imported deliberately.
+
 Cache Storage quota pressure is fail-soft. If a browser rejects a new audio
 write with `QuotaExceededError`, Read first evicts least-recently-used
 **unleased** audio to create bounded headroom and retries the write once.
