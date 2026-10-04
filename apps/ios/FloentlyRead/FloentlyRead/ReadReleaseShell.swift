@@ -2339,6 +2339,7 @@ private struct ReadProjectReaderView: View {
     @State private var offlineBusy = false
     @State private var offlineError: String?
     @State private var showingAppearance = false
+    @State private var showingHighlights = false
     @State private var isSearching = false
     @State private var searchQuery = ""
     @State private var searchMatchIndex = 0
@@ -2448,6 +2449,24 @@ private struct ReadProjectReaderView: View {
                             || epubPackage != nil
                             || searchableParagraphAnchors
                                 .isEmpty
+                        )
+
+                        Button {
+                            showingHighlights = true
+                        } label: {
+                            Label(
+                                sourceHighlights.isEmpty
+                                ? "Highlights & notes"
+                                : "Highlights & notes (\(sourceHighlights.count))",
+                                systemImage:
+                                    "highlighter"
+                            )
+                        }
+                        .disabled(
+                            originalPDFURL != nil
+                            || epubPackage != nil
+                            || hydrated?.rawText
+                                ?.isEmpty != false
                         )
 
                         Button {
@@ -2778,6 +2797,7 @@ private struct ReadProjectReaderView: View {
                                             ? FloentlyDesignTokens
                                                 .Colors
                                                 .brandTint
+                                                .opacity(0.28)
                                             : Color.clear
                                         )
                                         .textSelection(.enabled)
@@ -2819,6 +2839,45 @@ private struct ReadProjectReaderView: View {
         }
         .task(id: highlightStorageKey) {
             await refreshSourceHighlights()
+        }
+        .sheet(
+            isPresented:
+                $showingHighlights
+        ) {
+            ReadHighlightsSheet(
+                highlights:
+                    sourceHighlights,
+                onJump: {
+                    highlight in
+                    jumpToHighlight(
+                        highlight
+                    )
+                },
+                onSaveNote: {
+                    highlight,
+                    note in
+                    Task {
+                        await updateHighlightNote(
+                            highlight,
+                            note: note
+                        )
+                    }
+                },
+                onRemove: {
+                    highlight in
+                    Task {
+                        await removeHighlight(
+                            highlight
+                        )
+                    }
+                }
+            )
+            .presentationDetents(
+                [.medium, .large]
+            )
+            .presentationDragIndicator(
+                .visible
+            )
         }
         .sheet(
             isPresented:
@@ -3717,6 +3776,105 @@ private struct ReadProjectReaderView: View {
         return result
     }
 
+    private func jumpToHighlight(
+        _ highlight:
+            ReadSourceHighlight
+    ) {
+        guard
+            let paragraph =
+                searchableParagraphAnchors
+                    .last(
+                        where: {
+                            anchor in
+                            let length =
+                                ReadScalarOffsets
+                                    .scalarCount(
+                                        anchor.text
+                                    )
+                            return anchor
+                                .sourceScalarStart
+                                <= highlight
+                                    .sourceScalarStart
+                                && highlight
+                                    .sourceScalarStart
+                                    < anchor
+                                        .sourceScalarStart
+                                        + length
+                        }
+                    )
+        else {
+            return
+        }
+
+        readerScrollPosition =
+            paragraph.index
+        showingHighlights = false
+    }
+
+    private func updateHighlightNote(
+        _ highlight:
+            ReadSourceHighlight,
+        note: String
+    ) async {
+        guard
+            let accountIdentity =
+                highlightAccountIdentity
+        else {
+            return
+        }
+
+        highlightError = nil
+
+        do {
+            try await ReadSourceHighlightStore
+                .shared
+                .updateNote(
+                    accountIdentity:
+                        accountIdentity,
+                    projectId: project.id,
+                    id: highlight.id,
+                    note: note
+                )
+            await refreshSourceHighlights()
+        } catch is CancellationError {
+            return
+        } catch {
+            highlightError =
+                error.localizedDescription
+        }
+    }
+
+    private func removeHighlight(
+        _ highlight:
+            ReadSourceHighlight
+    ) async {
+        guard
+            let accountIdentity =
+                highlightAccountIdentity
+        else {
+            return
+        }
+
+        highlightError = nil
+
+        do {
+            try await ReadSourceHighlightStore
+                .shared
+                .remove(
+                    accountIdentity:
+                        accountIdentity,
+                    projectId: project.id,
+                    id: highlight.id
+                )
+            await refreshSourceHighlights()
+        } catch is CancellationError {
+            return
+        } catch {
+            highlightError =
+                error.localizedDescription
+        }
+    }
+
     private var resolvedVoiceId: String? {
         guard let manifest else {
             return nil
@@ -4340,6 +4498,299 @@ private struct ReadSettingsScreen: View {
                 ?? "Active"
         }
         return "Unavailable"
+    }
+}
+
+private struct ReadHighlightsSheet: View {
+    let highlights:
+        [ReadSourceHighlight]
+    let onJump:
+        (ReadSourceHighlight) -> Void
+    let onSaveNote:
+        (ReadSourceHighlight, String) -> Void
+    let onRemove:
+        (ReadSourceHighlight) -> Void
+
+    @Environment(\.dismiss)
+    private var dismiss
+    @State private var noteDrafts:
+        [String: String] = [:]
+
+    private let palette =
+        FloentlyPalette.read
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if highlights.isEmpty {
+                    VStack(
+                        spacing:
+                            FloentlyDesignTokens
+                                .Space
+                                .s4
+                    ) {
+                        Image(
+                            systemName:
+                                "highlighter"
+                        )
+                        .font(
+                            .system(size: 30)
+                        )
+                        .foregroundStyle(
+                            FloentlyDesignTokens
+                                .Colors
+                                .brandBright
+                        )
+
+                        Text(
+                            "No highlights yet"
+                        )
+                        .font(
+                            .headline.weight(
+                                .semibold
+                            )
+                        )
+                        .foregroundStyle(
+                            palette.text
+                        )
+
+                        Text(
+                            "Search within a text reading, then use the highlighter action on a result."
+                        )
+                        .multilineTextAlignment(
+                            .center
+                        )
+                        .foregroundStyle(
+                            palette.muted
+                        )
+                    }
+                    .padding(
+                        FloentlyDesignTokens
+                            .Space
+                            .s6
+                    )
+                } else {
+                    ScrollView {
+                        LazyVStack(
+                            spacing:
+                                FloentlyDesignTokens
+                                    .Space
+                                    .s3
+                        ) {
+                            ForEach(highlights) {
+                                highlight in
+                                highlightRow(
+                                    highlight
+                                )
+                            }
+                        }
+                        .padding(
+                            FloentlyDesignTokens
+                                .Space
+                                .s4
+                        )
+                    }
+                }
+            }
+            .background(
+                FloentlyDesignTokens
+                    .Colors
+                    .canvas
+                    .ignoresSafeArea()
+            )
+            .navigationTitle(
+                "Highlights & notes"
+            )
+            .navigationBarTitleDisplayMode(
+                .inline
+            )
+            .toolbar {
+                ToolbarItem(
+                    placement:
+                        .confirmationAction
+                ) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .onAppear {
+            seedDrafts()
+        }
+        .onChange(of: highlights) {
+            _, _ in
+            seedDrafts()
+        }
+    }
+
+    private func highlightRow(
+        _ highlight:
+            ReadSourceHighlight
+    ) -> some View {
+        VStack(
+            alignment: .leading,
+            spacing:
+                FloentlyDesignTokens
+                    .Space
+                    .s3
+        ) {
+            Text(highlight.quote)
+                .font(
+                    .body.weight(
+                        .medium
+                    )
+                )
+                .foregroundStyle(
+                    palette.text
+                )
+                .padding(
+                    .horizontal,
+                    FloentlyDesignTokens
+                        .Space
+                        .s2
+                )
+                .background(
+                    FloentlyDesignTokens
+                        .Colors
+                        .brandTint
+                )
+
+            TextField(
+                "Add a note",
+                text: Binding(
+                    get: {
+                        noteDrafts[
+                            highlight.id
+                        ]
+                        ?? highlight.note
+                        ?? ""
+                    },
+                    set: {
+                        noteDrafts[
+                            highlight.id
+                        ] = $0
+                    }
+                ),
+                axis: .vertical
+            )
+            .lineLimit(2...5)
+            .readFieldStyle()
+
+            HStack(
+                spacing:
+                    FloentlyDesignTokens
+                        .Space
+                        .s2
+            ) {
+                Button("Go to") {
+                    onJump(highlight)
+                    dismiss()
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(
+                    FloentlyDesignTokens
+                        .Colors
+                        .brandBright
+                )
+
+                Button("Save note") {
+                    onSaveNote(
+                        highlight,
+                        noteDrafts[
+                            highlight.id
+                        ]
+                        ?? ""
+                    )
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(
+                    FloentlyDesignTokens
+                        .Colors
+                        .brandBright
+                )
+
+                Spacer()
+
+                Button(
+                    role: .destructive
+                ) {
+                    onRemove(highlight)
+                } label: {
+                    Image(
+                        systemName: "trash"
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(
+                    "Remove highlight"
+                )
+            }
+            .font(
+                .subheadline.weight(
+                    .semibold
+                )
+            )
+        }
+        .padding(
+            FloentlyDesignTokens
+                .Space
+                .s4
+        )
+        .background(
+            FloentlyDesignTokens
+                .Colors
+                .surface2
+        )
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius:
+                    FloentlyDesignTokens
+                        .Radius
+                        .l,
+                style: .continuous
+            )
+        )
+        .overlay {
+            RoundedRectangle(
+                cornerRadius:
+                    FloentlyDesignTokens
+                        .Radius
+                        .l,
+                style: .continuous
+            )
+            .stroke(
+                FloentlyDesignTokens
+                    .Colors
+                    .borderSoft,
+                lineWidth: 1
+            )
+        }
+    }
+
+    private func seedDrafts() {
+        var values =
+            noteDrafts
+
+        for highlight in highlights {
+            if values[highlight.id] == nil {
+                values[highlight.id] =
+                    highlight.note
+                    ?? ""
+            }
+        }
+
+        let validIds =
+            Set(
+                highlights.map(\.id)
+            )
+        values =
+            values.filter {
+                validIds.contains(
+                    $0.key
+                )
+            }
+        noteDrafts = values
     }
 }
 
