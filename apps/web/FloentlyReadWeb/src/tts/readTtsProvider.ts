@@ -202,11 +202,17 @@ export class RenderReadTtsProvider implements ReadTtsProvider {
       ?? asOptionalString(source.voice_id)
       ?? input.voiceId;
 
+    const resolvedProvider =
+      asOptionalString(source.provider)
+      ?? this.id;
+    const resolvedModel = asOptionalString(source.model);
+
     const hashInput = JSON.stringify({
       text,
       language: input.language,
       voiceId: providerVoiceId,
-      provider: this.id,
+      provider: resolvedProvider,
+      model: resolvedModel,
     });
     const contentHash = await sha256(hashInput);
 
@@ -220,8 +226,8 @@ export class RenderReadTtsProvider implements ReadTtsProvider {
       contentHash: `sha256:${contentHash}`,
       cacheHit: Boolean(source.cacheHit ?? source.cache_hit),
       voiceId: providerVoiceId,
-      provider: asOptionalString(source.provider),
-      model: asOptionalString(source.model),
+      provider: resolvedProvider,
+      model: resolvedModel,
       durationMs: resolveDurationMs(source),
       rawWordTimings: Array.isArray(source.wordTimings)
         ? source.wordTimings
