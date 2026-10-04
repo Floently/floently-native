@@ -3424,3 +3424,93 @@ html[data-read-theme="light"] [tabindex]:focus-visible {
     transition: none;
   }
 }
+
+
+/* Qualification-only playback diagnostics. This surface is mounted only after
+ * the explicit readDiagnostics opt-in and is intentionally absent from normal
+ * product navigation. */
+.playback-diagnostics {
+  position: fixed;
+  right: max(16px, var(--read-shell-gutter));
+  bottom: 92px;
+  z-index: 90;
+  width: min(390px, calc(100vw - 32px));
+  max-height: min(620px, calc(100vh - 120px));
+  overflow: auto;
+  border: 1px solid var(--read-border-subtle);
+  border-radius: var(--read-radius-card);
+  background: var(--read-surface-card);
+  box-shadow: var(--read-shadow-card);
+  padding: var(--read-space-4);
+}
+
+.playback-diagnostics > summary {
+  cursor: pointer;
+  font-weight: 760;
+}
+
+.playback-diagnostics-note {
+  margin: var(--read-space-3) 0;
+  color: var(--read-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.playback-diagnostics-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin: 0;
+}
+
+.playback-diagnostics-metric {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--read-space-3);
+  padding: var(--read-space-2) 0;
+  border-bottom: 1px solid var(--read-border-subtle);
+}
+
+.playback-diagnostics-metric dt {
+  color: var(--read-text-muted);
+}
+
+.playback-diagnostics-metric dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.playback-diagnostics-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--read-space-3);
+  margin-top: var(--read-space-4);
+}
+
+.playback-diagnostics-actions button {
+  min-height: 38px;
+  border: 1px solid var(--read-border-subtle);
+  border-radius: var(--read-radius-control);
+  padding: 0 var(--read-space-3);
+  background: var(--read-surface-card);
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.playback-diagnostics-copy-state {
+  min-height: 1.25em;
+  color: var(--read-text-muted);
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .playback-diagnostics {
+    right: var(--read-shell-gutter);
+    bottom: 82px;
+    width: calc(100vw - 2 * var(--read-shell-gutter));
+    max-height: 52vh;
+  }
+}
