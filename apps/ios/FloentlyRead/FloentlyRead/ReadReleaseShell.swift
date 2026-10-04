@@ -2242,21 +2242,94 @@ private struct ReadProjectReaderView: View {
                     }
                 } else if let text = hydrated?.rawText {
                     VStack(spacing: 0) {
-                        if hydrated?.sourceType.lowercased() == "pdf" {
+                        if
+                            hydrated?
+                                .sourceType
+                                .lowercased()
+                                == "pdf"
+                        {
                             HStack(spacing: 8) {
-                                Image(systemName: "exclamationmark.circle")
-                                    .foregroundStyle(palette.accent2)
+                                Image(
+                                    systemName:
+                                        "exclamationmark.circle"
+                                )
+                                .foregroundStyle(
+                                    palette.accent2
+                                )
                                 Text(
                                     "The original PDF is not stored on this device. Showing the semantic reading layer."
                                 )
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(palette.muted)
+                                .font(
+                                    .caption.weight(
+                                        .semibold
+                                    )
+                                )
+                                .foregroundStyle(
+                                    palette.muted
+                                )
                                 Spacer()
                             }
-                            .padding(.horizontal, 18)
-                            .padding(.vertical, 8)
+                            .padding(
+                                .horizontal,
+                                FloentlyDesignTokens
+                                    .Space
+                                    .s4
+                            )
+                            .padding(
+                                .vertical,
+                                FloentlyDesignTokens
+                                    .Space
+                                    .s2
+                            )
                             .background(
-                                palette.elevated.opacity(0.72)
+                                FloentlyDesignTokens
+                                    .Colors
+                                    .surface1
+                            )
+                        } else if
+                            hydrated?
+                                .sourceType
+                                .lowercased()
+                                == "epub",
+                            epubPackage == nil
+                        {
+                            HStack(spacing: 8) {
+                                Image(
+                                    systemName:
+                                        "exclamationmark.circle"
+                                )
+                                .foregroundStyle(
+                                    palette.accent2
+                                )
+                                Text(
+                                    "The original EPUB is not stored on this device. Showing the semantic reading layer."
+                                )
+                                .font(
+                                    .caption.weight(
+                                        .semibold
+                                    )
+                                )
+                                .foregroundStyle(
+                                    palette.muted
+                                )
+                                Spacer()
+                            }
+                            .padding(
+                                .horizontal,
+                                FloentlyDesignTokens
+                                    .Space
+                                    .s4
+                            )
+                            .padding(
+                                .vertical,
+                                FloentlyDesignTokens
+                                    .Space
+                                    .s2
+                            )
+                            .background(
+                                FloentlyDesignTokens
+                                    .Colors
+                                    .surface1
                             )
                         }
 
