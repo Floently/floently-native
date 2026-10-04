@@ -1611,30 +1611,36 @@ private struct ReadProjectReaderView: View {
 
                         ScrollView {
                             LazyVStack(
-                            alignment: .leading,
-                            spacing: 18
-                        ) {
-                            ForEach(
-                                Array(paragraphs(text).enumerated()),
-                                id: \.offset
-                            ) { _, paragraph in
-                                Text(paragraph)
-                                    .font(
-                                        .system(
-                                            size: 20,
-                                            weight: .regular,
-                                            design: .rounded
+                                alignment: .leading,
+                                spacing: 18
+                            ) {
+                                ForEach(
+                                    Array(
+                                        paragraphs(text)
+                                            .enumerated()
+                                    ),
+                                    id: \.offset
+                                ) { _, paragraph in
+                                    Text(paragraph)
+                                        .font(
+                                            .system(
+                                                size: 20,
+                                                weight: .regular,
+                                                design: .rounded
+                                            )
                                         )
-                                    )
-                                    .lineSpacing(8)
-                                    .foregroundStyle(palette.text)
-                                    .textSelection(.enabled)
+                                        .lineSpacing(8)
+                                        .foregroundStyle(palette.text)
+                                        .textSelection(.enabled)
+                                }
                             }
-                        }
-                        .frame(maxWidth: 680, alignment: .leading)
-                        .frame(maxWidth: .infinity)
-                        .padding(.horizontal, 24)
-                        .padding(.top, 28)
+                            .frame(
+                                maxWidth: 680,
+                                alignment: .leading
+                            )
+                            .frame(maxWidth: .infinity)
+                            .padding(.horizontal, 24)
+                            .padding(.top, 28)
                             .padding(.bottom, 120)
                         }
                     }
