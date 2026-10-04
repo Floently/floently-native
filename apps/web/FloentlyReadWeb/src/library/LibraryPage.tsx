@@ -65,6 +65,8 @@ export function LibraryPage() {
   const auth = useAuthState();
   const ownerId = auth.session?.user.id ?? null;
   const ownerGateRef = useRef<LibraryOwnerGate | null>(null);
+  // Advance the owner epoch during render so promises from the previous owner
+  // are already stale before the new owner's effects start asynchronous work.
   if (!ownerGateRef.current) {
     ownerGateRef.current = new LibraryOwnerGate(ownerId);
   } else {
