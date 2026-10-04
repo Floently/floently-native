@@ -6,9 +6,25 @@ import {
   linkLocalOriginalToProject,
   type LocalOriginalDocumentRecord,
 } from "./localOriginalDocuments";
+import { accountScopedLocalName } from "./localOwnerScope";
 import type { ContentProject } from "./projectApi";
 
 const activeAttachments = new Map<string, Promise<ContentProject>>();
+
+function attachmentKey(
+  ownerId: string,
+  localDocumentId: string,
+): string {
+  const normalizedId = localDocumentId.trim();
+  if (!normalizedId) {
+    throw new Error("The original document id is missing.");
+  }
+
+  return accountScopedLocalName(
+    `floently-read-local-attachment:${encodeURIComponent(normalizedId)}`,
+    ownerId,
+  );
+}
 
 export function fileFromLocalOriginal(
   record: LocalOriginalDocumentRecord,
@@ -27,34 +43,37 @@ export function fileFromLocalOriginal(
 }
 
 export function trackCanonicalIngestionForLocalOriginal(
+  ownerId: string,
   localDocumentId: string,
   canonical: Promise<UnifiedIngestionResult>,
 ): Promise<ContentProject> {
-  const normalizedId = localDocumentId.trim();
-  if (!normalizedId) {
-    return Promise.reject(
-      new Error("The original document id is missing."),
-    );
+  let key: string;
+  try {
+    key = attachmentKey(ownerId, localDocumentId);
+  } catch (error) {
+    return Promise.reject(error);
   }
 
-  const existing = activeAttachments.get(normalizedId);
+  const normalizedId = localDocumentId.trim();
+  const existing = activeAttachments.get(key);
   if (existing) return existing;
 
   const task = canonical
     .then(async (result) => {
       await linkLocalOriginalToProject(
+        ownerId,
         normalizedId,
         result.project.id,
       );
       return result.project;
     })
     .finally(() => {
-      if (activeAttachments.get(normalizedId) === task) {
-        activeAttachments.delete(normalizedId);
+      if (activeAttachments.get(key) === task) {
+        activeAttachments.delete(key);
       }
     });
 
-  activeAttachments.set(normalizedId, task);
+  activeAttachments.set(key, task);
   return task;
 }
 
@@ -64,28 +83,41 @@ export function trackCanonicalIngestionForLocalOriginal(
  * intentionally disables the foreground 1.8s fast-open budget.
  */
 export function attachSemanticProjectToLocalOriginal(
+  ownerId: string,
   localDocumentId: string,
   file: File,
 ): Promise<ContentProject> {
-  const normalizedId = localDocumentId.trim();
-  if (!normalizedId) {
-    return Promise.reject(
-      new Error("The original document id is missing."),
-    );
+  let key: string;
+  try {
+    key = attachmentKey(ownerId, localDocumentId);
+  } catch (error) {
+    return Promise.reject(error);
   }
 
+  const existing = activeAttachments.get(key);
+  if (existing) return existing;
+
   const canonical = beginFileIngestion(file, {
+    ownerId,
     fastOpen: false,
   }).canonical;
 
   return trackCanonicalIngestionForLocalOriginal(
-    normalizedId,
+    ownerId,
+    localDocumentId,
     canonical,
   );
 }
 
 export function semanticAttachmentInFlight(
+  ownerId: string,
   localDocumentId: string,
 ): boolean {
-  return activeAttachments.has(localDocumentId.trim());
+  try {
+    return activeAttachments.has(
+      attachmentKey(ownerId, localDocumentId),
+    );
+  } catch {
+    return false;
+  }
 }
