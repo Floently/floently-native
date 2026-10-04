@@ -321,6 +321,12 @@ final class ReadPlaybackResumeStore {
             )
 
         save(migrated)
+        remove(
+            documentId:
+                previous.documentId,
+            revisionId:
+                previous.revisionId
+        )
         return migrated
     }
 
