@@ -52,7 +52,7 @@ function finiteNumber(
     : null;
 }
 
-function qualificationTelemetry(
+export function sanitizePlaybackTelemetryForQualification(
   events: readonly WebPlaybackTelemetryEvent[],
 ): Array<{
   name: WebPlaybackTelemetryEvent["name"];
@@ -163,7 +163,8 @@ export function PlaybackDiagnostics({
       maximumMediaStartLatencyMs: maximumLatency,
       bufferingEvents,
     },
-    recentTelemetry: qualificationTelemetry(events),
+    recentTelemetry:
+      sanitizePlaybackTelemetryForQualification(events),
   };
 
   async function copyDiagnostics(): Promise<void> {
