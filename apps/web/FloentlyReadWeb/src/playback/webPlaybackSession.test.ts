@@ -930,6 +930,61 @@ describe("WebPlaybackSession document-wide contract", () => {
     expect(storage.getItem(key)).toBeNull();
   });
 
+  it("keeps Media Session logically playing through a natural hidden-segment transition", async () => {
+    const playbackStates: MediaSessionPlaybackState[] = [];
+    let playbackState: MediaSessionPlaybackState = "none";
+
+    const fakeMediaSession = {
+      metadata: null,
+      get playbackState() {
+        return playbackState;
+      },
+      set playbackState(value: MediaSessionPlaybackState) {
+        playbackState = value;
+        playbackStates.push(value);
+      },
+      setActionHandler: vi.fn(),
+      setPositionState: vi.fn(),
+    };
+
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: {
+        mediaSession: fakeMediaSession,
+      },
+    });
+
+    const { session, core, engine } = createHarness();
+    core.prefetchResult = [1];
+
+    session.loadDocument(makeManifest());
+    await session.play();
+
+    await vi.waitFor(() => {
+      expect(session.getSnapshot().status).toBe("playing");
+    });
+
+    playbackStates.length = 0;
+    engine.emitEnded();
+
+    await vi.waitFor(() => {
+      expect(session.getSnapshot()).toMatchObject({
+        status: "playing",
+        activeSegmentIndex: 1,
+      });
+    });
+
+    expect(playbackStates).not.toContain("paused");
+    expect(playbackStates).toContain("playing");
+
+    playbackStates.length = 0;
+    session.pause();
+
+    expect(playbackStates.at(-1)).toBe("paused");
+
+    session.destroy();
+  });
+
   it("publishes document time to Media Session instead of clip duration", async () => {
     const positionStates: Array<{
       duration: number;
