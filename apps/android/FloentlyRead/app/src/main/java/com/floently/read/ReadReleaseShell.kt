@@ -69,6 +69,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -3517,6 +3520,14 @@ private fun ReadProjectReaderScreen(
     var searchMatchIndex by remember {
         mutableIntStateOf(0)
     }
+    var sourceHighlights by remember {
+        mutableStateOf<
+            List<ReadSourceHighlight>
+        >(emptyList())
+    }
+    var highlightError by remember {
+        mutableStateOf<String?>(null)
+    }
     var searchReturnIndex by remember {
         mutableIntStateOf(0)
     }
@@ -3563,6 +3574,35 @@ private fun ReadProjectReaderScreen(
                     searchableParagraphAnchors
             )
         }
+    val currentSearchMatch =
+        searchMatches
+            .takeIf {
+                it.isNotEmpty()
+            }
+            ?.let {
+                values ->
+                values[
+                    searchMatchIndex
+                        .coerceIn(
+                            0,
+                            values.lastIndex
+                        )
+                ]
+            }
+    val currentSearchHighlight =
+        currentSearchMatch?.let {
+            match ->
+            sourceHighlights
+                .firstOrNull {
+                    it.sourceScalarStart
+                        == match
+                            .sourceScalarOffset
+                        && it.sourceScalarLength
+                            == match
+                                .scalarLength
+                }
+        }
+
     val offlineVoiceId = manifest?.let {
         value ->
         if (
@@ -3653,6 +3693,90 @@ private fun ReadProjectReaderScreen(
                 .animateScrollToItem(
                     paragraphIndex
                 )
+        }
+    }
+
+    fun toggleCurrentSearchHighlight() {
+        val identity =
+            offlineAccountIdentity
+                ?: return
+        val sourceText =
+            hydrated?.rawText
+                ?: return
+        val match =
+            currentSearchMatch
+                ?: return
+
+        scope.launch {
+            highlightError = null
+
+            try {
+                val existing =
+                    currentSearchHighlight
+
+                if (existing != null) {
+                    ReadSourceHighlightStore
+                        .remove(
+                            context = context,
+                            accountIdentity =
+                                identity,
+                            projectId =
+                                project.id,
+                            id = existing.id
+                        )
+                } else {
+                    val revisionId =
+                        manifest?.revisionId
+                            ?: hydrated
+                                ?.revisionId
+                            ?: project
+                                .revisionId
+
+                    ReadSourceHighlightStore
+                        .add(
+                            context = context,
+                            accountIdentity =
+                                identity,
+                            projectId =
+                                project.id,
+                            revisionId =
+                                revisionId,
+                            sourceText =
+                                sourceText,
+                            sourceScalarStart =
+                                match
+                                    .sourceScalarOffset,
+                            sourceScalarLength =
+                                match
+                                    .scalarLength
+                        )
+                }
+
+                val revisionId =
+                    manifest?.revisionId
+                        ?: hydrated
+                            ?.revisionId
+                        ?: project.revisionId
+                sourceHighlights =
+                    ReadSourceHighlightStore
+                        .highlights(
+                            context = context,
+                            accountIdentity =
+                                identity,
+                            projectId =
+                                project.id,
+                            revisionId =
+                                revisionId
+                        )
+            } catch (
+                error: CancellationException
+            ) {
+                throw error
+            } catch (error: Exception) {
+                highlightError =
+                    error.localizedMessage
+                        ?: "Could not update this highlight."
+            }
         }
     }
 
@@ -3750,6 +3874,38 @@ private fun ReadProjectReaderScreen(
             .animateScrollToItem(
                 first.paragraphIndex
             )
+    }
+
+    LaunchedEffect(
+        offlineAccountIdentity,
+        project.id,
+        manifest?.revisionId,
+        hydrated?.revisionId
+    ) {
+        val identity =
+            offlineAccountIdentity
+        if (identity == null) {
+            sourceHighlights =
+                emptyList()
+            return@LaunchedEffect
+        }
+
+        val revisionId =
+            manifest?.revisionId
+                ?: hydrated?.revisionId
+                ?: project.revisionId
+
+        sourceHighlights =
+            ReadSourceHighlightStore
+                .highlights(
+                    context = context,
+                    accountIdentity =
+                        identity,
+                    projectId =
+                        project.id,
+                    revisionId =
+                        revisionId
+                )
     }
 
     LaunchedEffect(
@@ -3907,6 +4063,12 @@ private fun ReadProjectReaderScreen(
                     moveSearchResult(
                         1
                     )
+                },
+                currentHighlighted =
+                    currentSearchHighlight
+                        != null,
+                onToggleHighlight = {
+                    toggleCurrentSearchHighlight()
                 }
             )
         } else {
@@ -4102,6 +4264,12 @@ private fun ReadProjectReaderScreen(
         }
 
         epubPackageError?.let {
+            ReadStatusBanner(
+                text = it
+            )
+        }
+
+        highlightError?.let {
             ReadStatusBanner(
                 text = it
             )
@@ -4306,7 +4474,12 @@ private fun ReadProjectReaderScreen(
                                 }
 
                         Text(
-                            paragraph.text,
+                            readHighlightedParagraphText(
+                                paragraph =
+                                    paragraph,
+                                highlights =
+                                    sourceHighlights
+                            ),
                             color = palette.text,
                             style =
                                 MaterialTheme
@@ -4361,7 +4534,9 @@ private fun ReadReaderSearchToolbar(
     focusRequester: FocusRequester,
     onClose: () -> Unit,
     onPrevious: () -> Unit,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    currentHighlighted: Boolean,
+    onToggleHighlight: () -> Unit
 ) {
     val palette =
         floentlyPalette(
@@ -4465,6 +4640,23 @@ private fun ReadReaderSearchToolbar(
                 "Next search result",
             enabled = hasResults,
             onClick = onNext
+        )
+
+        ReadReaderToolbarButton(
+            symbol =
+                ReadReaderToolbarSymbol
+                    .Highlight,
+            contentDescription =
+                if (currentHighlighted) {
+                    "Remove highlight from current search result"
+                } else {
+                    "Highlight current search result"
+                },
+            enabled = hasResults,
+            selected =
+                currentHighlighted,
+            onClick =
+                onToggleHighlight
         )
     }
 }
@@ -4793,7 +4985,8 @@ private enum class ReadReaderToolbarSymbol {
     More,
     Close,
     Previous,
-    Next
+    Next,
+    Highlight
 }
 
 @Composable
@@ -4801,12 +4994,19 @@ private fun ReadReaderToolbarButton(
     symbol: ReadReaderToolbarSymbol,
     contentDescription: String,
     enabled: Boolean = true,
+    selected: Boolean = false,
     onClick: () -> Unit
 ) {
     val color =
-        FloentlyDesignTokens
-            .Colors
-            .textPrimary
+        if (selected) {
+            FloentlyDesignTokens
+                .Colors
+                .brandBright
+        } else {
+            FloentlyDesignTokens
+                .Colors
+                .textPrimary
+        }
 
     Button(
         onClick = onClick,
@@ -4968,6 +5168,36 @@ private fun ReadReaderToolbarButton(
                             )
                         )
                     }
+                }
+
+                ReadReaderToolbarSymbol
+                    .Highlight -> {
+                    drawLine(
+                        color = color,
+                        start = Offset(
+                            size.width * 0.32f,
+                            size.height * 0.72f
+                        ),
+                        end = Offset(
+                            size.width * 0.68f,
+                            size.height * 0.28f
+                        ),
+                        strokeWidth =
+                            stroke * 2.1f
+                    )
+                    drawLine(
+                        color = color,
+                        start = Offset(
+                            size.width * 0.24f,
+                            size.height * 0.80f
+                        ),
+                        end = Offset(
+                            size.width * 0.58f,
+                            size.height * 0.80f
+                        ),
+                        strokeWidth =
+                            stroke * 1.4f
+                    )
                 }
             }
         }
@@ -5144,6 +5374,131 @@ private fun ReadStatusBanner(
                 Text(
                     actionTitle,
                     color = palette.accent
+                )
+            }
+        }
+    }
+}
+
+private fun readHighlightedParagraphText(
+    paragraph: ReadReaderParagraphAnchor,
+    highlights: List<ReadSourceHighlight>
+): AnnotatedString {
+    val paragraphLength =
+        ReadScalarOffsets
+            .scalarCount(
+                paragraph.text
+            )
+    val paragraphStart =
+        paragraph.sourceScalarStart
+    val paragraphEnd =
+        paragraphStart
+            + paragraphLength
+
+    val ranges =
+        highlights
+            .mapNotNull {
+                highlight ->
+                val highlightStart =
+                    highlight
+                        .sourceScalarStart
+                val highlightEnd =
+                    highlightStart
+                        + highlight
+                            .sourceScalarLength
+                val overlapStart =
+                    maxOf(
+                        paragraphStart,
+                        highlightStart
+                    )
+                val overlapEnd =
+                    minOf(
+                        paragraphEnd,
+                        highlightEnd
+                    )
+
+                if (
+                    overlapEnd
+                        <= overlapStart
+                ) {
+                    null
+                } else {
+                    (
+                        overlapStart
+                            - paragraphStart
+                        ) to (
+                        overlapEnd
+                            - paragraphStart
+                        )
+                }
+            }
+            .sortedBy {
+                it.first
+            }
+
+    if (ranges.isEmpty()) {
+        return AnnotatedString(
+            paragraph.text
+        )
+    }
+
+    val merged =
+        mutableListOf<
+            Pair<Int, Int>
+        >()
+    ranges.forEach { range ->
+        val last =
+            merged.lastOrNull()
+        if (
+            last != null
+            && range.first
+                <= last.second
+        ) {
+            merged[
+                merged.lastIndex
+            ] =
+                last.first to maxOf(
+                    last.second,
+                    range.second
+                )
+        } else {
+            merged += range
+        }
+    }
+
+    return buildAnnotatedString {
+        append(paragraph.text)
+
+        merged.forEach {
+            range ->
+            val start =
+                ReadScalarOffsets
+                    .utf16Offset(
+                        text =
+                            paragraph.text,
+                        scalarOffset =
+                            range.first
+                    )
+            val end =
+                ReadScalarOffsets
+                    .utf16Offset(
+                        text =
+                            paragraph.text,
+                        scalarOffset =
+                            range.second
+                    )
+
+            if (end > start) {
+                addStyle(
+                    style =
+                        SpanStyle(
+                            background =
+                                FloentlyDesignTokens
+                                    .Colors
+                                    .brandTint
+                        ),
+                    start = start,
+                    end = end
                 )
             }
         }
