@@ -3,13 +3,16 @@ import Foundation
 actor ReadProgressiveAudioCoordinator {
     private let tts: ReadNativeTtsClient
     private let cache: ReadNativeAudioCache
+    private let offlineStore: ReadOfflineAudioStore
 
     init(
         tts: ReadNativeTtsClient = ReadNativeTtsClient(),
-        cache: ReadNativeAudioCache
+        cache: ReadNativeAudioCache,
+        offlineStore: ReadOfflineAudioStore = .shared
     ) {
         self.tts = tts
         self.cache = cache
+        self.offlineStore = offlineStore
     }
 
     func prepare(
@@ -17,6 +20,7 @@ actor ReadProgressiveAudioCoordinator {
         startingAt index: Int,
         voiceId: String,
         accessToken: String? = nil,
+        accountIdentity: String? = nil,
         horizon: TimeInterval = 120,
         maxSegments: Int = 4
     ) async throws -> [ReadPlayableSegment] {
@@ -50,6 +54,33 @@ actor ReadProgressiveAudioCoordinator {
                 language: manifest.language,
                 voiceId: voiceId
             )
+
+            if
+                let accountIdentity,
+                let offline = try await offlineStore.asset(
+                    accountIdentity: accountIdentity,
+                    manifest: manifest,
+                    voiceId: voiceId,
+                    segment: segment
+                )
+            {
+                result.append(
+                    ReadPlayableSegment(
+                        id: segment.id,
+                        index: segment.index,
+                        url: offline.localURL,
+                        logicalStartTime: TimeInterval(
+                            segment.logicalStartMs
+                        ) / 1_000,
+                        logicalEndTime: TimeInterval(
+                            segment.logicalEndMs
+                        ) / 1_000,
+                        physicalDuration:
+                            offline.duration
+                    )
+                )
+                continue
+            }
 
             if let cached = try await cache.cachedAsset(
                 lookupKey: lookupKey
@@ -96,6 +127,67 @@ actor ReadProgressiveAudioCoordinator {
         }
 
         return result
+    }
+
+    func saveOffline(
+        manifest: ReadingManifestV1,
+        voiceId: String,
+        accessToken: String?,
+        accountIdentity: String
+    ) async throws {
+        let segments = try await prepare(
+            manifest: manifest,
+            startingAt: 0,
+            voiceId: voiceId,
+            accessToken: accessToken,
+            accountIdentity: accountIdentity,
+            horizon: .greatestFiniteMagnitude,
+            maxSegments:
+                max(
+                    1,
+                    manifest.segments.count
+                )
+        )
+
+        guard
+            segments.count
+                == manifest.segments.count
+        else {
+            throw ReadOfflineAudioStoreError
+                .incompleteBundle
+        }
+
+        try await offlineStore.install(
+            accountIdentity: accountIdentity,
+            manifest: manifest,
+            voiceId: voiceId,
+            segments: segments
+        )
+    }
+
+    func isAvailableOffline(
+        manifest: ReadingManifestV1,
+        voiceId: String,
+        accountIdentity: String
+    ) async -> Bool {
+        (try? await offlineStore.isComplete(
+            accountIdentity: accountIdentity,
+            manifest: manifest,
+            voiceId: voiceId
+        )) == true
+    }
+
+    func removeOffline(
+        manifest: ReadingManifestV1,
+        voiceId: String,
+        accountIdentity: String
+    ) async {
+        await offlineStore.remove(
+            accountIdentity: accountIdentity,
+            documentId: manifest.documentId,
+            revisionId: manifest.revisionId,
+            voiceId: voiceId
+        )
     }
 
     func replaceProtectedSegments(
