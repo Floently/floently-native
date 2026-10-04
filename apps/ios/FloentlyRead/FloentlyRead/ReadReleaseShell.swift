@@ -3547,7 +3547,9 @@ private struct ReadProjectReaderView: View {
                         accountIdentity,
                     projectId: project.id,
                     revisionId:
-                        revisionId
+                        revisionId,
+                    sourceText:
+                        hydrated?.rawText
                 )
     }
 
