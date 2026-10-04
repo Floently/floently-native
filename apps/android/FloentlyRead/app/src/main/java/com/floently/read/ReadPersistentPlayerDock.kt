@@ -107,7 +107,7 @@ fun ReadPersistentPlayerDock(
                 horizontal =
                     FloentlyDesignTokens
                         .Space
-                        .s3,
+                        .s5,
                 vertical = 6.dp
             )
     ) {
