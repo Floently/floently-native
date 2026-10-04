@@ -669,18 +669,41 @@ class ReadProjectStore(
     var errorMessage by mutableStateOf<String?>(null)
 
     private val client = ReadContentProjectClient()
+    private var snapshotAccountIdentity: String? = null
     private val progressSyncMutex = Mutex()
     private var progressSyncGeneration = 0L
     private var progressSyncSequence = 0L
+
+    fun bindAccount(
+        userId: String,
+        email: String
+    ) {
+        val id = userId.trim()
+        if (id.isNotEmpty()) {
+            snapshotAccountIdentity = "id:" + id
+            return
+        }
+
+        val normalizedEmail = email
+            .trim()
+            .lowercase()
+        snapshotAccountIdentity =
+            normalizedEmail
+                .takeIf { it.isNotEmpty() }
+                ?.let { "email:" + it }
+    }
 
     suspend fun refresh(accessToken: String) {
         activity = "loading"
         errorMessage = null
 
-        val cached = ReadProjectSnapshotStore.load(
-            context = applicationContext,
-            accessToken = accessToken
-        )
+        val cached =
+            snapshotAccountIdentity?.let {
+                ReadProjectSnapshotStore.load(
+                    context = applicationContext,
+                    accountIdentity = it
+                )
+            } ?: emptyList()
         if (
             projects.isEmpty()
             && cached.isNotEmpty()
@@ -697,7 +720,7 @@ class ReadProjectStore(
                     cached = cached
                 )
                 runCatching {
-                    persistSnapshot(accessToken)
+                    persistSnapshot()
                 }
             }
             .onFailure {
@@ -727,7 +750,7 @@ class ReadProjectStore(
         )
         upsert(hydrated)
         runCatching {
-            persistSnapshot(accessToken)
+            persistSnapshot()
         }
         return hydrated
     }
@@ -747,7 +770,7 @@ class ReadProjectStore(
             )
             upsert(project)
             runCatching {
-                persistSnapshot(accessToken)
+                persistSnapshot()
             }
             project
         } finally {
@@ -770,7 +793,7 @@ class ReadProjectStore(
             )
             upsert(project)
             runCatching {
-                persistSnapshot(accessToken)
+                persistSnapshot()
             }
             project
         } finally {
@@ -795,7 +818,7 @@ class ReadProjectStore(
             it.id == project.id
         }
         runCatching {
-            persistSnapshot(accessToken)
+            persistSnapshot()
         }
     }
 
@@ -830,7 +853,7 @@ class ReadProjectStore(
 
             upsert(project)
             runCatching {
-                persistSnapshot(accessToken)
+                persistSnapshot()
             }
             project
         } finally {
@@ -895,6 +918,7 @@ class ReadProjectStore(
     fun reset() {
         progressSyncGeneration += 1L
         progressSyncSequence += 1L
+        snapshotAccountIdentity = null
         projects = emptyList()
         activity = "idle"
         errorMessage = null
@@ -928,12 +952,14 @@ class ReadProjectStore(
         }
     }
 
-    private suspend fun persistSnapshot(
-        accessToken: String
-    ) {
+    private suspend fun persistSnapshot() {
+        val identity =
+            snapshotAccountIdentity
+                ?: return
+
         ReadProjectSnapshotStore.save(
             context = applicationContext,
-            accessToken = accessToken,
+            accountIdentity = identity,
             projects = projects
         )
     }
