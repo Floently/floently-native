@@ -677,6 +677,11 @@ private struct ReadHomeDashboard: View {
                         .padding(.top, 8)
                     }
 
+                    if case .importing(let message) = projectStore.activity {
+                        ReadImportProgressView(message: message)
+                            .padding(.top, 18)
+                    }
+
                     if let error = projectStore.errorMessage {
                         ReadStatusBanner(
                             icon: "exclamationmark.triangle",
@@ -816,6 +821,11 @@ private struct ReadLibraryScreen: View {
                     .textInputAutocapitalization(.never)
                     .readFieldStyle()
                     .padding(.top, 18)
+
+                if case .importing(let message) = projectStore.activity {
+                    ReadImportProgressView(message: message)
+                        .padding(.top, 14)
+                }
 
                 if case .loading = projectStore.activity,
                    projectStore.projects.isEmpty {
@@ -1450,6 +1460,45 @@ private struct ReadSettingsScreen: View {
                 ?? "Active"
         }
         return "Unavailable"
+    }
+}
+
+private struct ReadImportProgressView: View {
+    let message: String
+
+    private let palette = FloentlyPalette.read
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                ProgressView()
+                    .tint(palette.accent)
+                Text(message)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(palette.text)
+                Spacer()
+            }
+
+            ProgressView()
+                .progressViewStyle(.linear)
+                .tint(palette.accent)
+
+            Text(
+                "Read will open the document as soon as readable content is available. Audio can continue preparing afterward."
+            )
+            .font(.caption)
+            .foregroundStyle(palette.muted)
+        }
+        .padding(14)
+        .background(palette.elevated.opacity(0.9))
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: 16,
+                style: .continuous
+            )
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(message). Import in progress.")
     }
 }
 
