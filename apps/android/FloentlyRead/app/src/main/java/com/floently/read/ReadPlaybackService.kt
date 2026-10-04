@@ -334,6 +334,7 @@ class ReadPlaybackService : MediaSessionService() {
                     startingAt = startingAt,
                     voiceId = request.voiceId,
                     accessToken = currentAccessToken(),
+                    accountIdentity = currentAccountIdentity(),
                     maxSegments = 1
                 )
 
@@ -532,7 +533,8 @@ class ReadPlaybackService : MediaSessionService() {
                         manifest = manifest,
                         startingAt = nextIndex,
                         voiceId = voiceId,
-                        accessToken = currentAccessToken()
+                        accessToken = currentAccessToken(),
+                        accountIdentity = currentAccountIdentity()
                     ) ?: return@launch
 
                     more.forEach {
@@ -607,6 +609,7 @@ class ReadPlaybackService : MediaSessionService() {
                     startingAt = targetIndex,
                     voiceId = voiceId,
                     accessToken = currentAccessToken(),
+                    accountIdentity = currentAccountIdentity(),
                     maxSegments = 1
                 )
 
@@ -732,6 +735,7 @@ class ReadPlaybackService : MediaSessionService() {
                     startingAt = targetIndex,
                     voiceId = newVoice,
                     accessToken = currentAccessToken(),
+                    accountIdentity = currentAccountIdentity(),
                     maxSegments = 1
                 )
 
@@ -864,6 +868,17 @@ class ReadPlaybackService : MediaSessionService() {
 
     private fun currentAccessToken(): String? =
         sessionStore?.session?.token
+
+    private fun currentAccountIdentity(): String? {
+        val user =
+            sessionStore?.session?.user
+                ?: return null
+
+        return readAccountIdentity(
+            userId = user.id,
+            email = user.email
+        )
+    }
 
     private fun cancelProgressiveWork(
         completePendingLoad: Boolean,
