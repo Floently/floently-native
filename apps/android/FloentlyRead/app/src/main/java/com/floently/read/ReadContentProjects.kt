@@ -850,18 +850,50 @@ class ReadProjectStore(
                 accessToken = accessToken
             )
 
+            val sourceType =
+                project.sourceType
+                    .lowercase()
+            val mime =
+                resolver.getType(uri)
+                    ?.lowercase()
+                    .orEmpty()
+            val name =
+                uri.lastPathSegment
+                    ?.lowercase()
+                    .orEmpty()
+
             if (
-                project.sourceType.lowercase() == "pdf"
-                || resolver.getType(uri)
-                    ?.lowercase() == "application/pdf"
+                sourceType == "pdf"
+                || mime == "application/pdf"
+                || name.endsWith(".pdf")
             ) {
                 runCatching {
-                    ReadOriginalDocumentStore.savePdf(
-                        context = applicationContext,
-                        projectId = project.id,
-                        uri = uri,
-                        resolver = resolver
-                    )
+                    ReadOriginalDocumentStore
+                        .savePdf(
+                            context =
+                                applicationContext,
+                            projectId =
+                                project.id,
+                            uri = uri,
+                            resolver = resolver
+                        )
+                }
+            } else if (
+                sourceType == "epub"
+                || mime
+                    == "application/epub+zip"
+                || name.endsWith(".epub")
+            ) {
+                runCatching {
+                    ReadOriginalDocumentStore
+                        .saveEpub(
+                            context =
+                                applicationContext,
+                            projectId =
+                                project.id,
+                            uri = uri,
+                            resolver = resolver
+                        )
                 }
             }
 
