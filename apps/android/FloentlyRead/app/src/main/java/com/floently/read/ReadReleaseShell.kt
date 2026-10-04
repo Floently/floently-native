@@ -2413,6 +2413,19 @@ private fun ReadProjectReaderScreen(
     }
     var preparing by remember { mutableStateOf(true) }
     var retryRevision by remember { mutableIntStateOf(0) }
+    val originalPdfFile = remember(
+        project.id,
+        project.sourceType
+    ) {
+        if (project.sourceType.lowercase() == "pdf") {
+            ReadOriginalDocumentStore.pdfFile(
+                context = context,
+                projectId = project.id
+            )
+        } else {
+            null
+        }
+    }
 
     LaunchedEffect(
         project.id,
@@ -2580,7 +2593,48 @@ private fun ReadProjectReaderScreen(
         }
 
         val text = hydrated?.rawText
-        if (text == null) {
+        if (originalPdfFile != null) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                Row(
+                    verticalAlignment =
+                        Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            palette.backgroundBottom
+                        )
+                        .padding(
+                            horizontal = 16.dp,
+                            vertical = 8.dp
+                        )
+                ) {
+                    Text(
+                        "PDF",
+                        color = palette.accent,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Original PDF pages · native reading layer ready",
+                        color = palette.muted,
+                        style =
+                            MaterialTheme.typography
+                                .bodySmall
+                    )
+                }
+
+                ReadOriginalPdfView(
+                    file = originalPdfFile,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                )
+            }
+        } else if (text == null) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
