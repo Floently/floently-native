@@ -246,7 +246,7 @@ struct ReadPersistentPlayerView: View {
                 .horizontal,
                 FloentlyDesignTokens
                     .Space
-                    .s3
+                    .s5
             )
             .padding(.bottom, 6)
             .accessibilityElement(
