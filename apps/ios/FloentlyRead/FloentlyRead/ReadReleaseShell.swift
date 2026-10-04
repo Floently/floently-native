@@ -1526,6 +1526,9 @@ private struct ReadProjectReaderView: View {
     @State private var originalPDFURL: URL?
     @State private var errorMessage: String?
     @State private var preparing = false
+    @State private var offlineAvailable = false
+    @State private var offlineBusy = false
+    @State private var offlineError: String?
 
     private let palette = FloentlyPalette.read
 
@@ -1552,6 +1555,46 @@ private struct ReadProjectReaderView: View {
                         .lineLimit(1)
 
                     Spacer()
+
+                    Button {
+                        Task {
+                            await toggleOffline()
+                        }
+                    } label: {
+                        if offlineBusy {
+                            ProgressView()
+                                .tint(palette.accent2)
+                                .frame(width: 44, height: 44)
+                        } else {
+                            Image(
+                                systemName:
+                                    offlineAvailable
+                                    ? "checkmark.circle.fill"
+                                    : "arrow.down.circle"
+                            )
+                            .frame(width: 44, height: 44)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(
+                        offlineAvailable
+                        ? palette.accent2
+                        : palette.text
+                    )
+                    .background(
+                        palette.elevated.opacity(0.9)
+                    )
+                    .clipShape(Circle())
+                    .disabled(
+                        manifest == nil
+                        || resolvedVoiceId == nil
+                        || offlineBusy
+                    )
+                    .accessibilityLabel(
+                        offlineAvailable
+                        ? "Remove offline download"
+                        : "Save for offline listening"
+                    )
 
                     Button {
                         startListening()
@@ -1595,6 +1638,15 @@ private struct ReadProjectReaderView: View {
                         }
                     }
                     .padding(18)
+                }
+
+                if let offlineError {
+                    ReadStatusBanner(
+                        icon: "arrow.down.circle",
+                        text: offlineError
+                    )
+                    .padding(.horizontal, 18)
+                    .padding(.bottom, 10)
                 }
 
                 if let originalPDFURL {
@@ -1689,6 +1741,93 @@ private struct ReadProjectReaderView: View {
         .task {
             await prepareProject()
         }
+        .task(id: offlineAvailabilityKey) {
+            await refreshOfflineAvailability()
+        }
+    }
+
+    private var resolvedVoiceId: String? {
+        guard let manifest else {
+            return nil
+        }
+
+        return hydrated?.progress?.voiceId
+            ?? project.progress?.voiceId
+            ?? voiceSettings.voiceId(
+                for: manifest.language
+            )
+    }
+
+    private var offlineAvailabilityKey: String {
+        [
+            manifest?.revisionId ?? "",
+            resolvedVoiceId ?? "",
+            sessionStore.session?.user.id
+                ?? sessionStore.session?.user.email
+                ?? ""
+        ].joined(separator: "::")
+    }
+
+    private func refreshOfflineAvailability() async {
+        guard
+            let manifest,
+            let voiceId = resolvedVoiceId
+        else {
+            offlineAvailable = false
+            return
+        }
+
+        offlineAvailable =
+            await loader.isAvailableOffline(
+                manifest: manifest,
+                voiceId: voiceId,
+                sessionStore: sessionStore
+            )
+    }
+
+    private func toggleOffline() async {
+        guard
+            let manifest,
+            let voiceId = resolvedVoiceId,
+            !offlineBusy
+        else {
+            return
+        }
+
+        offlineBusy = true
+        offlineError = nil
+        defer {
+            offlineBusy = false
+        }
+
+        if offlineAvailable {
+            await loader.removeOffline(
+                manifest: manifest,
+                voiceId: voiceId,
+                sessionStore: sessionStore
+            )
+            offlineAvailable = false
+            return
+        }
+
+        do {
+            try await loader.saveOffline(
+                manifest: manifest,
+                voiceId: voiceId,
+                sessionStore: sessionStore
+            )
+            offlineAvailable =
+                await loader.isAvailableOffline(
+                    manifest: manifest,
+                    voiceId: voiceId,
+                    sessionStore: sessionStore
+                )
+        } catch is CancellationError {
+            return
+        } catch {
+            offlineError =
+                error.localizedDescription
+        }
     }
 
     private func prepareProject() async {
@@ -1743,10 +1882,9 @@ private struct ReadProjectReaderView: View {
             return
         }
 
-        let voice =
-            hydrated?.progress?.voiceId
-            ?? project.progress?.voiceId
-            ?? voiceSettings.voiceId(for: manifest.language)
+        guard let voice = resolvedVoiceId else {
+            return
+        }
         loader.load(
             manifest: manifest,
             voiceId: voice,
