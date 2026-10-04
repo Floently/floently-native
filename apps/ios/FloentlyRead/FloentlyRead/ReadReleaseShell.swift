@@ -2342,6 +2342,9 @@ private struct ReadProjectReaderView: View {
     @State private var isSearching = false
     @State private var searchQuery = ""
     @State private var searchMatchIndex = 0
+    @State private var sourceHighlights:
+        [ReadSourceHighlight] = []
+    @State private var highlightError: String?
     @State private var readerScrollPosition: Int? = 0
     @State private var searchReturnPosition: Int?
     @FocusState private var searchFocused: Bool
@@ -2565,6 +2568,15 @@ private struct ReadProjectReaderView: View {
                     .padding(.bottom, 10)
                 }
 
+                if let highlightError {
+                    ReadStatusBanner(
+                        icon: "highlighter",
+                        text: highlightError
+                    )
+                    .padding(.horizontal, 18)
+                    .padding(.bottom, 10)
+                }
+
                 if let originalPDFURL {
                     VStack(spacing: 0) {
                         HStack(spacing: 8) {
@@ -2741,7 +2753,11 @@ private struct ReadProjectReaderView: View {
                                 ForEach(
                                     searchableParagraphAnchors
                                 ) { paragraph in
-                                    Text(paragraph.text)
+                                    Text(
+                                        highlightedParagraph(
+                                            paragraph
+                                        )
+                                    )
                                         .font(
                                             .system(
                                                 size:
@@ -2800,6 +2816,9 @@ private struct ReadProjectReaderView: View {
         }
         .task(id: offlineAvailabilityKey) {
             await refreshOfflineAvailability()
+        }
+        .task(id: highlightStorageKey) {
+            await refreshSourceHighlights()
         }
         .sheet(
             isPresented:
@@ -2950,6 +2969,53 @@ private struct ReadProjectReaderView: View {
                     delta: 1
                 )
             }
+
+            Button {
+                Task {
+                    await toggleCurrentSearchHighlight()
+                }
+            } label: {
+                Image(
+                    systemName:
+                        currentSearchHighlight
+                            == nil
+                        ? "highlighter"
+                        : "checkmark"
+                )
+                .font(
+                    .system(
+                        size: 15,
+                        weight: .semibold
+                    )
+                )
+                .frame(
+                    width:
+                        FloentlyDesignTokens
+                            .Control
+                            .iconTarget,
+                    height:
+                        FloentlyDesignTokens
+                            .Control
+                            .iconTarget
+                )
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(
+                currentSearchHighlight
+                    == nil
+                ? palette.text
+                : FloentlyDesignTokens
+                    .Colors
+                    .brandBright
+            )
+            .disabled(
+                currentSearchMatch == nil
+            )
+            .accessibilityLabel(
+                currentSearchHighlight == nil
+                ? "Highlight current search result"
+                : "Remove highlight from current search result"
+            )
         }
         .padding(
             .horizontal,
@@ -3333,6 +3399,322 @@ private struct ReadProjectReaderView: View {
         }
 
         return matches
+    }
+
+    private var highlightAccountIdentity:
+        String?
+    {
+        guard
+            let user =
+                sessionStore.session?.user
+        else {
+            return nil
+        }
+
+        return readAccountIdentity(
+            userId: user.id,
+            email: user.email
+        )
+    }
+
+    private var highlightStorageKey:
+        String
+    {
+        [
+            highlightAccountIdentity
+                ?? "",
+            project.id,
+            manifest?.revisionId
+                ?? hydrated?.revisionId
+                ?? project.revisionId
+        ].joined(
+            separator: "::"
+        )
+    }
+
+    private var currentSearchMatch:
+        ReadReaderSearchMatch?
+    {
+        guard !searchMatches.isEmpty else {
+            return nil
+        }
+
+        let index = min(
+            max(0, searchMatchIndex),
+            searchMatches.count - 1
+        )
+        return searchMatches[index]
+    }
+
+    private var currentSearchHighlight:
+        ReadSourceHighlight?
+    {
+        guard
+            let match =
+                currentSearchMatch
+        else {
+            return nil
+        }
+
+        return sourceHighlights.first {
+            $0.sourceScalarStart
+                == match.sourceScalarOffset
+            && $0.sourceScalarLength
+                == match.scalarLength
+        }
+    }
+
+    private func refreshSourceHighlights()
+        async
+    {
+        guard
+            let accountIdentity =
+                highlightAccountIdentity
+        else {
+            sourceHighlights = []
+            return
+        }
+
+        let revisionId =
+            manifest?.revisionId
+            ?? hydrated?.revisionId
+            ?? project.revisionId
+
+        sourceHighlights =
+            await ReadSourceHighlightStore
+                .shared
+                .highlights(
+                    accountIdentity:
+                        accountIdentity,
+                    projectId: project.id,
+                    revisionId:
+                        revisionId
+                )
+    }
+
+    private func toggleCurrentSearchHighlight()
+        async
+    {
+        guard
+            let accountIdentity =
+                highlightAccountIdentity,
+            let sourceText =
+                hydrated?.rawText,
+            let match =
+                currentSearchMatch
+        else {
+            return
+        }
+
+        highlightError = nil
+
+        do {
+            if
+                let existing =
+                    currentSearchHighlight
+            {
+                try await ReadSourceHighlightStore
+                    .shared
+                    .remove(
+                        accountIdentity:
+                            accountIdentity,
+                        projectId:
+                            project.id,
+                        id: existing.id
+                    )
+            } else {
+                let revisionId =
+                    manifest?.revisionId
+                    ?? hydrated?.revisionId
+                    ?? project.revisionId
+
+                try await ReadSourceHighlightStore
+                    .shared
+                    .add(
+                        accountIdentity:
+                            accountIdentity,
+                        projectId:
+                            project.id,
+                        revisionId:
+                            revisionId,
+                        sourceText:
+                            sourceText,
+                        sourceScalarStart:
+                            match
+                                .sourceScalarOffset,
+                        sourceScalarLength:
+                            match
+                                .scalarLength
+                    )
+            }
+
+            await refreshSourceHighlights()
+        } catch is CancellationError {
+            return
+        } catch {
+            highlightError =
+                error.localizedDescription
+        }
+    }
+
+    private func highlightedParagraph(
+        _ paragraph:
+            ReadReaderParagraphAnchor
+    ) -> AttributedString {
+        let paragraphLength =
+            ReadScalarOffsets
+                .scalarCount(
+                    paragraph.text
+                )
+        let paragraphStart =
+            paragraph.sourceScalarStart
+        let paragraphEnd =
+            paragraphStart
+            + paragraphLength
+
+        var ranges:
+            [(start: Int, end: Int)] =
+            sourceHighlights
+                .compactMap {
+                    highlight in
+                    let highlightStart =
+                        highlight
+                            .sourceScalarStart
+                    let highlightEnd =
+                        highlightStart
+                        + highlight
+                            .sourceScalarLength
+                    let overlapStart =
+                        max(
+                            paragraphStart,
+                            highlightStart
+                        )
+                    let overlapEnd =
+                        min(
+                            paragraphEnd,
+                            highlightEnd
+                        )
+
+                    guard
+                        overlapEnd
+                            > overlapStart
+                    else {
+                        return nil
+                    }
+
+                    return (
+                        start:
+                            overlapStart
+                                - paragraphStart,
+                        end:
+                            overlapEnd
+                                - paragraphStart
+                    )
+                }
+                .sorted {
+                    $0.start < $1.start
+                }
+
+        if ranges.isEmpty {
+            return AttributedString(
+                paragraph.text
+            )
+        }
+
+        var merged:
+            [(start: Int, end: Int)] =
+            []
+        for range in ranges {
+            if
+                let last =
+                    merged.last,
+                range.start <= last.end
+            {
+                merged[
+                    merged.count - 1
+                ] = (
+                    start: last.start,
+                    end:
+                        max(
+                            last.end,
+                            range.end
+                        )
+                )
+            } else {
+                merged.append(range)
+            }
+        }
+
+        var result =
+            AttributedString()
+        var cursor = 0
+
+        func append(
+            scalarStart: Int,
+            scalarEnd: Int,
+            highlighted: Bool
+        ) {
+            guard scalarEnd > scalarStart else {
+                return
+            }
+
+            let start =
+                ReadScalarOffsets
+                    .stringIndex(
+                        in:
+                            paragraph.text,
+                        scalarOffset:
+                            scalarStart
+                    )
+            let end =
+                ReadScalarOffsets
+                    .stringIndex(
+                        in:
+                            paragraph.text,
+                        scalarOffset:
+                            scalarEnd
+                    )
+            var piece =
+                AttributedString(
+                    String(
+                        paragraph
+                            .text[
+                                start..<end
+                            ]
+                    )
+                )
+
+            if highlighted {
+                piece.backgroundColor =
+                    FloentlyDesignTokens
+                        .Colors
+                        .brandTint
+            }
+
+            result.append(piece)
+        }
+
+        for range in merged {
+            append(
+                scalarStart: cursor,
+                scalarEnd: range.start,
+                highlighted: false
+            )
+            append(
+                scalarStart: range.start,
+                scalarEnd: range.end,
+                highlighted: true
+            )
+            cursor = range.end
+        }
+
+        append(
+            scalarStart: cursor,
+            scalarEnd: paragraphLength,
+            highlighted: false
+        )
+
+        return result
     }
 
     private var resolvedVoiceId: String? {
