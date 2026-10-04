@@ -1,6 +1,6 @@
 import Foundation
 
-struct ReadProjectProgress: Equatable, Sendable {
+struct ReadProjectProgress: Codable, Equatable, Sendable {
     let projectId: String
     let currentSegmentIndex: Int
     let currentCharacterOffset: Int
@@ -40,7 +40,7 @@ struct ReadProjectProgress: Equatable, Sendable {
     }
 }
 
-struct ReadContentProject: Identifiable, Equatable, Sendable {
+struct ReadContentProject: Codable, Identifiable, Equatable, Sendable {
     let id: String
     let title: String
     let kind: String
@@ -605,6 +605,7 @@ final class ReadProjectStore: ObservableObject {
 
     private let client = ReadContentProjectClient()
     private let originalStore = ReadOriginalDocumentStore.shared
+    private let snapshotStore = ReadProjectSnapshotStore.shared
     private var progressSyncTail: Task<Void, Never>?
     private var progressSyncGeneration = 0
     private var progressSyncSequence = 0
@@ -613,14 +614,34 @@ final class ReadProjectStore: ObservableObject {
         activity = .loading
         errorMessage = nil
 
+        let cached = await snapshotStore.load(
+            accessToken: accessToken
+        )
+        if projects.isEmpty && !cached.isEmpty {
+            projects = cached
+        }
+
         do {
-            projects = try await client.listProjects(
+            let remote = try await client.listProjects(
+                accessToken: accessToken
+            )
+            projects = mergeRemoteProjects(
+                remote,
+                cached: cached
+            )
+            try? await snapshotStore.save(
+                projects: projects,
                 accessToken: accessToken
             )
             activity = .idle
         } catch {
             activity = .idle
-            errorMessage = error.localizedDescription
+            if projects.isEmpty {
+                errorMessage = error.localizedDescription
+            } else {
+                errorMessage =
+                    "You’re offline. Showing saved library content from this device."
+            }
         }
     }
 
@@ -631,10 +652,17 @@ final class ReadProjectStore: ObservableObject {
         if let text = project.rawText, !text.isEmpty {
             return project
         }
-        return try await client.project(
+
+        let hydrated = try await client.project(
             id: project.id,
             accessToken: accessToken
         )
+        upsert(hydrated)
+        try? await snapshotStore.save(
+            projects: projects,
+            accessToken: accessToken
+        )
+        return hydrated
     }
 
     func addText(
@@ -652,6 +680,10 @@ final class ReadProjectStore: ObservableObject {
             accessToken: accessToken
         )
         upsert(project)
+        try? await snapshotStore.save(
+            projects: projects,
+            accessToken: accessToken
+        )
         return project
     }
 
@@ -670,6 +702,10 @@ final class ReadProjectStore: ObservableObject {
             accessToken: accessToken
         )
         upsert(project)
+        try? await snapshotStore.save(
+            projects: projects,
+            accessToken: accessToken
+        )
         return project
     }
 
@@ -686,6 +722,10 @@ final class ReadProjectStore: ObservableObject {
             projectId: project.id
         )
         projects.removeAll { $0.id == project.id }
+        try? await snapshotStore.save(
+            projects: projects,
+            accessToken: accessToken
+        )
     }
 
     func addFile(
@@ -720,6 +760,10 @@ final class ReadProjectStore: ObservableObject {
         }
 
         upsert(project)
+        try? await snapshotStore.save(
+            projects: projects,
+            accessToken: accessToken
+        )
         return project
     }
 
@@ -795,6 +839,43 @@ final class ReadProjectStore: ObservableObject {
         projects = []
         activity = .idle
         errorMessage = nil
+    }
+
+    private func mergeRemoteProjects(
+        _ remote: [ReadContentProject],
+        cached: [ReadContentProject]
+    ) -> [ReadContentProject] {
+        let cachedById = Dictionary(
+            uniqueKeysWithValues:
+                cached.map { ($0.id, $0) }
+        )
+
+        return remote.map { value in
+            guard
+                let local = cachedById[value.id],
+                local.revisionId == value.revisionId
+            else {
+                return value
+            }
+
+            return ReadContentProject(
+                id: value.id,
+                title: value.title,
+                kind: value.kind,
+                status: value.status,
+                sourceType: value.sourceType,
+                sourceURL: value.sourceURL,
+                language: value.language,
+                textHash: value.textHash,
+                wordCount: value.wordCount,
+                characterCount: value.characterCount,
+                createdAt: value.createdAt,
+                updatedAt: value.updatedAt,
+                lastOpenedAt: value.lastOpenedAt,
+                progress: value.progress ?? local.progress,
+                rawText: value.rawText ?? local.rawText
+            )
+        }
     }
 
     private func upsert(_ project: ReadContentProject) {
