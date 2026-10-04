@@ -615,21 +615,11 @@ final class ReadProjectStore: ObservableObject {
         userId: String,
         email: String
     ) {
-        let id = userId.trimmingCharacters(
-            in: .whitespacesAndNewlines
-        )
-        if !id.isEmpty {
-            snapshotAccountIdentity = "id:" + id
-            return
-        }
-
-        let normalizedEmail = email
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
         snapshotAccountIdentity =
-            normalizedEmail.isEmpty
-            ? nil
-            : "email:" + normalizedEmail
+            readAccountIdentity(
+                userId: userId,
+                email: email
+            )
     }
 
     func refresh(accessToken: String) async {
