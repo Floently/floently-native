@@ -8,6 +8,8 @@ struct FloentlyReadApp: App {
     @StateObject private var sessionStore = FloentlySessionStore()
     @StateObject private var documentLoader = ReadDocumentPlaybackLoader()
     @StateObject private var voiceSettings = ReadVoiceSettings()
+    @StateObject private var projectStore = ReadProjectStore()
+    @StateObject private var accessModel = ReadAccessModel()
 
     var body: some Scene {
         WindowGroup {
@@ -17,6 +19,8 @@ struct FloentlyReadApp: App {
                 .environmentObject(sessionStore)
                 .environmentObject(documentLoader)
                 .environmentObject(voiceSettings)
+                .environmentObject(projectStore)
+                .environmentObject(accessModel)
                 .onOpenURL { incomingURL in
                     browserRouter.openIncomingURL(incomingURL)
                 }
@@ -46,12 +50,14 @@ struct ReadRootView: View {
 
     var body: some View {
         NavigationStack {
-            ReadHomeView {
-                browserRouter.openBrowser()
-            }
-            .navigationDestination(isPresented: $browserRouter.isBrowserPresented) {
-                ReadBrowserView(initialURL: browserRouter.browserURL)
-            }
+            ReadReleaseGateView()
+                .navigationDestination(
+                    isPresented: $browserRouter.isBrowserPresented
+                ) {
+                    ReadBrowserView(
+                        initialURL: browserRouter.browserURL
+                    )
+                }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if playbackSession.document != nil {
