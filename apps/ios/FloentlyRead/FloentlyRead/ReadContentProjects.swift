@@ -598,6 +598,7 @@ final class ReadProjectStore: ObservableObject {
 
     private let client = ReadContentProjectClient()
     private var progressSyncTail: Task<Void, Never>?
+    private var progressSyncGeneration = 0
 
     func refresh(accessToken: String) async {
         activity = .loading
@@ -708,6 +709,7 @@ final class ReadProjectStore: ObservableObject {
         playbackRate: Double?,
         accessToken: String
     ) async {
+        let generation = progressSyncGeneration
         let previous = progressSyncTail
         let task = Task { [weak self] in
             if let previous {
@@ -716,7 +718,8 @@ final class ReadProjectStore: ObservableObject {
 
             guard
                 !Task.isCancelled,
-                let self
+                let self,
+                generation == self.progressSyncGeneration
             else {
                 return
             }
@@ -733,6 +736,7 @@ final class ReadProjectStore: ObservableObject {
                 )
                 guard
                     !Task.isCancelled,
+                    generation == self.progressSyncGeneration,
                     let progress
                 else {
                     return
@@ -756,6 +760,7 @@ final class ReadProjectStore: ObservableObject {
     }
 
     func reset() {
+        progressSyncGeneration &+= 1
         progressSyncTail?.cancel()
         progressSyncTail = nil
         projects = []
