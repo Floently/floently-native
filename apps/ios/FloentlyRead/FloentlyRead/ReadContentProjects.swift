@@ -445,6 +445,7 @@ final class ReadProjectStore: ObservableObject {
         text: String,
         accessToken: String
     ) async throws -> ReadContentProject {
+        errorMessage = nil
         activity = .importing("Saving text")
         defer { activity = .idle }
 
@@ -461,6 +462,7 @@ final class ReadProjectStore: ObservableObject {
         url: URL,
         accessToken: String
     ) async throws -> ReadContentProject {
+        errorMessage = nil
         activity = .importing("Uploading and extracting")
         defer { activity = .idle }
 
