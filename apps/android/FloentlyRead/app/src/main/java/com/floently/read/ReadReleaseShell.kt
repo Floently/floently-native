@@ -2346,6 +2346,7 @@ private fun ReadProjectReaderScreen(
     voiceSettings: ReadVoiceSettings,
     onExit: () -> Unit
 ) {
+    val context = LocalContext.current
     val palette = floentlyPalette(FloentlyProduct.Read)
     var hydrated by remember {
         mutableStateOf<ReadContentProject?>(null)
@@ -2396,6 +2397,12 @@ private fun ReadProjectReaderScreen(
             full to built
         }
             .onSuccess {
+                ReadRemoteProjectProgressBridge.apply(
+                    context = context,
+                    project = it.first,
+                    manifest = it.second,
+                    voiceSettings = voiceSettings
+                )
                 hydrated = it.first
                 manifest = it.second
             }
@@ -2406,6 +2413,15 @@ private fun ReadProjectReaderScreen(
 
         preparing = false
     }
+
+    ReadProjectProgressSyncEffect(
+        project = hydrated ?: project,
+        manifest = manifest,
+        sessionStore = sessionStore,
+        projectStore = projectStore,
+        playbackController = playbackController,
+        voiceSettings = voiceSettings
+    )
 
     Column(
         modifier = Modifier
@@ -2450,9 +2466,12 @@ private fun ReadProjectReaderScreen(
                 onClick = {
                     val value = manifest
                         ?: return@Button
-                    val voice = voiceSettings.voiceId(
-                        value.language
-                    )
+                    val voice =
+                        hydrated?.progress?.voiceId
+                            ?: project.progress?.voiceId
+                            ?: voiceSettings.voiceId(
+                                value.language
+                            )
                     playbackController.loadManifest(
                         manifest = value,
                         voiceId = voice,
