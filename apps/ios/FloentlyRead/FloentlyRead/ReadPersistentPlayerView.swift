@@ -12,6 +12,7 @@ struct ReadPersistentPlayerView: View {
 
     @State private var seekDraft: TimeInterval?
     @State private var toolsExpanded = false
+    @State private var showingFullPlayer = false
 
     private let palette = FloentlyPalette.read
 
@@ -58,41 +59,62 @@ struct ReadPersistentPlayerView: View {
                             .Space
                             .s3
                 ) {
-                    sourceGlyph
+                    Button {
+                        showingFullPlayer = true
+                    } label: {
+                        HStack(
+                            spacing:
+                                FloentlyDesignTokens
+                                    .Space
+                                    .s3
+                        ) {
+                            sourceGlyph
 
-                    VStack(
-                        alignment: .leading,
-                        spacing:
-                            FloentlyDesignTokens
-                                .Space
-                                .s1
-                    ) {
-                        Text(document.title)
-                            .font(
-                                .system(
-                                    size:
-                                        FloentlyDesignTokens
-                                            .TypeScale
-                                            .small,
-                                    weight: .semibold
-                                )
-                            )
-                            .foregroundStyle(palette.text)
-                            .lineLimit(1)
+                            VStack(
+                                alignment: .leading,
+                                spacing:
+                                    FloentlyDesignTokens
+                                        .Space
+                                        .s1
+                            ) {
+                                Text(document.title)
+                                    .font(
+                                        .system(
+                                            size:
+                                                FloentlyDesignTokens
+                                                    .TypeScale
+                                                    .small,
+                                            weight: .semibold
+                                        )
+                                    )
+                                    .foregroundStyle(
+                                        palette.text
+                                    )
+                                    .lineLimit(1)
 
-                        Text(statusText)
-                            .font(
-                                .system(
-                                    size:
-                                        FloentlyDesignTokens
-                                            .TypeScale
-                                            .caption,
-                                    weight: .regular
-                                )
-                            )
-                            .foregroundStyle(palette.muted)
-                            .lineLimit(1)
+                                Text(statusText)
+                                    .font(
+                                        .system(
+                                            size:
+                                                FloentlyDesignTokens
+                                                    .TypeScale
+                                                    .caption,
+                                            weight: .regular
+                                        )
+                                    )
+                                    .foregroundStyle(
+                                        palette.muted
+                                    )
+                                    .lineLimit(1)
+                            }
+                        }
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(
+                        "Open full player for "
+                            + document.title
+                    )
 
                     Spacer(minLength: 4)
 
@@ -267,6 +289,12 @@ struct ReadPersistentPlayerView: View {
                 await voiceSettings.refresh(
                     sessionStore: sessionStore
                 )
+            }
+            .fullScreenCover(
+                isPresented:
+                    $showingFullPlayer
+            ) {
+                ReadFullPlayerView()
             }
         }
     }
