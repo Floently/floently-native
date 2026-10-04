@@ -360,6 +360,25 @@ and accessibility chrome do not replace or restyle their source contents.
 Physical VoiceOver/NVDA and cross-browser assistive-technology qualification is
 still required before production cutover.
 
+## Playback qualification diagnostics
+
+A hidden diagnostics surface is available for manual browser qualification. It
+is not linked from normal Read navigation and never includes document text or
+extracted webpage content.
+
+- append `?readDiagnostics=1` to a protected Read route to enable it for the
+  current browser tab/session;
+- internal `/app/*` navigation keeps the opt-in active;
+- append `?readDiagnostics=0` to disable it;
+- the panel reports logical playback state, buffered-ahead time, buffering
+  events and the bounded sequential media-handoff measurements described above;
+- **Copy diagnostics JSON** copies only playback numbers and the bounded
+  telemetry event history.
+
+The handoff number measures the browser media-start interval between hidden
+segments. It must not be interpreted as measured acoustic silence; physical
+browser/audio qualification remains authoritative.
+
 ## Qualification still required before cutover
 
 A green CI build does **not** authorize replacing the current production READ web app. Remaining qualification includes:
