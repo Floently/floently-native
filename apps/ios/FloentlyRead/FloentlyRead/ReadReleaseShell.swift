@@ -1518,6 +1518,8 @@ private enum ReadLibraryFilter:
 }
 
 private struct ReadLibraryScreen: View {
+    @Environment(\.accessibilityReduceMotion)
+    private var reduceMotion
     @EnvironmentObject private var projectStore: ReadProjectStore
     @EnvironmentObject private var sessionStore: FloentlySessionStore
     @EnvironmentObject private var playback: ReadPlaybackSession
@@ -1555,17 +1557,25 @@ private struct ReadLibraryScreen: View {
                     Spacer()
 
                     Button {
-                        withAnimation(
-                            .easeInOut(
-                                duration:
-                                    FloentlyDesignTokens
-                                        .Motion
-                                        .fast
-                            )
-                        ) {
+                        let toggleSearch = {
                             searchVisible.toggle()
                             if !searchVisible {
                                 searchText = ""
+                            }
+                        }
+
+                        if reduceMotion {
+                            toggleSearch()
+                        } else {
+                            withAnimation(
+                                .easeInOut(
+                                    duration:
+                                        FloentlyDesignTokens
+                                            .Motion
+                                            .fast
+                                )
+                            ) {
+                                toggleSearch()
                             }
                         }
                     } label: {
@@ -2320,6 +2330,8 @@ private struct ReadReaderSearchMatch {
 
 private struct ReadProjectReaderView: View {
     @Environment(\.dismiss) private var dismiss
+    @ScaledMetric(relativeTo: .body)
+    private var readerTextScale: CGFloat = 1
     @EnvironmentObject private var sessionStore: FloentlySessionStore
     @EnvironmentObject private var projectStore: ReadProjectStore
     @EnvironmentObject private var playback: ReadPlaybackSession
@@ -2781,13 +2793,15 @@ private struct ReadProjectReaderView: View {
                                             .system(
                                                 size:
                                                     appearance
-                                                        .fontSize,
+                                                        .fontSize
+                                                    * readerTextScale,
                                                 weight: .regular
                                             )
                                         )
                                         .lineSpacing(
                                             appearance
                                                 .additionalLineSpacing
+                                            * readerTextScale
                                         )
                                         .foregroundStyle(palette.text)
                                         .background(
@@ -4803,6 +4817,8 @@ private struct ReadReaderAppearanceSheet: View {
 
     @Environment(\.dismiss)
     private var dismiss
+    @ScaledMetric(relativeTo: .body)
+    private var previewTextScale: CGFloat = 1
 
     private let palette = FloentlyPalette.read
 
@@ -4884,13 +4900,15 @@ private struct ReadReaderAppearanceSheet: View {
                     .system(
                         size:
                             settings
-                                .fontSize,
+                                .fontSize
+                            * previewTextScale,
                         weight: .regular
                     )
                 )
                 .lineSpacing(
                     settings
                         .additionalLineSpacing
+                    * previewTextScale
                 )
                 .foregroundStyle(
                     palette.text
