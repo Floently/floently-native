@@ -135,6 +135,42 @@ object ReadProgressOutboxStore {
                 .orEmpty()
         }
 
+    suspend fun currentWrite(
+        context: Context,
+        accountIdentity: String,
+        projectId: String
+    ): ReadPendingProgressWrite? =
+        withContext(Dispatchers.IO) {
+            val file = writeFile(
+                context = context,
+                accountIdentity = accountIdentity,
+                projectId = projectId
+            )
+            if (!file.isFile) {
+                return@withContext null
+            }
+
+            val root = runCatching {
+                JSONObject(
+                    file.readText()
+                )
+            }.getOrNull()
+                ?: return@withContext null
+
+            if (
+                root.optInt(
+                    "schemaVersion",
+                    0
+                ) != SCHEMA_VERSION
+            ) {
+                return@withContext null
+            }
+
+            decode(
+                root.optJSONObject("write")
+            )
+        }
+
     suspend fun removeIfMatches(
         context: Context,
         accountIdentity: String,
