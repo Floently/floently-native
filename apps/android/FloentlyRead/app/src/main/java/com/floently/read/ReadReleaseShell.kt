@@ -3126,6 +3126,18 @@ private fun ReadProjectReaderScreen(
     var showingAppearance by remember {
         mutableStateOf(false)
     }
+    var epubPackage by remember(
+        project.id
+    ) {
+        mutableStateOf<ReadLocalEpubPackage?>(
+            null
+        )
+    }
+    var epubPackageError by remember(
+        project.id
+    ) {
+        mutableStateOf<String?>(null)
+    }
     var isSearching by remember {
         mutableStateOf(false)
     }
@@ -3151,6 +3163,14 @@ private fun ReadProjectReaderScreen(
         project.id
     ) {
         ReadOriginalDocumentStore.pdfFile(
+            context = context,
+            projectId = project.id
+        )
+    }
+    val originalEpubFile = remember(
+        project.id
+    ) {
+        ReadOriginalDocumentStore.epubFile(
             context = context,
             projectId = project.id
         )
@@ -3399,6 +3419,51 @@ private fun ReadProjectReaderScreen(
 
     LaunchedEffect(
         manifest?.revisionId,
+        originalEpubFile?.absolutePath
+    ) {
+        val file =
+            originalEpubFile
+        val revisionId =
+            manifest?.revisionId
+
+        epubPackage = null
+        epubPackageError = null
+
+        if (
+            file == null
+            || revisionId.isNullOrBlank()
+            || (
+                hydrated
+                    ?: project
+                ).sourceType
+                    .lowercase()
+                    != "epub"
+        ) {
+            return@LaunchedEffect
+        }
+
+        try {
+            epubPackage =
+                ReadEpubSourceStore
+                    .packageFor(
+                        context = context,
+                        projectId = project.id,
+                        revisionId =
+                            revisionId,
+                        sourceFile = file
+                    )
+        } catch (
+            error: CancellationException
+        ) {
+            throw error
+        } catch (_: Exception) {
+            epubPackageError =
+                "The original EPUB could not be prepared on this device. The semantic reading layer remains available."
+        }
+    }
+
+    LaunchedEffect(
+        manifest?.revisionId,
         offlineVoiceId,
         offlineAccountIdentity
     ) {
@@ -3599,6 +3664,7 @@ private fun ReadProjectReaderScreen(
                         },
                         enabled =
                             originalPdfFile == null
+                            && epubPackage == null
                             && searchableParagraphs
                                 .isNotEmpty(),
                         onClick = {
@@ -3700,6 +3766,12 @@ private fun ReadProjectReaderScreen(
             )
         }
 
+        epubPackageError?.let {
+            ReadStatusBanner(
+                text = it
+            )
+        }
+
         val text = hydrated?.rawText
         if (originalPdfFile != null) {
             Column(
@@ -3742,6 +3814,68 @@ private fun ReadProjectReaderScreen(
                         .fillMaxWidth()
                 )
             }
+        } else if (epubPackage != null) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                Row(
+                    verticalAlignment =
+                        Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            FloentlyDesignTokens
+                                .Colors
+                                .surface1
+                        )
+                        .padding(
+                            horizontal =
+                                FloentlyDesignTokens
+                                    .Space
+                                    .s4,
+                            vertical =
+                                FloentlyDesignTokens
+                                    .Space
+                                    .s2
+                        )
+                ) {
+                    Text(
+                        "EPUB",
+                        color =
+                            FloentlyDesignTokens
+                                .Colors
+                                .brandBright,
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+                    Spacer(
+                        Modifier.width(
+                            FloentlyDesignTokens
+                                .Space
+                                .s2
+                        )
+                    )
+                    Text(
+                        "Original EPUB chapters · native reading layer ready",
+                        color = palette.muted,
+                        style =
+                            MaterialTheme.typography
+                                .bodySmall
+                    )
+                }
+
+                ReadOriginalEpubView(
+                    packageValue =
+                        requireNotNull(
+                            epubPackage
+                        ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                )
+            }
         } else if (text == null) {
             Box(
                 contentAlignment = Alignment.Center,
@@ -3764,15 +3898,28 @@ private fun ReadProjectReaderScreen(
                 }
             }
         } else {
-            if (
+            when (
                 (hydrated ?: project)
                     .sourceType
-                    .lowercase() == "pdf"
+                    .lowercase()
             ) {
-                ReadStatusBanner(
-                    text =
-                        "The original PDF is not stored on this device. Showing the semantic reading layer."
-                )
+                "pdf" -> {
+                    ReadStatusBanner(
+                        text =
+                            "The original PDF is not stored on this device. Showing the semantic reading layer."
+                    )
+                }
+
+                "epub" -> {
+                    if (
+                        originalEpubFile == null
+                    ) {
+                        ReadStatusBanner(
+                            text =
+                                "The original EPUB is not stored on this device. Showing the semantic reading layer."
+                        )
+                    }
+                }
             }
 
             Box(
