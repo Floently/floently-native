@@ -7,6 +7,7 @@ export class BrowserV2VncAttachGate {
   private active: boolean;
   private routeEpoch = 0;
   private nextAttempt = 0;
+  private retryCount = 0;
   private inFlightAttempt: number | null = null;
 
   constructor(active: boolean) {
@@ -18,14 +19,23 @@ export class BrowserV2VncAttachGate {
 
     this.active = active;
     this.routeEpoch += 1;
+
+    if (!active) {
+      this.retryCount = 0;
+    }
   }
 
-  begin(): BrowserV2VncAttachToken | null {
-    if (!this.active || this.inFlightAttempt !== null) {
+  begin(maxAttempts = 3): BrowserV2VncAttachToken | null {
+    if (
+      !this.active
+      || this.inFlightAttempt !== null
+      || this.retryCount >= maxAttempts
+    ) {
       return null;
     }
 
     const attempt = ++this.nextAttempt;
+    this.retryCount += 1;
     this.inFlightAttempt = attempt;
     return {
       attempt,
@@ -47,11 +57,19 @@ export class BrowserV2VncAttachGate {
     }
   }
 
+  resetRetryBudget(): void {
+    this.retryCount = 0;
+  }
+
   get isActive(): boolean {
     return this.active;
   }
 
   get hasInFlight(): boolean {
     return this.inFlightAttempt !== null;
+  }
+
+  get attemptsSinceReset(): number {
+    return this.retryCount;
   }
 }
