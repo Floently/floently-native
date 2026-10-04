@@ -285,9 +285,14 @@ export function BrowserWorkspace({
         vncAutoRetryRef.current += 1;
 
         try {
-          const grant =
-            cloud.getVncDisplayGrant()
-            ?? await cloud.refreshVncDisplayGrant();
+          let grant = cloud.takeVncDisplayGrant();
+          if (!grant) {
+            await cloud.refreshVncDisplayGrant();
+            grant = cloud.takeVncDisplayGrant();
+          }
+          if (!grant) {
+            throw new Error("DISPLAY_UNAVAILABLE");
+          }
           await display.connect(grant);
         } catch (reason) {
           setVncStage("DISPLAY_UNAVAILABLE");
@@ -368,10 +373,11 @@ export function BrowserWorkspace({
   }, [active, attachDisplay, cloud, retryAttempt, started, userId]);
 
   useEffect(() => {
-    if (!started || !cloud) return;
+    if (!started || !cloud || !active) return;
 
     void attachDisplay();
   }, [
+    active,
     attachDisplay,
     cloud,
     mediaReady,
@@ -379,6 +385,25 @@ export function BrowserWorkspace({
     snapshot?.lifecycle,
     started,
   ]);
+
+  useEffect(() => {
+    if (
+      !cloud
+      || !started
+      || active
+      || cloud.getDisplayTransport() !== "vnc"
+    ) {
+      return;
+    }
+
+    // Keep the authenticated Chromium/profile alive, but stop hidden
+    // framebuffer traffic. Returning to Browser requests a fresh one-use
+    // display ticket and reconnects this same app-owned session.
+    vncDisplayRef.current?.disconnect();
+    cloud.setVncFrameReady(false);
+    setMediaReady(false);
+    setRemoteTextInputFocused(false);
+  }, [active, cloud, started]);
 
   useEffect(() => {
     if (!active) {

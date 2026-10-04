@@ -222,8 +222,13 @@ export class BrowserV2CloudClient implements BrowserBackend {
     return optional?.displayTransport === "vnc" ? "vnc" : "webrtc";
   }
   isDisplayWorkerReady(): boolean { return this.workerReady && !this.stopped; }
-  getVncDisplayGrant(): BrowserV2VncGrant | null {
-    return this.vncDisplayGrant ? { ...this.vncDisplayGrant } : null;
+  takeVncDisplayGrant(): BrowserV2VncGrant | null {
+    if (!this.vncDisplayGrant) return null;
+    const grant = { ...this.vncDisplayGrant };
+    // Display tickets are one-use transport credentials. Once handed to the
+    // noVNC adapter they must never be retried from cached client state.
+    this.vncDisplayGrant = null;
+    return grant;
   }
   getVncViewport(): {
     cssWidth: number; cssHeight: number;

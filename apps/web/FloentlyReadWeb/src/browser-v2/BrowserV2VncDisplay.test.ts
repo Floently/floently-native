@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { browserV2VncDisplayUrl } from "./BrowserV2VncDisplay";
+import {
+  BrowserV2VncDisplay,
+  browserV2VncDisplayUrl,
+  type BrowserV2RfbLike,
+} from "./BrowserV2VncDisplay";
 
 const sessionId = "session-123";
 const displayTicket = "A".repeat(43);
@@ -81,5 +85,65 @@ describe("Browser V2 VNC display grant safety", () => {
     expect(() =>
       browserV2VncDisplayUrl(grant({ sessionId: "bad/session" })),
     ).toThrow("DISPLAY_GRANT_INVALID");
+  });
+});
+
+
+describe("Browser V2 VNC display lifecycle", () => {
+  it("can disconnect a hidden display and reconnect without closing the owner adapter", async () => {
+    const instances: FakeRfb[] = [];
+
+    class FakeRfb implements BrowserV2RfbLike {
+      scaleViewport = false;
+      clipViewport = false;
+      resizeSession = false;
+      viewOnly = true;
+      focusOnClick = false;
+      disconnected = false;
+
+      constructor() {
+        instances.push(this);
+      }
+
+      addEventListener(): void {}
+      removeEventListener(): void {}
+      disconnect(): void {
+        this.disconnected = true;
+      }
+      focus(): void {}
+    }
+
+    const target = {} as HTMLElement;
+    const stages: string[] = [];
+    const display = new BrowserV2VncDisplay(
+      target,
+      (stage) => stages.push(stage),
+      () => undefined,
+      async () => FakeRfb as unknown as new (
+        element: HTMLElement,
+        url: string,
+        options: { shared: false; wsProtocols: string[] },
+      ) => BrowserV2RfbLike,
+    );
+
+    await display.connect(grant());
+    expect(instances).toHaveLength(1);
+
+    display.disconnect();
+    expect(instances[0].disconnected).toBe(true);
+    expect(stages.at(-1)).toBe("DISPLAY_DISCONNECTED");
+
+    await display.connect(grant({
+      displayTicket: "B".repeat(43),
+    }));
+    expect(instances).toHaveLength(2);
+    expect(instances[1].disconnected).toBe(false);
+
+    display.close();
+    await expect(
+      display.connect(grant({
+        displayTicket: "C".repeat(43),
+      })),
+    ).rejects.toThrow("DISPLAY_CLOSED");
   });
 });
