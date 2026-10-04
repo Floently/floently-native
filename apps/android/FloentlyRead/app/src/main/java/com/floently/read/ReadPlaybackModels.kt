@@ -12,7 +12,9 @@ data class ReadPlaybackSegment(
     val logicalStartMs: Long,
     val logicalEndMs: Long,
     val audioUri: String? = null,
-    val actualDurationMs: Long? = null
+    val actualDurationMs: Long? = null,
+    val renditionId: String? = null,
+    val timingMapId: String? = null
 ) {
     val logicalDurationMs: Long
         get() = (logicalEndMs - logicalStartMs).coerceAtLeast(0L)
