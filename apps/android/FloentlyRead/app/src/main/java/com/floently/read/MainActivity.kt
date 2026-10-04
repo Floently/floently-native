@@ -736,7 +736,7 @@ fun ReadBrowserScreen(
                             selectedText.isNotBlank()
                                 || extractedText.isNotBlank(),
                         isPlaying = playbackController.snapshot.isPlaying,
-                        onPlayPause = ::toggleNativeReading,
+                        onPlayPause = { toggleNativeReading() },
                         onReadPage = {
                             activeReadingManifest = null
                             selectedText = ""
