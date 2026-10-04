@@ -55,6 +55,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -3499,6 +3500,9 @@ private fun ReadProjectReaderScreen(
     var showingAppearance by remember {
         mutableStateOf(false)
     }
+    var showingHighlights by remember {
+        mutableStateOf(false)
+    }
     var epubPackage by remember(
         project.id
     ) {
@@ -3776,6 +3780,137 @@ private fun ReadProjectReaderScreen(
                 highlightError =
                     error.localizedMessage
                         ?: "Could not update this highlight."
+            }
+        }
+    }
+
+    fun jumpToHighlight(
+        highlight: ReadSourceHighlight
+    ) {
+        val paragraph =
+            searchableParagraphAnchors
+                .lastOrNull {
+                    anchor ->
+                    val length =
+                        ReadScalarOffsets
+                            .scalarCount(
+                                anchor.text
+                            )
+                    anchor
+                        .sourceScalarStart
+                        <= highlight
+                            .sourceScalarStart
+                        && highlight
+                            .sourceScalarStart
+                            < anchor
+                                .sourceScalarStart
+                                + length
+                }
+            ?: return
+
+        showingHighlights = false
+        scope.launch {
+            readerListState
+                .animateScrollToItem(
+                    paragraph.index
+                )
+        }
+    }
+
+    fun updateHighlightNote(
+        highlight: ReadSourceHighlight,
+        note: String
+    ) {
+        val identity =
+            offlineAccountIdentity
+                ?: return
+
+        scope.launch {
+            highlightError = null
+
+            try {
+                ReadSourceHighlightStore
+                    .updateNote(
+                        context = context,
+                        accountIdentity =
+                            identity,
+                        projectId =
+                            project.id,
+                        id = highlight.id,
+                        note = note
+                    )
+                val revisionId =
+                    manifest?.revisionId
+                        ?: hydrated
+                            ?.revisionId
+                        ?: project.revisionId
+                sourceHighlights =
+                    ReadSourceHighlightStore
+                        .highlights(
+                            context = context,
+                            accountIdentity =
+                                identity,
+                            projectId =
+                                project.id,
+                            revisionId =
+                                revisionId
+                        )
+            } catch (
+                error: CancellationException
+            ) {
+                throw error
+            } catch (error: Exception) {
+                highlightError =
+                    error.localizedMessage
+                        ?: "Could not update this note."
+            }
+        }
+    }
+
+    fun removeHighlight(
+        highlight: ReadSourceHighlight
+    ) {
+        val identity =
+            offlineAccountIdentity
+                ?: return
+
+        scope.launch {
+            highlightError = null
+
+            try {
+                ReadSourceHighlightStore
+                    .remove(
+                        context = context,
+                        accountIdentity =
+                            identity,
+                        projectId =
+                            project.id,
+                        id = highlight.id
+                    )
+                val revisionId =
+                    manifest?.revisionId
+                        ?: hydrated
+                            ?.revisionId
+                        ?: project.revisionId
+                sourceHighlights =
+                    ReadSourceHighlightStore
+                        .highlights(
+                            context = context,
+                            accountIdentity =
+                                identity,
+                            projectId =
+                                project.id,
+                            revisionId =
+                                revisionId
+                        )
+            } catch (
+                error: CancellationException
+            ) {
+                throw error
+            } catch (error: Exception) {
+                highlightError =
+                    error.localizedMessage
+                        ?: "Could not remove this highlight."
             }
         }
     }
@@ -4183,6 +4318,34 @@ private fun ReadProjectReaderScreen(
                     DropdownMenuItem(
                         text = {
                             Text(
+                                if (
+                                    sourceHighlights
+                                        .isEmpty()
+                                ) {
+                                    "Highlights & notes"
+                                } else {
+                                    "Highlights & notes ("
+                                        + sourceHighlights
+                                            .size
+                                        + ")"
+                                }
+                            )
+                        },
+                        enabled =
+                            originalPdfFile == null
+                            && epubPackage == null
+                            && hydrated?.rawText
+                                ?.isNotEmpty()
+                                == true,
+                        onClick = {
+                            readerMenuExpanded = false
+                            showingHighlights = true
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = {
+                            Text(
                                 if (offlineBusy) {
                                     "Updating offline copy…"
                                 } else if (
@@ -4504,6 +4667,9 @@ private fun ReadProjectReaderScreen(
                                         FloentlyDesignTokens
                                             .Colors
                                             .brandTint
+                                            .copy(
+                                                alpha = 0.28f
+                                            )
                                     } else {
                                         Color.Transparent
                                     }
@@ -4513,6 +4679,30 @@ private fun ReadProjectReaderScreen(
                 }
             }
         }
+    }
+
+    if (showingHighlights) {
+        ReadHighlightsSheet(
+            highlights =
+                sourceHighlights,
+            onDismiss = {
+                showingHighlights = false
+            },
+            onJump = {
+                jumpToHighlight(it)
+            },
+            onSaveNote = {
+                highlight,
+                note ->
+                updateHighlightNote(
+                    highlight,
+                    note
+                )
+            },
+            onRemove = {
+                removeHighlight(it)
+            }
+        )
     }
 
     if (showingAppearance) {
@@ -4658,6 +4848,290 @@ private fun ReadReaderSearchToolbar(
             onClick =
                 onToggleHighlight
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReadHighlightsSheet(
+    highlights: List<ReadSourceHighlight>,
+    onDismiss: () -> Unit,
+    onJump: (ReadSourceHighlight) -> Unit,
+    onSaveNote:
+        (ReadSourceHighlight, String) -> Unit,
+    onRemove: (ReadSourceHighlight) -> Unit
+) {
+    val palette =
+        floentlyPalette(
+            FloentlyProduct.Read
+        )
+    val noteDrafts =
+        remember {
+            mutableStateMapOf<
+                String,
+                String
+            >()
+        }
+
+    LaunchedEffect(highlights) {
+        val ids =
+            highlights.map {
+                it.id
+            }.toSet()
+
+        noteDrafts.keys
+            .filterNot {
+                ids.contains(it)
+            }
+            .forEach {
+                noteDrafts.remove(it)
+            }
+
+        highlights.forEach {
+            highlight ->
+            if (
+                !noteDrafts.containsKey(
+                    highlight.id
+                )
+            ) {
+                noteDrafts[
+                    highlight.id
+                ] =
+                    highlight.note
+                        .orEmpty()
+            }
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor =
+            FloentlyDesignTokens
+                .Colors
+                .surface2
+    ) {
+        Column(
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    FloentlyDesignTokens
+                        .Space
+                        .s4
+                ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal =
+                        FloentlyDesignTokens
+                            .Space
+                            .s4
+                )
+                .padding(
+                    bottom =
+                        FloentlyDesignTokens
+                            .Space
+                            .s6
+                )
+        ) {
+            Text(
+                "Highlights & notes",
+                color = palette.text,
+                style =
+                    MaterialTheme.typography
+                        .headlineSmall,
+                fontWeight =
+                    FontWeight.Bold
+            )
+
+            if (highlights.isEmpty()) {
+                Text(
+                    "No highlights yet. Search within a text reading, then use the highlighter action on a result.",
+                    color = palette.muted,
+                    style =
+                        MaterialTheme.typography
+                            .bodyMedium
+                )
+            } else {
+                LazyColumn(
+                    verticalArrangement =
+                        Arrangement.spacedBy(
+                            FloentlyDesignTokens
+                                .Space
+                                .s3
+                        ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(
+                            max = 520.dp
+                        )
+                ) {
+                    items(
+                        items = highlights,
+                        key = {
+                            it.id
+                        }
+                    ) {
+                        highlight ->
+                        Column(
+                            verticalArrangement =
+                                Arrangement
+                                    .spacedBy(
+                                        FloentlyDesignTokens
+                                            .Space
+                                            .s3
+                                    ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(
+                                    RoundedCornerShape(
+                                        FloentlyDesignTokens
+                                            .Radius
+                                            .l
+                                    )
+                                )
+                                .background(
+                                    FloentlyDesignTokens
+                                        .Colors
+                                        .surface1
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color =
+                                        FloentlyDesignTokens
+                                            .Colors
+                                            .borderSoft,
+                                    shape =
+                                        RoundedCornerShape(
+                                            FloentlyDesignTokens
+                                                .Radius
+                                                .l
+                                        )
+                                )
+                                .padding(
+                                    FloentlyDesignTokens
+                                        .Space
+                                        .s4
+                                )
+                        ) {
+                            Text(
+                                highlight.quote,
+                                color =
+                                    palette.text,
+                                style =
+                                    MaterialTheme
+                                        .typography
+                                        .bodyMedium,
+                                fontWeight =
+                                    FontWeight.Medium,
+                                modifier =
+                                    Modifier
+                                        .background(
+                                            FloentlyDesignTokens
+                                                .Colors
+                                                .brandTint
+                                        )
+                                        .padding(
+                                            horizontal =
+                                                FloentlyDesignTokens
+                                                    .Space
+                                                    .s2
+                                        )
+                            )
+
+                            OutlinedTextField(
+                                value =
+                                    noteDrafts[
+                                        highlight.id
+                                    ].orEmpty(),
+                                onValueChange = {
+                                    noteDrafts[
+                                        highlight.id
+                                    ] = it
+                                },
+                                label = {
+                                    Text(
+                                        "Note"
+                                    )
+                                },
+                                minLines = 2,
+                                maxLines = 5,
+                                shape =
+                                    RoundedCornerShape(
+                                        FloentlyDesignTokens
+                                            .Radius
+                                            .m
+                                    ),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                            )
+
+                            Row(
+                                verticalAlignment =
+                                    Alignment
+                                        .CenterVertically,
+                                horizontalArrangement =
+                                    Arrangement
+                                        .spacedBy(
+                                            FloentlyDesignTokens
+                                                .Space
+                                                .s2
+                                        ),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                            ) {
+                                TextButton(
+                                    onClick = {
+                                        onJump(
+                                            highlight
+                                        )
+                                    }
+                                ) {
+                                    Text("Go to")
+                                }
+
+                                TextButton(
+                                    onClick = {
+                                        onSaveNote(
+                                            highlight,
+                                            noteDrafts[
+                                                highlight.id
+                                            ].orEmpty()
+                                        )
+                                    }
+                                ) {
+                                    Text(
+                                        "Save note"
+                                    )
+                                }
+
+                                Spacer(
+                                    Modifier.weight(
+                                        1f
+                                    )
+                                )
+
+                                TextButton(
+                                    onClick = {
+                                        onRemove(
+                                            highlight
+                                        )
+                                    }
+                                ) {
+                                    Text(
+                                        "Remove",
+                                        color =
+                                            FloentlyDesignTokens
+                                                .Colors
+                                                .danger
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
