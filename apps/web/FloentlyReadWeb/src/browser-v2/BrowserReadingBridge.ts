@@ -273,6 +273,7 @@ export class BrowserReadingBridge {
       || !source
       || !manifest
       || !tabId
+      || !this.playbackOwns(manifest)
     ) {
       return false;
     }
@@ -339,6 +340,7 @@ export class BrowserReadingBridge {
       || !tabId
       || source.spans.length === 0
       || this.snapshot.status !== "ready"
+      || !this.playbackOwns(manifest)
     ) {
       return false;
     }
@@ -495,6 +497,17 @@ export class BrowserReadingBridge {
       && this.snapshot.tabId === tabId
       && this.manifest === manifest
       && this.source !== null
+      && this.playbackOwns(manifest)
+    );
+  }
+
+  private playbackOwns(
+    manifest: ReadingManifestSummary,
+  ): boolean {
+    const playback = this.playback.getSnapshot();
+    return (
+      playback.documentId === manifest.documentId
+      && playback.revisionId === manifest.revisionId
     );
   }
 
