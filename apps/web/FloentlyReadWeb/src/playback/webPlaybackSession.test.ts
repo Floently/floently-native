@@ -70,6 +70,7 @@ function makeManifest(): ReadingManifestSummary {
 class FakeCore implements ReadPlaybackCore {
   readonly segments = makeSegments();
   prefetchResult: number[] = [];
+  positionRequests = 0;
   positionOverride:
     | ((elapsedMs: number) => Promise<LogicalTimePosition | null>)
     | null = null;
@@ -78,6 +79,7 @@ class FakeCore implements ReadPlaybackCore {
     _handle: string,
     elapsedMs: number,
   ): Promise<LogicalTimePosition | null> {
+    this.positionRequests += 1;
     if (this.positionOverride) {
       return this.positionOverride(elapsedMs);
     }
@@ -593,6 +595,63 @@ describe("WebPlaybackSession document-wide contract", () => {
     });
 
     expect(session.getSnapshot().voiceId).not.toBe("voice:new");
+
+    session.destroy();
+  });
+
+  it("uses ready prefetched audio without a second logical-time lookup at a natural boundary", async () => {
+    const { session, core, tts, engine } = createHarness();
+    core.prefetchResult = [1];
+
+    session.loadDocument(makeManifest());
+    await session.play();
+
+    await vi.waitFor(() => {
+      expect(
+        tts.calls.some((call) => call.segmentId === "segment-1"),
+      ).toBe(true);
+      expect(engine.primed.at(-1)).toContain(
+        "https://audio.invalid/segment-1.mp3",
+      );
+    });
+
+    expect(core.positionRequests).toBe(1);
+    engine.emitEnded();
+
+    await vi.waitFor(() => {
+      expect(session.getSnapshot()).toMatchObject({
+        status: "playing",
+        activeSegmentIndex: 1,
+        elapsedMs: 10_000,
+      });
+    });
+
+    expect(core.positionRequests).toBe(1);
+    expect(engine.loads.at(-1)).toMatchObject({
+      url: "https://audio.invalid/segment-1.mp3",
+      localOffsetMs: 0,
+    });
+
+    session.destroy();
+  });
+
+  it("falls back to logical-time mapping when the next sequential audio is not ready", async () => {
+    const { session, core, engine } = createHarness();
+
+    session.loadDocument(makeManifest());
+    await session.play();
+
+    expect(core.positionRequests).toBe(1);
+    engine.emitEnded();
+
+    await vi.waitFor(() => {
+      expect(session.getSnapshot()).toMatchObject({
+        status: "playing",
+        activeSegmentIndex: 1,
+      });
+    });
+
+    expect(core.positionRequests).toBe(2);
 
     session.destroy();
   });
