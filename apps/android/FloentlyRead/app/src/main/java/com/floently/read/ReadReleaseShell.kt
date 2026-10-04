@@ -817,6 +817,8 @@ private fun ReadAccessAccountDeletionControl(
                                 )
                                 ReadOriginalDocumentStore
                                     .clearAll(context)
+                                ReadProjectSnapshotStore
+                                    .clearAll(context)
                             }
                                 .onSuccess {
                                     showDialog = false
@@ -2034,6 +2036,8 @@ private fun ReadSettingsScreen(
                                     "in_app_settings"
                                 )
                                 ReadOriginalDocumentStore
+                                    .clearAll(context)
+                                ReadProjectSnapshotStore
                                     .clearAll(context)
                             }
                                 .onSuccess {
