@@ -544,7 +544,6 @@ private fun ReadEntitlementScreen(
     onRefresh: () -> Unit,
     onSignedOut: () -> Unit
 ) {
-    val context = LocalContext.current
     val palette = floentlyPalette(FloentlyProduct.Read)
 
     FloentlyScreen(product = FloentlyProduct.Read) {
@@ -571,33 +570,21 @@ private fun ReadEntitlementScreen(
                 BenefitLine("Document library and imports")
                 BenefitLine("Persistent voices, speed and resume")
 
+                Text(
+                    "This first native release verifies existing Floently Read entitlement. Purchase and plan changes stay outside this build until the native store flow is approved.",
+                    color = palette.muted,
+                    style = MaterialTheme.typography.bodySmall
+                )
+
                 Button(
-                    onClick = {
-                        runCatching {
-                            context.startActivity(
-                                Intent(
-                                    Intent.ACTION_VIEW,
-                                    Uri.parse(
-                                        "https://read.floently.com/app/subscription"
-                                    )
-                                )
-                            )
-                        }
-                    },
+                    onClick = onRefresh,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = palette.accent
                     ),
                     shape = RoundedCornerShape(18.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Manage Read subscription")
-                }
-
-                TextButton(onClick = onRefresh) {
-                    Text(
-                        "Refresh access",
-                        color = palette.accent
-                    )
+                    Text("Refresh access")
                 }
             }
 
