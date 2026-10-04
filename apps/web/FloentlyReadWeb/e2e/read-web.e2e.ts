@@ -281,9 +281,12 @@ test("playback diagnostics are explicit, session-scoped qualification tooling", 
   await installBackend(page);
 
   await page.goto("/app/library?readDiagnostics=1");
-  await expect(
-    page.getByText("Playback diagnostics", { exact: true }),
-  ).toBeVisible();
+  const diagnosticsSummary = page.getByText(
+    "Playback diagnostics",
+    { exact: true },
+  );
+  await expect(diagnosticsSummary).toBeVisible();
+  await diagnosticsSummary.click();
   await expect(
     page.getByText(
       "Qualification data only. Handoff latency measures browser media start, not verified acoustic silence.",
