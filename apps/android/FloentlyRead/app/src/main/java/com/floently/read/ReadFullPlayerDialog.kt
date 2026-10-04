@@ -384,7 +384,12 @@ fun ReadFullPlayerDialog(
                                 .Control
                                 .iconTarget,
                         contentDescription =
-                            "Back 15 seconds"
+                            "Back 15 seconds",
+                        modifier = Modifier.width(
+                            FloentlyDesignTokens
+                                .Control
+                                .iconTarget
+                        )
                     ) {
                         controller.seekBy(
                             -15_000
@@ -427,7 +432,12 @@ fun ReadFullPlayerDialog(
                                 .Control
                                 .iconTarget,
                         contentDescription =
-                            "Forward 15 seconds"
+                            "Forward 15 seconds",
+                        modifier = Modifier.width(
+                            FloentlyDesignTokens
+                                .Control
+                                .iconTarget
+                        )
                     ) {
                         controller.seekBy(
                             15_000
