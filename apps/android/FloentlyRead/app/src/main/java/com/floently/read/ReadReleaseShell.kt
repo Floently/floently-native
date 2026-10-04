@@ -75,6 +75,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.IOException
+import java.text.DateFormat
+import java.util.Date
 
 private enum class ReadReleaseTab {
     Home,
@@ -86,57 +89,125 @@ private enum class ReadAccessPhase {
     Idle,
     Checking,
     Granted,
+    GrantedOffline,
     Blocked,
     Failed
 }
 
-private class ReadAccessState {
+private class ReadAccessState(
+    context: Context
+) {
+    private val applicationContext =
+        context.applicationContext
+
     var phase by mutableStateOf(ReadAccessPhase.Idle)
         private set
     var status by mutableStateOf<FloentlyAccessStatus?>(null)
         private set
     var errorMessage by mutableStateOf<String?>(null)
         private set
+    var offlineVerifiedAtMs by mutableStateOf<Long?>(null)
+        private set
 
     suspend fun refresh(
         sessionStore: FloentlySecureSessionStore
     ) {
-        val token = sessionStore.session?.token
+        val session = sessionStore.session
+        val token = session?.token
             ?.takeIf { it.isNotBlank() }
 
-        if (token == null) {
+        if (session == null || token == null) {
             phase = ReadAccessPhase.Idle
             status = null
             errorMessage = null
+            offlineVerifiedAtMs = null
             return
         }
 
+        val accountIdentity =
+            readAccountIdentity(
+                userId = session.user.id,
+                email = session.user.email
+            )
+
         phase = ReadAccessPhase.Checking
         errorMessage = null
+        offlineVerifiedAtMs = null
 
-        runCatching {
+        try {
             val api = FloentlyApiClient(
-                baseUrl = "https://learn-api.floently.com",
+                baseUrl =
+                    "https://learn-api.floently.com",
                 tokenProvider = { token }
             )
-            FloentlyAccessService(api).fetchStatus()
-        }
-            .onSuccess { value ->
-                status = value
-                phase = if (
-                    value.readAccess
+            val value =
+                FloentlyAccessService(api)
+                    .fetchStatus()
+            val granted =
+                value.readAccess
                     || value.isInternalAllAccess
-                ) {
+
+            status = value
+            phase =
+                if (granted) {
                     ReadAccessPhase.Granted
                 } else {
                     ReadAccessPhase.Blocked
                 }
+
+            if (accountIdentity != null) {
+                if (granted) {
+                    ReadAccessLeaseStore.save(
+                        context = applicationContext,
+                        status = value,
+                        accountIdentity =
+                            accountIdentity
+                    )
+                } else {
+                    ReadAccessLeaseStore.remove(
+                        context = applicationContext,
+                        accountIdentity =
+                            accountIdentity
+                    )
+                }
             }
-            .onFailure {
-                errorMessage = it.message
+        } catch (
+            error: CancellationException
+        ) {
+            throw error
+        } catch (error: IOException) {
+            val lease =
+                accountIdentity?.let {
+                    ReadAccessLeaseStore
+                        .validGrantedLease(
+                            context =
+                                applicationContext,
+                            accountIdentity = it
+                        )
+                }
+
+            if (lease != null) {
+                status = lease.status
+                offlineVerifiedAtMs =
+                    lease.verifiedAtMs
+                phase =
+                    ReadAccessPhase
+                        .GrantedOffline
+            } else {
+                status = null
+                errorMessage =
+                    error.message
+                        ?: "Could not verify Read access."
+                phase =
+                    ReadAccessPhase.Failed
+            }
+        } catch (error: Exception) {
+            status = null
+            errorMessage =
+                error.message
                     ?: "Could not verify Read access."
-                phase = ReadAccessPhase.Failed
-            }
+            phase = ReadAccessPhase.Failed
+        }
     }
 }
 
@@ -150,7 +221,9 @@ fun ReadReleaseApp(
     val sessionStore = remember {
         FloentlySecureSessionStore(context)
     }
-    val accessState = remember { ReadAccessState() }
+    val accessState = remember(context) {
+        ReadAccessState(context)
+    }
     val projectStore = remember(context) {
         ReadProjectStore(context)
     }
@@ -240,15 +313,109 @@ fun ReadReleaseApp(
             )
         }
 
+        accessState.phase
+            == ReadAccessPhase.GrantedOffline -> {
+            ReadMainShell(
+                initialUrl = initialUrl,
+                sessionStore = sessionStore,
+                accessStatus = accessState.status,
+                offlineAccessVerifiedAtMs =
+                    accessState
+                        .offlineVerifiedAtMs,
+                projectStore = projectStore,
+                playbackController =
+                    playbackController,
+                voiceSettings = voiceSettings,
+                onRecheckAccess = {
+                    sessionRevision += 1
+                },
+                onSignedOut = ::clearAccountState
+            )
+        }
+
         else -> {
             ReadMainShell(
                 initialUrl = initialUrl,
                 sessionStore = sessionStore,
                 accessStatus = accessState.status,
+                offlineAccessVerifiedAtMs = null,
                 projectStore = projectStore,
                 playbackController = playbackController,
                 voiceSettings = voiceSettings,
+                onRecheckAccess = {
+                    sessionRevision += 1
+                },
                 onSignedOut = ::clearAccountState
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReadOfflineAccessLeaseBanner(
+    verifiedAtMs: Long,
+    onRecheck: () -> Unit
+) {
+    val palette =
+        floentlyPalette(FloentlyProduct.Read)
+    val verified = remember(
+        verifiedAtMs
+    ) {
+        DateFormat.getDateTimeInstance(
+            DateFormat.MEDIUM,
+            DateFormat.SHORT
+        ).format(
+            Date(verifiedAtMs)
+        )
+    }
+
+    Row(
+        verticalAlignment =
+            Alignment.CenterVertically,
+        horizontalArrangement =
+            Arrangement.spacedBy(10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                palette.backgroundBottom
+            )
+            .padding(
+                horizontal = 14.dp,
+                vertical = 9.dp
+            )
+    ) {
+        Text(
+            "◌",
+            color = palette.accent,
+            fontWeight = FontWeight.Bold
+        )
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(
+                "Offline mode",
+                color = palette.text,
+                style =
+                    MaterialTheme.typography
+                        .labelLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                "Access last verified "
+                    + verified
+                    + ".",
+                color = palette.muted,
+                style =
+                    MaterialTheme.typography
+                        .bodySmall
+            )
+        }
+        TextButton(
+            onClick = onRecheck
+        ) {
+            Text(
+                "Recheck",
+                color = palette.accent
             )
         }
     }
@@ -863,9 +1030,11 @@ private fun ReadMainShell(
     initialUrl: String?,
     sessionStore: FloentlySecureSessionStore,
     accessStatus: FloentlyAccessStatus?,
+    offlineAccessVerifiedAtMs: Long?,
     projectStore: ReadProjectStore,
     playbackController: ReadPlaybackController,
     voiceSettings: ReadVoiceSettings,
+    onRecheckAccess: () -> Unit,
     onSignedOut: () -> Unit
 ) {
     val context = LocalContext.current
@@ -965,6 +1134,19 @@ private fun ReadMainShell(
         else -> {
             Scaffold(
                 containerColor = palette.backgroundTop,
+                topBar = {
+                    if (
+                        offlineAccessVerifiedAtMs
+                            != null
+                    ) {
+                        ReadOfflineAccessLeaseBanner(
+                            verifiedAtMs =
+                                offlineAccessVerifiedAtMs,
+                            onRecheck =
+                                onRecheckAccess
+                        )
+                    }
+                },
                 bottomBar = {
                     NavigationBar(
                         containerColor =
