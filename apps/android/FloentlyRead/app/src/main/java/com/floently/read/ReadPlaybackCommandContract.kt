@@ -128,6 +128,8 @@ object ReadPlaybackCommandContract {
                     .put("logical_end_ms", segment.logicalEndMs)
                     .put("audio_uri", segment.audioUri)
                     .put("actual_duration_ms", segment.actualDurationMs)
+                    .put("rendition_id", segment.renditionId)
+                    .put("timing_map_id", segment.timingMapId)
             )
         }
 
@@ -180,7 +182,21 @@ object ReadPlaybackCommandContract {
                             item.getLong("actual_duration_ms")
                         } else {
                             null
-                        }
+                        },
+                        renditionId =
+                            item.optString(
+                                "rendition_id"
+                            )
+                                .takeIf {
+                                    it.isNotBlank()
+                                },
+                        timingMapId =
+                            item.optString(
+                                "timing_map_id"
+                            )
+                                .takeIf {
+                                    it.isNotBlank()
+                                }
                     )
                 )
             }
