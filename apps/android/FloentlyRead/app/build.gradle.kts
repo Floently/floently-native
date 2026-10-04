@@ -10,11 +10,18 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.vitusidi.floently.read.native.dev"
+        applicationId = "com.vitusidi.floently.read"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+    }
+
+    buildTypes {
+        getByName("debug") {
+            applicationIdSuffix = ".native.dev"
+            versionNameSuffix = "-dev"
+        }
     }
 
     buildFeatures {
