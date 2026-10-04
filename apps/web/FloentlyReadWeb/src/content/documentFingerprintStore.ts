@@ -1,4 +1,7 @@
-const STORAGE_KEY = "floently.read.web.vnext.file-project-index.v1";
+import { accountScopedLocalName } from "./localOwnerScope";
+
+const STORAGE_KEY_PREFIX =
+  "floently.read.web.vnext.file-project-index.v2";
 const SAMPLE_BYTES = 64 * 1024;
 const MAX_ENTRIES = 80;
 
@@ -8,8 +11,12 @@ interface FingerprintEntry {
 }
 
 interface FingerprintEnvelope {
-  version: 1;
+  version: 2;
   entries: Record<string, FingerprintEntry>;
+}
+
+export function documentFingerprintStorageKey(ownerId: string): string {
+  return accountScopedLocalName(STORAGE_KEY_PREFIX, ownerId);
 }
 
 function storage(): Storage | null {
@@ -23,13 +30,15 @@ function storage(): Storage | null {
   return window.localStorage;
 }
 
-function readEnvelope(): FingerprintEnvelope {
+function readEnvelope(ownerId: string): FingerprintEnvelope {
   const target = storage();
-  if (!target) return { version: 1, entries: {} };
+  if (!target) return { version: 2, entries: {} };
 
   try {
-    const raw = target.getItem(STORAGE_KEY);
-    if (!raw) return { version: 1, entries: {} };
+    const raw = target.getItem(
+      documentFingerprintStorageKey(ownerId),
+    );
+    if (!raw) return { version: 2, entries: {} };
 
     const parsed = JSON.parse(raw) as { entries?: unknown };
     if (
@@ -37,7 +46,7 @@ function readEnvelope(): FingerprintEnvelope {
       || typeof parsed.entries !== "object"
       || Array.isArray(parsed.entries)
     ) {
-      return { version: 1, entries: {} };
+      return { version: 2, entries: {} };
     }
 
     const entries: Record<string, FingerprintEntry> = {};
@@ -45,7 +54,9 @@ function readEnvelope(): FingerprintEnvelope {
       const [fingerprint, value]
       of Object.entries(parsed.entries as Record<string, unknown>)
     ) {
-      if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        continue;
+      }
 
       const candidate = value as Record<string, unknown>;
       const projectId =
@@ -63,13 +74,16 @@ function readEnvelope(): FingerprintEnvelope {
       }
     }
 
-    return { version: 1, entries };
+    return { version: 2, entries };
   } catch {
-    return { version: 1, entries: {} };
+    return { version: 2, entries: {} };
   }
 }
 
-function writeEnvelope(envelope: FingerprintEnvelope): void {
+function writeEnvelope(
+  ownerId: string,
+  envelope: FingerprintEnvelope,
+): void {
   const target = storage();
   if (!target) return;
 
@@ -79,9 +93,9 @@ function writeEnvelope(envelope: FingerprintEnvelope): void {
       .slice(0, MAX_ENTRIES);
 
     target.setItem(
-      STORAGE_KEY,
+      documentFingerprintStorageKey(ownerId),
       JSON.stringify({
-        version: 1,
+        version: 2,
         entries: Object.fromEntries(ordered),
       }),
     );
@@ -117,7 +131,10 @@ export async function fingerprintDocumentFile(file: File): Promise<string> {
   merged.set(last, metadata.byteLength + first.byteLength);
 
   if (globalThis.crypto?.subtle) {
-    const digest = await globalThis.crypto.subtle.digest("SHA-256", merged);
+    const digest = await globalThis.crypto.subtle.digest(
+      "SHA-256",
+      merged,
+    );
     return `sha256-sample:${toHex(digest)}`;
   }
 
@@ -131,15 +148,17 @@ export async function fingerprintDocumentFile(file: File): Promise<string> {
 }
 
 export function getProjectForFileFingerprint(
+  ownerId: string,
   fingerprint: string,
 ): string | null {
   const normalized = fingerprint.trim();
   if (!normalized) return null;
 
-  return readEnvelope().entries[normalized]?.projectId ?? null;
+  return readEnvelope(ownerId).entries[normalized]?.projectId ?? null;
 }
 
 export function rememberProjectForFileFingerprint(
+  ownerId: string,
   fingerprint: string,
   projectId: string,
 ): void {
@@ -147,23 +166,24 @@ export function rememberProjectForFileFingerprint(
   const normalizedProjectId = projectId.trim();
   if (!normalizedFingerprint || !normalizedProjectId) return;
 
-  const envelope = readEnvelope();
+  const envelope = readEnvelope(ownerId);
   envelope.entries[normalizedFingerprint] = {
     projectId: normalizedProjectId,
     updatedAt: Date.now(),
   };
-  writeEnvelope(envelope);
+  writeEnvelope(ownerId, envelope);
 }
 
 export function forgetProjectForFileFingerprint(
+  ownerId: string,
   fingerprint: string,
 ): void {
   const normalized = fingerprint.trim();
   if (!normalized) return;
 
-  const envelope = readEnvelope();
+  const envelope = readEnvelope(ownerId);
   if (!(normalized in envelope.entries)) return;
 
   delete envelope.entries[normalized];
-  writeEnvelope(envelope);
+  writeEnvelope(ownerId, envelope);
 }
