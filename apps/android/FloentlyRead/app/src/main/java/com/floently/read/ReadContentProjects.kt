@@ -46,7 +46,7 @@ data class ReadContentProject(
             "pdf" -> "PDF"
             "epub" -> "EPUB"
             "docx", "word" -> "Document"
-            "web", "website" -> "Website"
+            "web", "website", "url" -> "Website"
             "text", "txt", "markdown", "md" -> "Text"
             else -> sourceType.ifBlank { "Document" }
                 .replaceFirstChar { it.titlecase() }
@@ -229,6 +229,68 @@ class ReadContentProjectClient(
             ?: throw IllegalStateException(
                 "The saved project did not include readable content."
             )
+    }
+
+    suspend fun createUrlProject(
+        title: String?,
+        sourceUrl: String,
+        accessToken: String
+    ): ReadContentProject {
+        val normalized = sourceUrl.trim()
+        val parsed = runCatching {
+            java.net.URI(normalized)
+        }.getOrNull()
+        val scheme = parsed?.scheme?.lowercase()
+        require(
+            scheme == "https" || scheme == "http"
+        ) {
+            "Enter a valid http or https URL."
+        }
+
+        val body = JSONObject()
+            .put("url", normalized)
+        title?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            body.put("title", it)
+        }
+
+        val payload = unwrap(
+            requestPayload(
+                url = baseUrl.trimEnd('/') +
+                    "/api/v1/documents/from-url",
+                method = "POST",
+                accessToken = accessToken,
+                body = body
+            )
+        )
+        val objectValue = payload as? JSONObject
+            ?: throw IllegalStateException(
+                "The document service returned an invalid response."
+            )
+        val candidate = objectValue.optJSONObject("project")
+            ?: objectValue.optJSONObject("document")
+            ?: objectValue
+
+        return projectFromJson(candidate)
+            ?: throw IllegalStateException(
+                "The imported link did not contain readable content."
+            )
+    }
+
+    suspend fun deleteProject(
+        id: String,
+        accessToken: String
+    ) {
+        val encoded = URLEncoder.encode(
+            id,
+            StandardCharsets.UTF_8.name()
+        ).replace("+", "%20")
+
+        requestPayload(
+            url = baseUrl.trimEnd('/') +
+                "/api/v1/documents/$encoded",
+            method = "DELETE",
+            accessToken = accessToken
+        )
     }
 
     suspend fun uploadProject(
@@ -525,6 +587,38 @@ class ReadProjectStore {
             ).also(::upsert)
         } finally {
             activity = "idle"
+        }
+    }
+
+    suspend fun addUrl(
+        title: String?,
+        sourceUrl: String,
+        accessToken: String
+    ): ReadContentProject {
+        errorMessage = null
+        activity = "Importing link"
+        return try {
+            client.createUrlProject(
+                title = title,
+                sourceUrl = sourceUrl,
+                accessToken = accessToken
+            ).also(::upsert)
+        } finally {
+            activity = "idle"
+        }
+    }
+
+    suspend fun delete(
+        project: ReadContentProject,
+        accessToken: String
+    ) {
+        errorMessage = null
+        client.deleteProject(
+            id = project.id,
+            accessToken = accessToken
+        )
+        projects = projects.filterNot {
+            it.id == project.id
         }
     }
 
