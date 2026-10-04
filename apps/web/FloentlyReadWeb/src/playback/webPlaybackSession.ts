@@ -110,6 +110,25 @@ const DEFAULT_PREFETCH_HORIZON_MS = 120_000;
 const DEFAULT_PREFETCH_SEGMENTS = 4;
 const MAX_RECENT_TELEMETRY_EVENTS = 128;
 
+function normalizedPlaybackOwnerScope(
+  ownerId: string | null | undefined,
+): string {
+  return encodeURIComponent(ownerId?.trim() || "local");
+}
+
+export function readPlaybackResumeStorageKey(
+  ownerId: string | null | undefined,
+  documentId: string,
+  revisionId: string,
+): string {
+  return [
+    "floently-read-resume-v2",
+    normalizedPlaybackOwnerScope(ownerId),
+    encodeURIComponent(documentId),
+    encodeURIComponent(revisionId),
+  ].join(":");
+}
+
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
 }
@@ -170,6 +189,7 @@ export class WebPlaybackSession {
   private readonly telemetry?: WebPlaybackTelemetrySink;
   private readonly monotonicNow: () => number;
   private readonly recentTelemetry: WebPlaybackTelemetryEvent[] = [];
+  private readonly ownerId: string | null;
 
   private manifest: ReadingManifestSummary | null = null;
   private active: RuntimeAudio | null = null;
@@ -205,6 +225,7 @@ export class WebPlaybackSession {
   constructor(options: {
     core: ReadPlaybackCore;
     tts: ReadTtsProvider;
+    ownerId?: string | null;
     cache?: ReadAudioCachePort;
     engineFactory?: ReadAudioEngineFactory;
     telemetry?: WebPlaybackTelemetrySink;
@@ -217,7 +238,10 @@ export class WebPlaybackSession {
   }) {
     this.core = options.core;
     this.tts = options.tts;
-    this.cache = options.cache ?? new ReadAudioCache();
+    this.ownerId = options.ownerId?.trim() || null;
+    this.cache = options.cache ?? new ReadAudioCache({
+      ownerId: this.ownerId,
+    });
     this.telemetry = options.telemetry;
     this.monotonicNow =
       options.monotonicNow
@@ -1108,11 +1132,11 @@ export class WebPlaybackSession {
   }
 
   private resumeStorageKey(manifest: ReadingManifestSummary): string {
-    return [
-      "floently-read-resume-v1",
+    return readPlaybackResumeStorageKey(
+      this.ownerId,
       manifest.documentId,
       manifest.revisionId,
-    ].join(":");
+    );
   }
 
   private readResumeState(
