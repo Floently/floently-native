@@ -25,19 +25,103 @@ actor ReadOriginalDocumentStore {
         projectId: String,
         sourceURL: URL
     ) throws {
-        guard sourceURL.pathExtension.lowercased() == "pdf" else {
+        guard
+            sourceURL.pathExtension
+                .lowercased() == "pdf"
+        else {
             return
         }
 
+        try saveOriginal(
+            projectId: projectId,
+            sourceURL: sourceURL,
+            fileExtension: "pdf"
+        )
+    }
+
+    func saveEPUB(
+        projectId: String,
+        sourceURL: URL
+    ) throws {
+        guard
+            sourceURL.pathExtension
+                .lowercased() == "epub"
+        else {
+            return
+        }
+
+        try saveOriginal(
+            projectId: projectId,
+            sourceURL: sourceURL,
+            fileExtension: "epub"
+        )
+    }
+
+    func pdfURL(
+        for projectId: String
+    ) -> URL? {
+        existingOriginalURL(
+            projectId: projectId,
+            fileExtension: "pdf"
+        )
+    }
+
+    func epubURL(
+        for projectId: String
+    ) -> URL? {
+        existingOriginalURL(
+            projectId: projectId,
+            fileExtension: "epub"
+        )
+    }
+
+    func delete(
+        projectId: String
+    ) {
+        for fileExtension in [
+            "pdf",
+            "epub"
+        ] {
+            try? fileManager.removeItem(
+                at: originalURL(
+                    projectId: projectId,
+                    fileExtension:
+                        fileExtension
+                )
+            )
+        }
+    }
+
+    func clearAll() {
+        try? fileManager.removeItem(
+            at: directoryURL
+        )
+    }
+
+    private func saveOriginal(
+        projectId: String,
+        sourceURL: URL,
+        fileExtension: String
+    ) throws {
         try ensureDirectory()
 
-        let target = pdfURL(projectId: projectId)
-        let temporary = directoryURL.appending(
-            path: "\(storageKey(projectId))-\(UUID().uuidString).tmp"
+        let target = originalURL(
+            projectId: projectId,
+            fileExtension: fileExtension
         )
+        let temporary =
+            directoryURL.appending(
+                path:
+                    storageKey(projectId)
+                    + "-"
+                    + UUID().uuidString
+                    + ".tmp"
+            )
 
         defer {
-            try? fileManager.removeItem(at: temporary)
+            try? fileManager.removeItem(
+                at: temporary
+            )
         }
 
         try fileManager.copyItem(
@@ -45,8 +129,12 @@ actor ReadOriginalDocumentStore {
             to: temporary
         )
 
-        if fileManager.fileExists(atPath: target.path) {
-            try fileManager.removeItem(at: target)
+        if fileManager.fileExists(
+            atPath: target.path
+        ) {
+            try fileManager.removeItem(
+                at: target
+            )
         }
 
         try fileManager.moveItem(
@@ -64,25 +152,32 @@ actor ReadOriginalDocumentStore {
         )
     }
 
-    func pdfURL(
-        for projectId: String
+    private func existingOriginalURL(
+        projectId: String,
+        fileExtension: String
     ) -> URL? {
-        let value = pdfURL(projectId: projectId)
+        let value = originalURL(
+            projectId: projectId,
+            fileExtension: fileExtension
+        )
 
-        return fileManager.fileExists(atPath: value.path)
-            ? value
-            : nil
-    }
+        guard
+            fileManager.fileExists(
+                atPath: value.path
+            ),
+            (
+                try? value
+                    .resourceValues(
+                        forKeys:
+                            [.fileSizeKey]
+                    )
+                    .fileSize
+            ) ?? 0 > 0
+        else {
+            return nil
+        }
 
-    func delete(
-        projectId: String
-    ) {
-        let value = pdfURL(projectId: projectId)
-        try? fileManager.removeItem(at: value)
-    }
-
-    func clearAll() {
-        try? fileManager.removeItem(at: directoryURL)
+        return value
     }
 
     private func ensureDirectory() throws {
@@ -94,24 +189,32 @@ actor ReadOriginalDocumentStore {
         var values = URLResourceValues()
         values.isExcludedFromBackup = true
         var directory = directoryURL
-        try? directory.setResourceValues(values)
+        try? directory.setResourceValues(
+            values
+        )
     }
 
-    private func pdfURL(
-        projectId: String
+    private func originalURL(
+        projectId: String,
+        fileExtension: String
     ) -> URL {
         directoryURL.appending(
-            path: "\(storageKey(projectId)).pdf"
+            path:
+                storageKey(projectId)
+                + "."
+                + fileExtension
         )
     }
 
     private func storageKey(
         _ projectId: String
     ) -> String {
-        SHA256.hash(data: Data(projectId.utf8))
-            .map {
-                String(format: "%02x", $0)
-            }
-            .joined()
+        SHA256.hash(
+            data: Data(projectId.utf8)
+        )
+        .map {
+            String(format: "%02x", $0)
+        }
+        .joined()
     }
 }
