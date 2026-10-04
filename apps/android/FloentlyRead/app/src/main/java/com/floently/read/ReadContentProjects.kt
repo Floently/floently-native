@@ -816,6 +816,10 @@ class ReadProjectStore(
             context = applicationContext,
             projectId = project.id
         )
+        ReadEpubSourceStore.delete(
+            context = applicationContext,
+            projectId = project.id
+        )
         snapshotAccountIdentity?.let {
             ReadOfflineAudioStore.removeDocument(
                 context = applicationContext,
