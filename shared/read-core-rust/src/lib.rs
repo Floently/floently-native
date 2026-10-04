@@ -472,7 +472,7 @@ mod tests {
                 "wrong scalar length for {text:?}"
             );
 
-            if let segment = manifest.segments.first() {
+            if let Some(segment) = manifest.segments.first() {
                 assert_eq!(segment.scalar_start, 0);
                 assert_eq!(segment.scalar_end, expected_scalars);
                 assert_eq!(segment.text.chars().count(), expected_scalars);
