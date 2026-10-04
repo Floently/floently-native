@@ -1077,6 +1077,36 @@ private struct ReadHomeDashboard: View {
 
                         Spacer()
 
+                        if playback.document != nil {
+                            Button("Add") {
+                                addSource()
+                            }
+                            .buttonStyle(.plain)
+                            .font(
+                                .subheadline.weight(
+                                    .semibold
+                                )
+                            )
+                            .foregroundStyle(
+                                FloentlyDesignTokens
+                                    .Colors
+                                    .brandBright
+                            )
+                            .frame(
+                                minWidth:
+                                    FloentlyDesignTokens
+                                        .Control
+                                        .iconTarget,
+                                minHeight:
+                                    FloentlyDesignTokens
+                                        .Control
+                                        .iconTarget
+                            )
+                            .accessibilityLabel(
+                                "Add to Read"
+                            )
+                        }
+
                         Circle()
                             .fill(palette.elevated)
                             .frame(width: 44, height: 44)
@@ -1186,11 +1216,21 @@ private struct ReadHomeDashboard: View {
                         .padding(.top, 18)
                     }
 
-                    HStack(spacing: 12) {
-                        Button(action: addSource) {
-                            Label("Add to Read", systemImage: "plus")
-                                .font(.headline.weight(.semibold))
-                                .frame(maxWidth: .infinity)
+                    if playback.document == nil {
+                        HStack(spacing: 12) {
+                            Button(action: addSource) {
+                                Label(
+                                    "Add to Read",
+                                    systemImage: "plus"
+                                )
+                                .font(
+                                    .headline.weight(
+                                        .semibold
+                                    )
+                                )
+                                .frame(
+                                    maxWidth: .infinity
+                                )
                                 .frame(
                                     height:
                                         FloentlyDesignTokens
@@ -1213,14 +1253,20 @@ private struct ReadHomeDashboard: View {
                                             FloentlyDesignTokens
                                                 .Radius
                                                 .l,
-                                        style: .continuous
+                                        style:
+                                            .continuous
                                     )
                                 )
-                        }
-                        .buttonStyle(.plain)
+                            }
+                            .buttonStyle(.plain)
 
-                        Button(action: openBrowser) {
-                            Image(systemName: "globe")
+                            Button(
+                                action: openBrowser
+                            ) {
+                                Image(
+                                    systemName:
+                                        "globe"
+                                )
                                 .font(.headline)
                                 .frame(
                                     width:
@@ -1237,22 +1283,31 @@ private struct ReadHomeDashboard: View {
                                         .Colors
                                         .surface2
                                 )
-                                .foregroundStyle(palette.text)
+                                .foregroundStyle(
+                                    palette.text
+                                )
                                 .clipShape(
                                     RoundedRectangle(
                                         cornerRadius:
                                             FloentlyDesignTokens
                                                 .Radius
                                                 .l,
-                                        style: .continuous
+                                        style:
+                                            .continuous
                                     )
                                 )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(
+                                "Open reading browser"
+                            )
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Open reading browser")
+                        .padding(.top, 28)
+                        .padding(.bottom, 30)
+                    } else {
+                        Spacer()
+                            .frame(height: 18)
                     }
-                    .padding(.top, 28)
-                    .padding(.bottom, 30)
                 }
                 .frame(maxWidth: 720)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -1307,6 +1362,59 @@ private struct ReadEmptyLibraryCard: View {
     }
 }
 
+private enum ReadLibraryFilter:
+    String,
+    CaseIterable,
+    Identifiable
+{
+    case all = "All"
+    case pdf = "PDF"
+    case epub = "EPUB"
+    case web = "Web"
+    case text = "Text"
+    case other = "Other"
+
+    var id: String { rawValue }
+
+    func matches(
+        _ project: ReadContentProject
+    ) -> Bool {
+        let type =
+            project.sourceType
+                .lowercased()
+
+        switch self {
+        case .all:
+            return true
+        case .pdf:
+            return type == "pdf"
+        case .epub:
+            return type == "epub"
+        case .web:
+            return [
+                "web",
+                "website",
+                "url"
+            ].contains(type)
+        case .text:
+            return [
+                "text",
+                "txt",
+                "markdown",
+                "md"
+            ].contains(type)
+        case .other:
+            return !ReadLibraryFilter
+                .allCases
+                .dropFirst()
+                .dropLast()
+                .contains {
+                    $0.matches(project)
+                }
+        }
+    }
+}
+
 private struct ReadLibraryScreen: View {
     @EnvironmentObject private var projectStore: ReadProjectStore
     @EnvironmentObject private var sessionStore: FloentlySessionStore
@@ -1314,6 +1422,9 @@ private struct ReadLibraryScreen: View {
     @EnvironmentObject private var loader: ReadDocumentPlaybackLoader
 
     @State private var searchText = ""
+    @State private var searchVisible = false
+    @State private var selectedFilter:
+        ReadLibraryFilter = .all
     @State private var pendingDelete: ReadContentProject?
 
     let addSource: () -> Void
@@ -1326,28 +1437,190 @@ private struct ReadLibraryScreen: View {
             VStack(spacing: 0) {
                 HStack {
                     Text("Library")
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
-                        .foregroundStyle(palette.text)
+                        .font(
+                            .system(
+                                size:
+                                    FloentlyDesignTokens
+                                        .TypeScale
+                                        .h1,
+                                weight: .bold
+                            )
+                        )
+                        .foregroundStyle(
+                            palette.text
+                        )
 
                     Spacer()
 
-                    Button(action: addSource) {
-                        Image(systemName: "plus")
-                            .font(.headline.weight(.bold))
-                            .frame(width: 48, height: 48)
-                            .background(palette.elevated)
-                            .clipShape(Circle())
+                    Button {
+                        withAnimation(
+                            .easeInOut(
+                                duration:
+                                    FloentlyDesignTokens
+                                        .Motion
+                                        .fast
+                            )
+                        ) {
+                            searchVisible.toggle()
+                            if !searchVisible {
+                                searchText = ""
+                            }
+                        }
+                    } label: {
+                        Image(
+                            systemName:
+                                searchVisible
+                                ? "xmark"
+                                : "magnifyingglass"
+                        )
+                        .frame(
+                            width:
+                                FloentlyDesignTokens
+                                    .Control
+                                    .iconTarget,
+                            height:
+                                FloentlyDesignTokens
+                                    .Control
+                                    .iconTarget
+                        )
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(palette.text)
-                    .accessibilityLabel("Add to Read")
+                    .foregroundStyle(
+                        palette.text
+                    )
+                    .accessibilityLabel(
+                        searchVisible
+                        ? "Close library search"
+                        : "Search library"
+                    )
+
+                    Button(action: addSource) {
+                        Image(systemName: "plus")
+                            .font(
+                                .headline.weight(
+                                    .bold
+                                )
+                            )
+                            .frame(
+                                width:
+                                    FloentlyDesignTokens
+                                        .Control
+                                        .iconTarget,
+                                height:
+                                    FloentlyDesignTokens
+                                        .Control
+                                        .iconTarget
+                            )
+                            .background(
+                                FloentlyDesignTokens
+                                    .Colors
+                                    .surface2
+                            )
+                            .clipShape(
+                                RoundedRectangle(
+                                    cornerRadius:
+                                        FloentlyDesignTokens
+                                            .Radius
+                                            .m,
+                                    style:
+                                        .continuous
+                                )
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(
+                        palette.text
+                    )
+                    .accessibilityLabel(
+                        "Add to Read"
+                    )
                 }
                 .padding(.top, 18)
 
-                TextField("Search your library", text: $searchText)
-                    .textInputAutocapitalization(.never)
+                if searchVisible {
+                    TextField(
+                        "Search your library",
+                        text: $searchText
+                    )
+                    .textInputAutocapitalization(
+                        .never
+                    )
                     .readFieldStyle()
-                    .padding(.top, 18)
+                    .padding(.top, 12)
+                }
+
+                ScrollView(
+                    .horizontal,
+                    showsIndicators: false
+                ) {
+                    HStack(
+                        spacing:
+                            FloentlyDesignTokens
+                                .Space
+                                .s2
+                    ) {
+                        ForEach(
+                            ReadLibraryFilter
+                                .allCases
+                        ) { filter in
+                            Button {
+                                selectedFilter =
+                                    filter
+                            } label: {
+                                Text(
+                                    filter.rawValue
+                                )
+                                .font(
+                                    .caption.weight(
+                                        .semibold
+                                    )
+                                )
+                                .foregroundStyle(
+                                    selectedFilter
+                                        == filter
+                                    ? FloentlyDesignTokens
+                                        .Colors
+                                        .brandBright
+                                    : palette.muted
+                                )
+                                .padding(
+                                    .horizontal,
+                                    FloentlyDesignTokens
+                                        .Space
+                                        .s3
+                                )
+                                .frame(
+                                    minHeight:
+                                        FloentlyDesignTokens
+                                            .Control
+                                            .compactHeight
+                                )
+                                .background(
+                                    selectedFilter
+                                        == filter
+                                    ? FloentlyDesignTokens
+                                        .Colors
+                                        .brandTint
+                                    : FloentlyDesignTokens
+                                        .Colors
+                                        .surface1
+                                )
+                                .clipShape(
+                                    RoundedRectangle(
+                                        cornerRadius:
+                                            FloentlyDesignTokens
+                                                .Radius
+                                                .m,
+                                        style:
+                                            .continuous
+                                    )
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .padding(.top, 12)
 
                 if case .importing(let message) = projectStore.activity {
                     ReadImportProgressView(message: message)
@@ -1452,13 +1725,22 @@ private struct ReadLibraryScreen: View {
         let query = searchText.trimmingCharacters(
             in: .whitespacesAndNewlines
         )
-        guard !query.isEmpty else {
-            return projectStore.projects
-        }
-
         return projectStore.projects.filter {
-            $0.title.localizedCaseInsensitiveContains(query)
-                || $0.displaySource.localizedCaseInsensitiveContains(query)
+            project in
+            selectedFilter.matches(
+                project
+            )
+            && (
+                query.isEmpty
+                || project.title
+                    .localizedCaseInsensitiveContains(
+                        query
+                    )
+                || project.displaySource
+                    .localizedCaseInsensitiveContains(
+                        query
+                    )
+            )
         }
     }
 }
