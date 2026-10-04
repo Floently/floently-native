@@ -1758,6 +1758,17 @@ private struct ReadProjectReaderView: View {
             return nil
         }
 
+        if
+            loader.activeManifest?.documentId
+                == manifest.documentId,
+            loader.activeManifest?.revisionId
+                == manifest.revisionId,
+            let activeVoiceId =
+                loader.activeVoiceId
+        {
+            return activeVoiceId
+        }
+
         return hydrated?.progress?.voiceId
             ?? project.progress?.voiceId
             ?? voiceSettings.voiceId(
