@@ -137,7 +137,6 @@ export function BrowserWorkspace({
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const vncTargetRef = useRef<HTMLDivElement | null>(null);
   const vncDisplayRef = useRef<BrowserV2VncDisplay | null>(null);
-  const vncAutoRetryRef = useRef(0);
   const vncAttachGateRef = useRef<BrowserV2VncAttachGate | null>(null);
   if (!vncAttachGateRef.current) {
     vncAttachGateRef.current = new BrowserV2VncAttachGate(active);
@@ -281,7 +280,7 @@ export function BrowserWorkspace({
             }
           },
           () => {
-            vncAutoRetryRef.current = 0;
+            vncAttachGate.resetRetryBudget();
             cloud.setVncFrameReady(true);
             setMediaReady(cloud.isMediaReady());
           },
@@ -292,14 +291,8 @@ export function BrowserWorkspace({
 
       const display = vncDisplayRef.current;
       if (!display.frameReady && vncStage !== "DISPLAY_CONNECTING") {
-        const attachToken = vncAttachGate.begin();
+        const attachToken = vncAttachGate.begin(3);
         if (!attachToken) return;
-
-        if (vncAutoRetryRef.current >= 3) {
-          vncAttachGate.finish(attachToken);
-          return;
-        }
-        vncAutoRetryRef.current += 1;
 
         try {
           let grant = cloud.takeVncDisplayGrant();
@@ -444,7 +437,6 @@ export function BrowserWorkspace({
     // Keep the authenticated Chromium/profile alive, but stop hidden
     // framebuffer traffic. Returning to Browser requests a fresh one-use
     // display ticket and reconnects this same app-owned session.
-    vncAutoRetryRef.current = 0;
     cloud.takeVncDisplayGrant();
     vncDisplayRef.current?.disconnect();
     cloud.setVncFrameReady(false);
@@ -562,7 +554,7 @@ export function BrowserWorkspace({
     gestureUnbindRef.current = null;
     vncDisplayRef.current?.close();
     vncDisplayRef.current = null;
-    vncAutoRetryRef.current = 0;
+    vncAttachGate.resetRetryBudget();
     setVncStage(null);
 
     try {
@@ -1046,7 +1038,7 @@ export function BrowserWorkspace({
                 type="button"
                 onClick={() => {
                   setError(null);
-                  vncAutoRetryRef.current = 0;
+                  vncAttachGate.resetRetryBudget();
                   setVncStage(null);
                   void attachDisplay();
                 }}
