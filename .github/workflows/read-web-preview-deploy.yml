@@ -102,7 +102,7 @@ jobs:
             node -e 'process.stdout.write(new URL(process.env.READ_PREVIEW_ORIGIN).hostname)'
           )"
 
-          vercel alias set             "$deployment_url"             "$preview_host"             --token="$VERCEL_TOKEN"
+          vercel alias set "$deployment_url" "$preview_host" --token="$VERCEL_TOKEN"
 
           echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
           echo "preview_url=$READ_PREVIEW_ORIGIN" >> "$GITHUB_OUTPUT"
@@ -117,7 +117,9 @@ jobs:
           response="$(mktemp)"
           trap 'rm -f "$response"' EXIT
 
-          curl             --fail             --location             --retry 3             --retry-delay 2             --silent             --show-error             "$DEPLOYMENT_URL/app/library?qualification=spa"             --output "$response"
+          curl --fail --location --retry 3 --retry-delay 2 --silent --show-error \
+            "$DEPLOYMENT_URL/app/library?qualification=spa" \
+            --output "$response"
 
           grep -q '<div id="root"></div>' "$response"
 
@@ -130,7 +132,7 @@ jobs:
           {
             echo "## Floently Read isolated preview"
             echo
-            echo "- Commit: `$GITHUB_SHA`"
+            echo "- Commit: \`$GITHUB_SHA\`"
             echo "- Stable preview origin: $PREVIEW_URL"
             echo "- Immutable deployment: $DEPLOYMENT_URL"
             echo "- Production Read routing: unchanged"
