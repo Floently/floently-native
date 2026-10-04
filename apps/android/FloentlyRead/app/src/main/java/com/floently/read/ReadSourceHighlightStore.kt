@@ -31,15 +31,44 @@ object ReadSourceHighlightStore {
         context: Context,
         accountIdentity: String,
         projectId: String,
-        revisionId: String
+        revisionId: String,
+        sourceText: String? = null
     ): List<ReadSourceHighlight> =
         withContext(Dispatchers.IO) {
-            load(
-                context = context,
-                accountIdentity =
-                    accountIdentity,
-                projectId = projectId
-            )
+            var values =
+                load(
+                    context = context,
+                    accountIdentity =
+                        accountIdentity,
+                    projectId = projectId
+                )
+
+            if (!sourceText.isNullOrEmpty()) {
+                val migration =
+                    migrateHighlights(
+                        highlights = values,
+                        revisionId =
+                            revisionId,
+                        sourceText =
+                            sourceText
+                    )
+
+                if (migration.changed) {
+                    persist(
+                        context = context,
+                        accountIdentity =
+                            accountIdentity,
+                        projectId =
+                            projectId,
+                        highlights =
+                            migration.values
+                    )
+                }
+
+                values = migration.values
+            }
+
+            values
                 .filter {
                     it.revisionId
                         == revisionId
@@ -254,6 +283,339 @@ object ReadSourceHighlightStore {
         root(context)
             .deleteRecursively()
         Unit
+    }
+
+    private data class MigrationResult(
+        val values: List<ReadSourceHighlight>,
+        val changed: Boolean
+    )
+
+    private data class MigrationCandidate(
+        val scalarStart: Int,
+        val score: Int
+    )
+
+    private fun migrateHighlights(
+        highlights: List<ReadSourceHighlight>,
+        revisionId: String,
+        sourceText: String
+    ): MigrationResult {
+        val current =
+            highlights
+                .filter {
+                    it.revisionId == revisionId
+                }
+                .toMutableList()
+        val retained =
+            mutableListOf<ReadSourceHighlight>()
+        var changed = false
+        val scalarCount =
+            ReadScalarOffsets
+                .scalarCount(sourceText)
+
+        highlights
+            .filter {
+                it.revisionId != revisionId
+            }
+            .forEach { value ->
+                val start =
+                    migrationScalarStart(
+                        highlight = value,
+                        sourceText = sourceText
+                    )
+                if (start == null) {
+                    retained += value
+                    return@forEach
+                }
+
+                val length =
+                    ReadScalarOffsets
+                        .scalarCount(
+                            value.quote
+                        )
+                if (
+                    length <= 0
+                    || start + length >
+                    scalarCount
+                ) {
+                    retained += value
+                    return@forEach
+                }
+
+                val end = start + length
+                val prefix =
+                    scalarSubstring(
+                        sourceText,
+                        (start - 32)
+                            .coerceAtLeast(0),
+                        start
+                    )
+                val suffix =
+                    scalarSubstring(
+                        sourceText,
+                        end,
+                        (end + 32)
+                            .coerceAtMost(
+                                scalarCount
+                            )
+                    )
+                val existingIndex =
+                    current.indexOfFirst {
+                        it.sourceScalarStart
+                            == start
+                            && it.sourceScalarLength
+                            == length
+                            && it.quote
+                            == value.quote
+                    }
+
+                if (existingIndex >= 0) {
+                    val existing =
+                        current[
+                            existingIndex
+                        ]
+                    if (
+                        existing.note == null
+                        && value.note != null
+                    ) {
+                        current[
+                            existingIndex
+                        ] = existing.copy(
+                            note = value.note
+                        )
+                    }
+                    changed = true
+                    return@forEach
+                }
+
+                current +=
+                    value.copy(
+                        revisionId =
+                            revisionId,
+                        sourceScalarStart =
+                            start,
+                        sourceScalarLength =
+                            length,
+                        prefixContext =
+                            prefix,
+                        suffixContext =
+                            suffix
+                    )
+                changed = true
+            }
+
+        return MigrationResult(
+            values =
+                retained + current,
+            changed = changed
+        )
+    }
+
+    private fun migrationScalarStart(
+        highlight: ReadSourceHighlight,
+        sourceText: String
+    ): Int? {
+        if (
+            highlight.quote.isEmpty()
+            || sourceText.isEmpty()
+        ) {
+            return null
+        }
+
+        val scalarCount =
+            ReadScalarOffsets
+                .scalarCount(sourceText)
+        val quoteLength =
+            ReadScalarOffsets
+                .scalarCount(
+                    highlight.quote
+                )
+        if (
+            quoteLength <= 0
+            || quoteLength > scalarCount
+        ) {
+            return null
+        }
+
+        val candidates =
+            mutableListOf<
+                MigrationCandidate
+            >()
+        var searchStart = 0
+
+        while (searchStart <= sourceText.length) {
+            val utf16Index =
+                sourceText.indexOf(
+                    highlight.quote,
+                    startIndex =
+                        searchStart
+                )
+            if (utf16Index < 0) {
+                break
+            }
+
+            val scalarStart =
+                ReadScalarOffsets
+                    .scalarOffset(
+                        text = sourceText,
+                        utf16Offset =
+                            utf16Index
+                    )
+            if (scalarStart != null) {
+                val scalarEnd =
+                    scalarStart
+                        + quoteLength
+                val prefix =
+                    scalarSubstring(
+                        sourceText,
+                        (scalarStart - 32)
+                            .coerceAtLeast(0),
+                        scalarStart
+                    )
+                val suffix =
+                    scalarSubstring(
+                        sourceText,
+                        scalarEnd,
+                        (scalarEnd + 32)
+                            .coerceAtMost(
+                                scalarCount
+                            )
+                    )
+                val score =
+                    commonSuffixScalarCount(
+                        highlight
+                            .prefixContext,
+                        prefix
+                    ) +
+                        commonPrefixScalarCount(
+                            highlight
+                                .suffixContext,
+                            suffix
+                        )
+
+                candidates +=
+                    MigrationCandidate(
+                        scalarStart =
+                            scalarStart,
+                        score = score
+                    )
+            }
+
+            if (candidates.size > 128) {
+                return null
+            }
+
+            searchStart =
+                if (
+                    utf16Index <
+                    sourceText.length
+                ) {
+                    utf16Index +
+                        Character.charCount(
+                            sourceText
+                                .codePointAt(
+                                    utf16Index
+                                )
+                        )
+                } else {
+                    sourceText.length + 1
+                }
+        }
+
+        if (candidates.isEmpty()) {
+            return null
+        }
+
+        if (candidates.size == 1) {
+            return candidates.first()
+                .scalarStart
+        }
+
+        val ranked =
+            candidates.sortedWith(
+                compareByDescending<
+                    MigrationCandidate
+                > {
+                    it.score
+                }
+                    .thenBy {
+                        it.scalarStart
+                    }
+            )
+        val best = ranked.first()
+        val second =
+            ranked.getOrNull(1)
+        if (
+            best.score < 8
+            || (
+                second != null
+                && best.score
+                    <= second.score
+            )
+        ) {
+            return null
+        }
+
+        return best.scalarStart
+    }
+
+    private fun commonPrefixScalarCount(
+        lhs: String,
+        rhs: String
+    ): Int {
+        val left =
+            lhs.codePoints()
+                .toArray()
+        val right =
+            rhs.codePoints()
+                .toArray()
+        val limit =
+            minOf(
+                left.size,
+                right.size
+            )
+        var count = 0
+
+        while (
+            count < limit
+            && left[count]
+                == right[count]
+        ) {
+            count += 1
+        }
+
+        return count
+    }
+
+    private fun commonSuffixScalarCount(
+        lhs: String,
+        rhs: String
+    ): Int {
+        val left =
+            lhs.codePoints()
+                .toArray()
+        val right =
+            rhs.codePoints()
+                .toArray()
+        val limit =
+            minOf(
+                left.size,
+                right.size
+            )
+        var count = 0
+
+        while (
+            count < limit
+            && left[
+                left.lastIndex - count
+            ] == right[
+                right.lastIndex - count
+            ]
+        ) {
+            count += 1
+        }
+
+        return count
     }
 
     private fun load(
