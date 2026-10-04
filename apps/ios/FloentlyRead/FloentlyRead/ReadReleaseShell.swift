@@ -1609,6 +1609,10 @@ private struct ReadProjectReaderView: View {
         .task {
             await prepareProject()
         }
+        .readProjectProgressSync(
+            project: hydrated ?? project,
+            manifest: manifest
+        )
     }
 
     private func prepareProject() async {
@@ -1632,13 +1636,19 @@ private struct ReadProjectReaderView: View {
                 throw ReadProjectClientError.invalidProject
             }
 
-            manifest = try ReadCoreNative.buildManifest(
+            let builtManifest = try ReadCoreNative.buildManifest(
                 documentId: value.id,
                 revisionId: value.revisionId,
                 title: value.title,
                 language: value.language ?? "auto",
                 text: text
             )
+            ReadRemoteProgressBridge.apply(
+                project: value,
+                manifest: builtManifest,
+                voiceSettings: voiceSettings
+            )
+            manifest = builtManifest
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -1652,9 +1662,12 @@ private struct ReadProjectReaderView: View {
             return
         }
 
-        let voice = voiceSettings.voiceId(
-            for: manifest.language
-        )
+        let voice =
+            hydrated?.progress?.voiceId
+            ?? project.progress?.voiceId
+            ?? voiceSettings.voiceId(
+                for: manifest.language
+            )
         loader.load(
             manifest: manifest,
             voiceId: voice,
