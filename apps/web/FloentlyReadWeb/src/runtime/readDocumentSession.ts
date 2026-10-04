@@ -63,7 +63,17 @@ export class ReadDocumentSession {
       && this.snapshot.revisionId === normalizedRevision
       && this.snapshot.manifest
     ) {
-      return this.snapshot.manifest;
+      const cachedManifest = this.snapshot.manifest;
+      const playback = this.playback.getSnapshot();
+
+      if (
+        playback.documentId !== cachedManifest.documentId
+        || playback.revisionId !== cachedManifest.revisionId
+      ) {
+        this.playback.loadDocument(cachedManifest);
+      }
+
+      return cachedManifest;
     }
 
     const generation = ++this.generation;
