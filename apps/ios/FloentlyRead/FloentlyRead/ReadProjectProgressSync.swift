@@ -35,7 +35,7 @@ enum ReadRemoteProgressBridge {
         )
         let fallbackLogicalTime = manifest.estimatedSourceDuration
             * (boundedPercent / 100)
-        let canonicalScalarOffset = {
+        let canonicalScalarOffset: Int? = {
             let offset = progress.currentCharacterOffset
             guard offset > 0 || boundedPercent <= 0 else {
                 return nil
