@@ -98,16 +98,18 @@ function RouteContent({ pathname }: { pathname: string }) {
 
 export function ProductApp({
   pathname,
+  search,
   user,
 }: {
   pathname: string;
+  search: string;
   user: ReadAuthUser;
 }) {
   const browserActive = pathname === "/app/browser";
 
   return (
     <ReadRuntimeProvider>
-      <AppShell pathname={pathname} user={user}>
+      <AppShell pathname={pathname} search={search} user={user}>
         <BrowserWorkspace active={browserActive} userId={user.id} />
         {browserActive ? null : <RouteContent pathname={pathname} />}
       </AppShell>
