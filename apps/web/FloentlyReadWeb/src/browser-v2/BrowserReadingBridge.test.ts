@@ -474,6 +474,44 @@ describe("BrowserReadingBridge", () => {
     expect(playback.getSnapshot().documentId).toBe("local-library-doc");
   });
 
+  it("fails closed when Read From Here no longer owns app playback", async () => {
+    const { bridge, playback } = harness();
+
+    await bridge.startReading("cloud-tab-1");
+    playback.setForeignDocument();
+
+    const started = await bridge.readFromHere({
+      x: 120,
+      y: 250,
+      viewportRevision: 7,
+    });
+
+    expect(started).toBe(false);
+    expect(playback.seekRequests).toHaveLength(0);
+    expect(playback.playCount).toBe(0);
+    expect(playback.clearCount).toBe(0);
+    expect(playback.getSnapshot()).toMatchObject({
+      documentId: "local-library-doc",
+      revisionId: "local-rev",
+      status: "playing",
+    });
+  });
+
+  it("fails closed when Previous or Next no longer owns app playback", async () => {
+    const { bridge, core, playback } = harness();
+
+    await bridge.startReading("cloud-tab-1");
+    playback.setForeignDocument();
+
+    const moved = await bridge.moveBySentence(1);
+
+    expect(moved).toBe(false);
+    expect(core.scalarRequests).toHaveLength(0);
+    expect(playback.seekRequests).toHaveLength(0);
+    expect(playback.clearCount).toBe(0);
+    expect(playback.getSnapshot().documentId).toBe("local-library-doc");
+  });
+
   it("revalidates the same private page before Read From Here seeks and starts", async () => {
     const { bridge, core, playback } = harness();
 
