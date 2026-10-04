@@ -56,6 +56,7 @@ export interface WebPlaybackTelemetryEvent {
     | "tts_ready"
     | "segment_started"
     | "segment_ended"
+    | "segment_handoff"
     | "audio_waiting"
     | "audio_playing"
     | "playback_error";
@@ -96,10 +97,18 @@ interface ResumeState {
   voiceId: string;
 }
 
+interface PendingSegmentHandoff {
+  fromIndex: number;
+  toIndex: number;
+  logicalBoundaryMs: number;
+  startedAtMs: number;
+}
+
 const MIN_SPEED = 0.5;
 const MAX_SPEED = 3;
 const DEFAULT_PREFETCH_HORIZON_MS = 120_000;
 const DEFAULT_PREFETCH_SEGMENTS = 4;
+const MAX_RECENT_TELEMETRY_EVENTS = 128;
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
@@ -159,6 +168,8 @@ export class WebPlaybackSession {
   private readonly cache: ReadAudioCachePort;
   private readonly engine: ReadAudioEngine;
   private readonly telemetry?: WebPlaybackTelemetrySink;
+  private readonly monotonicNow: () => number;
+  private readonly recentTelemetry: WebPlaybackTelemetryEvent[] = [];
 
   private manifest: ReadingManifestSummary | null = null;
   private active: RuntimeAudio | null = null;
@@ -172,6 +183,7 @@ export class WebPlaybackSession {
   private preferredVoiceLanguage: string | null = "en";
   private lastPersistedAt = 0;
   private lastTransitionAt = 0;
+  private pendingSegmentHandoff: PendingSegmentHandoff | null = null;
   private readonly lifecycleDisposers: Array<() => void> = [];
 
   private snapshot: WebPlaybackSnapshot = {
@@ -196,6 +208,7 @@ export class WebPlaybackSession {
     cache?: ReadAudioCachePort;
     engineFactory?: ReadAudioEngineFactory;
     telemetry?: WebPlaybackTelemetrySink;
+    monotonicNow?: () => number;
     initialPreferences?: {
       speed?: number;
       voiceId?: string | null;
@@ -206,6 +219,13 @@ export class WebPlaybackSession {
     this.tts = options.tts;
     this.cache = options.cache ?? new ReadAudioCache();
     this.telemetry = options.telemetry;
+    this.monotonicNow =
+      options.monotonicNow
+      ?? (() => (
+        typeof performance !== "undefined"
+          ? this.monotonicNow()
+          : Date.now()
+      ));
 
     const callbacks: BrowserAudioEngineCallbacks = {
       onTime: (currentTimeMs, physicalDurationMs) =>
@@ -253,6 +273,12 @@ export class WebPlaybackSession {
 
   readonly getSnapshot = (): WebPlaybackSnapshot => this.snapshot;
 
+  readonly getRecentTelemetry = (): WebPlaybackTelemetryEvent[] =>
+    this.recentTelemetry.map((event) => ({
+      ...event,
+      ...(event.data ? { data: { ...event.data } } : {}),
+    }));
+
   loadDocument(
     manifest: ReadingManifestSummary,
     options: {
@@ -263,6 +289,7 @@ export class WebPlaybackSession {
     this.generation += 1;
     this.playbackIntentGeneration += 1;
     this.wantsPlayback = false;
+    this.clearPendingSegmentHandoff();
     this.engine.pause();
     this.releaseRuntimeAudio();
 
@@ -324,6 +351,7 @@ export class WebPlaybackSession {
     this.generation += 1;
     this.playbackIntentGeneration += 1;
     this.wantsPlayback = false;
+    this.clearPendingSegmentHandoff();
     this.engine.pause();
     this.releaseRuntimeAudio();
     this.manifest = null;
@@ -347,6 +375,7 @@ export class WebPlaybackSession {
     if (!this.manifest) return;
 
     const intentGeneration = ++this.playbackIntentGeneration;
+    this.clearPendingSegmentHandoff();
     this.wantsPlayback = true;
     this.emit("play_requested");
     await this.startAtDocumentTime(
@@ -361,6 +390,7 @@ export class WebPlaybackSession {
 
     this.playbackIntentGeneration += 1;
     this.wantsPlayback = false;
+    this.clearPendingSegmentHandoff();
     this.engine.pause();
     this.replaceSnapshot({
       status: "paused",
@@ -390,6 +420,7 @@ export class WebPlaybackSession {
     const resumeAfterSeek = this.wantsPlayback
       || this.snapshot.status === "playing";
     const intentGeneration = ++this.playbackIntentGeneration;
+    this.clearPendingSegmentHandoff();
     this.wantsPlayback = resumeAfterSeek;
 
     this.emit("seek", {
@@ -448,6 +479,7 @@ export class WebPlaybackSession {
       || this.snapshot.status === "playing";
     const cursor = this.snapshot.elapsedMs;
     const intentGeneration = ++this.playbackIntentGeneration;
+    this.clearPendingSegmentHandoff();
 
     if (options.updatePreference !== false) {
       this.preferredVoiceId = normalized;
@@ -489,6 +521,7 @@ export class WebPlaybackSession {
     this.generation += 1;
     this.playbackIntentGeneration += 1;
     this.wantsPlayback = false;
+    this.clearPendingSegmentHandoff();
     this.persistResumeState(true);
     this.releaseRuntimeAudio();
     this.removePageLifecycleHandlers();
@@ -614,7 +647,7 @@ export class WebPlaybackSession {
       }
 
       this.active = runtime;
-      this.lastTransitionAt = performance.now();
+      this.lastTransitionAt = this.monotonicNow();
       this.replaceSnapshot({
         status: autoplay ? "preparing" : "paused",
         elapsedMs: target,
@@ -867,7 +900,7 @@ export class WebPlaybackSession {
     if (!manifest || !active) return;
 
     const nextIndex = active.descriptor.index + 1;
-    const endedAt = performance.now();
+    const endedAt = this.monotonicNow();
     const transitionFrom = this.lastTransitionAt;
 
     this.emit("segment_ended", {
@@ -876,6 +909,7 @@ export class WebPlaybackSession {
     });
 
     if (nextIndex >= manifest.segmentCount) {
+      this.clearPendingSegmentHandoff();
       this.wantsPlayback = false;
       this.replaceSnapshot({
         status: "ended",
@@ -887,6 +921,17 @@ export class WebPlaybackSession {
       this.persistResumeState(true);
       this.publishMediaState();
       return;
+    }
+
+    if (this.wantsPlayback) {
+      this.pendingSegmentHandoff = {
+        fromIndex: active.descriptor.index,
+        toIndex: nextIndex,
+        logicalBoundaryMs: active.descriptor.logicalEndMs,
+        startedAtMs: endedAt,
+      };
+    } else {
+      this.clearPendingSegmentHandoff();
     }
 
     void this.startAtDocumentTime(
@@ -907,6 +952,25 @@ export class WebPlaybackSession {
 
   private handlePlaying(): void {
     if (!this.wantsPlayback) return;
+
+    const pending = this.pendingSegmentHandoff;
+    const activeIndex = this.active?.descriptor.index ?? null;
+    if (pending) {
+      this.pendingSegmentHandoff = null;
+
+      if (activeIndex === pending.toIndex) {
+        this.emit("segment_handoff", {
+          fromIndex: pending.fromIndex,
+          toIndex: pending.toIndex,
+          logicalBoundaryMs: Math.round(pending.logicalBoundaryMs),
+          mediaStartLatencyMs: Math.max(
+            0,
+            this.monotonicNow() - pending.startedAtMs,
+          ),
+        });
+      }
+    }
+
     this.replaceSnapshot({ status: "playing" });
     this.publishMediaState();
     this.emit("audio_playing", {
@@ -917,6 +981,7 @@ export class WebPlaybackSession {
   private fail(message: string): void {
     this.playbackIntentGeneration += 1;
     this.wantsPlayback = false;
+    this.clearPendingSegmentHandoff();
     this.engine.pause();
     this.replaceSnapshot({
       status: "error",
@@ -1179,14 +1244,28 @@ export class WebPlaybackSession {
     }
   }
 
+  private clearPendingSegmentHandoff(): void {
+    this.pendingSegmentHandoff = null;
+  }
+
   private emit(
     name: WebPlaybackTelemetryEvent["name"],
     data?: WebPlaybackTelemetryEvent["data"],
   ): void {
-    this.telemetry?.({
+    const event: WebPlaybackTelemetryEvent = {
       name,
       at: Date.now(),
       data,
-    });
+    };
+
+    this.recentTelemetry.push(event);
+    if (this.recentTelemetry.length > MAX_RECENT_TELEMETRY_EVENTS) {
+      this.recentTelemetry.splice(
+        0,
+        this.recentTelemetry.length - MAX_RECENT_TELEMETRY_EVENTS,
+      );
+    }
+
+    this.telemetry?.(event);
   }
 }
