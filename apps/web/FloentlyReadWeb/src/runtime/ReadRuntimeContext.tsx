@@ -31,7 +31,10 @@ export interface ReadWebRuntime {
 
 const ReadRuntimeContext = createContext<ReadWebRuntime | null>(null);
 
-export function ReadRuntimeProvider({ children }: PropsWithChildren) {
+export function ReadRuntimeProvider({
+  children,
+  ownerId,
+}: PropsWithChildren<{ ownerId: string }>) {
   const [runtime, setRuntime] = useState<ReadWebRuntime | null>(null);
 
   useEffect(() => {
@@ -40,11 +43,12 @@ export function ReadRuntimeProvider({ children }: PropsWithChildren) {
       baseUrl: getReadApiBaseUrl(),
       getAccessToken: getAuthAccessToken,
     });
-    const cache = new ReadAudioCache();
+    const cache = new ReadAudioCache({ ownerId });
     const preferences = getReadPreferencesSnapshot();
     const playback = new WebPlaybackSession({
       core,
       tts,
+      ownerId,
       cache,
       initialPreferences: {
         speed: preferences.speed,
@@ -92,7 +96,7 @@ export function ReadRuntimeProvider({ children }: PropsWithChildren) {
       playback.destroy();
       core.terminate();
     };
-  }, []);
+  }, [ownerId]);
 
   return (
     <ReadRuntimeContext.Provider value={runtime}>
