@@ -33,7 +33,10 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import java.io.File
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
@@ -56,6 +59,9 @@ fun ReadOriginalPdfView(
     }
     var errorMessage by remember(file.absolutePath) {
         mutableStateOf<String?>(null)
+    }
+    val renderMutex = remember(file.absolutePath) {
+        Mutex()
     }
 
     DisposableEffect(file.absolutePath) {
@@ -115,56 +121,78 @@ fun ReadOriginalPdfView(
         bitmap = null
         errorMessage = null
 
-        runCatching {
-            withContext(Dispatchers.IO) {
-                currentRenderer.openPage(
-                    boundedPage
-                ).use { page ->
-                    val targetWidth = 1600
-                    val scale =
-                        targetWidth.toFloat()
-                            / page.width
+        try {
+            val rendered = withContext(
+                Dispatchers.IO
+            ) {
+                renderMutex.withLock {
+                    currentRenderer.openPage(
+                        boundedPage
+                    ).use { page ->
+                        val widthScale =
+                            1600f /
+                                page.width
+                                    .coerceAtLeast(1)
+                                    .toFloat()
+                        val heightScale =
+                            4096f /
+                                page.height
+                                    .coerceAtLeast(1)
+                                    .toFloat()
+                        val scale = minOf(
+                            widthScale,
+                            heightScale,
+                            2f
+                        ).coerceAtLeast(0.1f)
+                        val targetWidth = (
+                            page.width
                                 .coerceAtLeast(1)
-                                .toFloat()
-                    val targetHeight = (
-                        page.height
+                                .toFloat() * scale
+                            )
+                            .roundToInt()
                             .coerceAtLeast(1)
-                            .toFloat() * scale
-                        )
-                        .roundToInt()
-                        .coerceAtLeast(1)
+                        val targetHeight = (
+                            page.height
+                                .coerceAtLeast(1)
+                                .toFloat() * scale
+                            )
+                            .roundToInt()
+                            .coerceAtLeast(1)
 
-                    val target = Bitmap.createBitmap(
-                        targetWidth,
-                        targetHeight,
-                        Bitmap.Config.ARGB_8888
-                    )
-                    val matrix = Matrix().apply {
-                        postScale(
-                            scale,
-                            scale
+                        val target =
+                            Bitmap.createBitmap(
+                                targetWidth,
+                                targetHeight,
+                                Bitmap.Config.ARGB_8888
+                            )
+                        val matrix =
+                            Matrix().apply {
+                                postScale(
+                                    scale,
+                                    scale
+                                )
+                            }
+
+                        page.render(
+                            target,
+                            null,
+                            matrix,
+                            PdfRenderer.Page
+                                .RENDER_MODE_FOR_DISPLAY
                         )
+                        target
                     }
-
-                    page.render(
-                        target,
-                        null,
-                        matrix,
-                        PdfRenderer.Page
-                            .RENDER_MODE_FOR_DISPLAY
-                    )
-                    target
                 }
             }
+
+            bitmap = rendered
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            errorMessage =
+                error.message
+                    ?: "The PDF page could not be rendered."
         }
-            .onSuccess {
-                bitmap = it
-            }
-            .onFailure {
-                errorMessage =
-                    it.message
-                        ?: "The PDF page could not be rendered."
-            }
     }
 
     Column(
