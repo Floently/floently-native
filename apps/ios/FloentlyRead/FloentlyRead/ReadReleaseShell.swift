@@ -9,36 +9,102 @@ final class ReadAccessModel: ObservableObject {
         case idle
         case checking
         case granted
+        case grantedOffline
         case blocked
         case failed(String)
     }
 
     @Published private(set) var state: State = .idle
     @Published private(set) var status: FloentlyAccessStatus?
+    @Published private(set) var offlineVerifiedAt: Date?
+
+    private let leaseStore =
+        ReadAccessLeaseStore.shared
 
     func refresh(sessionStore: FloentlySessionStore) async {
-        guard let token = sessionStore.session?.token, !token.isEmpty else {
+        guard
+            let session = sessionStore.session,
+            !session.token.isEmpty
+        else {
             status = nil
+            offlineVerifiedAt = nil
             state = .idle
             return
         }
 
+        let accountIdentity =
+            readAccountIdentity(
+                userId: session.user.id,
+                email: session.user.email
+            )
+
         state = .checking
+        offlineVerifiedAt = nil
 
         do {
             let api = FloentlyAPIClient(
-                baseURL: URL(string: "https://learn-api.floently.com")!,
-                tokenProvider: { token }
+                baseURL: URL(
+                    string:
+                        "https://learn-api.floently.com"
+                )!,
+                tokenProvider: {
+                    session.token
+                }
             )
-            let value = try await FloentlyAccessService(api: api)
+            let value =
+                try await FloentlyAccessService(
+                    api: api
+                )
                 .fetchStatus()
+            let granted =
+                value.readAccess
+                || value.isInternalAllAccess
+
             status = value
-            state =
-                value.readAccess || value.isInternalAllAccess
+            state = granted
                 ? .granted
                 : .blocked
+
+            if let accountIdentity {
+                if granted {
+                    try? leaseStore.save(
+                        status: value,
+                        accountIdentity:
+                            accountIdentity
+                    )
+                } else {
+                    leaseStore.remove(
+                        accountIdentity:
+                            accountIdentity
+                    )
+                }
+            }
+        } catch let error as URLError {
+            guard error.code != .cancelled else {
+                return
+            }
+
+            if
+                let accountIdentity,
+                let lease =
+                    leaseStore.validGrantedLease(
+                        accountIdentity:
+                            accountIdentity
+                    )
+            {
+                status = lease.status
+                offlineVerifiedAt =
+                    lease.verifiedAt
+                state = .grantedOffline
+            } else {
+                state = .failed(
+                    error.localizedDescription
+                )
+            }
         } catch {
-            state = .failed(error.localizedDescription)
+            state = .failed(
+                error.localizedDescription
+            )
         }
     }
 }
@@ -70,6 +136,18 @@ struct ReadReleaseGateView: View {
                     )
                 case .granted:
                     ReadMainShell()
+                case .grantedOffline:
+                    ReadMainShell()
+                        .safeAreaInset(
+                            edge: .top,
+                            spacing: 0
+                        ) {
+                            ReadOfflineAccessLeaseBanner(
+                                verifiedAt:
+                                    accessModel
+                                        .offlineVerifiedAt
+                            )
+                        }
                 case .blocked:
                     ReadEntitlementView()
                 case .failed(let message):
@@ -94,6 +172,92 @@ struct ReadReleaseGateView: View {
             playbackSession.clear()
             projectStore.reset()
         }
+    }
+}
+
+private struct ReadOfflineAccessLeaseBanner: View {
+    @EnvironmentObject private var sessionStore:
+        FloentlySessionStore
+    @EnvironmentObject private var accessModel:
+        ReadAccessModel
+
+    let verifiedAt: Date?
+
+    private let palette = FloentlyPalette.read
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "wifi.slash")
+                .foregroundStyle(palette.accent2)
+
+            VStack(
+                alignment: .leading,
+                spacing: 2
+            ) {
+                Text("Offline mode")
+                    .font(
+                        .caption.weight(
+                            .bold
+                        )
+                    )
+                    .foregroundStyle(
+                        palette.text
+                    )
+
+                Text(detail)
+                    .font(.caption2)
+                    .foregroundStyle(
+                        palette.muted
+                    )
+                    .lineLimit(2)
+            }
+
+            Spacer(minLength: 8)
+
+            Button("Recheck") {
+                Task {
+                    await accessModel.refresh(
+                        sessionStore:
+                            sessionStore
+                    )
+                }
+            }
+            .buttonStyle(.plain)
+            .font(
+                .caption.weight(
+                    .semibold
+                )
+            )
+            .foregroundStyle(
+                palette.accent2
+            )
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .background(
+            palette.elevated.opacity(0.97)
+        )
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(palette.border)
+                .frame(height: 1)
+        }
+        .accessibilityElement(
+            children: .combine
+        )
+    }
+
+    private var detail: String {
+        guard let verifiedAt else {
+            return "Using recently verified Read access saved on this device."
+        }
+
+        return "Access last verified "
+            + verifiedAt.formatted(
+                date: .abbreviated,
+                time: .shortened
+            )
+            + "."
     }
 }
 
