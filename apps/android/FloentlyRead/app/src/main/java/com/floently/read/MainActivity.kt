@@ -205,6 +205,16 @@ fun ReadBrowserScreen(
         pendingPermissionRequest = null
     }
 
+    fun invalidateReadableSource() {
+        sourceGeneration += 1
+        extractionRequestGeneration += 1
+        extractedText = ""
+        extractedLanguage = "auto"
+        selectedText = ""
+        selectedLanguage = "auto"
+        activeReadingManifest = null
+    }
+
     fun updateNavigation(view: WebView, url: String? = view.url) {
         url?.let {
             if (
@@ -226,16 +236,6 @@ fun ReadBrowserScreen(
         rendererCrashUrl = null
         rendererCrashCount = 0
         rendererRecoveryBlocked = false
-    }
-
-    fun invalidateReadableSource() {
-        sourceGeneration += 1
-        extractionRequestGeneration += 1
-        extractedText = ""
-        extractedLanguage = "auto"
-        selectedText = ""
-        selectedLanguage = "auto"
-        activeReadingManifest = null
     }
 
     fun hardRestartBrowser(
