@@ -382,7 +382,7 @@ fun ReadPersistentPlayerDock(
                                                         voice.id
                                                             == currentVoiceId
                                                     ) {
-                                                        "✓ "
+                                                        "Selected · "
                                                             + voice.name
                                                     } else {
                                                         voice.name
