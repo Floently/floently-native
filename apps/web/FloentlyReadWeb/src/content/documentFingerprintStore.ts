@@ -31,13 +31,12 @@ function storage(): Storage | null {
 }
 
 function readEnvelope(ownerId: string): FingerprintEnvelope {
+  const storageKey = documentFingerprintStorageKey(ownerId);
   const target = storage();
   if (!target) return { version: 2, entries: {} };
 
   try {
-    const raw = target.getItem(
-      documentFingerprintStorageKey(ownerId),
-    );
+    const raw = target.getItem(storageKey);
     if (!raw) return { version: 2, entries: {} };
 
     const parsed = JSON.parse(raw) as { entries?: unknown };
@@ -84,6 +83,7 @@ function writeEnvelope(
   ownerId: string,
   envelope: FingerprintEnvelope,
 ): void {
+  const storageKey = documentFingerprintStorageKey(ownerId);
   const target = storage();
   if (!target) return;
 
@@ -93,7 +93,7 @@ function writeEnvelope(
       .slice(0, MAX_ENTRIES);
 
     target.setItem(
-      documentFingerprintStorageKey(ownerId),
+      storageKey,
       JSON.stringify({
         version: 2,
         entries: Object.fromEntries(ordered),
