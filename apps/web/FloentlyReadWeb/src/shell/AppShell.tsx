@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { ReadAuthUser } from "../auth/authStore";
 import {
   readMessage,
@@ -8,6 +8,10 @@ import {
 import { useReadRuntime } from "../runtime/ReadRuntimeContext";
 import { useWebPlaybackSnapshot } from "../playback/useWebPlaybackSnapshot";
 import { PlaybackDock } from "../reader/PlaybackDock";
+import {
+  PlaybackDiagnostics,
+  resolvePlaybackDiagnosticsEnabled,
+} from "../playback/PlaybackDiagnostics";
 import { navigateTo } from "../routing/navigation";
 
 interface NavItem {
@@ -62,10 +66,12 @@ function NavLink({
 
 export function AppShell({
   pathname,
+  search,
   user,
   children,
 }: {
   pathname: string;
+  search: string;
   user: ReadAuthUser;
   children: ReactNode;
 }) {
@@ -75,6 +81,15 @@ export function AppShell({
   const accountLabel = user.name || user.email;
   const accountInitial = accountLabel.slice(0, 1).toUpperCase();
   const previousPathnameRef = useRef(pathname);
+  const [diagnosticsEnabled, setDiagnosticsEnabled] = useState(
+    () => resolvePlaybackDiagnosticsEnabled(search),
+  );
+
+  useEffect(() => {
+    setDiagnosticsEnabled(
+      resolvePlaybackDiagnosticsEnabled(search),
+    );
+  }, [search]);
 
   useEffect(() => {
     if (previousPathnameRef.current === pathname) return;
@@ -186,6 +201,13 @@ export function AppShell({
 
         {runtime && playback.documentId ? (
           <PlaybackDock
+            session={runtime.playback}
+            snapshot={playback}
+          />
+        ) : null}
+
+        {runtime && diagnosticsEnabled ? (
+          <PlaybackDiagnostics
             session={runtime.playback}
             snapshot={playback}
           />
