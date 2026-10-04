@@ -2132,11 +2132,6 @@ private struct ReadProjectReaderView: View {
                 }
             }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if playback.document != nil {
-                ReadPersistentPlayerView()
-            }
-        }
         .task {
             await prepareProject()
         }
