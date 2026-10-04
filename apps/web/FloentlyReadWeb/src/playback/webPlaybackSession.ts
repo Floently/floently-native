@@ -654,7 +654,12 @@ export class WebPlaybackSession {
         logicalEndMs: runtime.descriptor.logicalEndMs,
       });
     } catch (error) {
-      if (generation !== this.generation) return;
+      if (
+        generation !== this.generation
+        || intentGeneration !== this.playbackIntentGeneration
+      ) {
+        return;
+      }
       this.fail(
         error instanceof Error
           ? error.message
