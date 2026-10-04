@@ -127,6 +127,26 @@ describe("ReadAudioCache quota-pressure recovery", () => {
     audioCache.dispose();
   });
 
+  it("recognizes legacy browser quota exceptions as storage pressure", async () => {
+    let attempts = 0;
+    const { cache } = installCacheHarness(async () => {
+      attempts += 1;
+      if (attempts === 1) {
+        const error = new Error("legacy quota full");
+        error.name = "NS_ERROR_DOM_QUOTA_REACHED";
+        throw error;
+      }
+    });
+
+    const audioCache = new ReadAudioCache();
+    const playable = await audioCache.resolve(asset());
+
+    expect(cache.put).toHaveBeenCalledTimes(2);
+
+    playable.release();
+    audioCache.dispose();
+  });
+
   it("keeps already-fetched bytes playable when quota retry also fails", async () => {
     const { cache, fetchMock } = installCacheHarness(async () => {
       throw quotaError();
