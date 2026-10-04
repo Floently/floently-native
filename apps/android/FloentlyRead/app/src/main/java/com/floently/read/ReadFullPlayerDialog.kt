@@ -522,7 +522,7 @@ fun ReadFullPlayerDialog(
                                                 voice.id
                                                     == currentVoiceId
                                             ) {
-                                                "✓ "
+                                                "Selected · "
                                                     + voice.name
                                             } else {
                                                 voice.name
