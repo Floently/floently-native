@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "separator": "U+001F",
+  "cases": [
+    {
+      "id": "resolved-provider-model",
+      "documentId": "doc-demo",
+      "revisionId": "rev-2",
+      "language": "fi",
+      "voiceId": "fi-FI-standard-a",
+      "provider": "azure",
+      "model": "neural-v3",
+      "expectedRenditionId": "sha256:5682956b9e542df696019b80aa942c908c313514f770d4c9c3238f4dd98734e1",
+      "segmentId": "seg-7",
+      "segmentIndex": 7,
+      "logicalStartMs": 12000,
+      "logicalEndMs": 16800,
+      "physicalDurationMs": 4310,
+      "expectedTimingMapId": "sha256:ee9665f71ac07578078f74d9cc95f27baa82e4071deabea67b1a10e71abb784c"
+    },
+    {
+      "id": "legacy-unknown-provider-duration",
+      "documentId": "doc-demo",
+      "revisionId": "rev-2",
+      "language": "fi",
+      "voiceId": "fi-FI-standard-a",
+      "provider": null,
+      "model": null,
+      "expectedRenditionId": "sha256:115bebb15b8a729bea1535a146197d8e23d9d7a8a362db1a541f356037a00b0d",
+      "segmentId": "seg-7",
+      "segmentIndex": 7,
+      "logicalStartMs": 12000,
+      "logicalEndMs": 16800,
+      "physicalDurationMs": null,
+      "expectedTimingMapId": "sha256:f3aa60c168f08308f17629e179a9c9b56eab180ae63a115ca85a95b941c10150"
+    }
+  ]
+}
