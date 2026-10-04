@@ -747,6 +747,13 @@ final class ReadProjectStore: ObservableObject {
                     snapshotAccountIdentity,
                 projectId: project.id
             )
+            await ReadSourceHighlightStore
+                .shared
+                .removeProject(
+                    accountIdentity:
+                        snapshotAccountIdentity,
+                    projectId: project.id
+                )
         }
         projects.removeAll { $0.id == project.id }
         await persistSnapshotIfBound()
