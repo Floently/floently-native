@@ -133,6 +133,57 @@ describe("ReadDocumentSession playback ownership", () => {
     documents.destroy();
   });
 
+  it("clears obsolete playback before a replacement manifest finishes building", async () => {
+    const { core, playback, documents } = harness();
+
+    await documents.load(source());
+
+    let resolveReplacement!:
+      (value: ReadingManifestSummary) => void;
+    core.buildManifest = async () => {
+      core.buildCount += 1;
+      return new Promise<ReadingManifestSummary>((resolve) => {
+        resolveReplacement = resolve;
+      });
+    };
+
+    const replacementSource: ReadDocumentSource = {
+      ...source(),
+      id: "doc-2",
+      revisionId: "rev-2",
+      title: "Replacement document",
+      text: "A different logical document.",
+    };
+    const replacement = documents.load(replacementSource);
+
+    expect(playback.getSnapshot().documentId).toBeNull();
+    expect(playback.clearCount).toBe(1);
+    expect(documents.getSnapshot()).toMatchObject({
+      status: "loading",
+      documentId: "doc-2",
+      revisionId: "rev-2",
+      manifest: null,
+    });
+
+    resolveReplacement({
+      ...manifest(),
+      handle: "doc-2:rev-2",
+      documentId: "doc-2",
+      revisionId: "rev-2",
+      title: "Replacement document",
+    });
+
+    await replacement;
+
+    expect(playback.getSnapshot()).toMatchObject({
+      status: "ready",
+      documentId: "doc-2",
+      revisionId: "rev-2",
+    });
+
+    documents.destroy();
+  });
+
   it("re-attaches a cached manifest when another surface took playback ownership", async () => {
     const { core, playback, documents } = harness();
 
