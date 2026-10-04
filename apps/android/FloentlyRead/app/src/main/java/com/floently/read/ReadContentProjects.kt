@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import org.json.JSONTokener
 import java.io.BufferedOutputStream
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
@@ -104,14 +105,14 @@ private fun projectFromJson(value: JSONObject): ReadContentProject? {
             "lastOpenedAt",
             "last_opened_at"
         ).takeIf { it.isNotBlank() },
-        rawText = string("rawText", "raw_text")
+        rawText = string("rawText", "raw_text", "text", "content")
             .takeIf { it.isNotBlank() }
     )
 }
 
 class ReadContentProjectClient(
     private val baseUrl: String =
-        "https://learn-api.floently.com"
+        "https://flowreader-api.onrender.com"
 ) {
     suspend fun listProjects(
         accessToken: String,
@@ -119,23 +120,32 @@ class ReadContentProjectClient(
         offset: Int = 0
     ): List<ReadContentProject> {
         val url = baseUrl.trimEnd('/') +
-            "/api/v1/projects?limit=" +
+            "/api/v1/documents?limit=" +
             limit.coerceIn(1, 100) +
             "&offset=" +
             offset.coerceAtLeast(0)
 
-        val payload = requestJson(
-            url = url,
-            method = "GET",
-            accessToken = accessToken
+        val payload = unwrap(
+            requestPayload(
+                url = url,
+                method = "GET",
+                accessToken = accessToken
+            )
         )
-        val objectValue = unwrap(payload)
-        val projects = objectValue.optJSONArray("projects")
-            ?: JSONArray()
+
+        val documents = when (payload) {
+            is JSONArray -> payload
+            is JSONObject ->
+                payload.optJSONArray("projects")
+                    ?: payload.optJSONArray("documents")
+                    ?: payload.optJSONArray("items")
+                    ?: JSONArray()
+            else -> JSONArray()
+        }
 
         return buildList {
-            for (index in 0 until projects.length()) {
-                val value = projects.optJSONObject(index) ?: continue
+            for (index in 0 until documents.length()) {
+                val value = documents.optJSONObject(index) ?: continue
                 projectFromJson(value)?.let(::add)
             }
         }
@@ -150,14 +160,20 @@ class ReadContentProjectClient(
             StandardCharsets.UTF_8.name()
         ).replace("+", "%20")
 
-        val payload = requestJson(
-            url = baseUrl.trimEnd('/') +
-                "/api/v1/projects/$encoded",
-            method = "GET",
-            accessToken = accessToken
+        val payload = unwrap(
+            requestPayload(
+                url = baseUrl.trimEnd('/') +
+                    "/api/v1/documents/$encoded",
+                method = "GET",
+                accessToken = accessToken
+            )
         )
-        val objectValue = unwrap(payload)
+        val objectValue = payload as? JSONObject
+            ?: throw IllegalStateException(
+                "The document service returned an invalid response."
+            )
         val candidate = objectValue.optJSONObject("project")
+            ?: objectValue.optJSONObject("document")
             ?: objectValue
 
         val project = projectFromJson(candidate)
@@ -184,20 +200,29 @@ class ReadContentProjectClient(
 
         val body = JSONObject()
             .put("text", normalized)
+            .put("content", normalized)
+            .put("language", "auto")
             .put("sourceType", "text")
+            .put("source_type", "text")
         title?.trim()?.takeIf { it.isNotEmpty() }?.let {
             body.put("title", it)
         }
 
-        val payload = requestJson(
-            url = baseUrl.trimEnd('/') +
-                "/api/v1/projects/from-text",
-            method = "POST",
-            accessToken = accessToken,
-            body = body
+        val payload = unwrap(
+            requestPayload(
+                url = baseUrl.trimEnd('/') +
+                    "/api/v1/documents/from-text",
+                method = "POST",
+                accessToken = accessToken,
+                body = body
+            )
         )
-        val objectValue = unwrap(payload)
+        val objectValue = payload as? JSONObject
+            ?: throw IllegalStateException(
+                "The document service returned an invalid response."
+            )
         val candidate = objectValue.optJSONObject("project")
+            ?: objectValue.optJSONObject("document")
             ?: objectValue
 
         return projectFromJson(candidate)
@@ -220,7 +245,7 @@ class ReadContentProjectClient(
         val boundary = "FloentlyRead-" + UUID.randomUUID()
 
         val connection = URL(
-            baseUrl.trimEnd('/') + "/api/v1/projects/upload"
+            baseUrl.trimEnd('/') + "/api/v1/documents/upload"
         ).openConnection() as HttpURLConnection
 
         try {
@@ -286,10 +311,15 @@ class ReadContentProjectClient(
             val payload = if (raw.isBlank()) {
                 JSONObject()
             } else {
-                JSONObject(raw)
+                JSONTokener(raw).nextValue()
             }
-            val objectValue = unwrap(payload)
+            val unwrapped = unwrap(payload)
+            val objectValue = unwrapped as? JSONObject
+                ?: throw IllegalStateException(
+                    "The document service returned an invalid response."
+                )
             val candidate = objectValue.optJSONObject("project")
+                ?: objectValue.optJSONObject("document")
                 ?: objectValue
 
             projectFromJson(candidate)
@@ -301,12 +331,12 @@ class ReadContentProjectClient(
         }
     }
 
-    private suspend fun requestJson(
+    private suspend fun requestPayload(
         url: String,
         method: String,
         accessToken: String,
         body: JSONObject? = null
-    ): JSONObject = withContext(Dispatchers.IO) {
+    ): Any = withContext(Dispatchers.IO) {
         val connection = URL(url)
             .openConnection() as HttpURLConnection
 
@@ -347,18 +377,26 @@ class ReadContentProjectClient(
                 )
             }
 
-            if (raw.isBlank()) JSONObject() else JSONObject(raw)
+            if (raw.isBlank()) {
+                JSONObject()
+            } else {
+                JSONTokener(raw).nextValue()
+            }
         } finally {
             connection.disconnect()
         }
     }
 
-    private fun unwrap(payload: JSONObject): JSONObject {
+    private fun unwrap(payload: Any): Any {
+        if (payload !is JSONObject) {
+            return payload
+        }
+
         return if (
-            payload.optBoolean("ok")
-            && payload.optJSONObject("data") != null
+            payload.has("data")
+            && !payload.isNull("data")
         ) {
-            payload.optJSONObject("data")!!
+            payload.get("data")
         } else {
             payload
         }
