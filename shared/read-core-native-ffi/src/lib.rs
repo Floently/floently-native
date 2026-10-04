@@ -1,4 +1,10 @@
-use floently_read_core::{build_manifest, ReadingManifest, ReadingSegment};
+use floently_read_core::{
+    build_manifest,
+    resolve_source_anchor,
+    ReadingManifest,
+    ReadingSegment,
+    SourceAnchorResolution,
+};
 use percent_encoding::percent_decode_str;
 use roxmltree::Document;
 use serde::Serialize;
@@ -68,6 +74,22 @@ struct EpubManifestItem {
     media_type: String,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SourceAnchorResolutionDto {
+    scalar_start: usize,
+    scalar_length: usize,
+}
+
+impl From<SourceAnchorResolution> for SourceAnchorResolutionDto {
+    fn from(value: SourceAnchorResolution) -> Self {
+        Self {
+            scalar_start: value.scalar_start,
+            scalar_length: value.scalar_length,
+        }
+    }
+}
+
 impl From<ReadingManifest> for ManifestDto {
     fn from(value: ReadingManifest) -> Self {
         Self {
@@ -128,6 +150,29 @@ fn build_manifest_json(
 
     serde_json::to_string(&ManifestDto::from(manifest))
         .map_err(|error| format!("manifest serialization failed: {error}"))
+}
+
+fn resolve_source_anchor_json(
+    source_text: &str,
+    quote: &str,
+    prefix_context: &str,
+    suffix_context: &str,
+) -> Result<String, String> {
+    let resolution =
+        resolve_source_anchor(
+            source_text,
+            quote,
+            prefix_context,
+            suffix_context,
+        )
+        .map(SourceAnchorResolutionDto::from);
+
+    serde_json::to_string(&resolution)
+        .map_err(|error| {
+            format!(
+                "source anchor serialization failed: {error}"
+            )
+        })
 }
 
 fn extract_epub_json(
@@ -430,6 +475,32 @@ pub unsafe extern "C" fn floently_read_build_manifest_json(
     }
 }
 
+/// Resolves a source anchor in the shared Rust Read Core.
+/// Returns JSON or null JSON for an unresolved/ambiguous anchor.
+#[no_mangle]
+pub unsafe extern "C" fn floently_read_resolve_source_anchor_json(
+    source_text: *const c_char,
+    quote: *const c_char,
+    prefix_context: *const c_char,
+    suffix_context: *const c_char,
+) -> *mut c_char {
+    let result = (|| {
+        resolve_source_anchor_json(
+            utf8_arg(source_text, "source_text")?,
+            utf8_arg(quote, "quote")?,
+            utf8_arg(prefix_context, "prefix_context")?,
+            utf8_arg(suffix_context, "suffix_context")?,
+        )
+    })();
+
+    match result {
+        Ok(json) => CString::new(json)
+            .map(CString::into_raw)
+            .unwrap_or(ptr::null_mut()),
+        Err(_) => ptr::null_mut(),
+    }
+}
+
 /// Extracts an EPUB archive into the caller-provided private directory and
 /// returns JSON describing the package spine. The extractor rejects unsafe
 /// paths, links, encryption, excessive archive fan-out and oversized output.
@@ -464,7 +535,11 @@ pub unsafe extern "C" fn floently_read_string_free(pointer: *mut c_char) {
 
 #[cfg(target_os = "android")]
 mod android {
-    use super::{build_manifest_json, extract_epub_json};
+    use super::{
+        build_manifest_json,
+        extract_epub_json,
+        resolve_source_anchor_json,
+    };
     use jni::objects::{JClass, JString};
     use jni::sys::{jint, jstring};
     use jni::JNIEnv;
@@ -539,6 +614,51 @@ mod android {
     }
 
     #[no_mangle]
+    pub extern "system" fn Java_com_floently_read_ReadCoreNative_nativeResolveSourceAnchorJson(
+        mut env: JNIEnv<'_>,
+        _class: JClass<'_>,
+        source_text: JString<'_>,
+        quote: JString<'_>,
+        prefix_context: JString<'_>,
+        suffix_context: JString<'_>,
+    ) -> jstring {
+        let result = (|| {
+            let source_text =
+                java_string(&mut env, source_text, "sourceText")?;
+            let quote =
+                java_string(&mut env, quote, "quote")?;
+            let prefix_context =
+                java_string(&mut env, prefix_context, "prefixContext")?;
+            let suffix_context =
+                java_string(&mut env, suffix_context, "suffixContext")?;
+
+            resolve_source_anchor_json(
+                &source_text,
+                &quote,
+                &prefix_context,
+                &suffix_context,
+            )
+        })();
+
+        let json = match result {
+            Ok(json) => json,
+            Err(message) => {
+                return throw_and_null(&mut env, message);
+            }
+        };
+
+        match env.new_string(json) {
+            Ok(value) => value.into_raw(),
+            Err(error) => throw_and_null(
+                &mut env,
+                format!(
+                    "source anchor result could not be returned: {error}"
+                ),
+            ),
+        }
+    }
+
+    #[no_mangle]
     pub extern "system" fn Java_com_floently_read_ReadCoreNative_nativeExtractEpubJson(
         mut env: JNIEnv<'_>,
         _class: JClass<'_>,
@@ -575,6 +695,39 @@ mod android {
 mod tests {
     use super::*;
     use serde_json::Value;
+
+    #[test]
+    fn source_anchor_json_uses_shared_core_resolution() {
+        let json = resolve_source_anchor_json(
+            "Before target here. Later target ends.",
+            "target",
+            "Before ",
+            " here.",
+        )
+        .expect("source anchor json");
+
+        let decoded: Value =
+            serde_json::from_str(&json).expect("valid json");
+
+        assert_eq!(
+            decoded["scalarStart"].as_u64(),
+            Some("Before ".chars().count() as u64)
+        );
+        assert_eq!(
+            decoded["scalarLength"].as_u64(),
+            Some("target".chars().count() as u64)
+        );
+
+        let unresolved = resolve_source_anchor_json(
+            "same / same",
+            "same",
+            "",
+            "",
+        )
+        .expect("unresolved source anchor json");
+
+        assert_eq!(unresolved, "null");
+    }
 
     #[test]
     fn native_json_matches_core_timeline() {
