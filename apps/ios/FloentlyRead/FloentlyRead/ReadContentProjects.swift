@@ -597,6 +597,7 @@ final class ReadProjectStore: ObservableObject {
     @Published var errorMessage: String?
 
     private let client = ReadContentProjectClient()
+    private let originalStore = ReadOriginalDocumentStore.shared
     private var progressSyncTail: Task<Void, Never>?
     private var progressSyncGeneration = 0
     private var progressSyncSequence = 0
@@ -674,6 +675,9 @@ final class ReadProjectStore: ObservableObject {
             id: project.id,
             accessToken: accessToken
         )
+        await originalStore.delete(
+            projectId: project.id
+        )
         projects.removeAll { $0.id == project.id }
     }
 
@@ -697,6 +701,17 @@ final class ReadProjectStore: ObservableObject {
             title: nil,
             accessToken: accessToken
         )
+
+        if
+            project.sourceType.lowercased() == "pdf"
+            || url.pathExtension.lowercased() == "pdf"
+        {
+            try? await originalStore.savePDF(
+                projectId: project.id,
+                sourceURL: url
+            )
+        }
+
         upsert(project)
         return project
     }
