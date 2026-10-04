@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { ReadAuthUser } from "../auth/authStore";
 import {
   readMessage,
@@ -79,8 +79,9 @@ export function AppShell({
   const accountLabel = user.name || user.email;
   const accountInitial = accountLabel.slice(0, 1).toUpperCase();
   const previousPathnameRef = useRef(pathname);
-  const diagnosticsEnabled =
-    resolvePlaybackDiagnosticsEnabled();
+  const [diagnosticsEnabled] = useState(
+    resolvePlaybackDiagnosticsEnabled,
+  );
 
   useEffect(() => {
     if (previousPathnameRef.current === pathname) return;
