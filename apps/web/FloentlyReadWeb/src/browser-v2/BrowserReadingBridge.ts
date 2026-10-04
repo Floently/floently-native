@@ -319,9 +319,16 @@ export class BrowserReadingBridge {
       return false;
     }
 
-    await this.playback.play();
-    if (!this.isCurrent(generation, tabId, manifest)) {
-      return false;
+    const statusAfterSeek = this.playback.getSnapshot().status;
+    if (
+      statusAfterSeek !== "playing"
+      && statusAfterSeek !== "preparing"
+      && statusAfterSeek !== "buffering"
+    ) {
+      await this.playback.play();
+      if (!this.isCurrent(generation, tabId, manifest)) {
+        return false;
+      }
     }
 
     this.enqueueHighlight(anchor);
