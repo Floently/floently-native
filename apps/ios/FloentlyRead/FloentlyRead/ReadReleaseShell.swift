@@ -547,6 +547,8 @@ private struct ReadAccessAccountDeletionControl: View {
                 ).deleteAccount(
                     deletionReason: "read_native_access_screen"
                 )
+                await ReadOriginalDocumentStore.shared
+                    .clearAll()
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -1919,6 +1921,8 @@ private struct ReadSettingsScreen: View {
                 try await auth.deleteAccount(
                     deletionReason: "in_app_settings"
                 )
+                await ReadOriginalDocumentStore.shared
+                    .clearAll()
                 playback.clear()
             } catch {
                 deleteError = error.localizedDescription
