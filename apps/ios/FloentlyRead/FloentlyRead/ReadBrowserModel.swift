@@ -196,12 +196,19 @@ final class ReadBrowserController: ObservableObject {
         estimatedProgress = webView.estimatedProgress
     }
 
-    func readPage() {
+    func readPage(
+        onReady: (() -> Void)? = nil
+    ) {
         guard let webView, let url = webView.url else { return }
         guard !Self.isProtectedAuthenticationURL(url) else {
             readingStatus = "Finish signing in before using Read on this page."
             return
         }
+
+        extractedText = ""
+        extractedLanguage = "auto"
+        selectionText = ""
+        selectionLanguage = "auto"
 
         let request = beginExtraction(for: url)
         let script = Self.guardedExtractionJavaScript(
@@ -255,18 +262,24 @@ final class ReadBrowserController: ObservableObject {
                 self.pageTitle =
                     payload.title.isEmpty ? self.pageTitle : payload.title
                 self.readingStatus =
-                    "Ready to read \(payload.wordCount) words "
-                    + "from the live page."
+                    "Starting Read for \(payload.wordCount) words "
+                    + "while the live page stays visible."
+                onReady?()
             }
         }
     }
 
-    func readSelection() {
+    func readSelection(
+        onReady: (() -> Void)? = nil
+    ) {
         guard let webView, let url = webView.url else { return }
         guard !Self.isProtectedAuthenticationURL(url) else {
             readingStatus = "Finish signing in before using Read on this page."
             return
         }
+
+        selectionText = ""
+        selectionLanguage = "auto"
 
         let request = beginExtraction(for: url)
         let script = Self.guardedExtractionJavaScript(
@@ -311,10 +324,15 @@ final class ReadBrowserController: ObservableObject {
                     payload.language.isEmpty
                     ? "auto"
                     : payload.language
-                self.readingStatus =
-                    text.isEmpty
-                    ? "Select text on the page first."
-                    : "Selection ready to read."
+                if text.isEmpty {
+                    self.readingStatus =
+                        "Select text on the page first."
+                } else {
+                    self.readingStatus =
+                        "Starting Read for the selected text "
+                        + "while the live page stays visible."
+                    onReady?()
+                }
             }
         }
     }
