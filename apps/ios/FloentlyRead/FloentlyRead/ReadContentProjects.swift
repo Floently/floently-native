@@ -606,17 +606,44 @@ final class ReadProjectStore: ObservableObject {
     private let client = ReadContentProjectClient()
     private let originalStore = ReadOriginalDocumentStore.shared
     private let snapshotStore = ReadProjectSnapshotStore.shared
+    private var snapshotAccountIdentity: String?
     private var progressSyncTail: Task<Void, Never>?
     private var progressSyncGeneration = 0
     private var progressSyncSequence = 0
+
+    func bindAccount(
+        userId: String,
+        email: String
+    ) {
+        let id = userId.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        if !id.isEmpty {
+            snapshotAccountIdentity = "id:" + id
+            return
+        }
+
+        let normalizedEmail = email
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        snapshotAccountIdentity =
+            normalizedEmail.isEmpty
+            ? nil
+            : "email:" + normalizedEmail
+    }
 
     func refresh(accessToken: String) async {
         activity = .loading
         errorMessage = nil
 
-        let cached = await snapshotStore.load(
-            accessToken: accessToken
-        )
+        let cached: [ReadContentProject]
+        if let snapshotAccountIdentity {
+            cached = await snapshotStore.load(
+                accountIdentity: snapshotAccountIdentity
+            )
+        } else {
+            cached = []
+        }
         if projects.isEmpty && !cached.isEmpty {
             projects = cached
         }
@@ -629,10 +656,7 @@ final class ReadProjectStore: ObservableObject {
                 remote,
                 cached: cached
             )
-            try? await snapshotStore.save(
-                projects: projects,
-                accessToken: accessToken
-            )
+            await persistSnapshotIfBound()
             activity = .idle
         } catch {
             activity = .idle
@@ -658,10 +682,7 @@ final class ReadProjectStore: ObservableObject {
             accessToken: accessToken
         )
         upsert(hydrated)
-        try? await snapshotStore.save(
-            projects: projects,
-            accessToken: accessToken
-        )
+        await persistSnapshotIfBound()
         return hydrated
     }
 
@@ -680,10 +701,7 @@ final class ReadProjectStore: ObservableObject {
             accessToken: accessToken
         )
         upsert(project)
-        try? await snapshotStore.save(
-            projects: projects,
-            accessToken: accessToken
-        )
+        await persistSnapshotIfBound()
         return project
     }
 
@@ -702,10 +720,7 @@ final class ReadProjectStore: ObservableObject {
             accessToken: accessToken
         )
         upsert(project)
-        try? await snapshotStore.save(
-            projects: projects,
-            accessToken: accessToken
-        )
+        await persistSnapshotIfBound()
         return project
     }
 
@@ -722,10 +737,7 @@ final class ReadProjectStore: ObservableObject {
             projectId: project.id
         )
         projects.removeAll { $0.id == project.id }
-        try? await snapshotStore.save(
-            projects: projects,
-            accessToken: accessToken
-        )
+        await persistSnapshotIfBound()
     }
 
     func addFile(
@@ -760,10 +772,7 @@ final class ReadProjectStore: ObservableObject {
         }
 
         upsert(project)
-        try? await snapshotStore.save(
-            projects: projects,
-            accessToken: accessToken
-        )
+        await persistSnapshotIfBound()
         return project
     }
 
@@ -836,9 +845,21 @@ final class ReadProjectStore: ObservableObject {
         progressSyncSequence &+= 1
         progressSyncTail?.cancel()
         progressSyncTail = nil
+        snapshotAccountIdentity = nil
         projects = []
         activity = .idle
         errorMessage = nil
+    }
+
+    private func persistSnapshotIfBound() async {
+        guard let snapshotAccountIdentity else {
+            return
+        }
+
+        try? await snapshotStore.save(
+            projects: projects,
+            accountIdentity: snapshotAccountIdentity
+        )
     }
 
     private func mergeRemoteProjects(
