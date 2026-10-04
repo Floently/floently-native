@@ -19,6 +19,8 @@ object ReadPlaybackCommandContract {
         "com.floently.read.command.LOAD_MANIFEST"
     const val ACTION_CHANGE_VOICE =
         "com.floently.read.command.CHANGE_VOICE"
+    const val ACTION_CLEAR_PLAYBACK =
+        "com.floently.read.command.CLEAR_PLAYBACK"
 
     const val EXTRA_DOCUMENT_JSON = "document_json"
     const val EXTRA_MANIFEST_HANDOFF_ID = "manifest_handoff_id"
@@ -40,6 +42,12 @@ object ReadPlaybackCommandContract {
     val changeVoiceCommand: SessionCommand
         get() = SessionCommand(
             ACTION_CHANGE_VOICE,
+            Bundle.EMPTY
+        )
+
+    val clearPlaybackCommand: SessionCommand
+        get() = SessionCommand(
+            ACTION_CLEAR_PLAYBACK,
             Bundle.EMPTY
         )
 
