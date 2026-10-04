@@ -1,6 +1,7 @@
 package com.floently.read
 
 import android.content.ContentResolver
+import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -604,7 +605,12 @@ class ReadContentProjectClient(
     }
 }
 
-class ReadProjectStore {
+class ReadProjectStore(
+    context: Context
+) {
+    private val applicationContext =
+        context.applicationContext
+
     var projects by mutableStateOf<List<ReadContentProject>>(
         emptyList()
     )
@@ -696,6 +702,10 @@ class ReadProjectStore {
             id = project.id,
             accessToken = accessToken
         )
+        ReadOriginalDocumentStore.delete(
+            context = applicationContext,
+            projectId = project.id
+        )
         projects = projects.filterNot {
             it.id == project.id
         }
@@ -709,11 +719,29 @@ class ReadProjectStore {
         errorMessage = null
         activity = "Uploading and extracting"
         return try {
-            client.uploadProject(
+            val project = client.uploadProject(
                 uri = uri,
                 resolver = resolver,
                 accessToken = accessToken
-            ).also(::upsert)
+            )
+
+            if (
+                project.sourceType.lowercase() == "pdf"
+                || resolver.getType(uri)
+                    ?.lowercase() == "application/pdf"
+            ) {
+                runCatching {
+                    ReadOriginalDocumentStore.savePdf(
+                        context = applicationContext,
+                        projectId = project.id,
+                        uri = uri,
+                        resolver = resolver
+                    )
+                }
+            }
+
+            upsert(project)
+            project
         } finally {
             activity = "idle"
         }
