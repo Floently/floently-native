@@ -12,6 +12,85 @@ import java.net.URI
 import java.net.URL
 import java.security.MessageDigest
 
+object ReadNativeAudioIdentity {
+    fun renditionId(
+        documentId: String,
+        revisionId: String,
+        language: String,
+        voiceId: String,
+        provider: String?,
+        model: String?
+    ): String =
+        digest(
+            listOf(
+                documentId,
+                revisionId,
+                language.ifBlank { "auto" },
+                voiceId,
+                provider
+                    ?.trim()
+                    ?.takeIf {
+                        it.isNotEmpty()
+                    }
+                    ?: "unknown-provider",
+                model
+                    ?.trim()
+                    ?.takeIf {
+                        it.isNotEmpty()
+                    }
+                    ?: "unknown-model",
+                "read-audio-rendition-v1"
+            )
+        )
+
+    fun timingMapId(
+        renditionId: String,
+        segmentId: String,
+        segmentIndex: Int,
+        logicalStartMs: Long,
+        logicalEndMs: Long,
+        physicalDurationMs: Long?
+    ): String =
+        digest(
+            listOf(
+                renditionId,
+                segmentId,
+                segmentIndex.toString(),
+                logicalStartMs.toString(),
+                logicalEndMs.toString(),
+                physicalDurationMs
+                    ?.coerceAtLeast(0L)
+                    ?.toString()
+                    ?: "unknown-duration",
+                "read-timing-map-v1"
+            )
+        )
+
+    private fun digest(
+        components: List<String>
+    ): String {
+        val canonical =
+            components.joinToString(
+                "\u001f"
+            )
+        val value =
+            MessageDigest
+                .getInstance("SHA-256")
+                .digest(
+                    canonical.toByteArray(
+                        Charsets.UTF_8
+                    )
+                )
+                .joinToString("") {
+                    "%02x".format(
+                        it.toInt() and 0xff
+                    )
+                }
+
+        return "sha256:$value"
+    }
+}
+
 data class ReadNativeTtsAsset(
     val audioUri: String,
     val cacheKey: String,
