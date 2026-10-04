@@ -85,7 +85,7 @@ struct ReadContentProject: Identifiable, Equatable, Sendable {
             createdAt: string(["createdAt", "created_at"]),
             updatedAt: string(["updatedAt", "updated_at"]),
             lastOpenedAt: string(["lastOpenedAt", "last_opened_at"]).nilIfBlank,
-            rawText: string(["rawText", "raw_text"]).nilIfBlank
+            rawText: string(["rawText", "raw_text", "text", "content"]).nilIfBlank
         )
     }
 }
@@ -125,7 +125,7 @@ actor ReadContentProjectClient {
     private let session: URLSession
 
     init(
-        baseURL: URL = URL(string: "https://learn-api.floently.com")!,
+        baseURL: URL = URL(string: "https://flowreader-api.onrender.com")!,
         session: URLSession = .shared
     ) {
         self.baseURL = baseURL
@@ -138,7 +138,7 @@ actor ReadContentProjectClient {
         offset: Int = 0
     ) async throws -> [ReadContentProject] {
         var components = URLComponents(
-            url: baseURL.appending(path: "/api/v1/projects"),
+            url: baseURL.appending(path: "/api/v1/documents"),
             resolvingAgainstBaseURL: false
         )
         components?.queryItems = [
@@ -155,12 +155,23 @@ actor ReadContentProjectClient {
             method: "GET",
             accessToken: accessToken
         )
-        let object = unwrappedObject(payload)
+        let value = unwrappedValue(payload)
 
-        guard let projects = object["projects"] as? [Any] else {
+        if let values = value as? [Any] {
+            return values.compactMap(ReadContentProject.decode)
+        }
+
+        guard let object = value as? [String: Any] else {
             return []
         }
-        return projects.compactMap(ReadContentProject.decode)
+
+        for key in ["projects", "documents", "items"] {
+            if let values = object[key] as? [Any] {
+                return values.compactMap(ReadContentProject.decode)
+            }
+        }
+
+        return []
     }
 
     func project(
@@ -168,7 +179,7 @@ actor ReadContentProjectClient {
         accessToken: String
     ) async throws -> ReadContentProject {
         let url = baseURL.appending(
-            path: "/api/v1/projects/\(id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id)"
+            path: "/api/v1/documents/\(id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id)"
         )
         let payload = try await requestJSON(
             url: url,
@@ -176,7 +187,10 @@ actor ReadContentProjectClient {
             accessToken: accessToken
         )
         let object = unwrappedObject(payload)
-        let candidate = object["project"] ?? object
+        let candidate =
+            object["project"]
+            ?? object["document"]
+            ?? object
 
         guard
             let project = ReadContentProject.decode(candidate),
@@ -200,7 +214,10 @@ actor ReadContentProjectClient {
 
         var body: [String: Any] = [
             "text": normalized,
-            "sourceType": "text"
+            "content": normalized,
+            "language": "auto",
+            "sourceType": "text",
+            "source_type": "text"
         ]
         if let title = title?.nilIfBlank {
             body["title"] = title
@@ -208,14 +225,17 @@ actor ReadContentProjectClient {
 
         let data = try JSONSerialization.data(withJSONObject: body)
         let payload = try await requestJSON(
-            url: baseURL.appending(path: "/api/v1/projects/from-text"),
+            url: baseURL.appending(path: "/api/v1/documents/from-text"),
             method: "POST",
             accessToken: accessToken,
             body: data,
             contentType: "application/json"
         )
         let object = unwrappedObject(payload)
-        let candidate = object["project"] ?? object
+        let candidate =
+            object["project"]
+            ?? object["document"]
+            ?? object
 
         guard let project = ReadContentProject.decode(candidate) else {
             throw ReadProjectClientError.invalidProject
@@ -283,7 +303,7 @@ actor ReadContentProjectClient {
         try handle.synchronize()
 
         var request = URLRequest(
-            url: baseURL.appending(path: "/api/v1/projects/upload")
+            url: baseURL.appending(path: "/api/v1/documents/upload")
         )
         request.httpMethod = "POST"
         request.setValue(
@@ -304,7 +324,10 @@ actor ReadContentProjectClient {
 
         let payload = try JSONSerialization.jsonObject(with: data)
         let object = unwrappedObject(payload)
-        let candidate = object["project"] ?? object
+        let candidate =
+            object["project"]
+            ?? object["document"]
+            ?? object
         guard let project = ReadContentProject.decode(candidate) else {
             throw ReadProjectClientError.invalidProject
         }
@@ -353,19 +376,24 @@ actor ReadContentProjectClient {
         }
     }
 
+    private func unwrappedValue(
+        _ payload: Any
+    ) -> Any {
+        guard let object = payload as? [String: Any] else {
+            return payload
+        }
+
+        if let data = object["data"] {
+            return data
+        }
+
+        return object
+    }
+
     private func unwrappedObject(
         _ payload: Any
     ) -> [String: Any] {
-        guard let object = payload as? [String: Any] else {
-            return [:]
-        }
-        if
-            object["ok"] as? Bool == true,
-            let data = object["data"] as? [String: Any]
-        {
-            return data
-        }
-        return object
+        unwrappedValue(payload) as? [String: Any] ?? [:]
     }
 
     private static func errorMessage(
