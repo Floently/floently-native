@@ -27,6 +27,7 @@ import type {
 import {
   WebPlaybackSession,
   type ReadPlaybackCore,
+  type WebPlaybackTelemetryEvent,
 } from "./webPlaybackSession";
 
 const SEGMENT_DURATION_MS = 10_000;
@@ -229,6 +230,10 @@ function createHarness(
     voiceId?: string | null;
     voiceLanguage?: string | null;
   },
+  runtimeOptions: {
+    telemetry?: (event: WebPlaybackTelemetryEvent) => void;
+    monotonicNow?: () => number;
+  } = {},
 ): Harness {
   const core = new FakeCore();
   const tts = new FakeTts();
@@ -240,6 +245,8 @@ function createHarness(
     tts,
     cache,
     initialPreferences,
+    telemetry: runtimeOptions.telemetry,
+    monotonicNow: runtimeOptions.monotonicNow,
     engineFactory: (callbacks) => {
       engine = new FakeEngine(callbacks);
       return engine;
@@ -609,6 +616,95 @@ describe("WebPlaybackSession document-wide contract", () => {
 
     expect(engine.loads.at(-1)?.playbackRate).toBe(2);
     expect(session.getSnapshot().speed).toBe(2);
+
+    session.destroy();
+  });
+
+  it("measures sequential media handoff latency from ended to playing", async () => {
+    const events: WebPlaybackTelemetryEvent[] = [];
+    let now = 100;
+
+    const { session, engine } = createHarness(
+      undefined,
+      {
+        telemetry: (event) => events.push(event),
+        monotonicNow: () => now,
+      },
+    );
+
+    session.loadDocument(makeManifest());
+    await session.play();
+
+    now = 1_000;
+    engine.emitEnded();
+    now = 1_042;
+
+    await vi.waitFor(() => {
+      expect(
+        events.some((event) => event.name === "segment_handoff"),
+      ).toBe(true);
+    });
+
+    const handoff = events.find(
+      (event) => event.name === "segment_handoff",
+    );
+    expect(handoff?.data).toMatchObject({
+      fromIndex: 0,
+      toIndex: 1,
+      logicalBoundaryMs: 10_000,
+      mediaStartLatencyMs: 42,
+    });
+
+    expect(
+      session.getRecentTelemetry().find(
+        (event) => event.name === "segment_handoff",
+      )?.data,
+    ).toMatchObject({
+      fromIndex: 0,
+      toIndex: 1,
+      mediaStartLatencyMs: 42,
+    });
+
+    session.destroy();
+  });
+
+  it("drops a pending handoff measurement when pause cancels the transition", async () => {
+    const events: WebPlaybackTelemetryEvent[] = [];
+    let now = 100;
+    let resolvePosition!:
+      (value: LogicalTimePosition | null) => void;
+
+    const { session, core, engine } = createHarness(
+      undefined,
+      {
+        telemetry: (event) => events.push(event),
+        monotonicNow: () => now,
+      },
+    );
+
+    session.loadDocument(makeManifest());
+    await session.play();
+
+    core.positionOverride = () =>
+      new Promise((resolve) => {
+        resolvePosition = resolve;
+      });
+
+    now = 1_000;
+    engine.emitEnded();
+    session.pause();
+
+    now = 1_100;
+    resolvePosition({
+      index: 1,
+      localOffsetMs: 0,
+    });
+    await Promise.resolve();
+
+    expect(
+      events.filter((event) => event.name === "segment_handoff"),
+    ).toHaveLength(0);
+    expect(session.getSnapshot().status).toBe("paused");
 
     session.destroy();
   });
