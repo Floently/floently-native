@@ -1028,6 +1028,8 @@ private fun ReadMainShell(
                             ReadLibraryScreen(
                                 sessionStore = sessionStore,
                                 projectStore = projectStore,
+                                playbackController =
+                                    playbackController,
                                 onOpenProject = {
                                     activeProject = it
                                 },
@@ -1430,6 +1432,7 @@ private fun ReadHomeScreen(
 private fun ReadLibraryScreen(
     sessionStore: FloentlySecureSessionStore,
     projectStore: ReadProjectStore,
+    playbackController: ReadPlaybackController,
     onOpenProject: (ReadContentProject) -> Unit,
     onAdd: () -> Unit
 ) {
@@ -1611,17 +1614,32 @@ private fun ReadLibraryScreen(
                             projectStore.errorMessage =
                                 "Sign in again to change your library."
                         } else {
-                            scope.launch {
-                                runCatching {
-                                    projectStore.delete(
-                                        project = project,
-                                        accessToken = token
-                                    )
-                                }.onFailure {
-                                    projectStore.errorMessage =
-                                        it.message
-                                            ?: "Could not remove this reading."
+                            val performDelete: () -> Unit = {
+                                scope.launch {
+                                    runCatching {
+                                        projectStore.delete(
+                                            project = project,
+                                            accessToken = token
+                                        )
+                                    }.onFailure {
+                                        projectStore.errorMessage =
+                                            it.message
+                                                ?: "Could not remove this reading."
+                                    }
                                 }
+                            }
+
+                            if (
+                                playbackController
+                                    .activeDocumentId
+                                    == project.id
+                            ) {
+                                playbackController.clear(
+                                    onComplete =
+                                        performDelete
+                                )
+                            } else {
+                                performDelete()
                             }
                         }
                     }
@@ -2620,14 +2638,29 @@ private fun ReadProjectReaderScreen(
 
                         try {
                             if (offlineSaved) {
-                                offlineCoordinator
-                                    .removeOffline(
-                                        manifest = value,
-                                        voiceId = voice,
-                                        accountIdentity =
-                                            identity
-                                    )
-                                offlineSaved = false
+                                if (
+                                    playbackController
+                                        .activeDocumentId
+                                        == value.documentId
+                                    && playbackController
+                                        .activeRevisionId
+                                        == value.revisionId
+                                    && playbackController
+                                        .activeVoiceId
+                                        == voice
+                                ) {
+                                    offlineError =
+                                        "This offline voice is currently in use. Open another reading or stop the current session before removing it."
+                                } else {
+                                    offlineCoordinator
+                                        .removeOffline(
+                                            manifest = value,
+                                            voiceId = voice,
+                                            accountIdentity =
+                                                identity
+                                        )
+                                    offlineSaved = false
+                                }
                             } else {
                                 offlineCoordinator
                                     .saveOffline(
