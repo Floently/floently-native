@@ -107,6 +107,87 @@ describe("project progress writer", () => {
     expect(save).toHaveBeenCalledTimes(1);
   });
 
+  it("does not start a queued write after its owner becomes inactive", async () => {
+    let ownerActive = true;
+    const save = vi.fn(async () => undefined);
+    const writer = createProjectProgressWriter(save, {
+      canWrite: () => ownerActive,
+    });
+
+    writer.queue("p1", { currentCharacterOffset: 12 });
+    ownerActive = false;
+
+    await writer.flush();
+
+    expect(save).toHaveBeenCalledTimes(0);
+  });
+
+  it("does not start a pending second write after the owner changes", async () => {
+    let ownerActive = true;
+    let releaseFirst!: () => void;
+    const save = vi.fn(
+      async (
+        _projectId: string,
+        progress: { currentCharacterOffset?: number },
+      ) => {
+        if (progress.currentCharacterOffset === 10) {
+          await new Promise<void>((resolve) => {
+            releaseFirst = resolve;
+          });
+        }
+      },
+    );
+    const writer = createProjectProgressWriter(save, {
+      canWrite: () => ownerActive,
+    });
+
+    writer.queue("p1", { currentCharacterOffset: 10 });
+    writer.queue("p1", { currentCharacterOffset: 20 });
+
+    await Promise.resolve();
+    expect(save).toHaveBeenCalledTimes(1);
+
+    ownerActive = false;
+    releaseFirst();
+    await writer.flush();
+
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save.mock.calls[0]?.[1].currentCharacterOffset).toBe(10);
+  });
+
+  it("drops pending work when the runtime invalidates the writer", async () => {
+    let releaseFirst!: () => void;
+    const save = vi.fn(
+      async (
+        _projectId: string,
+        progress: { currentCharacterOffset?: number },
+      ) => {
+        if (progress.currentCharacterOffset === 10) {
+          await new Promise<void>((resolve) => {
+            releaseFirst = resolve;
+          });
+        }
+      },
+    );
+    const writer = createProjectProgressWriter(save);
+
+    writer.queue("p1", { currentCharacterOffset: 10 });
+    writer.queue("p1", { currentCharacterOffset: 20 });
+
+    await Promise.resolve();
+    expect(save).toHaveBeenCalledTimes(1);
+
+    writer.invalidate();
+    releaseFirst();
+    await writer.flush();
+
+    expect(save).toHaveBeenCalledTimes(1);
+
+    writer.queue("p1", { currentCharacterOffset: 30 });
+    await writer.flush();
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
   it("allows a failed snapshot to be retried later", async () => {
     let attempts = 0;
     const save = vi.fn(async () => {

@@ -80,7 +80,12 @@ export function projectProgressFromPlayback(
  */
 export function createProjectProgressWriter(
   save: SaveProjectProgress = updateContentProjectProgress,
+  options: {
+    canWrite?: () => boolean;
+  } = {},
 ) {
+  const canWrite = options.canWrite ?? (() => true);
+  let invalidated = false;
   let activeKey: string | null = null;
   let lastSavedKey: string | null = null;
   let inFlight: Promise<void> | null = null;
@@ -88,6 +93,11 @@ export function createProjectProgressWriter(
 
   const startNext = () => {
     if (inFlight || !pending) return;
+
+    if (invalidated || !canWrite()) {
+      pending = null;
+      return;
+    }
 
     if (pending.key === lastSavedKey) {
       pending = null;
@@ -99,10 +109,19 @@ export function createProjectProgressWriter(
     activeKey = next.key;
 
     inFlight = Promise.resolve()
-      .then(() => save(next.projectId, next.progress))
+      .then(async () => {
+        if (invalidated || !canWrite()) {
+          return false;
+        }
+
+        await save(next.projectId, next.progress);
+        return true;
+      })
       .then(
-        () => {
-          lastSavedKey = next.key;
+        (saved) => {
+          if (saved) {
+            lastSavedKey = next.key;
+          }
         },
         () => {
           // Progress is opportunistic. Keep playback responsive and allow the
@@ -118,6 +137,8 @@ export function createProjectProgressWriter(
 
   return {
     queue(projectId: string, progress: ProjectProgressPayload): void {
+      if (invalidated || !canWrite()) return;
+
       const key = progressKey(projectId, progress);
 
       if (pending?.key === key) return;
@@ -150,6 +171,14 @@ export function createProjectProgressWriter(
 
     async flush(): Promise<void> {
       for (;;) {
+        if (invalidated) {
+          pending = null;
+          if (inFlight) {
+            await inFlight;
+          }
+          return;
+        }
+
         startNext();
 
         if (inFlight) {
@@ -159,6 +188,11 @@ export function createProjectProgressWriter(
 
         if (!pending) return;
       }
+    },
+
+    invalidate(): void {
+      invalidated = true;
+      pending = null;
     },
   };
 }

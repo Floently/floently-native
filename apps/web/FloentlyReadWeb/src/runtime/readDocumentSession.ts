@@ -78,13 +78,29 @@ export class ReadDocumentSession {
 
     const generation = ++this.generation;
     const previousManifest = this.snapshot.manifest;
+    const sameDocumentSnapshot =
+      this.snapshot.documentId === normalizedId
+      && this.snapshot.revisionId === normalizedRevision;
+    const retainedManifest =
+      sameDocumentSnapshot ? previousManifest : null;
+
+    const playbackSnapshot = this.playback.getSnapshot();
+    if (
+      playbackSnapshot.documentId
+      && (
+        playbackSnapshot.documentId !== normalizedId
+        || playbackSnapshot.revisionId !== normalizedRevision
+      )
+    ) {
+      this.playback.clear();
+    }
 
     this.replaceSnapshot({
       status: "loading",
       documentId: normalizedId,
       revisionId: normalizedRevision,
       title: source.title.trim() || "Untitled document",
-      manifest: previousManifest,
+      manifest: retainedManifest,
       error: null,
     });
 
@@ -134,7 +150,7 @@ export class ReadDocumentSession {
         documentId: normalizedId,
         revisionId: normalizedRevision,
         title: source.title.trim() || "Untitled document",
-        manifest: previousManifest,
+        manifest: retainedManifest,
         error: message,
       });
 
