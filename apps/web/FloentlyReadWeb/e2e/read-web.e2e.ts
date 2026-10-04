@@ -251,7 +251,7 @@ test("landing and auth layouts stay inside desktop and mobile viewports", async 
   }
 });
 
-test("direct trailing-slash routes canonicalize before app routing", async ({
+test("direct protected trailing-slash routes canonicalize before app routing", async ({
   page,
 }) => {
   await installBackend(page);
@@ -264,6 +264,12 @@ test("direct trailing-slash routes canonicalize before app routing", async ({
   await expect(
     page.getByRole("heading", { name: "Preferences", exact: true }),
   ).toBeVisible();
+});
+
+test("direct public trailing-slash routes canonicalize before auth rendering", async ({
+  page,
+}) => {
+  await installBackend(page, { authenticated: false });
 
   await page.goto("/login/?returnTo=%2Fapp%2Flibrary%2F");
 
