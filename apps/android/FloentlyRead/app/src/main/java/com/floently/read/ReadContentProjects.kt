@@ -379,8 +379,55 @@ class ReadContentProjectClient(
             resolver = resolver,
             uri = uri
         ) ?: "document"
+        val safeFileName = fileName
+            .replace("\r", "_")
+            .replace("\n", "_")
+            .replace("\"", "_")
+        val rawMime = resolver.getType(uri)
+            .orEmpty()
+            .trim()
+        val mime = rawMime.takeIf {
+            it.matches(
+                Regex(
+                    "^[A-Za-z0-9!#        val fileName = queryDisplayName(
+            resolver = resolver,
+            uri = uri
+        ) ?: "document"
         val mime = resolver.getType(uri)
             ?: "application/octet-stream"
+        val boundary = "FloentlyRead-" + UUID.randomUUID()
+^_.+-]+/[A-Za-z0-9!#        val fileName = queryDisplayName(
+            resolver = resolver,
+            uri = uri
+        ) ?: "document"
+        val mime = resolver.getType(uri)
+            ?: "application/octet-stream"
+        val boundary = "FloentlyRead-" + UUID.randomUUID()
+^_.+-]+$"
+                )
+            )
+        } ?: "application/octet-stream"
+        val fileSize = runCatching {
+            resolver.openAssetFileDescriptor(
+                uri,
+                "r"
+            )?.use {
+                it.length
+            }
+        }.getOrNull()
+        if (fileSize == 0L) {
+            throw IllegalArgumentException(
+                "The selected file is empty."
+            )
+        }
+        if (
+            fileSize != null
+            && fileSize > 75L * 1024L * 1024L
+        ) {
+            throw IllegalArgumentException(
+                "Files larger than 75 MB are not supported."
+            )
+        }
         val boundary = "FloentlyRead-" + UUID.randomUUID()
 
         val connection = URL(
@@ -420,7 +467,7 @@ class ReadContentProjectClient(
                 write(
                     "Content-Disposition: form-data; " +
                         "name=\"file\"; filename=\"" +
-                        fileName.replace("\"", "_") +
+                        safeFileName +
                         "\"\r\n"
                 )
                 write("Content-Type: $mime\r\n\r\n")
