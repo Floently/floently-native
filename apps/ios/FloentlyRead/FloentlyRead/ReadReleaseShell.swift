@@ -1861,94 +1861,153 @@ private struct ReadProjectReaderView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                HStack(spacing: 12) {
+                HStack(
+                    spacing:
+                        FloentlyDesignTokens
+                            .Space
+                            .s2
+                ) {
                     Button {
                         dismiss()
                     } label: {
-                        Image(systemName: "chevron.left")
-                            .frame(width: 48, height: 48)
+                        Image(
+                            systemName:
+                                "chevron.left"
+                        )
+                        .frame(
+                            width:
+                                FloentlyDesignTokens
+                                    .Control
+                                    .iconTarget,
+                            height:
+                                FloentlyDesignTokens
+                                    .Control
+                                    .iconTarget
+                        )
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(palette.text)
                     .accessibilityLabel("Back")
 
                     Text(project.title)
-                        .font(.headline)
+                        .font(
+                            .system(
+                                size:
+                                    FloentlyDesignTokens
+                                        .TypeScale
+                                        .title,
+                                weight: .semibold
+                            )
+                        )
                         .foregroundStyle(palette.text)
                         .lineLimit(1)
 
-                    Spacer()
+                    Spacer(minLength: 4)
 
-                    Button {
-                        Task {
-                            await toggleOffline()
+                    Menu {
+                        Button {
+                            startListening()
+                        } label: {
+                            Label(
+                                preparing
+                                ? "Preparing audio…"
+                                : "Listen",
+                                systemImage:
+                                    preparing
+                                    ? "hourglass"
+                                    : "headphones"
+                            )
                         }
-                    } label: {
-                        if offlineBusy {
-                            ProgressView()
-                                .tint(palette.accent2)
-                                .frame(width: 44, height: 44)
-                        } else {
-                            Image(
-                                systemName:
+                        .disabled(
+                            manifest == nil
+                            || preparing
+                        )
+
+                        Button {
+                            Task {
+                                await toggleOffline()
+                            }
+                        } label: {
+                            Label(
+                                offlineBusy
+                                ? "Updating offline copy…"
+                                : (
                                     offlineAvailable
-                                    ? "checkmark.circle.fill"
+                                    ? "Remove offline download"
+                                    : "Save for offline listening"
+                                ),
+                                systemImage:
+                                    offlineAvailable
+                                    ? "trash"
                                     : "arrow.down.circle"
                             )
-                            .frame(width: 44, height: 44)
                         }
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(
-                        offlineAvailable
-                        ? palette.accent2
-                        : palette.text
-                    )
-                    .background(
-                        palette.elevated.opacity(0.9)
-                    )
-                    .clipShape(Circle())
-                    .disabled(
-                        manifest == nil
-                        || resolvedVoiceId == nil
-                        || offlineBusy
-                    )
-                    .accessibilityLabel(
-                        offlineAvailable
-                        ? "Remove offline download"
-                        : "Save for offline listening"
-                    )
-
-                    Button {
-                        startListening()
+                        .disabled(
+                            manifest == nil
+                            || resolvedVoiceId == nil
+                            || offlineBusy
+                        )
                     } label: {
-                        if preparing {
-                            ProgressView()
-                                .tint(.white)
-                                .frame(width: 48, height: 48)
-                        } else {
-                            Image(systemName: "headphones")
-                                .frame(width: 48, height: 48)
-                        }
+                        Image(systemName: "ellipsis")
+                            .font(
+                                .system(
+                                    size: 18,
+                                    weight: .semibold
+                                )
+                            )
+                            .foregroundStyle(palette.text)
+                            .frame(
+                                width:
+                                    FloentlyDesignTokens
+                                        .Control
+                                        .iconTarget,
+                                height:
+                                    FloentlyDesignTokens
+                                        .Control
+                                        .iconTarget
+                            )
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.white)
-                    .background(palette.accent)
-                    .clipShape(Circle())
-                    .disabled(manifest == nil || preparing)
-                    .accessibilityLabel("Listen")
+                    .accessibilityLabel(
+                        "Reader options"
+                    )
                 }
-                .padding(.horizontal, 12)
-                .frame(height: 58)
+                .padding(
+                    .horizontal,
+                    FloentlyDesignTokens
+                        .Space
+                        .s1
+                )
+                .frame(height: 56)
+                .background(
+                    FloentlyDesignTokens
+                        .Colors
+                        .surface1
+                )
+                .overlay(alignment: .bottom) {
+                    Rectangle()
+                        .fill(
+                            FloentlyDesignTokens
+                                .Colors
+                                .borderSoft
+                        )
+                        .frame(height: 1)
+                }
 
                 ProgressView(
-                    value: playback.document?.id == project.id
+                    value:
+                        playback.document?.id
+                            == project.id
                         && playback.duration > 0
-                        ? playback.elapsedTime / playback.duration
+                        ? playback.elapsedTime
+                            / playback.duration
                         : 0
                 )
-                .tint(palette.accent)
-                .frame(height: 3)
+                .tint(
+                    FloentlyDesignTokens
+                        .Colors
+                        .brand
+                )
+                .frame(height: 2)
 
                 if let errorMessage {
                     ReadStatusBanner(
@@ -2027,12 +2086,14 @@ private struct ReadProjectReaderView: View {
                                     Text(paragraph)
                                         .font(
                                             .system(
-                                                size: 20,
-                                                weight: .regular,
-                                                design: .rounded
+                                                size:
+                                                    FloentlyDesignTokens
+                                                        .TypeScale
+                                                        .readerDefault,
+                                                weight: .regular
                                             )
                                         )
-                                        .lineSpacing(8)
+                                        .lineSpacing(12)
                                         .foregroundStyle(palette.text)
                                         .textSelection(.enabled)
                                 }
