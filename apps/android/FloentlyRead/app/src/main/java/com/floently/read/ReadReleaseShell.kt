@@ -2656,6 +2656,17 @@ private fun ReadProjectReaderScreen(
                 }
             }
         } else {
+            if (
+                (hydrated ?: project)
+                    .sourceType
+                    .lowercase() == "pdf"
+            ) {
+                ReadStatusBanner(
+                    text =
+                        "The original PDF is not stored on this device. Showing the semantic reading layer."
+                )
+            }
+
             val paragraphs = remember(text) {
                 text.replace("\r\n", "\n")
                     .split(Regex("\\n\\s*\\n"))
