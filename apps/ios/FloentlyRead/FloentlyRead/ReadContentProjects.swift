@@ -34,7 +34,7 @@ struct ReadContentProject: Identifiable, Equatable, Sendable {
             return "EPUB"
         case "docx", "word":
             return "Document"
-        case "web", "website":
+        case "web", "website", "url":
             return "Website"
         case "text", "txt", "markdown", "md":
             return "Text"
@@ -241,6 +241,67 @@ actor ReadContentProjectClient {
             throw ReadProjectClientError.invalidProject
         }
         return project
+    }
+
+    func createURLProject(
+        title: String?,
+        sourceURL: String,
+        accessToken: String
+    ) async throws -> ReadContentProject {
+        let normalized = sourceURL.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        guard
+            let url = URL(string: normalized),
+            let scheme = url.scheme?.lowercased(),
+            scheme == "https" || scheme == "http"
+        else {
+            throw ReadProjectClientError.server(
+                "Enter a valid http or https URL."
+            )
+        }
+
+        var body: [String: Any] = [
+            "url": normalized
+        ]
+        if let title = title?.nilIfBlank {
+            body["title"] = title
+        }
+
+        let data = try JSONSerialization.data(withJSONObject: body)
+        let payload = try await requestJSON(
+            url: baseURL.appending(path: "/api/v1/documents/from-url"),
+            method: "POST",
+            accessToken: accessToken,
+            body: data,
+            contentType: "application/json"
+        )
+        let object = unwrappedObject(payload)
+        let candidate =
+            object["project"]
+            ?? object["document"]
+            ?? object
+
+        guard let project = ReadContentProject.decode(candidate) else {
+            throw ReadProjectClientError.invalidProject
+        }
+        return project
+    }
+
+    func deleteProject(
+        id: String,
+        accessToken: String
+    ) async throws {
+        let encoded = id.addingPercentEncoding(
+            withAllowedCharacters: .urlPathAllowed
+        ) ?? id
+        _ = try await requestJSON(
+            url: baseURL.appending(
+                path: "/api/v1/documents/\(encoded)"
+            ),
+            method: "DELETE",
+            accessToken: accessToken
+        )
     }
 
     func uploadProject(
@@ -484,6 +545,36 @@ final class ReadProjectStore: ObservableObject {
         )
         upsert(project)
         return project
+    }
+
+    func addURL(
+        title: String?,
+        sourceURL: String,
+        accessToken: String
+    ) async throws -> ReadContentProject {
+        errorMessage = nil
+        activity = .importing("Importing link")
+        defer { activity = .idle }
+
+        let project = try await client.createURLProject(
+            title: title,
+            sourceURL: sourceURL,
+            accessToken: accessToken
+        )
+        upsert(project)
+        return project
+    }
+
+    func delete(
+        _ project: ReadContentProject,
+        accessToken: String
+    ) async throws {
+        errorMessage = nil
+        try await client.deleteProject(
+            id: project.id,
+            accessToken: accessToken
+        )
+        projects.removeAll { $0.id == project.id }
     }
 
     func addFile(
