@@ -64,7 +64,12 @@ class ReadProgressiveAudioCoordinator(
                     audioUri = offline.localFile
                         .toURI()
                         .toString(),
-                    actualDurationMs = offline.durationMs
+                    actualDurationMs =
+                        offline.durationMs,
+                    renditionId =
+                        offline.renditionId,
+                    timingMapId =
+                        offline.timingMapId
                 )
             } else {
                 val cached = cache.cachedAsset(
@@ -72,6 +77,39 @@ class ReadProgressiveAudioCoordinator(
                 )
 
                 if (cached != null) {
+                    val renditionId =
+                        ReadNativeAudioIdentity
+                            .renditionId(
+                                documentId =
+                                    manifest.documentId,
+                                revisionId =
+                                    manifest.revisionId,
+                                language =
+                                    manifest.language,
+                                voiceId =
+                                    cached.voiceId,
+                                provider =
+                                    cached.provider,
+                                model =
+                                    cached.model
+                            )
+                    val timingMapId =
+                        ReadNativeAudioIdentity
+                            .timingMapId(
+                                renditionId =
+                                    renditionId,
+                                segmentId =
+                                    segment.id,
+                                segmentIndex =
+                                    segment.index,
+                                logicalStartMs =
+                                    segment.logicalStartMs,
+                                logicalEndMs =
+                                    segment.logicalEndMs,
+                                physicalDurationMs =
+                                    cached.durationMs
+                            )
+
                     ReadPlaybackSegment(
                         id = segment.id,
                         index = segment.index,
@@ -80,7 +118,12 @@ class ReadProgressiveAudioCoordinator(
                         audioUri = cached.localFile
                             .toURI()
                             .toString(),
-                        actualDurationMs = cached.durationMs
+                        actualDurationMs =
+                            cached.durationMs,
+                        renditionId =
+                            renditionId,
+                        timingMapId =
+                            timingMapId
                     )
                 } else {
                     val asset = tts.synthesize(
@@ -90,6 +133,38 @@ class ReadProgressiveAudioCoordinator(
                         accessToken = accessToken
                     )
                     val local = cache.localFile(asset)
+                    val renditionId =
+                        ReadNativeAudioIdentity
+                            .renditionId(
+                                documentId =
+                                    manifest.documentId,
+                                revisionId =
+                                    manifest.revisionId,
+                                language =
+                                    manifest.language,
+                                voiceId =
+                                    asset.voiceId,
+                                provider =
+                                    asset.provider,
+                                model =
+                                    asset.model
+                            )
+                    val timingMapId =
+                        ReadNativeAudioIdentity
+                            .timingMapId(
+                                renditionId =
+                                    renditionId,
+                                segmentId =
+                                    segment.id,
+                                segmentIndex =
+                                    segment.index,
+                                logicalStartMs =
+                                    segment.logicalStartMs,
+                                logicalEndMs =
+                                    segment.logicalEndMs,
+                                physicalDurationMs =
+                                    asset.durationMs
+                            )
 
                     ReadPlaybackSegment(
                         id = segment.id,
@@ -97,7 +172,12 @@ class ReadProgressiveAudioCoordinator(
                         logicalStartMs = segment.logicalStartMs,
                         logicalEndMs = segment.logicalEndMs,
                         audioUri = local.toURI().toString(),
-                        actualDurationMs = asset.durationMs
+                        actualDurationMs =
+                            asset.durationMs,
+                        renditionId =
+                            renditionId,
+                        timingMapId =
+                            timingMapId
                     )
                 }
             }
