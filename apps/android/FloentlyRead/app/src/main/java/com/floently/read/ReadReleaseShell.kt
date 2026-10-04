@@ -1,5 +1,6 @@
 package com.floently.read
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -258,6 +259,7 @@ private fun ReadAuthScreen(
     onAuthenticated: () -> Unit
 ) {
     val palette = floentlyPalette(FloentlyProduct.Read)
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var creating by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
@@ -493,6 +495,40 @@ private fun ReadAuthScreen(
                 color = palette.muted,
                 style = MaterialTheme.typography.bodySmall
             )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                TextButton(
+                    onClick = {
+                        openReadExternalUrl(
+                            context,
+                            "https://www.floently.com/learn/privacy"
+                        )
+                    }
+                ) {
+                    Text("Privacy", color = palette.accent)
+                }
+                TextButton(
+                    onClick = {
+                        openReadExternalUrl(
+                            context,
+                            "https://www.floently.com/learn/terms"
+                        )
+                    }
+                ) {
+                    Text("Terms", color = palette.accent)
+                }
+                TextButton(
+                    onClick = {
+                        openReadExternalUrl(
+                            context,
+                            "https://www.floently.com/learn/support"
+                        )
+                    }
+                ) {
+                    Text("Support", color = palette.accent)
+                }
+            }
         }
     }
 }
@@ -1584,7 +1620,18 @@ private fun ReadSettingsScreen(
     onSignedOut: () -> Unit
 ) {
     val palette = floentlyPalette(FloentlyProduct.Read)
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val session = sessionStore.session
+    var showDeleteDialog by remember {
+        mutableStateOf(false)
+    }
+    var deletingAccount by remember {
+        mutableStateOf(false)
+    }
+    var deleteError by remember {
+        mutableStateOf<String?>(null)
+    }
 
     FloentlyScreen(product = FloentlyProduct.Read) {
         Column(
@@ -1676,20 +1723,183 @@ private fun ReadSettingsScreen(
                 )
             }
 
+            Spacer(Modifier.height(16.dp))
+
+            ReadSurfaceCard {
+                Text(
+                    "Privacy & support",
+                    color = palette.text,
+                    fontWeight = FontWeight.Bold
+                )
+                LegalLinkRow("Privacy Policy") {
+                    openReadExternalUrl(
+                        context,
+                        "https://www.floently.com/learn/privacy"
+                    )
+                }
+                LegalLinkRow("Terms of Use") {
+                    openReadExternalUrl(
+                        context,
+                        "https://www.floently.com/learn/terms"
+                    )
+                }
+                LegalLinkRow("Support") {
+                    openReadExternalUrl(
+                        context,
+                        "https://www.floently.com/learn/support"
+                    )
+                }
+                LegalLinkRow("Account deletion information") {
+                    openReadExternalUrl(
+                        context,
+                        "https://www.floently.com/learn/delete-account"
+                    )
+                }
+            }
+
+            deleteError?.let {
+                Spacer(Modifier.height(12.dp))
+                ReadStatusBanner(text = it)
+            }
+
             Spacer(Modifier.height(22.dp))
             Button(
                 onClick = onSignedOut,
                 colors = ButtonDefaults.buttonColors(
                     containerColor =
-                        Color(0xFF6B1F2A)
+                        palette.backgroundBottom
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp)
             ) {
-                Text("Sign out")
+                Text("Sign out", color = palette.text)
             }
+
+            Spacer(Modifier.height(10.dp))
+            Button(
+                enabled = !deletingAccount,
+                onClick = {
+                    showDeleteDialog = true
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor =
+                        Color(0xFF7B1F2D)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+            ) {
+                Text(
+                    if (deletingAccount) {
+                        "Deleting account…"
+                    } else {
+                        "Delete Account"
+                    }
+                )
+            }
+            Spacer(Modifier.height(28.dp))
         }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!deletingAccount) {
+                    showDeleteDialog = false
+                }
+            },
+            title = {
+                Text("Delete your Floently account?")
+            },
+            text = {
+                Text(
+                    "This permanently deletes your Floently account and associated personal data where deletion is legally possible. Store subscriptions must still be cancelled in the App Store or Google Play."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !deletingAccount,
+                    onClick = {
+                        val token =
+                            sessionStore.session?.token
+                        if (token.isNullOrBlank()) {
+                            showDeleteDialog = false
+                            deleteError =
+                                "Your session expired. Sign in again."
+                            return@TextButton
+                        }
+
+                        deletingAccount = true
+                        deleteError = null
+
+                        scope.launch {
+                            runCatching {
+                                val api = FloentlyApiClient(
+                                    baseUrl =
+                                        "https://learn-api.floently.com",
+                                    tokenProvider = { token }
+                                )
+                                FloentlyAuthService(
+                                    api,
+                                    sessionStore
+                                ).deleteAccount(
+                                    "in_app_settings"
+                                )
+                            }
+                                .onSuccess {
+                                    showDeleteDialog = false
+                                    onSignedOut()
+                                }
+                                .onFailure {
+                                    showDeleteDialog = false
+                                    deleteError =
+                                        it.message
+                                            ?: "Account deletion failed."
+                                }
+                            deletingAccount = false
+                        }
+                    }
+                ) {
+                    Text(
+                        "Delete Account",
+                        color = Color(0xFFFF6B7A)
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !deletingAccount,
+                    onClick = {
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun LegalLinkRow(
+    title: String,
+    onClick: () -> Unit
+) {
+    val palette = floentlyPalette(FloentlyProduct.Read)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp)
+    ) {
+        Text(
+            title,
+            color = palette.accent,
+            modifier = Modifier.weight(1f)
+        )
+        Text("›", color = palette.muted)
     }
 }
 
@@ -2356,6 +2566,20 @@ private fun accountInitial(
             ?: email?.trim()?.firstOrNull()
             ?: 'F'
         ).uppercase()
+
+private fun openReadExternalUrl(
+    context: Context,
+    url: String
+) {
+    runCatching {
+        context.startActivity(
+            Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse(url)
+            )
+        )
+    }
+}
 
 private fun speedLabel(value: Float): String =
     if (kotlin.math.abs(value - value.toInt()) < 0.01f) {

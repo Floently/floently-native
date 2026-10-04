@@ -230,6 +230,30 @@ private struct ReadAuthView: View {
                     .font(.caption)
                     .foregroundStyle(palette.muted)
                     .padding(.top, 18)
+
+                    HStack(spacing: 18) {
+                        Link(
+                            "Privacy",
+                            destination: URL(
+                                string: "https://www.floently.com/learn/privacy"
+                            )!
+                        )
+                        Link(
+                            "Terms",
+                            destination: URL(
+                                string: "https://www.floently.com/learn/terms"
+                            )!
+                        )
+                        Link(
+                            "Support",
+                            destination: URL(
+                                string: "https://www.floently.com/learn/support"
+                            )!
+                        )
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(palette.accent2)
+                    .padding(.top, 10)
                     .padding(.bottom, 34)
                 }
                 .frame(maxWidth: 620)
@@ -1581,6 +1605,10 @@ private struct ReadSettingsScreen: View {
     @EnvironmentObject private var accessModel: ReadAccessModel
     @EnvironmentObject private var playback: ReadPlaybackSession
 
+    @State private var showDeleteConfirmation = false
+    @State private var deletingAccount = false
+    @State private var deleteError: String?
+
     private let palette = FloentlyPalette.read
 
     var body: some View {
@@ -1646,7 +1674,47 @@ private struct ReadSettingsScreen: View {
                         .foregroundStyle(palette.muted)
                     }
 
-                    Button(role: .destructive) {
+                    FloentlyCard(product: .read) {
+                        Text("Privacy & support")
+                            .font(.headline)
+                            .foregroundStyle(palette.text)
+
+                        Link(
+                            "Privacy Policy",
+                            destination: URL(
+                                string: "https://www.floently.com/learn/privacy"
+                            )!
+                        )
+                        Link(
+                            "Terms of Use",
+                            destination: URL(
+                                string: "https://www.floently.com/learn/terms"
+                            )!
+                        )
+                        Link(
+                            "Support",
+                            destination: URL(
+                                string: "https://www.floently.com/learn/support"
+                            )!
+                        )
+                        Link(
+                            "Account deletion information",
+                            destination: URL(
+                                string: "https://www.floently.com/learn/delete-account"
+                            )!
+                        )
+                    }
+                    .foregroundStyle(palette.accent2)
+
+                    if let deleteError {
+                        ReadStatusBanner(
+                            icon: "exclamationmark.triangle",
+                            text: deleteError
+                        )
+                    }
+
+                    Button {
+                        playback.clear()
                         sessionStore.clear()
                     } label: {
                         Text("Sign out")
@@ -1655,11 +1723,79 @@ private struct ReadSettingsScreen: View {
                             .frame(height: 52)
                     }
                     .buttonStyle(.bordered)
+                    .tint(palette.accent2)
+
+                    Button(role: .destructive) {
+                        showDeleteConfirmation = true
+                    } label: {
+                        Text(
+                            deletingAccount
+                            ? "Deleting account…"
+                            : "Delete Account"
+                        )
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                    }
+                    .buttonStyle(.borderedProminent)
                     .tint(.red)
+                    .disabled(deletingAccount)
                     .padding(.bottom, 30)
                 }
                 .frame(maxWidth: 720)
                 .frame(maxWidth: .infinity, alignment: .center)
+            }
+        }
+        .confirmationDialog(
+            "Delete your Floently account?",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Account", role: .destructive) {
+                deleteAccount()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(
+                "This permanently deletes your Floently account and associated personal data where deletion is legally possible. Store subscriptions must still be cancelled in the App Store or Google Play."
+            )
+        }
+    }
+
+    private func deleteAccount() {
+        guard
+            let token = sessionStore.session?.token,
+            !token.isEmpty
+        else {
+            deleteError = "Your session expired. Sign in again."
+            return
+        }
+
+        deletingAccount = true
+        deleteError = nil
+
+        Task {
+            defer {
+                deletingAccount = false
+            }
+
+            do {
+                let api = FloentlyAPIClient(
+                    baseURL: URL(
+                        string: "https://learn-api.floently.com"
+                    )!,
+                    tokenProvider: { token }
+                )
+                let auth = FloentlyAuthService(
+                    api: api,
+                    store: sessionStore
+                )
+                try await auth.deleteAccount(
+                    deletionReason: "in_app_settings"
+                )
+                playback.clear()
+            } catch {
+                deleteError = error.localizedDescription
             }
         }
     }

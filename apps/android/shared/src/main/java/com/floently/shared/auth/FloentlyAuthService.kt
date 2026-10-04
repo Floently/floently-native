@@ -42,6 +42,26 @@ class FloentlyAuthService(
         return authSessionFromJson(response).also { store.save(it) }
     }
 
+    suspend fun deleteAccount(
+        deletionReason: String? = null
+    ) {
+        val body = JSONObject()
+            .put("confirm_delete", true)
+
+        deletionReason
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?.let {
+                body.put("deletion_reason", it)
+            }
+
+        api.post(
+            "/api/v1/auth/account/delete",
+            body
+        )
+        store.clear()
+    }
+
     suspend fun logout() {
         runCatching {
             api.post(

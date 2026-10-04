@@ -1,5 +1,15 @@
 import Foundation
 
+private struct DeleteAccountRequest: Encodable {
+    let confirmDelete: Bool
+    let deletionReason: String?
+
+    enum CodingKeys: String, CodingKey {
+        case confirmDelete = "confirm_delete"
+        case deletionReason = "deletion_reason"
+    }
+}
+
 public final class FloentlyAuthService {
     private let api: FloentlyAPIClient
     private let store: FloentlySessionStore
@@ -49,6 +59,20 @@ public final class FloentlyAuthService {
         let session = try await api.get("/api/v1/auth/session", as: FloentlyAuthSession.self)
         store.save(session)
         return session
+    }
+
+    public func deleteAccount(
+        deletionReason: String? = nil
+    ) async throws {
+        _ = try await api.post(
+            "/api/v1/auth/account/delete",
+            body: DeleteAccountRequest(
+                confirmDelete: true,
+                deletionReason: deletionReason
+            ),
+            as: FloentlyEmpty.self
+        )
+        store.clear()
     }
 
     public func logout() async {
