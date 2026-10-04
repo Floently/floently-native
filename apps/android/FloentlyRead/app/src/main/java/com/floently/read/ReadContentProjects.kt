@@ -8,6 +8,7 @@ import android.provider.OpenableColumns
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
@@ -703,27 +704,36 @@ class ReadProjectStore(
             projects = cached
         }
 
-        runCatching {
-            client.listProjects(accessToken)
-        }
-            .onSuccess { remote ->
-                projects = mergeRemoteProjects(
-                    remote = remote,
-                    cached = cached
+        try {
+            val remote =
+                client.listProjects(
+                    accessToken
                 )
-                runCatching {
-                    persistSnapshot()
+            projects = mergeRemoteProjects(
+                remote = remote,
+                cached = cached
+            )
+            flushPendingProgress(
+                accessToken = accessToken,
+                remoteProjects = remote
+            )
+            runCatching {
+                persistSnapshot()
+            }
+        } catch (
+            error: CancellationException
+        ) {
+            activity = "idle"
+            throw error
+        } catch (error: Exception) {
+            errorMessage =
+                if (projects.isEmpty()) {
+                    error.message
+                        ?: "Could not load your library."
+                } else {
+                    "You’re offline. Showing saved library content from this device."
                 }
-            }
-            .onFailure {
-                errorMessage =
-                    if (projects.isEmpty()) {
-                        it.message
-                            ?: "Could not load your library."
-                    } else {
-                        "You’re offline. Showing saved library content from this device."
-                    }
-            }
+        }
 
         activity = "idle"
     }
@@ -812,6 +822,11 @@ class ReadProjectStore(
                 accountIdentity = it,
                 documentId = project.id
             )
+            ReadProgressOutboxStore.removeProject(
+                context = applicationContext,
+                accountIdentity = it,
+                projectId = project.id
+            )
         }
         projects = projects.filterNot {
             it.id == project.id
@@ -872,6 +887,67 @@ class ReadProjectStore(
         val generation = progressSyncGeneration
         progressSyncSequence += 1L
         val sequence = progressSyncSequence
+        val accountIdentity =
+            snapshotAccountIdentity
+        val baseServerUpdatedAt =
+            projects.firstOrNull {
+                it.id == projectId
+            }?.progress?.updatedAt
+                ?.trim()
+                ?.takeIf {
+                    it.isNotEmpty()
+                }
+        val pending =
+            ReadPendingProgressWrite(
+                nonce =
+                    UUID.randomUUID()
+                        .toString(),
+                projectId = projectId,
+                currentSegmentIndex =
+                    currentSegmentIndex
+                        .coerceAtLeast(0),
+                currentCharacterOffset =
+                    currentCharacterOffset
+                        .coerceAtLeast(0),
+                progressPercent =
+                    progressPercent
+                        .coerceIn(
+                            0.0,
+                            100.0
+                        ),
+                voiceId = voiceId,
+                playbackRate =
+                    playbackRate
+                        ?.takeIf {
+                            it.isFinite()
+                        }
+                        ?.coerceIn(
+                            0.5,
+                            3.0
+                        ),
+                baseServerUpdatedAt =
+                    baseServerUpdatedAt,
+                createdAtMs =
+                    System.currentTimeMillis()
+            )
+
+        if (accountIdentity != null) {
+            try {
+                ReadProgressOutboxStore.save(
+                    context = applicationContext,
+                    accountIdentity =
+                        accountIdentity,
+                    write = pending
+                )
+            } catch (
+                error: CancellationException
+            ) {
+                throw error
+            } catch (_: Exception) {
+                // Network sync can still proceed if local outbox storage
+                // is temporarily unavailable.
+            }
+        }
 
         progressSyncMutex.withLock {
             if (
@@ -881,31 +957,72 @@ class ReadProjectStore(
                 return@withLock
             }
 
-            runCatching {
-                client.updateProgress(
-                    projectId = projectId,
-                    currentSegmentIndex = currentSegmentIndex,
-                    currentCharacterOffset = currentCharacterOffset,
-                    progressPercent = progressPercent,
-                    voiceId = voiceId,
-                    playbackRate = playbackRate,
-                    accessToken = accessToken
-                )
-            }.getOrNull()?.let { progress ->
-                if (
-                    generation != progressSyncGeneration
-                    || sequence != progressSyncSequence
-                ) {
-                    return@let
+            try {
+                val progress =
+                    client.updateProgress(
+                        projectId =
+                            pending.projectId,
+                        currentSegmentIndex =
+                            pending
+                                .currentSegmentIndex,
+                        currentCharacterOffset =
+                            pending
+                                .currentCharacterOffset,
+                        progressPercent =
+                            pending.progressPercent,
+                        voiceId =
+                            pending.voiceId,
+                        playbackRate =
+                            pending.playbackRate,
+                        accessToken = accessToken
+                    )
+
+                if (accountIdentity != null) {
+                    ReadProgressOutboxStore
+                        .removeIfMatches(
+                            context =
+                                applicationContext,
+                            accountIdentity =
+                                accountIdentity,
+                            projectId =
+                                pending.projectId,
+                            nonce =
+                                pending.nonce
+                        )
                 }
 
-                projects = projects.map { project ->
-                    if (project.id == projectId) {
-                        project.copy(progress = progress)
-                    } else {
-                        project
-                    }
+                if (
+                    generation
+                        != progressSyncGeneration
+                    || sequence
+                        != progressSyncSequence
+                ) {
+                    return@withLock
                 }
+
+                if (progress != null) {
+                    projects =
+                        projects.map { project ->
+                            if (
+                                project.id
+                                    == projectId
+                            ) {
+                                project.copy(
+                                    progress =
+                                        progress
+                                )
+                            } else {
+                                project
+                            }
+                        }
+                }
+            } catch (
+                error: CancellationException
+            ) {
+                throw error
+            } catch (_: Exception) {
+                // The write-ahead outbox retains the newest cursor for
+                // reconnect. Local resume remains authoritative offline.
             }
         }
         // Best effort: local resume remains authoritative offline.
@@ -921,6 +1038,154 @@ class ReadProjectStore(
         projects = emptyList()
         activity = "idle"
         errorMessage = null
+    }
+
+    private suspend fun flushPendingProgress(
+        accessToken: String,
+        remoteProjects: List<ReadContentProject>
+    ) {
+        val accountIdentity =
+            snapshotAccountIdentity
+                ?: return
+        val remoteById =
+            remoteProjects.associateBy {
+                it.id
+            }
+        val writes =
+            ReadProgressOutboxStore.entries(
+                context = applicationContext,
+                accountIdentity = accountIdentity
+            )
+
+        progressSyncMutex.withLock {
+            for (write in writes) {
+                val current =
+                    ReadProgressOutboxStore
+                        .currentWrite(
+                            context =
+                                applicationContext,
+                            accountIdentity =
+                                accountIdentity,
+                            projectId =
+                                write.projectId
+                        )
+                if (
+                    current == null
+                    || current.nonce
+                        != write.nonce
+                ) {
+                    continue
+                }
+
+                val remote =
+                    remoteById[write.projectId]
+                if (remote == null) {
+                    ReadProgressOutboxStore
+                        .removeIfMatches(
+                            context =
+                                applicationContext,
+                            accountIdentity =
+                                accountIdentity,
+                            projectId =
+                                write.projectId,
+                            nonce = write.nonce
+                        )
+                    continue
+                }
+
+                val remoteUpdatedAt =
+                    remote.progress
+                        ?.updatedAt
+                        ?.trim()
+                        ?.takeIf {
+                            it.isNotEmpty()
+                        }
+                val baseUpdatedAt =
+                    write.baseServerUpdatedAt
+                        ?.trim()
+                        ?.takeIf {
+                            it.isNotEmpty()
+                        }
+
+                if (
+                    remoteUpdatedAt != null
+                    && remoteUpdatedAt
+                        != baseUpdatedAt
+                ) {
+                    // The server advanced since this offline write was
+                    // based on it. Remote wins so another device's newer
+                    // cursor cannot be overwritten by a stale replay.
+                    ReadProgressOutboxStore
+                        .removeIfMatches(
+                            context =
+                                applicationContext,
+                            accountIdentity =
+                                accountIdentity,
+                            projectId =
+                                write.projectId,
+                            nonce = write.nonce
+                        )
+                    continue
+                }
+
+                try {
+                    val progress =
+                        client.updateProgress(
+                            projectId =
+                                write.projectId,
+                            currentSegmentIndex =
+                                write
+                                    .currentSegmentIndex,
+                            currentCharacterOffset =
+                                write
+                                    .currentCharacterOffset,
+                            progressPercent =
+                                write.progressPercent,
+                            voiceId =
+                                write.voiceId,
+                            playbackRate =
+                                write.playbackRate,
+                            accessToken =
+                                accessToken
+                        )
+
+                    ReadProgressOutboxStore
+                        .removeIfMatches(
+                            context =
+                                applicationContext,
+                            accountIdentity =
+                                accountIdentity,
+                            projectId =
+                                write.projectId,
+                            nonce = write.nonce
+                        )
+
+                    if (progress != null) {
+                        projects =
+                            projects.map { project ->
+                                if (
+                                    project.id
+                                        == write.projectId
+                                ) {
+                                    project.copy(
+                                        progress =
+                                            progress
+                                    )
+                                } else {
+                                    project
+                                }
+                            }
+                    }
+                } catch (
+                    error: CancellationException
+                ) {
+                    throw error
+                } catch (_: Exception) {
+                    // Keep the pending write for a later online refresh.
+                    continue
+                }
+            }
+        }
     }
 
     private fun mergeRemoteProjects(
