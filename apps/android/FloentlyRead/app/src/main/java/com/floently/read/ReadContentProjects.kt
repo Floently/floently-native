@@ -677,15 +677,37 @@ class ReadProjectStore(
         activity = "loading"
         errorMessage = null
 
+        val cached = ReadProjectSnapshotStore.load(
+            context = applicationContext,
+            accessToken = accessToken
+        )
+        if (
+            projects.isEmpty()
+            && cached.isNotEmpty()
+        ) {
+            projects = cached
+        }
+
         runCatching {
             client.listProjects(accessToken)
         }
-            .onSuccess {
-                projects = it
+            .onSuccess { remote ->
+                projects = mergeRemoteProjects(
+                    remote = remote,
+                    cached = cached
+                )
+                runCatching {
+                    persistSnapshot(accessToken)
+                }
             }
             .onFailure {
-                errorMessage = it.message
-                    ?: "Could not load your library."
+                errorMessage =
+                    if (projects.isEmpty()) {
+                        it.message
+                            ?: "Could not load your library."
+                    } else {
+                        "You’re offline. Showing saved library content from this device."
+                    }
             }
 
         activity = "idle"
@@ -698,10 +720,16 @@ class ReadProjectStore(
         if (!project.rawText.isNullOrBlank()) {
             return project
         }
-        return client.project(
+
+        val hydrated = client.project(
             id = project.id,
             accessToken = accessToken
         )
+        upsert(hydrated)
+        runCatching {
+            persistSnapshot(accessToken)
+        }
+        return hydrated
     }
 
     suspend fun addText(
@@ -712,11 +740,16 @@ class ReadProjectStore(
         errorMessage = null
         activity = "Saving text"
         return try {
-            client.createTextProject(
+            val project = client.createTextProject(
                 title = title,
                 text = text,
                 accessToken = accessToken
-            ).also(::upsert)
+            )
+            upsert(project)
+            runCatching {
+                persistSnapshot(accessToken)
+            }
+            project
         } finally {
             activity = "idle"
         }
@@ -730,11 +763,16 @@ class ReadProjectStore(
         errorMessage = null
         activity = "Importing link"
         return try {
-            client.createUrlProject(
+            val project = client.createUrlProject(
                 title = title,
                 sourceUrl = sourceUrl,
                 accessToken = accessToken
-            ).also(::upsert)
+            )
+            upsert(project)
+            runCatching {
+                persistSnapshot(accessToken)
+            }
+            project
         } finally {
             activity = "idle"
         }
@@ -755,6 +793,9 @@ class ReadProjectStore(
         )
         projects = projects.filterNot {
             it.id == project.id
+        }
+        runCatching {
+            persistSnapshot(accessToken)
         }
     }
 
@@ -788,6 +829,9 @@ class ReadProjectStore(
             }
 
             upsert(project)
+            runCatching {
+                persistSnapshot(accessToken)
+            }
             project
         } finally {
             activity = "idle"
@@ -854,6 +898,44 @@ class ReadProjectStore(
         projects = emptyList()
         activity = "idle"
         errorMessage = null
+    }
+
+    private fun mergeRemoteProjects(
+        remote: List<ReadContentProject>,
+        cached: List<ReadContentProject>
+    ): List<ReadContentProject> {
+        val cachedById = cached.associateBy {
+            it.id
+        }
+
+        return remote.map { value ->
+            val local = cachedById[value.id]
+            if (
+                local == null
+                || local.revisionId != value.revisionId
+            ) {
+                value
+            } else {
+                value.copy(
+                    rawText =
+                        value.rawText
+                            ?: local.rawText,
+                    progress =
+                        value.progress
+                            ?: local.progress
+                )
+            }
+        }
+    }
+
+    private suspend fun persistSnapshot(
+        accessToken: String
+    ) {
+        ReadProjectSnapshotStore.save(
+            context = applicationContext,
+            accessToken = accessToken,
+            projects = projects
+        )
     }
 
     private fun upsert(project: ReadContentProject) {
