@@ -402,6 +402,19 @@ fun ReadBrowserScreen(
         }
     }
 
+    DisposableEffect(Unit) {
+        onDispose {
+            invalidateReadableSource()
+            pendingPermissionRequest?.deny()
+            pendingPermissionRequest = null
+            filePathCallback?.onReceiveValue(null)
+            filePathCallback = null
+            webView?.stopLoading()
+            webView?.destroy()
+            webView = null
+        }
+    }
+
     LaunchedEffect(initialUrl) {
         if (!initialUrl.isNullOrBlank() && initialUrl != currentUrl) {
             openAddress(initialUrl)
