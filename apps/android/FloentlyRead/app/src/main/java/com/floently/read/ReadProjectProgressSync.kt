@@ -30,10 +30,10 @@ object ReadRemoteProjectProgressBridge {
     ) {
         val progress = project.progress ?: return
         val store = ReadPlaybackResumeStore(context)
-        val local = store.load(
-            documentId = manifest.documentId,
-            revisionId = manifest.revisionId
-        )
+        val local =
+            store.loadOrMigrate(
+                manifest
+            )
         val remoteUpdatedAt = parseInstant(
             progress.updatedAt
         )?.toEpochMilli()
@@ -118,6 +118,12 @@ object ReadRemoteProjectProgressBridge {
             )
             .coerceIn(0.5, 3.0)
             .toFloat()
+        val sourceAnchor =
+            store.sourceAnchor(
+                manifest = manifest,
+                logicalTimeMs =
+                    logicalTimeMs
+            )
 
         store.save(
             ReadPlaybackResumeSnapshot(
@@ -133,7 +139,18 @@ object ReadRemoteProjectProgressBridge {
                 sourceSegmentId = segment?.id,
                 sourceSegmentIndex = segment?.index,
                 voiceId = progress.voiceId,
-                renditionId = null
+                renditionId = null,
+                sourceAnchorQuote =
+                    sourceAnchor?.quote,
+                sourceAnchorPrefixContext =
+                    sourceAnchor
+                        ?.prefixContext,
+                sourceAnchorSuffixContext =
+                    sourceAnchor
+                        ?.suffixContext,
+                sourceAnchorCursorOffset =
+                    sourceAnchor
+                        ?.cursorOffset
             )
         )
 
