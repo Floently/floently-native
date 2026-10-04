@@ -404,6 +404,8 @@ private struct ReadEntitlementView: View {
                     }
                 }
 
+                ReadAccessAccountDeletionControl()
+
                 Button("Sign out") {
                     sessionStore.clear()
                 }
@@ -449,6 +451,9 @@ private struct ReadAccessFailureView: View {
                     }
                 }
                 .frame(maxWidth: 320)
+                ReadAccessAccountDeletionControl()
+                    .frame(maxWidth: 320)
+
                 Button("Sign out") {
                     sessionStore.clear()
                 }
@@ -457,6 +462,91 @@ private struct ReadAccessFailureView: View {
                 Spacer()
             }
             .frame(maxWidth: .infinity)
+        }
+    }
+}
+
+private struct ReadAccessAccountDeletionControl: View {
+    @EnvironmentObject private var sessionStore: FloentlySessionStore
+
+    @State private var showingConfirmation = false
+    @State private var deleting = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button(role: .destructive) {
+                showingConfirmation = true
+            } label: {
+                Label(
+                    deleting
+                    ? "Deleting account…"
+                    : "Delete account",
+                    systemImage: "trash"
+                )
+                .font(.subheadline.weight(.semibold))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.red)
+            .disabled(deleting)
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+        }
+        .confirmationDialog(
+            "Delete your Floently account?",
+            isPresented: $showingConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(
+                "Delete account permanently",
+                role: .destructive
+            ) {
+                deleteAccount()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(
+                "This starts permanent deletion of your Floently account and associated personal data where deletion is legally possible. Store subscriptions must be cancelled separately in the App Store or Google Play."
+            )
+        }
+    }
+
+    private func deleteAccount() {
+        guard
+            let token = sessionStore.session?.token,
+            !token.isEmpty
+        else {
+            errorMessage =
+                "Your session expired. Sign in again before deleting your account."
+            return
+        }
+
+        deleting = true
+        errorMessage = nil
+
+        Task {
+            defer { deleting = false }
+
+            do {
+                let api = FloentlyAPIClient(
+                    baseURL: URL(
+                        string: "https://learn-api.floently.com"
+                    )!,
+                    tokenProvider: { token }
+                )
+                try await FloentlyAuthService(
+                    api: api,
+                    store: sessionStore
+                ).deleteAccount(
+                    deletionReason: "read_native_access_screen"
+                )
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 }
