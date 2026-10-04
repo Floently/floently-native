@@ -55,29 +55,58 @@ actor ReadSourceHighlightStore {
     func highlights(
         accountIdentity: String,
         projectId: String,
-        revisionId: String
+        revisionId: String,
+        sourceText: String? = nil
     ) -> [ReadSourceHighlight] {
-        load(
+        var values = load(
             accountIdentity:
                 accountIdentity,
             projectId: projectId
         )
-        .filter {
-            $0.revisionId
-                == revisionId
-        }
-        .sorted {
-            if
-                $0.sourceScalarStart
-                    == $1.sourceScalarStart
-            {
-                return $0.createdAt
-                    < $1.createdAt
+
+        if
+            let sourceText,
+            !sourceText.isEmpty
+        {
+            let migration =
+                migrateHighlights(
+                    values,
+                    toRevisionId:
+                        revisionId,
+                    sourceText:
+                        sourceText
+                )
+
+            if migration.changed {
+                try? persist(
+                    migration.values,
+                    accountIdentity:
+                        accountIdentity,
+                    projectId:
+                        projectId
+                )
             }
 
-            return $0.sourceScalarStart
-                < $1.sourceScalarStart
+            values = migration.values
         }
+
+        return values
+            .filter {
+                $0.revisionId
+                    == revisionId
+            }
+            .sorted {
+                if
+                    $0.sourceScalarStart
+                        == $1.sourceScalarStart
+                {
+                    return $0.createdAt
+                        < $1.createdAt
+                }
+
+                return $0.sourceScalarStart
+                    < $1.sourceScalarStart
+            }
     }
 
     @discardableResult
@@ -283,6 +312,371 @@ actor ReadSourceHighlightStore {
         try? fileManager.removeItem(
             at: root
         )
+    }
+
+    private struct MigrationCandidate {
+        let scalarStart: Int
+        let score: Int
+    }
+
+    private func migrateHighlights(
+        _ highlights: [ReadSourceHighlight],
+        toRevisionId revisionId: String,
+        sourceText: String
+    ) -> (
+        values: [ReadSourceHighlight],
+        changed: Bool
+    ) {
+        var current =
+            highlights.filter {
+                $0.revisionId == revisionId
+            }
+        var retained:
+            [ReadSourceHighlight] = []
+        var changed = false
+        let scalarCount =
+            ReadScalarOffsets
+                .scalarCount(sourceText)
+
+        for value in highlights
+        where value.revisionId != revisionId {
+            guard
+                let start =
+                    migrationScalarStart(
+                        for: value,
+                        in: sourceText
+                    )
+            else {
+                retained.append(value)
+                continue
+            }
+
+            let length =
+                ReadScalarOffsets
+                    .scalarCount(value.quote)
+            guard
+                length > 0,
+                start + length
+                    <= scalarCount
+            else {
+                retained.append(value)
+                continue
+            }
+
+            let end = start + length
+            let prefix =
+                substring(
+                    sourceText,
+                    scalarStart:
+                        max(0, start - 32),
+                    scalarEnd: start
+                )
+            let suffix =
+                substring(
+                    sourceText,
+                    scalarStart: end,
+                    scalarEnd:
+                        min(
+                            scalarCount,
+                            end + 32
+                        )
+                )
+
+            if
+                let existingIndex =
+                    current.firstIndex(
+                        where: {
+                            $0.sourceScalarStart
+                                == start
+                            && $0.sourceScalarLength
+                                == length
+                            && $0.quote
+                                == value.quote
+                        }
+                    )
+            {
+                let existing =
+                    current[existingIndex]
+                let mergedNote =
+                    existing.note
+                    ?? value.note
+
+                if
+                    mergedNote
+                        != existing.note
+                {
+                    current[existingIndex] =
+                        ReadSourceHighlight(
+                            id: existing.id,
+                            projectId:
+                                existing.projectId,
+                            revisionId:
+                                existing.revisionId,
+                            sourceScalarStart:
+                                existing
+                                    .sourceScalarStart,
+                            sourceScalarLength:
+                                existing
+                                    .sourceScalarLength,
+                            quote:
+                                existing.quote,
+                            prefixContext:
+                                existing
+                                    .prefixContext,
+                            suffixContext:
+                                existing
+                                    .suffixContext,
+                            note:
+                                mergedNote,
+                            createdAt:
+                                existing.createdAt
+                        )
+                }
+
+                changed = true
+                continue
+            }
+
+            current.append(
+                ReadSourceHighlight(
+                    id: value.id,
+                    projectId:
+                        value.projectId,
+                    revisionId:
+                        revisionId,
+                    sourceScalarStart:
+                        start,
+                    sourceScalarLength:
+                        length,
+                    quote: value.quote,
+                    prefixContext:
+                        prefix,
+                    suffixContext:
+                        suffix,
+                    note: value.note,
+                    createdAt:
+                        value.createdAt
+                )
+            )
+            changed = true
+        }
+
+        return (
+            retained + current,
+            changed
+        )
+    }
+
+    private func migrationScalarStart(
+        for highlight: ReadSourceHighlight,
+        in sourceText: String
+    ) -> Int? {
+        guard
+            !highlight.quote.isEmpty,
+            !sourceText.isEmpty
+        else {
+            return nil
+        }
+
+        let scalarCount =
+            ReadScalarOffsets
+                .scalarCount(sourceText)
+        let quoteLength =
+            ReadScalarOffsets
+                .scalarCount(
+                    highlight.quote
+                )
+        guard
+            quoteLength > 0,
+            quoteLength <= scalarCount
+        else {
+            return nil
+        }
+
+        var candidates:
+            [MigrationCandidate] = []
+        var searchStart =
+            sourceText.startIndex
+
+        while
+            searchStart
+                < sourceText.endIndex,
+            let range =
+                sourceText.range(
+                    of: highlight.quote,
+                    range:
+                        searchStart
+                        ..< sourceText.endIndex
+                )
+        {
+            let utf16Offset =
+                sourceText.utf16
+                    .distance(
+                        from:
+                            sourceText
+                                .utf16
+                                .startIndex,
+                        to:
+                            range.lowerBound
+                    )
+
+            if
+                let scalarStart =
+                    ReadScalarOffsets
+                        .scalarOffset(
+                            in: sourceText,
+                            utf16Offset:
+                                utf16Offset
+                        )
+            {
+                let scalarEnd =
+                    scalarStart
+                    + quoteLength
+                let prefix =
+                    substring(
+                        sourceText,
+                        scalarStart:
+                            max(
+                                0,
+                                scalarStart - 32
+                            ),
+                        scalarEnd:
+                            scalarStart
+                    )
+                let suffix =
+                    substring(
+                        sourceText,
+                        scalarStart:
+                            scalarEnd,
+                        scalarEnd:
+                            min(
+                                scalarCount,
+                                scalarEnd + 32
+                            )
+                    )
+                let score =
+                    commonSuffixScalarCount(
+                        highlight
+                            .prefixContext,
+                        prefix
+                    )
+                    + commonPrefixScalarCount(
+                        highlight
+                            .suffixContext,
+                        suffix
+                    )
+
+                candidates.append(
+                    MigrationCandidate(
+                        scalarStart:
+                            scalarStart,
+                        score: score
+                    )
+                )
+            }
+
+            if candidates.count > 128 {
+                return nil
+            }
+
+            guard
+                range.lowerBound
+                    < sourceText.endIndex
+            else {
+                break
+            }
+
+            searchStart =
+                sourceText.unicodeScalars
+                    .index(
+                        after:
+                            range.lowerBound
+                    )
+        }
+
+        guard !candidates.isEmpty else {
+            return nil
+        }
+
+        if candidates.count == 1 {
+            return candidates[0]
+                .scalarStart
+        }
+
+        let ranked =
+            candidates.sorted {
+                if $0.score == $1.score {
+                    return $0.scalarStart
+                        < $1.scalarStart
+                }
+
+                return $0.score
+                    > $1.score
+            }
+        guard
+            let best = ranked.first,
+            best.score >= 8,
+            ranked.count < 2
+                || best.score
+                    > ranked[1].score
+        else {
+            return nil
+        }
+
+        return best.scalarStart
+    }
+
+    private func commonPrefixScalarCount(
+        _ lhs: String,
+        _ rhs: String
+    ) -> Int {
+        let left =
+            Array(lhs.unicodeScalars)
+        let right =
+            Array(rhs.unicodeScalars)
+        let limit =
+            min(
+                left.count,
+                right.count
+            )
+        var count = 0
+
+        while
+            count < limit,
+            left[count] == right[count]
+        {
+            count += 1
+        }
+
+        return count
+    }
+
+    private func commonSuffixScalarCount(
+        _ lhs: String,
+        _ rhs: String
+    ) -> Int {
+        let left =
+            Array(lhs.unicodeScalars)
+        let right =
+            Array(rhs.unicodeScalars)
+        let limit =
+            min(
+                left.count,
+                right.count
+            )
+        var count = 0
+
+        while
+            count < limit,
+            left[left.count - 1 - count]
+                == right[
+                    right.count - 1 - count
+                ]
+        {
+            count += 1
+        }
+
+        return count
     }
 
     private func load(
