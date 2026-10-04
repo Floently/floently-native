@@ -562,17 +562,7 @@ export class WebPlaybackSession {
       return;
     }
 
-    // Freeze the previous physical source while the destination is resolved.
-    // Otherwise old timeupdate events could move the public document clock
-    // after a long seek or voice change has already begun.
-    this.engine.pause();
-    this.active = null;
-
-    this.replaceSnapshot({
-      status: "preparing",
-      elapsedMs: target,
-      error: null,
-    });
+    this.prepareRuntimeTransition(target);
 
     try {
       const position = await this.core.segmentForLogicalTime(
@@ -596,96 +586,157 @@ export class WebPlaybackSession {
         return;
       }
 
-      const logicalDurationMs = Math.max(
-        1,
-        runtime.descriptor.logicalEndMs
-          - runtime.descriptor.logicalStartMs,
-      );
-
-      let physicalDurationMs =
-        runtime.physicalDurationMs
-        ?? runtime.tts.durationMs
-        ?? null;
-
-      // The browser media element is the authority for physical asset duration.
-      // Load once at zero if the provider did not return an explicit-unit
-      // duration, then map the document-local cursor proportionally.
-      if (!physicalDurationMs || physicalDurationMs <= 0) {
-        physicalDurationMs = await this.engine.load(
-          runtime.playable.url,
-          0,
-          this.snapshot.speed,
-        );
-        runtime.physicalDurationMs = physicalDurationMs;
-      }
-
-      const localLogicalMs = clamp(
+      await this.activateRuntimeAudio(
+        runtime,
+        target,
         position.localOffsetMs,
-        0,
-        logicalDurationMs,
+        autoplay,
+        generation,
+        intentGeneration,
       );
-      const physicalOffsetMs =
-        physicalDurationMs && physicalDurationMs > 0
-          ? (localLogicalMs / logicalDurationMs) * physicalDurationMs
-          : localLogicalMs;
-
-      const loadedDuration = await this.engine.load(
-        runtime.playable.url,
-        physicalOffsetMs,
-        this.snapshot.speed,
-      );
-      runtime.physicalDurationMs =
-        loadedDuration
-        ?? physicalDurationMs
-        ?? runtime.physicalDurationMs;
-
+    } catch (error) {
       if (
         generation !== this.generation
         || intentGeneration !== this.playbackIntentGeneration
       ) {
         return;
       }
+      this.fail(
+        error instanceof Error
+          ? error.message
+          : String(error),
+      );
+    }
+  }
 
-      this.active = runtime;
-      this.lastTransitionAt = this.monotonicNow();
-      this.replaceSnapshot({
-        status: autoplay ? "preparing" : "paused",
-        elapsedMs: target,
-        activeSegmentIndex: runtime.descriptor.index,
-        canonicalScalarCursor: scalarCursorForDescriptor(
-          runtime.descriptor,
-          target,
-        ),
-        error: null,
-      });
-      this.publishMediaState();
+  private prepareRuntimeTransition(target: number): void {
+    // Freeze the previous physical source while the destination is resolved.
+    // Otherwise old timeupdate events could move the public document clock
+    // after a seek, voice change, or hidden-segment transition has begun.
+    this.engine.pause();
+    this.active = null;
+    this.replaceSnapshot({
+      status: "preparing",
+      elapsedMs: target,
+      error: null,
+    });
+    this.publishMediaState();
+  }
 
-      void this.prefetch(runtime.descriptor.index, generation);
+  private async activateRuntimeAudio(
+    runtime: RuntimeAudio,
+    target: number,
+    localLogicalOffsetMs: number,
+    autoplay: boolean,
+    generation: number,
+    intentGeneration: number,
+  ): Promise<void> {
+    const logicalDurationMs = Math.max(
+      1,
+      runtime.descriptor.logicalEndMs
+        - runtime.descriptor.logicalStartMs,
+    );
 
-      if (autoplay) {
-        if (
-          !this.wantsPlayback
-          || intentGeneration !== this.playbackIntentGeneration
-        ) {
-          return;
-        }
+    let physicalDurationMs =
+      runtime.physicalDurationMs
+      ?? runtime.tts.durationMs
+      ?? null;
 
-        await this.engine.play();
+    if (!physicalDurationMs || physicalDurationMs <= 0) {
+      physicalDurationMs = await this.engine.load(
+        runtime.playable.url,
+        0,
+        this.snapshot.speed,
+      );
+      runtime.physicalDurationMs = physicalDurationMs;
+    }
 
-        if (
-          !this.wantsPlayback
-          || intentGeneration !== this.playbackIntentGeneration
-        ) {
-          this.engine.pause();
-          return;
-        }
+    const localLogicalMs = clamp(
+      localLogicalOffsetMs,
+      0,
+      logicalDurationMs,
+    );
+    const physicalOffsetMs =
+      physicalDurationMs && physicalDurationMs > 0
+        ? (localLogicalMs / logicalDurationMs) * physicalDurationMs
+        : localLogicalMs;
+
+    const loadedDuration = await this.engine.load(
+      runtime.playable.url,
+      physicalOffsetMs,
+      this.snapshot.speed,
+    );
+    runtime.physicalDurationMs =
+      loadedDuration
+      ?? physicalDurationMs
+      ?? runtime.physicalDurationMs;
+
+    if (
+      generation !== this.generation
+      || intentGeneration !== this.playbackIntentGeneration
+    ) {
+      return;
+    }
+
+    this.active = runtime;
+    this.lastTransitionAt = this.monotonicNow();
+    this.replaceSnapshot({
+      status: autoplay ? "preparing" : "paused",
+      elapsedMs: target,
+      activeSegmentIndex: runtime.descriptor.index,
+      canonicalScalarCursor: scalarCursorForDescriptor(
+        runtime.descriptor,
+        target,
+      ),
+      error: null,
+    });
+    this.publishMediaState();
+
+    void this.prefetch(runtime.descriptor.index, generation);
+
+    if (autoplay) {
+      if (
+        !this.wantsPlayback
+        || intentGeneration !== this.playbackIntentGeneration
+      ) {
+        return;
       }
 
-      this.emit("segment_started", {
-        index: runtime.descriptor.index,
-        logicalStartMs: runtime.descriptor.logicalStartMs,
-        logicalEndMs: runtime.descriptor.logicalEndMs,
-      });
+      await this.engine.play();
+
+      if (
+        !this.wantsPlayback
+        || intentGeneration !== this.playbackIntentGeneration
+      ) {
+        this.engine.pause();
+        return;
+      }
+    }
+
+    this.emit("segment_started", {
+      index: runtime.descriptor.index,
+      logicalStartMs: runtime.descriptor.logicalStartMs,
+      logicalEndMs: runtime.descriptor.logicalEndMs,
+    });
+  }
+
+  private async startReadySequentialRuntime(
+    runtime: RuntimeAudio,
+    target: number,
+    intentGeneration: number,
+  ): Promise<void> {
+    const generation = this.generation;
+    this.prepareRuntimeTransition(target);
+
+    try {
+      await this.activateRuntimeAudio(
+        runtime,
+        target,
+        0,
+        true,
+        generation,
+        intentGeneration,
+      );
     } catch (error) {
       if (
         generation !== this.generation
@@ -932,6 +983,16 @@ export class WebPlaybackSession {
       };
     } else {
       this.clearPendingSegmentHandoff();
+    }
+
+    const prefetchedNext = this.audioByIndex.get(nextIndex) ?? null;
+    if (this.wantsPlayback && prefetchedNext) {
+      void this.startReadySequentialRuntime(
+        prefetchedNext,
+        active.descriptor.logicalEndMs,
+        this.playbackIntentGeneration,
+      );
+      return;
     }
 
     void this.startAtDocumentTime(
