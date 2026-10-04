@@ -19,6 +19,28 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
+export function canonicalReadPathname(pathname: string): string {
+  if (!pathname || pathname === "/") return "/";
+
+  const canonical = pathname.replace(/\/+$/, "");
+  return canonical || "/";
+}
+
+export function canonicalizeCurrentReadLocation(): void {
+  if (typeof window === "undefined") return;
+
+  const canonicalPathname = canonicalReadPathname(
+    window.location.pathname,
+  );
+  if (canonicalPathname === window.location.pathname) return;
+
+  window.history.replaceState(
+    window.history.state,
+    "",
+    `${canonicalPathname}${window.location.search}${window.location.hash}`,
+  );
+}
+
 export interface BrowserLocation {
   pathname: string;
   search: string;
@@ -77,14 +99,16 @@ export function safeReturnTo(
   try {
     const url = new URL(candidate, origin);
 
+    const pathname = canonicalReadPathname(url.pathname);
+
     if (
       url.origin !== origin
-      || (url.pathname !== "/app" && !url.pathname.startsWith("/app/"))
+      || (pathname !== "/app" && !pathname.startsWith("/app/"))
     ) {
       return null;
     }
 
-    return `${url.pathname}${url.search}${url.hash}`;
+    return `${pathname}${url.search}${url.hash}`;
   } catch {
     return null;
   }
