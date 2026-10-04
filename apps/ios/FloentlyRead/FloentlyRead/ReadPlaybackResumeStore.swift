@@ -246,6 +246,48 @@ final class ReadPlaybackResumeStore {
                     match.scalarOffset,
                 in: match.segment
             )
+        let quoteLength =
+            quote.unicodeScalars.count
+        let localQuoteStart =
+            max(
+                0,
+                match.scalarOffset
+                    - cursorOffset
+                    - match.segment
+                        .scalarStart
+            )
+        let localQuoteEnd =
+            min(
+                match.segment.text
+                    .unicodeScalars
+                    .count,
+                localQuoteStart
+                    + quoteLength
+            )
+        let migratedPrefix =
+            substring(
+                match.segment.text,
+                scalarStart:
+                    max(
+                        0,
+                        localQuoteStart - 32
+                    ),
+                scalarEnd:
+                    localQuoteStart
+            )
+        let migratedSuffix =
+            substring(
+                match.segment.text,
+                scalarStart:
+                    localQuoteEnd,
+                scalarEnd:
+                    min(
+                        match.segment.text
+                            .unicodeScalars
+                            .count,
+                        localQuoteEnd + 32
+                    )
+            )
         let migrated =
             ReadPlaybackResumeSnapshot(
                 documentId:
@@ -271,9 +313,9 @@ final class ReadPlaybackResumeStore {
                 sourceAnchorQuote:
                     quote,
                 sourceAnchorPrefixContext:
-                    prefix,
+                    migratedPrefix,
                 sourceAnchorSuffixContext:
-                    suffix,
+                    migratedSuffix,
                 sourceAnchorCursorOffset:
                     cursorOffset
             )
