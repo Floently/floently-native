@@ -1,4 +1,6 @@
-const DATABASE_NAME = "floently-read-web-vnext";
+import { accountScopedLocalName } from "../content/localOwnerScope";
+
+const DATABASE_PREFIX = "floently-read-web-vnext-v2";
 const DATABASE_VERSION = 1;
 const DOCUMENT_STORE = "documents";
 
@@ -20,13 +22,19 @@ export interface SaveLibraryDocumentInput {
   sourceType?: LibraryDocument["sourceType"];
 }
 
-let databasePromise: Promise<IDBDatabase> | null = null;
+const databasePromises = new Map<string, Promise<IDBDatabase>>();
 
-function openDatabase(): Promise<IDBDatabase> {
-  if (databasePromise) return databasePromise;
+export function libraryDocumentDatabaseName(ownerId: string): string {
+  return accountScopedLocalName(DATABASE_PREFIX, ownerId);
+}
 
-  databasePromise = new Promise((resolve, reject) => {
-    const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
+function openDatabase(ownerId: string): Promise<IDBDatabase> {
+  const databaseName = libraryDocumentDatabaseName(ownerId);
+  const existing = databasePromises.get(databaseName);
+  if (existing) return existing;
+
+  const pending = new Promise<IDBDatabase>((resolve, reject) => {
+    const request = indexedDB.open(databaseName, DATABASE_VERSION);
 
     request.onupgradeneeded = () => {
       const database = request.result;
@@ -40,11 +48,17 @@ function openDatabase(): Promise<IDBDatabase> {
     };
 
     request.onsuccess = () => resolve(request.result);
-    request.onerror = () =>
-      reject(request.error ?? new Error("Document database failed to open."));
+    request.onerror = () => {
+      databasePromises.delete(databaseName);
+      reject(
+        request.error
+        ?? new Error("Document database failed to open."),
+      );
+    };
   });
 
-  return databasePromise;
+  databasePromises.set(databaseName, pending);
+  return pending;
 }
 
 function requestResult<T>(request: IDBRequest<T>): Promise<T> {
@@ -75,8 +89,10 @@ function makeDocumentId(): string {
     .slice(2, 10)}`;
 }
 
-export async function listLibraryDocuments(): Promise<LibraryDocument[]> {
-  const database = await openDatabase();
+export async function listLibraryDocuments(
+  ownerId: string,
+): Promise<LibraryDocument[]> {
+  const database = await openDatabase(ownerId);
   const transaction = database.transaction(DOCUMENT_STORE, "readonly");
   const records = await requestResult(
     transaction.objectStore(DOCUMENT_STORE).getAll(),
@@ -88,9 +104,10 @@ export async function listLibraryDocuments(): Promise<LibraryDocument[]> {
 }
 
 export async function getLibraryDocument(
+  ownerId: string,
   id: string,
 ): Promise<LibraryDocument | null> {
-  const database = await openDatabase();
+  const database = await openDatabase(ownerId);
   const transaction = database.transaction(DOCUMENT_STORE, "readonly");
   const record = await requestResult(
     transaction.objectStore(DOCUMENT_STORE).get(id),
@@ -100,6 +117,7 @@ export async function getLibraryDocument(
 }
 
 export async function saveLibraryDocument(
+  ownerId: string,
   input: SaveLibraryDocumentInput,
 ): Promise<LibraryDocument> {
   const text = input.text.trim();
@@ -108,9 +126,11 @@ export async function saveLibraryDocument(
     throw new Error("Add document text before saving.");
   }
 
-  const database = await openDatabase();
+  const database = await openDatabase(ownerId);
   const id = input.id?.trim() || makeDocumentId();
-  const existing = input.id ? await getLibraryDocument(id) : null;
+  const existing = input.id
+    ? await getLibraryDocument(ownerId, id)
+    : null;
   const timestamp = new Date().toISOString();
 
   const document: LibraryDocument = {
@@ -130,8 +150,11 @@ export async function saveLibraryDocument(
   return document;
 }
 
-export async function deleteLibraryDocument(id: string): Promise<void> {
-  const database = await openDatabase();
+export async function deleteLibraryDocument(
+  ownerId: string,
+  id: string,
+): Promise<void> {
+  const database = await openDatabase(ownerId);
   const transaction = database.transaction(DOCUMENT_STORE, "readwrite");
   transaction.objectStore(DOCUMENT_STORE).delete(id);
   await transactionComplete(transaction);

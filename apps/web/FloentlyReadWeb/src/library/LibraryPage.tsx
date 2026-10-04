@@ -15,6 +15,7 @@ import {
   type LocalOriginalDocumentRecord,
 } from "../content/localOriginalDocuments";
 import { navigateTo } from "../routing/navigation";
+import { useAuthState } from "../auth/useAuthState";
 
 function formatUpdatedAt(value: string | number): string {
   const date = new Date(value);
@@ -60,6 +61,8 @@ function localOriginalType(record: LocalOriginalDocumentRecord): string {
 }
 
 export function LibraryPage() {
+  const auth = useAuthState();
+  const ownerId = auth.session?.user.id ?? null;
   const [projects, setProjects] = useState<ContentProject[]>([]);
   const [originals, setOriginals] =
     useState<LocalOriginalDocumentRecord[]>([]);
@@ -71,14 +74,16 @@ export function LibraryPage() {
   const [error, setError] = useState<string | null>(null);
 
   async function refresh(): Promise<void> {
+    if (!ownerId) return;
+
     setStatus("loading");
     setError(null);
 
     const [cloudResult, originalsResult, legacyResult] =
       await Promise.allSettled([
         listContentProjects(100, 0),
-        listLocalOriginalDocuments(100),
-        listLibraryDocuments(),
+        listLocalOriginalDocuments(ownerId, 100),
+        listLibraryDocuments(ownerId),
       ]);
 
     if (cloudResult.status === "fulfilled") {
@@ -113,8 +118,13 @@ export function LibraryPage() {
   }
 
   useEffect(() => {
-    void refresh();
-  }, []);
+    setProjects([]);
+    setOriginals([]);
+    setLegacyDocuments([]);
+    if (ownerId) {
+      void refresh();
+    }
+  }, [ownerId]);
 
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -209,8 +219,10 @@ export function LibraryPage() {
       return;
     }
 
+    if (!ownerId) return;
+
     try {
-      await removeLocalOriginalDocument(record.id);
+      await removeLocalOriginalDocument(ownerId, record.id);
       setOriginals((current) =>
         current.filter((item) => item.id !== record.id),
       );
@@ -224,8 +236,10 @@ export function LibraryPage() {
       return;
     }
 
+    if (!ownerId) return;
+
     try {
-      await deleteLibraryDocument(document.id);
+      await deleteLibraryDocument(ownerId, document.id);
       setLegacyDocuments((current) =>
         current.filter((item) => item.id !== document.id),
       );

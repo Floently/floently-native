@@ -90,13 +90,18 @@ export function VisualDocumentPage({
   }, [objectUrl]);
 
   useEffect(() => {
+    if (!runtime) return;
+
     let cancelled = false;
     let timer: number | null = null;
     let attempts = 0;
 
     const refresh = async () => {
       try {
-        const next = await getLocalOriginalDocument(localDocumentId);
+        const next = await getLocalOriginalDocument(
+          runtime.ownerId,
+          localDocumentId,
+        );
         if (cancelled) return;
 
         if (!next) {
@@ -132,7 +137,7 @@ export function VisualDocumentPage({
       cancelled = true;
       if (timer !== null) window.clearTimeout(timer);
     };
-  }, [localDocumentId]);
+  }, [localDocumentId, runtime]);
 
   useEffect(() => {
     if (!runtime || !record?.projectId) return;
@@ -257,7 +262,7 @@ export function VisualDocumentPage({
   }, [progressWriter]);
 
   async function retrySemanticLayer(): Promise<void> {
-    if (!record || semanticBusy) return;
+    if (!runtime || !record || semanticBusy) return;
 
     setSemanticBusy(true);
     setError(null);
@@ -265,11 +270,15 @@ export function VisualDocumentPage({
     try {
       const nextProject =
         await attachSemanticProjectToLocalOriginal(
+          runtime.ownerId,
           record.id,
           fileFromLocalOriginal(record),
         );
       const refreshed =
-        await getLocalOriginalDocument(record.id);
+        await getLocalOriginalDocument(
+          runtime.ownerId,
+          record.id,
+        );
 
       setProject(null);
       setRecord((current) =>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  localOriginalDatabaseName,
   localOriginalFromStorage,
   originalRecordForStorage,
   sameOriginalIdentity,
@@ -47,6 +48,24 @@ describe("local original File persistence", () => {
     expect(
       Array.from(new Uint8Array(await blob.arrayBuffer())),
     ).toEqual([10, 20, 30]);
+  });
+});
+
+describe("local original account storage isolation", () => {
+  it("uses a distinct v2 IndexedDB namespace for each authenticated owner", () => {
+    const first = localOriginalDatabaseName("account-a");
+    const second = localOriginalDatabaseName("account-b");
+
+    expect(first).not.toBe(second);
+    expect(first).toContain("original-documents-v2");
+    expect(first).toContain("account-a");
+    expect(second).toContain("account-b");
+  });
+
+  it("fails closed when owner identity is missing", () => {
+    expect(() => localOriginalDatabaseName("   ")).toThrow(
+      "Authenticated Read owner is required",
+    );
   });
 });
 

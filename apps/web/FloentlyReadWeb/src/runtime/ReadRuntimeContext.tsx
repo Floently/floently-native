@@ -21,6 +21,7 @@ import {
 } from "../preferences/readPreferencesStore";
 
 export interface ReadWebRuntime {
+  ownerId: string;
   core: ReadCoreWorkerClient;
   playback: WebPlaybackSession;
   documents: ReadDocumentSession;
@@ -78,6 +79,7 @@ export function ReadRuntimeProvider({
       subscribeReadPreferences(applyHighlightPreference);
 
     const nextRuntime: ReadWebRuntime = {
+      ownerId,
       core,
       playback,
       documents,

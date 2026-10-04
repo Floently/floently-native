@@ -50,6 +50,7 @@ async function withinFastOpenBudget<T>(
 }
 
 export interface FileIngestionOptions {
+  ownerId: string;
   title?: string;
   /**
    * Keep the production first-open budget for UI-blocking imports.
@@ -74,7 +75,7 @@ export interface FileIngestionHandle {
 
 async function canonicalFileIngestion(
   file: File,
-  options: Pick<FileIngestionOptions, "title">,
+  options: Pick<FileIngestionOptions, "ownerId" | "title">,
 ): Promise<UnifiedIngestionResult> {
   let fingerprint: string | null = null;
 
@@ -85,12 +86,19 @@ async function canonicalFileIngestion(
   }
 
   if (fingerprint) {
-    const existingProjectId = getProjectForFileFingerprint(fingerprint);
+    const existingProjectId = getProjectForFileFingerprint(
+      options.ownerId,
+      fingerprint,
+    );
 
     if (existingProjectId) {
       try {
         const project = await getContentProject(existingProjectId);
-        rememberProjectForFileFingerprint(fingerprint, project.id);
+        rememberProjectForFileFingerprint(
+          options.ownerId,
+          fingerprint,
+          project.id,
+        );
 
         return {
           kind: "file",
@@ -108,7 +116,11 @@ async function canonicalFileIngestion(
   });
 
   if (fingerprint) {
-    rememberProjectForFileFingerprint(fingerprint, project.id);
+    rememberProjectForFileFingerprint(
+      options.ownerId,
+      fingerprint,
+      project.id,
+    );
   }
 
   return {
@@ -120,7 +132,7 @@ async function canonicalFileIngestion(
 
 export function beginFileIngestion(
   file: File,
-  options: FileIngestionOptions = {},
+  options: FileIngestionOptions,
 ): FileIngestionHandle {
   const canonical = canonicalFileIngestion(file, options);
   const immediate =
@@ -136,7 +148,7 @@ export function beginFileIngestion(
 
 export async function ingestFileIntoReader(
   file: File,
-  options: FileIngestionOptions = {},
+  options: FileIngestionOptions,
 ): Promise<UnifiedIngestionResult> {
   return beginFileIngestion(file, options).immediate;
 }

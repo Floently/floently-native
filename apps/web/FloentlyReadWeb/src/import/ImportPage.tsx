@@ -92,6 +92,7 @@ function titleForText(text: string): string {
 
 export function ImportPage() {
   const auth = useAuthState();
+  const ownerId = auth.session?.user.id ?? null;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [source, setSource] = useState<ImportSource>("device");
   const [pasteText, setPasteText] = useState("");
@@ -117,6 +118,10 @@ export function ImportPage() {
 
   async function openFile(file: File): Promise<void> {
     if (!file || busy) return;
+    if (!ownerId) {
+      setError("Sign in again before importing a local document.");
+      return;
+    }
 
     setBusy(true);
     setError(null);
@@ -124,7 +129,7 @@ export function ImportPage() {
     if (isPdfFile(file)) {
       try {
         setStatus("Opening the original PDF pages…");
-        const local = await handoffOriginalDocument(file);
+        const local = await handoffOriginalDocument(ownerId, file);
 
         navigateTo(
           `/app/document/${encodeURIComponent(local.id)}`,
@@ -135,6 +140,7 @@ export function ImportPage() {
         // budget, and retries on the visual document page join this same
         // in-flight attachment instead of creating a duplicate upload.
         void attachSemanticProjectToLocalOriginal(
+          ownerId,
           local.id,
           file,
         ).catch(() => {
@@ -155,7 +161,9 @@ export function ImportPage() {
     }
 
     setStatus(`Adding ${file.name} to your synced library…`);
-    const ingestion = beginFileIngestion(file);
+    const ingestion = beginFileIngestion(file, {
+      ownerId,
+    });
 
     try {
       const result = await ingestion.immediate;
@@ -166,12 +174,13 @@ export function ImportPage() {
       // Preserve the original file when canonical extraction cannot finish.
       // This mirrors production's fail-open visual-source behavior.
       try {
-        const local = await handoffOriginalDocument(file);
+        const local = await handoffOriginalDocument(ownerId, file);
 
         // The canonical request may simply have exceeded the first-open
         // budget. Keep that exact request alive and attach its eventual
         // project to the preserved original.
         void trackCanonicalIngestionForLocalOriginal(
+          ownerId,
           local.id,
           ingestion.canonical,
         ).catch(() => {
