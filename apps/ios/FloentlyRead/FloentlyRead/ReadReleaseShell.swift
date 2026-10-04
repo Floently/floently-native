@@ -316,7 +316,6 @@ private struct ReadAuthView: View {
 }
 
 private struct ReadEntitlementView: View {
-    @Environment(\.openURL) private var openURL
     @EnvironmentObject private var sessionStore: FloentlySessionStore
     @EnvironmentObject private var accessModel: ReadAccessModel
 
@@ -351,27 +350,22 @@ private struct ReadEntitlementView: View {
                         systemImage: "waveform"
                     )
 
+                    Text(
+                        "This first native release verifies existing Floently Read entitlement. Purchase and plan changes stay outside this build until the native store flow is approved."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(palette.muted)
+
                     FloentlyPrimaryButton(
-                        "Manage Read subscription",
+                        "Refresh access",
                         product: .read
                     ) {
-                        openURL(
-                            URL(
-                                string:
-                                    "https://read.floently.com/app/subscription"
-                            )!
-                        )
-                    }
-
-                    Button("Refresh access") {
                         Task {
                             await accessModel.refresh(
                                 sessionStore: sessionStore
                             )
                         }
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(palette.accent2)
                 }
 
                 Button("Sign out") {
