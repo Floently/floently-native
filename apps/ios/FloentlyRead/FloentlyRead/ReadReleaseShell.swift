@@ -4057,6 +4057,7 @@ private struct ReadProjectReaderView: View {
                 voiceSettings: voiceSettings
             )
             manifest = builtManifest
+            await refreshSourceHighlights()
         } catch {
             errorMessage = error.localizedDescription
         }
