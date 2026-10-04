@@ -1,4 +1,6 @@
-const DB_NAME = "floently-read-web-vnext-original-documents";
+import { accountScopedLocalName } from "./localOwnerScope";
+
+const DB_NAME_PREFIX = "floently-read-web-vnext-original-documents-v2";
 const DB_VERSION = 1;
 const STORE_NAME = "documents";
 const QUICK_INDEX = "quickSignature";
@@ -28,9 +30,16 @@ export interface StoredLocalOriginalDocumentRecord
   blob?: Blob;
 }
 
-function openDatabase(): Promise<IDBDatabase> {
+export function localOriginalDatabaseName(ownerId: string): string {
+  return accountScopedLocalName(DB_NAME_PREFIX, ownerId);
+}
+
+function openDatabase(ownerId: string): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const request = indexedDB.open(
+      localOriginalDatabaseName(ownerId),
+      DB_VERSION,
+    );
 
     request.onupgradeneeded = () => {
       const database = request.result;
@@ -221,10 +230,11 @@ async function calculateContentHash(file: File): Promise<string | null> {
 }
 
 async function getByIndex(
+  ownerId: string,
   indexName: string,
   value: IDBValidKey,
 ): Promise<LocalOriginalDocumentRecord | null> {
-  const database = await openDatabase();
+  const database = await openDatabase(ownerId);
 
   try {
     const transaction = database.transaction(STORE_NAME, "readonly");
@@ -255,12 +265,13 @@ export function withCompletedContentHash(
 }
 
 async function putRecord(
+  ownerId: string,
   record: LocalOriginalDocumentRecord,
 ): Promise<void> {
   // Materialize bytes before opening the write transaction. IndexedDB
   // transactions may auto-close while unrelated async Blob work is pending.
   const stored = await originalRecordForStorage(record);
-  const database = await openDatabase();
+  const database = await openDatabase(ownerId);
 
   try {
     const transaction = database.transaction(STORE_NAME, "readwrite");
@@ -272,9 +283,10 @@ async function putRecord(
 }
 
 export async function getLocalOriginalDocument(
+  ownerId: string,
   id: string,
 ): Promise<LocalOriginalDocumentRecord | null> {
-  const database = await openDatabase();
+  const database = await openDatabase(ownerId);
 
   try {
     const transaction = database.transaction(STORE_NAME, "readonly");
@@ -290,10 +302,10 @@ export async function getLocalOriginalDocument(
   }
 }
 
-async function getAllLocalOriginalRecords(): Promise<
-  LocalOriginalDocumentRecord[]
-> {
-  const database = await openDatabase();
+async function getAllLocalOriginalRecords(
+  ownerId: string,
+): Promise<LocalOriginalDocumentRecord[]> {
+  const database = await openDatabase(ownerId);
 
   try {
     const transaction = database.transaction(STORE_NAME, "readonly");
@@ -328,9 +340,10 @@ export function sameOriginalIdentity(
 }
 
 export async function listLocalOriginalDocuments(
+  ownerId: string,
   limit = 80,
 ): Promise<LocalOriginalDocumentRecord[]> {
-  const records = await getAllLocalOriginalRecords();
+  const records = await getAllLocalOriginalRecords(ownerId);
   const canonical = new Map<string, LocalOriginalDocumentRecord>();
 
   for (const record of records) {
@@ -356,9 +369,10 @@ export async function listLocalOriginalDocuments(
 }
 
 export async function removeLocalOriginalDocument(
+  ownerId: string,
   id: string,
 ): Promise<void> {
-  const records = await getAllLocalOriginalRecords();
+  const records = await getAllLocalOriginalRecords(ownerId);
   const target = records.find((record) => record.id === id) ?? null;
   const idsToDelete = target
     ? records
@@ -366,7 +380,7 @@ export async function removeLocalOriginalDocument(
         .map((record) => record.id)
     : [id];
 
-  const database = await openDatabase();
+  const database = await openDatabase(ownerId);
 
   try {
     const transaction = database.transaction(STORE_NAME, "readwrite");
@@ -383,10 +397,15 @@ export async function removeLocalOriginalDocument(
 }
 
 export async function handoffOriginalDocument(
+  ownerId: string,
   file: File,
 ): Promise<{ id: string; duplicate: boolean }> {
   const quickSignature = await buildQuickSignature(file);
-  const existingQuick = await getByIndex(QUICK_INDEX, quickSignature);
+  const existingQuick = await getByIndex(
+    ownerId,
+    QUICK_INDEX,
+    quickSignature,
+  );
 
   if (existingQuick) {
     const refreshed: LocalOriginalDocumentRecord = {
@@ -398,7 +417,7 @@ export async function handoffOriginalDocument(
       lastModified: file.lastModified || existingQuick.lastModified,
       updatedAt: Date.now(),
     };
-    await putRecord(refreshed);
+    await putRecord(ownerId, refreshed);
 
     return {
       id: refreshed.id,
@@ -419,20 +438,21 @@ export async function handoffOriginalDocument(
     createdAt: now,
     updatedAt: now,
   };
-  await putRecord(record);
+  await putRecord(ownerId, record);
 
   void (async () => {
     const hash = await calculateContentHash(file);
     if (!hash) return;
 
-    const exact = await getByIndex(HASH_INDEX, hash);
-    const latest = await getLocalOriginalDocument(record.id);
+    const exact = await getByIndex(ownerId, HASH_INDEX, hash);
+    const latest = await getLocalOriginalDocument(ownerId, record.id);
     if (!latest) return;
 
     // Never delete the just-opened id during background hashing: another route
     // or tab may already be rendering it. listLocalOriginalDocuments() dedupes
     // identical hashes for presentation while both ids remain addressable.
     await putRecord(
+      ownerId,
       withCompletedContentHash(
         latest,
         hash,
@@ -451,13 +471,14 @@ export async function handoffOriginalDocument(
 }
 
 export async function linkLocalOriginalToProject(
+  ownerId: string,
   id: string,
   projectId: string,
 ): Promise<void> {
-  const record = await getLocalOriginalDocument(id);
+  const record = await getLocalOriginalDocument(ownerId, id);
   if (!record) return;
 
-  await putRecord({
+  await putRecord(ownerId, {
     ...record,
     projectId: projectId.trim() || null,
     updatedAt: Date.now(),
