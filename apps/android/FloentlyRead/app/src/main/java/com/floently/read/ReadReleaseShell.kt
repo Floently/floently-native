@@ -1242,7 +1242,8 @@ private fun ReadMainShell(
                         ReleaseNavItem(
                             selected =
                                 tab == ReadReleaseTab.Home,
-                            glyph = "⌂",
+                            symbol =
+                                ReadShellSymbol.Home,
                             label = "Read"
                         ) {
                             tab = ReadReleaseTab.Home
@@ -1250,7 +1251,8 @@ private fun ReadMainShell(
                         ReleaseNavItem(
                             selected =
                                 tab == ReadReleaseTab.Library,
-                            glyph = "▤",
+                            symbol =
+                                ReadShellSymbol.Library,
                             label = "Library"
                         ) {
                             tab = ReadReleaseTab.Library
@@ -1258,7 +1260,8 @@ private fun ReadMainShell(
                         ReleaseNavItem(
                             selected =
                                 tab == ReadReleaseTab.Settings,
-                            glyph = "⚙",
+                            symbol =
+                                ReadShellSymbol.Settings,
                             label = "Settings"
                         ) {
                             tab = ReadReleaseTab.Settings
@@ -1407,49 +1410,344 @@ private fun ReadMainShell(
     }
 }
 
+private enum class ReadShellSymbol {
+    Home,
+    Library,
+    Settings,
+    Search,
+    Close,
+    Add,
+    ChevronRight,
+    More
+}
+
 @Composable
 private fun ReleaseNavItem(
     selected: Boolean,
-    glyph: String,
+    symbol: ReadShellSymbol,
     label: String,
     onClick: () -> Unit
 ) {
-    val palette = floentlyPalette(FloentlyProduct.Read)
+    val palette =
+        floentlyPalette(
+            FloentlyProduct.Read
+        )
+    val color =
+        if (selected) {
+            palette.accent
+        } else {
+            palette.muted
+        }
 
     TextButton(
         onClick = onClick,
-        shape = RoundedCornerShape(FloentlyDesignTokens.Radius.l),
-        colors = ButtonDefaults.textButtonColors(
-            contentColor = if (selected) {
-                palette.accent
-            } else {
-                palette.muted
-            }
-        ),
-        contentPadding = PaddingValues(
-            horizontal = 18.dp,
-            vertical = 8.dp
-        ),
-        modifier = Modifier.height(58.dp)
+        shape =
+            RoundedCornerShape(
+                FloentlyDesignTokens
+                    .Radius
+                    .l
+            ),
+        colors =
+            ButtonDefaults
+                .textButtonColors(
+                    contentColor = color
+                ),
+        contentPadding =
+            PaddingValues(
+                horizontal = 18.dp,
+                vertical = 8.dp
+            ),
+        modifier =
+            Modifier.height(58.dp)
     ) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            horizontalAlignment =
+                Alignment.CenterHorizontally,
+            verticalArrangement =
+                Arrangement.Center
         ) {
-            Text(
-                glyph,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+            ReadShellGlyph(
+                symbol = symbol,
+                color = color,
+                modifier =
+                    Modifier.size(22.dp)
             )
             Text(
                 label,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = if (selected) {
-                    FontWeight.SemiBold
-                } else {
-                    FontWeight.Normal
-                }
+                style =
+                    MaterialTheme.typography
+                        .labelSmall,
+                fontWeight =
+                    if (selected) {
+                        FontWeight.SemiBold
+                    } else {
+                        FontWeight.Normal
+                    }
             )
+        }
+    }
+}
+
+@Composable
+private fun ReadShellGlyph(
+    symbol: ReadShellSymbol,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier) {
+        val stroke = 2.dp.toPx()
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+
+        when (symbol) {
+            ReadShellSymbol.Home -> {
+                val roof = Path().apply {
+                    moveTo(
+                        size.width * 0.18f,
+                        size.height * 0.48f
+                    )
+                    lineTo(
+                        cx,
+                        size.height * 0.20f
+                    )
+                    lineTo(
+                        size.width * 0.82f,
+                        size.height * 0.48f
+                    )
+                }
+                drawPath(
+                    path = roof,
+                    color = color,
+                    style =
+                        androidx.compose.ui
+                            .graphics.drawscope
+                            .Stroke(
+                                width = stroke
+                            )
+                )
+                drawRect(
+                    color = color,
+                    topLeft = Offset(
+                        size.width * 0.30f,
+                        size.height * 0.46f
+                    ),
+                    size =
+                        androidx.compose.ui
+                            .geometry
+                            .Size(
+                                size.width * 0.40f,
+                                size.height * 0.36f
+                            ),
+                    style =
+                        androidx.compose.ui
+                            .graphics.drawscope
+                            .Stroke(
+                                width = stroke
+                            )
+                )
+            }
+
+            ReadShellSymbol.Library -> {
+                listOf(
+                    0.28f,
+                    0.50f,
+                    0.72f
+                ).forEach { x ->
+                    drawLine(
+                        color = color,
+                        start = Offset(
+                            size.width * x,
+                            size.height * 0.22f
+                        ),
+                        end = Offset(
+                            size.width * x,
+                            size.height * 0.78f
+                        ),
+                        strokeWidth =
+                            stroke * 1.6f
+                    )
+                }
+                drawLine(
+                    color = color,
+                    start = Offset(
+                        size.width * 0.18f,
+                        size.height * 0.82f
+                    ),
+                    end = Offset(
+                        size.width * 0.82f,
+                        size.height * 0.82f
+                    ),
+                    strokeWidth = stroke
+                )
+            }
+
+            ReadShellSymbol.Settings -> {
+                drawCircle(
+                    color = color,
+                    radius =
+                        size.minDimension
+                            * 0.16f,
+                    center = Offset(
+                        cx,
+                        cy
+                    ),
+                    style =
+                        androidx.compose.ui
+                            .graphics.drawscope
+                            .Stroke(
+                                width = stroke
+                            )
+                )
+
+                val spokes = listOf(
+                    Offset(cx, size.height * 0.12f)
+                        to Offset(cx, size.height * 0.28f),
+                    Offset(cx, size.height * 0.72f)
+                        to Offset(cx, size.height * 0.88f),
+                    Offset(size.width * 0.12f, cy)
+                        to Offset(size.width * 0.28f, cy),
+                    Offset(size.width * 0.72f, cy)
+                        to Offset(size.width * 0.88f, cy)
+                )
+                spokes.forEach {
+                    (start, end) ->
+                    drawLine(
+                        color = color,
+                        start = start,
+                        end = end,
+                        strokeWidth = stroke
+                    )
+                }
+            }
+
+            ReadShellSymbol.Search -> {
+                drawCircle(
+                    color = color,
+                    radius =
+                        size.minDimension
+                            * 0.24f,
+                    center = Offset(
+                        size.width * 0.43f,
+                        size.height * 0.43f
+                    ),
+                    style =
+                        androidx.compose.ui
+                            .graphics.drawscope
+                            .Stroke(
+                                width = stroke
+                            )
+                )
+                drawLine(
+                    color = color,
+                    start = Offset(
+                        size.width * 0.60f,
+                        size.height * 0.60f
+                    ),
+                    end = Offset(
+                        size.width * 0.82f,
+                        size.height * 0.82f
+                    ),
+                    strokeWidth = stroke
+                )
+            }
+
+            ReadShellSymbol.Close -> {
+                drawLine(
+                    color = color,
+                    start = Offset(
+                        size.width * 0.26f,
+                        size.height * 0.26f
+                    ),
+                    end = Offset(
+                        size.width * 0.74f,
+                        size.height * 0.74f
+                    ),
+                    strokeWidth = stroke
+                )
+                drawLine(
+                    color = color,
+                    start = Offset(
+                        size.width * 0.74f,
+                        size.height * 0.26f
+                    ),
+                    end = Offset(
+                        size.width * 0.26f,
+                        size.height * 0.74f
+                    ),
+                    strokeWidth = stroke
+                )
+            }
+
+            ReadShellSymbol.Add -> {
+                drawLine(
+                    color = color,
+                    start = Offset(
+                        cx,
+                        size.height * 0.22f
+                    ),
+                    end = Offset(
+                        cx,
+                        size.height * 0.78f
+                    ),
+                    strokeWidth = stroke
+                )
+                drawLine(
+                    color = color,
+                    start = Offset(
+                        size.width * 0.22f,
+                        cy
+                    ),
+                    end = Offset(
+                        size.width * 0.78f,
+                        cy
+                    ),
+                    strokeWidth = stroke
+                )
+            }
+
+            ReadShellSymbol.ChevronRight -> {
+                drawLine(
+                    color = color,
+                    start = Offset(
+                        size.width * 0.38f,
+                        size.height * 0.28f
+                    ),
+                    end = Offset(
+                        size.width * 0.62f,
+                        cy
+                    ),
+                    strokeWidth = stroke
+                )
+                drawLine(
+                    color = color,
+                    start = Offset(
+                        size.width * 0.62f,
+                        cy
+                    ),
+                    end = Offset(
+                        size.width * 0.38f,
+                        size.height * 0.72f
+                    ),
+                    strokeWidth = stroke
+                )
+            }
+
+            ReadShellSymbol.More -> {
+                listOf(
+                    0.28f,
+                    0.50f,
+                    0.72f
+                ).forEach { x ->
+                    drawCircle(
+                        color = color,
+                        radius = stroke,
+                        center = Offset(
+                            size.width * x,
+                            cy
+                        )
+                    )
+                }
+            }
         }
     }
 }
@@ -1985,17 +2283,18 @@ private fun ReadLibraryScreen(
                                 .iconTarget
                         )
                 ) {
-                    Text(
-                        if (searchVisible) {
-                            "×"
-                        } else {
-                            "⌕"
-                        },
+                    ReadShellGlyph(
+                        symbol =
+                            if (searchVisible) {
+                                ReadShellSymbol
+                                    .Close
+                            } else {
+                                ReadShellSymbol
+                                    .Search
+                            },
                         color = palette.text,
-                        style =
-                            MaterialTheme
-                                .typography
-                                .titleMedium
+                        modifier =
+                            Modifier.size(20.dp)
                     )
                 }
 
@@ -2024,13 +2323,12 @@ private fun ReadLibraryScreen(
                                 .iconTarget
                         )
                 ) {
-                    Text(
-                        "+",
+                    ReadShellGlyph(
+                        symbol =
+                            ReadShellSymbol.Add,
                         color = palette.text,
-                        style =
-                            MaterialTheme
-                                .typography
-                                .titleLarge
+                        modifier =
+                            Modifier.size(20.dp)
                     )
                 }
             }
@@ -2343,8 +2641,10 @@ private fun ReadProjectRow(
                             project.sourceType.lowercase()
                         ) {
                             "pdf" -> "PDF"
-                            "web", "website", "url" -> "◎"
-                            else -> "Aa"
+                            "epub" -> "EPUB"
+                            "web", "website", "url" -> "WEB"
+                            "text", "txt", "markdown", "md" -> "TXT"
+                            else -> "DOC"
                         },
                         color = palette.accent,
                         style =
@@ -2381,10 +2681,13 @@ private fun ReadProjectRow(
                 )
             }
 
-            Text(
-                "›",
+            ReadShellGlyph(
+                symbol =
+                    ReadShellSymbol
+                        .ChevronRight,
                 color = palette.muted,
-                style = MaterialTheme.typography.titleLarge
+                modifier =
+                    Modifier.size(20.dp)
             )
         }
 
@@ -2399,11 +2702,12 @@ private fun ReadProjectRow(
                         .width(42.dp)
                         .height(48.dp)
                 ) {
-                    Text(
-                        "⋯",
+                    ReadShellGlyph(
+                        symbol =
+                            ReadShellSymbol.More,
                         color = palette.muted,
-                        style =
-                            MaterialTheme.typography.titleLarge
+                        modifier =
+                            Modifier.size(20.dp)
                     )
                 }
 
@@ -2439,10 +2743,12 @@ private fun ReadEmptyLibraryCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(
-                "▤",
+            ReadShellGlyph(
+                symbol =
+                    ReadShellSymbol.Library,
                 color = palette.accent,
-                style = MaterialTheme.typography.displaySmall
+                modifier =
+                    Modifier.size(36.dp)
             )
             Spacer(Modifier.height(10.dp))
             Text(
