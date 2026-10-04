@@ -52,6 +52,16 @@ struct ReadPlaybackResumeSnapshot: Codable, Equatable {
     }
 }
 
+struct ReadPlaybackSourceAnchor {
+    let scalarOffset: Int
+    let segmentId: String
+    let segmentIndex: Int
+    let quote: String
+    let prefixContext: String
+    let suffixContext: String
+    let cursorOffset: Int
+}
+
 @MainActor
 final class ReadPlaybackResumeStore {
     private let defaults: UserDefaults
@@ -120,6 +130,327 @@ final class ReadPlaybackResumeStore {
             .max {
                 $0.updatedAt < $1.updatedAt
             }
+    }
+
+    func loadOrMigrate(
+        manifest: ReadingManifestV1
+    ) -> ReadPlaybackResumeSnapshot? {
+        if
+            let current = load(
+                documentId:
+                    manifest.documentId,
+                revisionId:
+                    manifest.revisionId
+            )
+        {
+            return current
+        }
+
+        guard
+            let previous = loadLatest(
+                documentId:
+                    manifest.documentId,
+                excludingRevisionId:
+                    manifest.revisionId
+            ),
+            let quote =
+                previous.sourceAnchorQuote,
+            !quote.isEmpty,
+            let cursorOffset =
+                previous
+                    .sourceAnchorCursorOffset,
+            cursorOffset >= 0
+        else {
+            return nil
+        }
+
+        let prefix =
+            previous
+                .sourceAnchorPrefixContext
+            ?? ""
+        let suffix =
+            previous
+                .sourceAnchorSuffixContext
+            ?? ""
+        var matches:
+            [(
+                segment:
+                    ReadingManifestSegmentV1,
+                scalarOffset: Int
+            )] = []
+
+        for segment in manifest.segments {
+            let resolution:
+                ReadSourceAnchorResolution?
+
+            do {
+                resolution =
+                    try ReadCoreNative
+                        .resolveSourceAnchor(
+                            sourceText:
+                                segment.text,
+                            quote: quote,
+                            prefixContext:
+                                prefix,
+                            suffixContext:
+                                suffix
+                        )
+            } catch {
+                resolution = nil
+            }
+
+            guard
+                let resolution
+            else {
+                continue
+            }
+
+            let localCursor =
+                resolution.scalarStart
+                + cursorOffset
+            guard
+                localCursor >= 0,
+                localCursor
+                    <= segment.text
+                        .unicodeScalars
+                        .count
+            else {
+                continue
+            }
+
+            matches.append(
+                (
+                    segment,
+                    min(
+                        segment.scalarEnd,
+                        segment.scalarStart
+                            + localCursor
+                    )
+                )
+            )
+
+            if matches.count > 1 {
+                return nil
+            }
+        }
+
+        guard
+            let match = matches.first
+        else {
+            return nil
+        }
+
+        let logicalTime =
+            logicalTime(
+                for:
+                    match.scalarOffset,
+                in: match.segment
+            )
+        let migrated =
+            ReadPlaybackResumeSnapshot(
+                documentId:
+                    manifest.documentId,
+                revisionId:
+                    manifest.revisionId,
+                logicalTime:
+                    logicalTime,
+                playbackRate:
+                    previous.playbackRate,
+                updatedAt:
+                    previous.updatedAt,
+                sourceScalarOffset:
+                    match.scalarOffset,
+                sourceSegmentId:
+                    match.segment.id,
+                sourceSegmentIndex:
+                    match.segment.index,
+                voiceId:
+                    previous.voiceId,
+                renditionId:
+                    previous.renditionId,
+                sourceAnchorQuote:
+                    quote,
+                sourceAnchorPrefixContext:
+                    prefix,
+                sourceAnchorSuffixContext:
+                    suffix,
+                sourceAnchorCursorOffset:
+                    cursorOffset
+            )
+
+        save(migrated)
+        return migrated
+    }
+
+    func sourceAnchor(
+        manifest: ReadingManifestV1,
+        logicalTime: TimeInterval
+    ) -> ReadPlaybackSourceAnchor? {
+        guard
+            !manifest.segments.isEmpty
+        else {
+            return nil
+        }
+
+        let cursorMs =
+            Int64(
+                max(
+                    0,
+                    logicalTime
+                ) * 1_000
+            )
+        guard
+            let segment =
+                manifest.segments.first(
+                    where: {
+                        cursorMs
+                            < $0.logicalEndMs
+                    }
+                )
+                ?? manifest.segments.last
+        else {
+            return nil
+        }
+
+        let scalarSpan =
+            max(
+                0,
+                segment.scalarEnd
+                    - segment.scalarStart
+            )
+        let logicalSpan =
+            max(
+                Int64(1),
+                segment.logicalEndMs
+                    - segment.logicalStartMs
+            )
+        let localMs =
+            min(
+                logicalSpan,
+                max(
+                    Int64(0),
+                    cursorMs
+                        - segment
+                            .logicalStartMs
+                )
+            )
+        let fraction =
+            Double(localMs)
+            / Double(logicalSpan)
+        let localScalar =
+            min(
+                scalarSpan,
+                max(
+                    0,
+                    Int(
+                        (
+                            Double(
+                                scalarSpan
+                            )
+                            * fraction
+                        )
+                        .rounded()
+                    )
+                )
+            )
+        let scalarOffset =
+            min(
+                segment.scalarEnd,
+                segment.scalarStart
+                    + localScalar
+            )
+        let segmentScalarCount =
+            segment.text
+                .unicodeScalars
+                .count
+
+        guard
+            segmentScalarCount > 0
+        else {
+            return nil
+        }
+
+        let localCursor =
+            min(
+                segmentScalarCount,
+                max(
+                    0,
+                    scalarOffset
+                        - segment
+                            .scalarStart
+                )
+            )
+        var quoteStart =
+            max(
+                0,
+                localCursor - 24
+            )
+        var quoteEnd =
+            min(
+                segmentScalarCount,
+                quoteStart + 64
+            )
+        quoteStart =
+            max(
+                0,
+                quoteEnd - 64
+            )
+        quoteEnd =
+            min(
+                segmentScalarCount,
+                quoteStart + 64
+            )
+
+        guard quoteEnd > quoteStart else {
+            return nil
+        }
+
+        let prefixStart =
+            max(
+                0,
+                quoteStart - 32
+            )
+        let suffixEnd =
+            min(
+                segmentScalarCount,
+                quoteEnd + 32
+            )
+
+        return ReadPlaybackSourceAnchor(
+            scalarOffset:
+                scalarOffset,
+            segmentId:
+                segment.id,
+            segmentIndex:
+                segment.index,
+            quote:
+                substring(
+                    segment.text,
+                    scalarStart:
+                        quoteStart,
+                    scalarEnd:
+                        quoteEnd
+                ),
+            prefixContext:
+                substring(
+                    segment.text,
+                    scalarStart:
+                        prefixStart,
+                    scalarEnd:
+                        quoteStart
+                ),
+            suffixContext:
+                substring(
+                    segment.text,
+                    scalarStart:
+                        quoteEnd,
+                    scalarEnd:
+                        suffixEnd
+                ),
+            cursorOffset:
+                localCursor
+                    - quoteStart
+        )
     }
 
     func save(_ snapshot: ReadPlaybackResumeSnapshot) {
@@ -193,6 +524,72 @@ final class ReadPlaybackResumeStore {
                 documentId: documentId,
                 revisionId: revisionId
             )
+        )
+    }
+
+    private func logicalTime(
+        for scalarOffset: Int,
+        in segment: ReadingManifestSegmentV1
+    ) -> TimeInterval {
+        let scalarSpan =
+            max(
+                1,
+                segment.scalarEnd
+                    - segment.scalarStart
+            )
+        let localScalar =
+            min(
+                scalarSpan,
+                max(
+                    0,
+                    scalarOffset
+                        - segment.scalarStart
+                )
+            )
+        let fraction =
+            Double(localScalar)
+            / Double(scalarSpan)
+        let logicalSpan =
+            max(
+                Int64(0),
+                segment.logicalEndMs
+                    - segment.logicalStartMs
+            )
+        let logicalMs =
+            Double(
+                segment.logicalStartMs
+            )
+            + Double(logicalSpan)
+                * fraction
+
+        return max(
+            0,
+            logicalMs / 1_000
+        )
+    }
+
+    private func substring(
+        _ text: String,
+        scalarStart: Int,
+        scalarEnd: Int
+    ) -> String {
+        let start =
+            ReadScalarOffsets
+                .stringIndex(
+                    in: text,
+                    scalarOffset:
+                        scalarStart
+                )
+        let end =
+            ReadScalarOffsets
+                .stringIndex(
+                    in: text,
+                    scalarOffset:
+                        scalarEnd
+                )
+
+        return String(
+            text[start..<end]
         )
     }
 
