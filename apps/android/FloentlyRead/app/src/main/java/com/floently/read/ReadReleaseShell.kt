@@ -1,5 +1,6 @@
 package com.floently.read
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.content.Intent
 import android.text.format.Formatter
@@ -3766,6 +3767,8 @@ private fun ReadProjectReaderScreen(
     val context = LocalContext.current
     val palette = floentlyPalette(FloentlyProduct.Read)
     val scope = rememberCoroutineScope()
+    val animationsEnabled =
+        ValueAnimator.areAnimatorsEnabled()
     val appearance = remember(context) {
         ReadReaderAppearanceSettings(
             context
@@ -4000,10 +4003,17 @@ private fun ReadProjectReaderScreen(
                 searchMatchIndex
             ].paragraphIndex
         scope.launch {
-            readerListState
-                .animateScrollToItem(
-                    paragraphIndex
-                )
+            if (animationsEnabled) {
+                readerListState
+                    .animateScrollToItem(
+                        paragraphIndex
+                    )
+            } else {
+                readerListState
+                    .scrollToItem(
+                        paragraphIndex
+                    )
+            }
         }
     }
 
@@ -4119,10 +4129,17 @@ private fun ReadProjectReaderScreen(
 
         showingHighlights = false
         scope.launch {
-            readerListState
-                .animateScrollToItem(
-                    paragraph.index
-                )
+            if (animationsEnabled) {
+                readerListState
+                    .animateScrollToItem(
+                        paragraph.index
+                    )
+            } else {
+                readerListState
+                    .scrollToItem(
+                        paragraph.index
+                    )
+            }
         }
     }
 
@@ -4318,10 +4335,17 @@ private fun ReadProjectReaderScreen(
             searchMatches
                 .firstOrNull()
                 ?: return@LaunchedEffect
-        readerListState
-            .animateScrollToItem(
-                first.paragraphIndex
-            )
+        if (animationsEnabled) {
+            readerListState
+                .animateScrollToItem(
+                    first.paragraphIndex
+                )
+        } else {
+            readerListState
+                .scrollToItem(
+                    first.paragraphIndex
+                )
+        }
     }
 
     LaunchedEffect(
