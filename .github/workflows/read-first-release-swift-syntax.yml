@@ -1,0 +1,42 @@
+name: Read first-release Swift syntax qualification
+
+on:
+  push:
+    branches:
+      - build/read-native-first-release-shell-20261004
+    paths:
+      - "apps/ios/**/*.swift"
+      - ".github/workflows/read-first-release-swift-syntax.yml"
+
+concurrency:
+  group: read-first-release-swift-syntax-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  swift-syntax:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.0"
+      - name: Parse all native Swift sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' source; do
+            echo "Parsing $source"
+            swiftc -parse "$source"
+          done < <(
+            find apps/ios/FloentlyRead/FloentlyRead                  apps/ios/FloentlyShared/Sources                  -type f -name '*.swift' -print0
+          )
+      - name: Type-check pure access model
+        run: |
+          swiftc -typecheck             apps/ios/FloentlyShared/Sources/FloentlyShared/Billing/FloentlyAccessModels.swift
+      - name: Type-check pure auth models
+        run: |
+          swiftc -typecheck             apps/ios/FloentlyShared/Sources/FloentlyShared/Auth/FloentlyAuthModels.swift
