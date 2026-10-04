@@ -368,6 +368,10 @@ final class ReadBrowserController: ObservableObject {
 
           const active = \(activeValue);
           const pulse = \(pulseValue);
+          const reduceMotion =
+            window.matchMedia?.(
+              "(prefers-reduced-motion: reduce)"
+            )?.matches === true;
           const root = document.querySelector(
             "[data-floently-read-root='true']"
           );
@@ -408,6 +412,14 @@ final class ReadBrowserController: ObservableObject {
                     0 0 22px rgba(75, 195, 255, 0.12);
                 }
               }
+              @media (prefers-reduced-motion: reduce) {
+                [data-floently-read-root='true'] {
+                  transition: none;
+                }
+                [data-floently-read-root='true'].floently-read-pulse {
+                  animation: none;
+                }
+              }
             `;
             document.head.appendChild(style);
           }
@@ -424,7 +436,7 @@ final class ReadBrowserController: ObservableObject {
             return;
           }
 
-          if (pulse) {
+          if (pulse && !reduceMotion) {
             root.classList.remove(
               "floently-read-pulse"
             );
