@@ -81,6 +81,15 @@ function randomId(): string {
         .slice(2, 10)}`;
 }
 
+export function storageBlobForFile(file: File): Blob {
+  const type = file.type || "application/octet-stream";
+
+  // Persist a plain Blob, not the picker-backed File object itself.
+  // WebKit can reject or mishandle File objects crossing IndexedDB boundaries,
+  // while File.slice() materializes a stable Blob snapshot with the same bytes.
+  return file.slice(0, file.size, type);
+}
+
 function bytesToHex(buffer: ArrayBuffer): string {
   return Array.from(
     new Uint8Array(buffer),
@@ -333,7 +342,7 @@ export async function handoffOriginalDocument(
   if (existingQuick) {
     const refreshed: LocalOriginalDocumentRecord = {
       ...existingQuick,
-      blob: file,
+      blob: storageBlobForFile(file),
       name: file.name,
       type: file.type || existingQuick.type,
       size: file.size,
@@ -351,7 +360,7 @@ export async function handoffOriginalDocument(
   const now = Date.now();
   const record: LocalOriginalDocumentRecord = {
     id: randomId(),
-    blob: file,
+    blob: storageBlobForFile(file),
     name: file.name,
     type: file.type || "application/octet-stream",
     size: file.size,
