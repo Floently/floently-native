@@ -7,10 +7,11 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "vitest run && node --test scripts/validate-preview-config.node-test.mjs",
+    "test": "vitest run && node --test scripts/validate-preview-config.node-test.mjs scripts/package-vercel-preview.node-test.mjs",
     "test:e2e": "playwright test",
     "test:e2e:cross-browser": "playwright test --config playwright.cross-browser.config.ts",
-    "validate:preview-config": "node scripts/validate-preview-config.mjs"
+    "validate:preview-config": "node scripts/validate-preview-config.mjs",
+    "package:vercel-preview": "node scripts/package-vercel-preview.mjs"
   },
   "dependencies": {
     "react": "^19.2.0",

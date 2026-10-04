@@ -1,0 +1,140 @@
+name: Read web isolated preview deploy
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: read-web-isolated-preview
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: read-web-preview
+      url: ${{ steps.deploy.outputs.preview_url }}
+    env:
+      READ_PREVIEW_ORIGIN: ${{ vars.READ_PREVIEW_ORIGIN }}
+      VITE_API_URL: ${{ vars.VITE_API_URL }}
+      VITE_AUTH_API_URL: ${{ vars.VITE_AUTH_API_URL }}
+      VITE_READ_API_BASE_URL: ${{ vars.VITE_READ_API_BASE_URL }}
+      VITE_BROWSER_V2_ORIGIN: ${{ vars.VITE_BROWSER_V2_ORIGIN }}
+      VITE_GOOGLE_DRIVE_API_KEY: ${{ vars.VITE_GOOGLE_DRIVE_API_KEY }}
+      VITE_GOOGLE_DRIVE_APP_ID: ${{ vars.VITE_GOOGLE_DRIVE_APP_ID }}
+      VITE_STRIPE_READ_BILLING_PORTAL_URL: ${{ vars.VITE_STRIPE_READ_BILLING_PORTAL_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Require isolated preview deployment credentials
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN"
+          test -n "$VERCEL_ORG_ID"
+          test -n "$VERCEL_PROJECT_ID"
+
+      - name: Validate fail-closed preview origins
+        working-directory: apps/web/FloentlyReadWeb
+        run: npm run validate:preview-config
+
+      - name: Install WebAssembly Rust target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked --version 0.15.0
+
+      - name: Build Rust/WASM and React Read web
+        run: bash scripts/build_read_web_wasm.sh
+
+      - name: Run Read web contracts before deployment
+        working-directory: apps/web/FloentlyReadWeb
+        run: npm test
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Link isolated Vercel preview project
+        working-directory: apps/web/FloentlyReadWeb
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
+
+      - name: Package static Build Output API deployment
+        working-directory: apps/web/FloentlyReadWeb
+        run: npm run package:vercel-preview
+
+      - name: Deploy prebuilt isolated preview
+        id: deploy
+        working-directory: apps/web/FloentlyReadWeb
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+
+          deployment_url="$(vercel deploy --prebuilt --yes --token="$VERCEL_TOKEN")"
+          case "$deployment_url" in
+            https://*) ;;
+            *)
+              echo "Vercel did not return an HTTPS deployment URL." >&2
+              exit 1
+              ;;
+          esac
+
+          preview_host="$(
+            node -e 'process.stdout.write(new URL(process.env.READ_PREVIEW_ORIGIN).hostname)'
+          )"
+
+          vercel alias set "$deployment_url" "$preview_host" --token="$VERCEL_TOKEN"
+
+          echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
+          echo "preview_url=$READ_PREVIEW_ORIGIN" >> "$GITHUB_OUTPUT"
+
+      - name: Verify direct SPA route on immutable deployment
+        working-directory: apps/web/FloentlyReadWeb
+        shell: bash
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment_url }}
+        run: |
+          set -euo pipefail
+          response="$(mktemp)"
+          trap 'rm -f "$response"' EXIT
+
+          curl --fail --location --retry 3 --retry-delay 2 --silent --show-error \
+            "$DEPLOYMENT_URL/app/library?qualification=spa" \
+            --output "$response"
+
+          grep -q '<div id="root"></div>' "$response"
+
+      - name: Record preview deployment
+        shell: bash
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment_url }}
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+        run: |
+          {
+            echo "## Floently Read isolated preview"
+            echo
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- Stable preview origin: $PREVIEW_URL"
+            echo "- Immutable deployment: $DEPLOYMENT_URL"
+            echo "- Production Read routing: unchanged"
+            echo "- Native build: not triggered"
+          } >> "$GITHUB_STEP_SUMMARY"
