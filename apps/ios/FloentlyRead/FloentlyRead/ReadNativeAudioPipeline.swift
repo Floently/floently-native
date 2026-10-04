@@ -14,10 +14,18 @@ enum ReadNativeAudioIdentity {
             [
                 documentId,
                 revisionId,
-                language.isEmpty
-                    ? "auto"
-                    : language,
-                voiceId,
+                language
+                    .trimmingCharacters(
+                        in:
+                            .whitespacesAndNewlines
+                    )
+                    .nilIfEmpty
+                    ?? "auto",
+                voiceId
+                    .trimmingCharacters(
+                        in:
+                            .whitespacesAndNewlines
+                    ),
                 provider
                     ?.trimmingCharacters(
                         in:
@@ -49,16 +57,16 @@ enum ReadNativeAudioIdentity {
             physicalDuration
                 .flatMap {
                     value in
-                    guard
-                        value.isFinite,
-                        value >= 0
-                    else {
+                    guard value.isFinite else {
                         return nil
                     }
 
                     return String(
                         Int64(
-                            value
+                            max(
+                                0,
+                                value
+                            )
                             * 1_000
                         )
                     )
