@@ -22,7 +22,7 @@ export function ReaderPage({
     let cancelled = false;
     setLoadError(null);
 
-    void getLibraryDocument(documentId)
+    void getLibraryDocument(runtime.ownerId, documentId)
       .then(async (document) => {
         if (cancelled) return;
 
