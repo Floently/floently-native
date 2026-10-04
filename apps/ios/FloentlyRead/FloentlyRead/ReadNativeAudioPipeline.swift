@@ -1,6 +1,118 @@
 import CryptoKit
 import Foundation
 
+enum ReadNativeAudioIdentity {
+    static func renditionId(
+        documentId: String,
+        revisionId: String,
+        language: String,
+        voiceId: String,
+        provider: String?,
+        model: String?
+    ) -> String {
+        digest(
+            [
+                documentId,
+                revisionId,
+                language.isEmpty
+                    ? "auto"
+                    : language,
+                voiceId,
+                provider
+                    ?.trimmingCharacters(
+                        in:
+                            .whitespacesAndNewlines
+                    )
+                    .nilIfEmpty
+                    ?? "unknown-provider",
+                model
+                    ?.trimmingCharacters(
+                        in:
+                            .whitespacesAndNewlines
+                    )
+                    .nilIfEmpty
+                    ?? "unknown-model",
+                "read-audio-rendition-v1"
+            ]
+        )
+    }
+
+    static func timingMapId(
+        renditionId: String,
+        segmentId: String,
+        segmentIndex: Int,
+        logicalStartMs: Int64,
+        logicalEndMs: Int64,
+        physicalDuration: TimeInterval?
+    ) -> String {
+        let durationIdentity =
+            physicalDuration
+                .flatMap {
+                    value in
+                    guard
+                        value.isFinite,
+                        value >= 0
+                    else {
+                        return nil
+                    }
+
+                    return String(
+                        Int64(
+                            (
+                                value
+                                * 1_000
+                            )
+                            .rounded()
+                        )
+                    )
+                }
+            ?? "unknown-duration"
+
+        return digest(
+            [
+                renditionId,
+                segmentId,
+                String(segmentIndex),
+                String(logicalStartMs),
+                String(logicalEndMs),
+                durationIdentity,
+                "read-timing-map-v1"
+            ]
+        )
+    }
+
+    private static func digest(
+        _ components: [String]
+    ) -> String {
+        let canonical =
+            components.joined(
+                separator: "\u{1f}"
+            )
+        let value =
+            SHA256.hash(
+                data:
+                    Data(
+                        canonical.utf8
+                    )
+            )
+            .map {
+                String(
+                    format: "%02x",
+                    $0
+                )
+            }
+            .joined()
+
+        return "sha256:\(value)"
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
+    }
+}
+
 struct ReadNativeTtsAsset: Equatable {
     let audioURL: URL
     let cacheKey: String
