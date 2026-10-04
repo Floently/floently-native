@@ -10,6 +10,28 @@ struct ReadPlayableSegment: Identifiable, Equatable {
     let logicalStartTime: TimeInterval
     let logicalEndTime: TimeInterval
     let physicalDuration: TimeInterval?
+    let renditionId: String?
+    let timingMapId: String?
+
+    init(
+        id: String,
+        index: Int,
+        url: URL,
+        logicalStartTime: TimeInterval,
+        logicalEndTime: TimeInterval,
+        physicalDuration: TimeInterval?,
+        renditionId: String? = nil,
+        timingMapId: String? = nil
+    ) {
+        self.id = id
+        self.index = index
+        self.url = url
+        self.logicalStartTime = logicalStartTime
+        self.logicalEndTime = logicalEndTime
+        self.physicalDuration = physicalDuration
+        self.renditionId = renditionId
+        self.timingMapId = timingMapId
+    }
 
     var logicalDuration: TimeInterval {
         max(0, logicalEndTime - logicalStartTime)
