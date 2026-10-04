@@ -2527,8 +2527,10 @@ private fun ReadProjectReaderScreen(
             progress = {
                 if (
                     playbackController.snapshot.visible
-                    && playbackController.snapshot.title
-                        == project.title
+                    && playbackController.activeDocumentId
+                        == project.id
+                    && playbackController.activeRevisionId
+                        == project.revisionId
                 ) {
                     (
                         playbackController
