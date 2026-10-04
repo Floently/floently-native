@@ -194,7 +194,11 @@ struct ReadBrowserView: View {
         HStack(spacing: 8) {
             Button {
                 clearReadingVisualAssociation()
-                controller.readPage()
+                controller.readPage {
+                    toggleNativeReading(
+                        ensurePlaying: true
+                    )
+                }
             } label: {
                 Label(
                     "Read page",
@@ -215,7 +219,11 @@ struct ReadBrowserView: View {
 
             Button {
                 clearReadingVisualAssociation()
-                controller.readSelection()
+                controller.readSelection {
+                    toggleNativeReading(
+                        ensurePlaying: true
+                    )
+                }
             } label: {
                 Image(systemName: "selection.pin.in.out")
                     .font(.system(size: 18, weight: .semibold))
@@ -358,7 +366,9 @@ struct ReadBrowserView: View {
         )
     }
 
-    private func toggleNativeReading() {
+    private func toggleNativeReading(
+        ensurePlaying: Bool = false
+    ) {
         guard let source = activeReadingSource else {
             return
         }
@@ -377,7 +387,13 @@ struct ReadBrowserView: View {
                 current.id == manifest.documentId,
                 current.revisionId == manifest.revisionId
             {
-                playbackSession.togglePlayPause()
+                if ensurePlaying {
+                    if playbackSession.state != .playing {
+                        playbackSession.play()
+                    }
+                } else {
+                    playbackSession.togglePlayPause()
+                }
                 controller.readingStatus =
                     playbackSession.state == .playing
                     ? "Reading the live page."
