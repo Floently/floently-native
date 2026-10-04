@@ -38,6 +38,12 @@ pub struct SegmentPosition {
     pub fraction: f64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SourceAnchorResolution {
+    pub scalar_start: usize,
+    pub scalar_length: usize,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct SegmentSlice {
     text: String,
@@ -241,6 +247,114 @@ pub fn prefetch_indexes(
     }
 
     indexes
+}
+
+/// Resolves a previously source-anchored quote inside a new raw source
+/// revision. Exact quote identity is mandatory. Prefix/suffix context is used
+/// only to disambiguate repeated exact quotes; ambiguous evidence fails
+/// closed rather than attaching an annotation to the wrong passage.
+pub fn resolve_source_anchor(
+    source_text: &str,
+    quote: &str,
+    prefix_context: &str,
+    suffix_context: &str,
+) -> Option<SourceAnchorResolution> {
+    if source_text.is_empty() || quote.is_empty() {
+        return None;
+    }
+
+    let quote_scalar_length = quote.chars().count();
+    if quote_scalar_length == 0
+        || quote_scalar_length > source_text.chars().count()
+    {
+        return None;
+    }
+
+    let source_chars: Vec<char> = source_text.chars().collect();
+    let prefix_chars: Vec<char> = prefix_context.chars().collect();
+    let suffix_chars: Vec<char> = suffix_context.chars().collect();
+    let mut candidates = Vec::<(usize, usize)>::new();
+
+    for (scalar_start, (byte_start, _)) in
+        source_text.char_indices().enumerate()
+    {
+        if !source_text[byte_start..].starts_with(quote) {
+            continue;
+        }
+
+        let scalar_end = scalar_start + quote_scalar_length;
+        if scalar_end > source_chars.len() {
+            continue;
+        }
+
+        let prefix_start = scalar_start.saturating_sub(32);
+        let suffix_end = scalar_end
+            .saturating_add(32)
+            .min(source_chars.len());
+
+        let prefix_score = common_suffix_len(
+            &prefix_chars,
+            &source_chars[prefix_start..scalar_start],
+        );
+        let suffix_score = common_prefix_len(
+            &suffix_chars,
+            &source_chars[scalar_end..suffix_end],
+        );
+
+        candidates.push((
+            scalar_start,
+            prefix_score.saturating_add(suffix_score),
+        ));
+
+        if candidates.len() > 128 {
+            return None;
+        }
+    }
+
+    if candidates.len() == 1 {
+        return Some(SourceAnchorResolution {
+            scalar_start: candidates[0].0,
+            scalar_length: quote_scalar_length,
+        });
+    }
+
+    if candidates.is_empty() {
+        return None;
+    }
+
+    candidates.sort_by(|left, right| {
+        right
+            .1
+            .cmp(&left.1)
+            .then_with(|| left.0.cmp(&right.0))
+    });
+
+    let best = candidates[0];
+    let second = candidates[1];
+
+    if best.1 < 8 || best.1 <= second.1 {
+        return None;
+    }
+
+    Some(SourceAnchorResolution {
+        scalar_start: best.0,
+        scalar_length: quote_scalar_length,
+    })
+}
+
+fn common_prefix_len(left: &[char], right: &[char]) -> usize {
+    left.iter()
+        .zip(right.iter())
+        .take_while(|(lhs, rhs)| lhs == rhs)
+        .count()
+}
+
+fn common_suffix_len(left: &[char], right: &[char]) -> usize {
+    left.iter()
+        .rev()
+        .zip(right.iter().rev())
+        .take_while(|(lhs, rhs)| lhs == rhs)
+        .count()
 }
 
 fn normalize_text(text: &str) -> String {
@@ -478,6 +592,74 @@ mod tests {
                 assert_eq!(segment.text.chars().count(), expected_scalars);
             }
         }
+    }
+
+    #[test]
+    fn resolves_unique_source_anchor_with_unicode_scalar_coordinates() {
+        let source = "Intro 🙂. Hyvää päivää. Closing.";
+        let quote = "Hyvää päivää";
+        let resolution = resolve_source_anchor(
+            source,
+            quote,
+            "Intro 🙂. ",
+            ". Closing.",
+        )
+        .expect("unique source anchor");
+
+        assert_eq!(
+            resolution.scalar_start,
+            "Intro 🙂. ".chars().count()
+        );
+        assert_eq!(
+            resolution.scalar_length,
+            quote.chars().count()
+        );
+    }
+
+    #[test]
+    fn resolves_repeated_quote_only_with_unique_context() {
+        let source =
+            "Chapter one says target phrase here. Later target phrase closes.";
+        let quote = "target phrase";
+        let resolution = resolve_source_anchor(
+            source,
+            quote,
+            "one says ",
+            " here. Later",
+        )
+        .expect("context should identify first quote");
+
+        assert_eq!(
+            resolution.scalar_start,
+            "Chapter one says ".chars().count()
+        );
+    }
+
+    #[test]
+    fn refuses_ambiguous_repeated_source_anchor() {
+        let source = "same quote / same quote";
+        assert_eq!(
+            resolve_source_anchor(
+                source,
+                "same quote",
+                "",
+                "",
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn refuses_missing_source_anchor() {
+        assert_eq!(
+            resolve_source_anchor(
+                "new revision",
+                "old quote",
+                "before",
+                "after",
+            ),
+            None
+        );
     }
 
     #[test]
