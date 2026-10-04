@@ -2414,17 +2414,12 @@ private fun ReadProjectReaderScreen(
     var preparing by remember { mutableStateOf(true) }
     var retryRevision by remember { mutableIntStateOf(0) }
     val originalPdfFile = remember(
-        project.id,
-        project.sourceType
+        project.id
     ) {
-        if (project.sourceType.lowercase() == "pdf") {
-            ReadOriginalDocumentStore.pdfFile(
-                context = context,
-                projectId = project.id
-            )
-        } else {
-            null
-        }
+        ReadOriginalDocumentStore.pdfFile(
+            context = context,
+            projectId = project.id
+        )
     }
 
     LaunchedEffect(
