@@ -81,7 +81,7 @@ public struct FloentlyAccessStatus: Codable, Equatable {
             if let value = try? container.decodeIfPresent(
                 String.self,
                 forKey: primary
-            ), let value, !value.isEmpty {
+            ), !value.isEmpty {
                 return value
             }
 
@@ -89,7 +89,7 @@ public struct FloentlyAccessStatus: Codable, Equatable {
                let value = try? container.decodeIfPresent(
                     String.self,
                     forKey: alternate
-               ), let value, !value.isEmpty {
+               ), !value.isEmpty {
                 return value
             }
 
@@ -104,7 +104,7 @@ public struct FloentlyAccessStatus: Codable, Equatable {
                 .isInternalAllAccess,
                 .isInternalAllAccessCamel
             )
-            ?? tier?.lowercased() == "internal_all_access"
+            ?? (tier?.lowercased() == "internal_all_access")
 
         let resolvedYki =
             bool(.ykiAccess, .ykiAccessCamel)
