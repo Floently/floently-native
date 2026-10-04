@@ -576,6 +576,92 @@ describe("WebPlaybackSession document-wide contract", () => {
     session.destroy();
   });
 
+  it("flushes resume state when the page becomes hidden without forcing pause", async () => {
+    localStorage.clear();
+    const { session, engine } = createHarness();
+
+    session.loadDocument(makeManifest());
+    await session.play();
+    engine.emitTime(4_200, 10_000);
+
+    const key = "floently-read-resume-v1:doc:rev";
+    localStorage.removeItem(key);
+
+    const visibilityDescriptor = Object.getOwnPropertyDescriptor(
+      document,
+      "visibilityState",
+    );
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "hidden",
+    });
+
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    expect(engine.paused).toBe(false);
+    expect(JSON.parse(localStorage.getItem(key) ?? "{}")).toMatchObject({
+      elapsedMs: 4_200,
+      speed: 1,
+    });
+
+    if (visibilityDescriptor) {
+      Object.defineProperty(
+        document,
+        "visibilityState",
+        visibilityDescriptor,
+      );
+    }
+
+    session.destroy();
+  });
+
+  it("republishes Media Session state after page restoration", () => {
+    const fakeMediaSession = {
+      metadata: null,
+      playbackState: "none",
+      setActionHandler: vi.fn(),
+      setPositionState: vi.fn(),
+    };
+
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: {
+        mediaSession: fakeMediaSession,
+      },
+    });
+
+    const { session } = createHarness();
+    session.loadDocument(makeManifest());
+
+    fakeMediaSession.setPositionState.mockClear();
+    fakeMediaSession.metadata = null;
+
+    window.dispatchEvent(new Event("pageshow"));
+
+    expect(fakeMediaSession.metadata).not.toBeNull();
+    expect(fakeMediaSession.setPositionState).toHaveBeenCalledWith({
+      duration: 30,
+      playbackRate: 1,
+      position: 0,
+    });
+
+    session.destroy();
+  });
+
+  it("removes page lifecycle listeners when destroyed", () => {
+    localStorage.clear();
+    const { session } = createHarness();
+
+    session.loadDocument(makeManifest());
+    session.destroy();
+
+    const key = "floently-read-resume-v1:doc:rev";
+    localStorage.removeItem(key);
+    window.dispatchEvent(new Event("pagehide"));
+
+    expect(localStorage.getItem(key)).toBeNull();
+  });
+
   it("publishes document time to Media Session instead of clip duration", async () => {
     const positionStates: Array<{
       duration: number;
