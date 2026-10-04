@@ -775,6 +775,8 @@ private struct ReadAccessAccountDeletionControl: View {
                     .clearAll()
                 ReadAccessLeaseStore.shared
                     .clearAll()
+                await ReadProgressOutboxStore.shared
+                    .clearAll()
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -2372,6 +2374,8 @@ private struct ReadSettingsScreen: View {
                 await ReadOfflineAudioStore.shared
                     .clearAll()
                 ReadAccessLeaseStore.shared
+                    .clearAll()
+                await ReadProgressOutboxStore.shared
                     .clearAll()
                 playback.clear()
             } catch {
