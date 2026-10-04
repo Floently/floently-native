@@ -18,9 +18,6 @@ jobs:
       name: read-web-preview
       url: ${{ steps.deploy.outputs.preview_url }}
     env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       READ_PREVIEW_ORIGIN: ${{ vars.READ_PREVIEW_ORIGIN }}
       VITE_API_URL: ${{ vars.VITE_API_URL }}
       VITE_AUTH_API_URL: ${{ vars.VITE_AUTH_API_URL }}
@@ -39,6 +36,10 @@ jobs:
 
       - name: Require isolated preview deployment credentials
         shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           set -euo pipefail
           test -n "$VERCEL_TOKEN"
@@ -67,6 +68,10 @@ jobs:
 
       - name: Link isolated Vercel preview project
         working-directory: apps/web/FloentlyReadWeb
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
 
       - name: Package static Build Output API deployment
@@ -77,6 +82,10 @@ jobs:
         id: deploy
         working-directory: apps/web/FloentlyReadWeb
         shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           set -euo pipefail
 
