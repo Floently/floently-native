@@ -1,5 +1,12 @@
 package com.floently.read
 
+import org.json.JSONObject
+
+data class ReadSourceAnchorResolution(
+    val scalarStart: Int,
+    val scalarLength: Int
+)
+
 class ReadCoreNative private constructor() {
     companion object {
         init {
@@ -12,6 +19,14 @@ class ReadCoreNative private constructor() {
         private external fun nativeExtractEpubJson(
             inputPath: String,
             outputDirectory: String
+        ): String
+
+        @JvmStatic
+        private external fun nativeResolveSourceAnchorJson(
+            sourceText: String,
+            quote: String,
+            prefixContext: String,
+            suffixContext: String
         ): String
 
         @JvmStatic
@@ -42,6 +57,51 @@ class ReadCoreNative private constructor() {
             )
 
             return ReadingManifestV1Codec.decode(json)
+        }
+
+        fun resolveSourceAnchor(
+            sourceText: String,
+            quote: String,
+            prefixContext: String,
+            suffixContext: String
+        ): ReadSourceAnchorResolution? {
+            val json =
+                nativeResolveSourceAnchorJson(
+                    sourceText = sourceText,
+                    quote = quote,
+                    prefixContext =
+                        prefixContext,
+                    suffixContext =
+                        suffixContext
+                )
+
+            if (json == "null") {
+                return null
+            }
+
+            val value = JSONObject(json)
+            val scalarStart =
+                value.optInt(
+                    "scalarStart",
+                    -1
+                )
+            val scalarLength =
+                value.optInt(
+                    "scalarLength",
+                    -1
+                )
+
+            if (
+                scalarStart < 0
+                || scalarLength <= 0
+            ) {
+                return null
+            }
+
+            return ReadSourceAnchorResolution(
+                scalarStart = scalarStart,
+                scalarLength = scalarLength
+            )
         }
 
         fun extractEpub(
