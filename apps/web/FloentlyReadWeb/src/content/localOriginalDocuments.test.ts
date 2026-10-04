@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  originalRecordForStorage,
   sameOriginalIdentity,
   withCompletedContentHash,
   type LocalOriginalDocumentRecord,
@@ -23,6 +24,27 @@ function record(
     ...patch,
   };
 }
+
+describe("local original document IndexedDB storage", () => {
+  it("omits a pending null content hash so WebKit does not index an invalid key", () => {
+    const pending = record({ contentHash: null });
+    const stored = originalRecordForStorage(pending);
+
+    expect("contentHash" in stored).toBe(false);
+    expect(stored).toMatchObject({
+      id: pending.id,
+      quickSignature: pending.quickSignature,
+      projectId: pending.projectId,
+    });
+  });
+
+  it("keeps a completed content hash available to the IndexedDB hash index", () => {
+    const completed = record({ contentHash: "sha256-ready" });
+    const stored = originalRecordForStorage(completed);
+
+    expect(stored.contentHash).toBe("sha256-ready");
+  });
+});
 
 describe("local original document hash completion", () => {
   it("preserves a project link attached while hashing was in flight", () => {
