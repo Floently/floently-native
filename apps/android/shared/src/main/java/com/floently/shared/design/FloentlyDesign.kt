@@ -49,12 +49,12 @@ fun floentlyPalette(product: FloentlyProduct): FloentlyPalette {
             accent = Color(0xFF30D5C8)
         )
         FloentlyProduct.Read -> FloentlyPalette(
-            backgroundTop = Color(0xFF101827),
-            backgroundBottom = Color(0xFF26364F),
-            card = Color(0xFFFFFFFF),
+            backgroundTop = Color(0xFF05081A),
+            backgroundBottom = Color(0xFF0F142E),
+            card = Color(0xFF1A1740),
             text = Color(0xFFFFFFFF),
-            muted = Color(0xCCFFFFFF),
-            accent = Color(0xFFFFC857)
+            muted = Color(0xFFB8B3DB),
+            accent = Color(0xFFB273FF)
         )
         FloentlyProduct.Create -> FloentlyPalette(
             backgroundTop = Color(0xFF120A23),
