@@ -75,7 +75,9 @@ describe("file ingestion lifecycle", () => {
       { type: "application/pdf" },
     );
 
-    const ingestion = beginFileIngestion(file);
+    const ingestion = beginFileIngestion(file, {
+      ownerId: "account-a",
+    });
 
     const immediate = expect(ingestion.immediate).rejects.toThrow(
       "open the original immediately",
@@ -114,6 +116,7 @@ describe("file ingestion lifecycle", () => {
     );
 
     const ingestion = beginFileIngestion(file, {
+      ownerId: "account-a",
       fastOpen: false,
     });
 
@@ -135,5 +138,33 @@ describe("file ingestion lifecycle", () => {
     await expect(ingestion.canonical).resolves.toMatchObject({
       project: { id: "project-visible" },
     });
+  });
+
+  it("threads the authenticated owner through fingerprint reuse and persistence", async () => {
+    const file = new File(["small"], "small.pdf", {
+      type: "application/pdf",
+    });
+    mocks.fingerprintDocumentFile.mockResolvedValue("fingerprint-1");
+    mocks.getProjectForFileFingerprint.mockReturnValue(null);
+    mocks.uploadContentProject.mockResolvedValue(project("project-owner"));
+
+    const ingestion = beginFileIngestion(file, {
+      ownerId: "account-owner",
+    });
+
+    await expect(ingestion.canonical).resolves.toMatchObject({
+      project: { id: "project-owner" },
+      reused: false,
+    });
+
+    expect(mocks.getProjectForFileFingerprint).toHaveBeenCalledWith(
+      "account-owner",
+      "fingerprint-1",
+    );
+    expect(mocks.rememberProjectForFileFingerprint).toHaveBeenCalledWith(
+      "account-owner",
+      "fingerprint-1",
+      "project-owner",
+    );
   });
 });
