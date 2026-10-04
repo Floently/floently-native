@@ -53,6 +53,9 @@ private enum ReadAuthMode: String, CaseIterable, Identifiable {
 struct ReadReleaseGateView: View {
     @EnvironmentObject private var sessionStore: FloentlySessionStore
     @EnvironmentObject private var accessModel: ReadAccessModel
+    @EnvironmentObject private var playbackSession: ReadPlaybackSession
+    @EnvironmentObject private var documentLoader: ReadDocumentPlaybackLoader
+    @EnvironmentObject private var projectStore: ReadProjectStore
 
     var body: some View {
         Group {
@@ -78,6 +81,15 @@ struct ReadReleaseGateView: View {
             await accessModel.refresh(
                 sessionStore: sessionStore
             )
+        }
+        .onChange(of: sessionStore.session?.token) { previous, current in
+            guard previous != current, previous != nil else {
+                return
+            }
+
+            documentLoader.cancel()
+            playbackSession.clear()
+            projectStore.reset()
         }
     }
 }
