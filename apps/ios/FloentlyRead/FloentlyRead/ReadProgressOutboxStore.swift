@@ -119,6 +119,33 @@ actor ReadProgressOutboxStore {
         }
     }
 
+    func currentWrite(
+        accountIdentity: String,
+        projectId: String
+    ) -> ReadPendingProgressWrite? {
+        let url = writeURL(
+            accountIdentity:
+                accountIdentity,
+            projectId: projectId
+        )
+
+        guard
+            let data = try? Data(
+                contentsOf: url
+            ),
+            let envelope =
+                try? JSONDecoder().decode(
+                    Envelope.self,
+                    from: data
+                ),
+            envelope.schemaVersion == 1
+        else {
+            return nil
+        }
+
+        return envelope.write
+    }
+
     func removeIfMatches(
         accountIdentity: String,
         projectId: String,
