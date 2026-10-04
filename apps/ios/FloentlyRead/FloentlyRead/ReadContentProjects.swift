@@ -801,6 +801,15 @@ final class ReadProjectStore: ObservableObject {
             projects.first {
                 $0.id == projectId
             }?.progress?.updatedAt
+        let boundedPlaybackRate =
+            playbackRate.flatMap {
+                $0.isFinite
+                ? min(
+                    3,
+                    max(0.5, $0)
+                )
+                : nil
+            }
         let pending = ReadPendingProgressWrite(
             nonce: UUID().uuidString,
             projectId: projectId,
@@ -812,12 +821,7 @@ final class ReadProjectStore: ObservableObject {
                 min(100, max(0, progressPercent)),
             voiceId: voiceId,
             playbackRate:
-                playbackRate?.isFinite == true
-                ? min(
-                    3,
-                    max(0.5, playbackRate!)
-                )
-                : nil,
+                boundedPlaybackRate,
             baseServerUpdatedAt:
                 baseServerUpdatedAt,
             createdAt: Date()
