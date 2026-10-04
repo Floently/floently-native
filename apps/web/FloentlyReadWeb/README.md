@@ -268,6 +268,12 @@ playback remains the fallback when browser storage is unavailable.
 Media Session publishes one logical document item even while hidden synthesis
 assets change underneath it.
 
+Local playback persistence is account-scoped. Resume snapshots use the stable
+authenticated user id only as a local storage namespace, and browser audio
+Cache Storage + IndexedDB use separate per-account v2 namespaces. Normal
+sign-out does not erase that account's local resume/cache state, but another
+account in the same browser profile cannot reuse it accidentally.
+
 Cache Storage quota pressure is fail-soft. If a browser rejects a new audio
 write with `QuotaExceededError`, Read first evicts least-recently-used
 **unleased** audio to create bounded headroom and retries the write once.

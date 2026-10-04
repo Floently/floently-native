@@ -25,6 +25,7 @@ import type {
   ReadAudioCachePort,
 } from "./readAudioCache";
 import {
+  readPlaybackResumeStorageKey,
   WebPlaybackSession,
   type ReadPlaybackCore,
   type WebPlaybackTelemetryEvent,
@@ -239,6 +240,7 @@ function createHarness(
     voiceLanguage?: string | null;
   },
   runtimeOptions: {
+    ownerId?: string;
     telemetry?: (event: WebPlaybackTelemetryEvent) => void;
     monotonicNow?: () => number;
   } = {},
@@ -251,6 +253,7 @@ function createHarness(
   const session = new WebPlaybackSession({
     core,
     tts,
+    ownerId: runtimeOptions.ownerId ?? "test-owner",
     cache,
     initialPreferences,
     telemetry: runtimeOptions.telemetry,
@@ -994,7 +997,11 @@ describe("WebPlaybackSession document-wide contract", () => {
     await session.play();
     engine.emitTime(4_200, 10_000);
 
-    const key = "floently-read-resume-v1:doc:rev";
+    const key = readPlaybackResumeStorageKey(
+      "test-owner",
+      "doc",
+      "rev",
+    );
     storage.removeItem(key);
     pageDocument.visibilityState = "hidden";
     pageDocument.dispatchEvent(new Event("visibilitychange"));
@@ -1006,6 +1013,46 @@ describe("WebPlaybackSession document-wide contract", () => {
     });
 
     session.destroy();
+  });
+
+  it("keeps resume state isolated by authenticated account", async () => {
+    installFakeBrowserLifecycle();
+
+    const first = createHarness(
+      undefined,
+      { ownerId: "account-a" },
+    );
+    first.session.loadDocument(makeManifest());
+    first.session.setSpeed(2.25);
+    await first.session.play();
+    first.engine.emitTime(4_200, 10_000);
+    first.session.pause();
+    first.session.destroy();
+
+    const second = createHarness(
+      undefined,
+      { ownerId: "account-b" },
+    );
+    second.session.loadDocument(makeManifest());
+
+    expect(second.session.getSnapshot()).toMatchObject({
+      elapsedMs: 0,
+      speed: 1,
+    });
+    second.session.destroy();
+
+    const firstAgain = createHarness(
+      undefined,
+      { ownerId: "account-a" },
+    );
+    firstAgain.session.loadDocument(makeManifest());
+
+    expect(firstAgain.session.getSnapshot()).toMatchObject({
+      elapsedMs: 4_200,
+      speed: 2.25,
+    });
+
+    firstAgain.session.destroy();
   });
 
   it("republishes Media Session state after page restoration", () => {
@@ -1052,7 +1099,11 @@ describe("WebPlaybackSession document-wide contract", () => {
     session.loadDocument(makeManifest());
     session.destroy();
 
-    const key = "floently-read-resume-v1:doc:rev";
+    const key = readPlaybackResumeStorageKey(
+      "test-owner",
+      "doc",
+      "rev",
+    );
     storage.removeItem(key);
     pageWindow.dispatchEvent(new Event("pagehide"));
 

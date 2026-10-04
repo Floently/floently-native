@@ -7,7 +7,10 @@ import {
   vi,
 } from "vitest";
 import type { ReadTtsAsset } from "../tts/readTtsProvider";
-import { ReadAudioCache } from "./readAudioCache";
+import {
+  ReadAudioCache,
+  readAudioCacheStorageNames,
+} from "./readAudioCache";
 
 const originalCachesDescriptor =
   Object.getOwnPropertyDescriptor(globalThis, "caches");
@@ -55,7 +58,7 @@ function installCacheHarness(
     delete: vi.fn(async () => true),
   } as unknown as Cache;
 
-  const open = vi.fn(async () => cache);
+  const open = vi.fn(async (_cacheName: string) => cache);
   Object.defineProperty(globalThis, "caches", {
     configurable: true,
     value: { open },
@@ -100,6 +103,37 @@ afterEach(() => {
   restoreGlobal("indexedDB", originalIndexedDbDescriptor);
   URL.createObjectURL = originalCreateObjectUrl;
   URL.revokeObjectURL = originalRevokeObjectUrl;
+});
+
+describe("ReadAudioCache account storage isolation", () => {
+  it("derives distinct durable storage namespaces per authenticated account", () => {
+    const first = readAudioCacheStorageNames("account-a");
+    const second = readAudioCacheStorageNames("account-b");
+
+    expect(first).not.toEqual(second);
+    expect(first.cacheName).toContain("account-a");
+    expect(first.dbName).toContain("account-a");
+    expect(second.cacheName).toContain("account-b");
+    expect(second.dbName).toContain("account-b");
+  });
+
+  it("opens only the current account cache namespace", async () => {
+    const { open } = installCacheHarness(async () => undefined);
+    const audioCache = new ReadAudioCache({ ownerId: "account-a" });
+
+    const playable = await audioCache.resolve(asset());
+
+    expect(open).toHaveBeenCalled();
+    expect(
+      open.mock.calls.every(
+        ([name]) =>
+          name === readAudioCacheStorageNames("account-a").cacheName,
+      ),
+    ).toBe(true);
+
+    playable.release();
+    audioCache.dispose();
+  });
 });
 
 describe("ReadAudioCache quota-pressure recovery", () => {
