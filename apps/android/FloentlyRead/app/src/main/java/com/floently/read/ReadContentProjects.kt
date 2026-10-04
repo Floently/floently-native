@@ -546,6 +546,12 @@ class ReadProjectStore {
         }
     }
 
+    fun reset() {
+        projects = emptyList()
+        activity = "idle"
+        errorMessage = null
+    }
+
     private fun upsert(project: ReadContentProject) {
         projects = listOf(project) +
             projects.filterNot { it.id == project.id }
