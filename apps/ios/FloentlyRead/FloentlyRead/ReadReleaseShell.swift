@@ -1125,44 +1125,144 @@ private struct ReadHomeDashboard: View {
                                 .readSectionLabel()
 
                             Button {
-                                playback.play()
+                                if
+                                    let activeProject =
+                                        projectStore
+                                            .projects
+                                            .first(
+                                                where: {
+                                                    $0.id
+                                                        == document.id
+                                                }
+                                            )
+                                {
+                                    openProject(
+                                        activeProject
+                                    )
+                                } else {
+                                    playback.play()
+                                }
                             } label: {
-                                VStack(alignment: .leading, spacing: 16) {
+                                VStack(
+                                    alignment: .leading,
+                                    spacing:
+                                        FloentlyDesignTokens
+                                            .Space
+                                            .s4
+                                ) {
                                     HStack {
-                                        Image(systemName: "waveform.circle.fill")
-                                            .font(.system(size: 34))
-                                            .foregroundStyle(palette.accent)
+                                        Image(
+                                            systemName:
+                                                "waveform.circle.fill"
+                                        )
+                                        .font(
+                                            .system(
+                                                size: 34
+                                            )
+                                        )
+                                        .foregroundStyle(
+                                            palette.accent
+                                        )
+
                                         Spacer()
-                                        Image(systemName: "play.fill")
-                                            .foregroundStyle(.white)
-                                            .frame(width: 46, height: 46)
-                                            .background(palette.accent)
-                                            .clipShape(Circle())
+
+                                        Image(
+                                            systemName:
+                                                "chevron.right"
+                                        )
+                                        .font(
+                                            .headline.weight(
+                                                .semibold
+                                            )
+                                        )
+                                        .foregroundStyle(
+                                            palette.muted
+                                        )
+                                        .frame(
+                                            width:
+                                                FloentlyDesignTokens
+                                                    .Control
+                                                    .iconTarget,
+                                            height:
+                                                FloentlyDesignTokens
+                                                    .Control
+                                                    .iconTarget
+                                        )
                                     }
 
-                                    Text(document.title)
-                                        .font(.title2.weight(.bold))
-                                        .foregroundStyle(palette.text)
-                                        .lineLimit(2)
+                                    Text(
+                                        document.title
+                                    )
+                                    .font(
+                                        .title2.weight(
+                                            .bold
+                                        )
+                                    )
+                                    .foregroundStyle(
+                                        palette.text
+                                    )
+                                    .lineLimit(2)
 
                                     ProgressView(
-                                        value: playback.duration > 0
-                                            ? playback.elapsedTime / playback.duration
+                                        value:
+                                            playback.duration
+                                                > 0
+                                            ? playback
+                                                .elapsedTime
+                                                / playback
+                                                    .duration
                                             : 0
                                     )
-                                    .tint(palette.accent)
+                                    .tint(
+                                        palette.accent
+                                    )
                                 }
-                                .padding(20)
-                                .frame(maxWidth: .infinity, minHeight: 172)
+                                .padding(
+                                    FloentlyDesignTokens
+                                        .Space
+                                        .s5
+                                )
+                                .frame(
+                                    maxWidth: .infinity,
+                                    minHeight: 172
+                                )
                                 .background(
                                     RoundedRectangle(
-                                        cornerRadius: 24,
-                                        style: .continuous
+                                        cornerRadius:
+                                            FloentlyDesignTokens
+                                                .Radius
+                                                .xl,
+                                        style:
+                                            .continuous
                                     )
-                                    .fill(palette.elevated.opacity(0.92))
+                                    .fill(
+                                        FloentlyDesignTokens
+                                            .Colors
+                                            .surface2
+                                    )
                                 )
+                                .overlay {
+                                    RoundedRectangle(
+                                        cornerRadius:
+                                            FloentlyDesignTokens
+                                                .Radius
+                                                .xl,
+                                        style:
+                                            .continuous
+                                    )
+                                    .stroke(
+                                        FloentlyDesignTokens
+                                            .Colors
+                                            .borderSoft,
+                                        lineWidth: 1
+                                    )
+                                }
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel(
+                                "Continue reading "
+                                    + document.title
+                            )
                         }
                         .padding(.top, 30)
                     }
