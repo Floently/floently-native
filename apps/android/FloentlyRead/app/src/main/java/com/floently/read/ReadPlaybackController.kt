@@ -257,7 +257,9 @@ class ReadPlaybackController(
         )
     }
 
-    fun clear() {
+    fun clear(
+        onComplete: (() -> Unit)? = null
+    ) {
         pendingDocumentLoad = null
         pendingManifestLoad = null
         activeVoiceId = null
@@ -269,6 +271,7 @@ class ReadPlaybackController(
         val player = controller
         if (player == null) {
             snapshot = ReadPlayerUiSnapshot()
+            onComplete?.invoke()
             return
         }
 
@@ -283,24 +286,28 @@ class ReadPlaybackController(
 
         request.addListener(
             {
-                runCatching { request.get() }
-                    .onSuccess { result ->
-                        if (
-                            result.resultCode
-                            == SessionResult.RESULT_SUCCESS
-                        ) {
-                            publish(player)
-                        } else {
+                try {
+                    runCatching { request.get() }
+                        .onSuccess { result ->
+                            if (
+                                result.resultCode
+                                == SessionResult.RESULT_SUCCESS
+                            ) {
+                                publish(player)
+                            } else {
+                                snapshot = ReadPlayerUiSnapshot(
+                                    connected = true
+                                )
+                            }
+                        }
+                        .onFailure {
                             snapshot = ReadPlayerUiSnapshot(
                                 connected = true
                             )
                         }
-                    }
-                    .onFailure {
-                        snapshot = ReadPlayerUiSnapshot(
-                            connected = true
-                        )
-                    }
+                } finally {
+                    onComplete?.invoke()
+                }
             },
             mainExecutor
         )
