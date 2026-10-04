@@ -25,8 +25,10 @@ object ReadNativeAudioIdentity {
             listOf(
                 documentId,
                 revisionId,
-                language.ifBlank { "auto" },
-                voiceId,
+                language
+                    .trim()
+                    .ifBlank { "auto" },
+                voiceId.trim(),
                 provider
                     ?.trim()
                     ?.takeIf {
