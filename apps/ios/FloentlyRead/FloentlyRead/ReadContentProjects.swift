@@ -597,6 +597,7 @@ final class ReadProjectStore: ObservableObject {
     @Published var errorMessage: String?
 
     private let client = ReadContentProjectClient()
+    private var progressSyncTail: Task<Void, Never>?
 
     func refresh(accessToken: String) async {
         activity = .loading
@@ -707,26 +708,56 @@ final class ReadProjectStore: ObservableObject {
         playbackRate: Double?,
         accessToken: String
     ) async {
-        do {
-            let progress = try await client.updateProgress(
-                projectId: projectId,
-                currentSegmentIndex: currentSegmentIndex,
-                currentCharacterOffset: currentCharacterOffset,
-                progressPercent: progressPercent,
-                voiceId: voiceId,
-                playbackRate: playbackRate,
-                accessToken: accessToken
-            )
-            guard let progress else { return }
-            if let index = projects.firstIndex(where: { $0.id == projectId }) {
-                projects[index] = projects[index].replacingProgress(progress)
+        let previous = progressSyncTail
+        let task = Task { [weak self] in
+            if let previous {
+                await previous.value
             }
-        } catch {
-            // Best effort: local resume remains authoritative offline.
+
+            guard
+                !Task.isCancelled,
+                let self
+            else {
+                return
+            }
+
+            do {
+                let progress = try await self.client.updateProgress(
+                    projectId: projectId,
+                    currentSegmentIndex: currentSegmentIndex,
+                    currentCharacterOffset: currentCharacterOffset,
+                    progressPercent: progressPercent,
+                    voiceId: voiceId,
+                    playbackRate: playbackRate,
+                    accessToken: accessToken
+                )
+                guard
+                    !Task.isCancelled,
+                    let progress
+                else {
+                    return
+                }
+                if let index = self.projects.firstIndex(where: {
+                    $0.id == projectId
+                }) {
+                    self.projects[index] =
+                        self.projects[index]
+                            .replacingProgress(progress)
+                }
+            } catch {
+                // Best effort: local resume remains authoritative offline.
+            }
         }
+
+        progressSyncTail = task
+        await task.value
+        // Chaining writes prevents an older cursor from completing after
+        // a newer one and moving cloud progress backwards.
     }
 
     func reset() {
+        progressSyncTail?.cancel()
+        progressSyncTail = nil
         projects = []
         activity = .idle
         errorMessage = nil
