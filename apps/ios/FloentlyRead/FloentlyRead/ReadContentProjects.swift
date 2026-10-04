@@ -438,8 +438,15 @@ actor ReadContentProjectClient {
         }
 
         let fileName = values.name ?? fileURL.lastPathComponent
+        let safeFileName = fileName
+            .replacingOccurrences(of: "\r", with: "_")
+            .replacingOccurrences(of: "\n", with: "_")
+            .replacingOccurrences(of: "\"", with: "_")
         try write("--\(boundary)\r\n")
-        try write("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName.replacingOccurrences(of: "\"", with: "_"))\"\r\n")
+        try write(
+            "Content-Disposition: form-data; name=\"file\"; "
+            + "filename=\"\(safeFileName)\"\r\n"
+        )
         try write("Content-Type: application/octet-stream\r\n\r\n")
 
         let source = try FileHandle(forReadingFrom: fileURL)
