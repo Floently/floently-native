@@ -65,6 +65,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.floently.shared.design.FloentlyDesignTokens
 import com.floently.shared.design.FloentlyProduct
 import com.floently.shared.design.floentlyPalette
 import kotlinx.coroutines.Dispatchers
@@ -465,8 +466,18 @@ fun ReadBrowserScreen(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .background(palette.backgroundBottom)
-                .padding(horizontal = 8.dp, vertical = 6.dp)
+                .height(52.dp)
+                .background(
+                    FloentlyDesignTokens
+                        .Colors
+                        .surface1
+                )
+                .padding(
+                    horizontal =
+                        FloentlyDesignTokens
+                            .Space
+                            .s1
+                )
         ) {
             BrowserButton(
                 label = if (canGoBack) "‹" else "×",
@@ -493,7 +504,11 @@ fun ReadBrowserScreen(
                 placeholder = { Text("Search or enter website") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { openAddress(addressText) }),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(
+                    FloentlyDesignTokens
+                        .Radius
+                        .m
+                ),
                 modifier = Modifier
                     .weight(1f)
                     .height(52.dp)
@@ -921,7 +936,11 @@ private fun BrowserStart(paletteText: Color, paletteMuted: Color, paletteAccent:
         verticalArrangement = Arrangement.Center,
         modifier = Modifier
             .fillMaxSize()
-            .padding(28.dp)
+            .padding(
+                FloentlyDesignTokens
+                    .Space
+                    .s6
+            )
     ) {
         Text("◎", color = paletteAccent, style = MaterialTheme.typography.displayMedium)
         Spacer(Modifier.height(16.dp))
@@ -948,7 +967,11 @@ private fun RendererRecovery(
         verticalArrangement = Arrangement.Center,
         modifier = Modifier
             .fillMaxSize()
-            .padding(28.dp)
+            .padding(
+                FloentlyDesignTokens
+                    .Space
+                    .s6
+            )
     ) {
         Text("Page paused", color = paletteText, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(10.dp))
@@ -996,47 +1019,142 @@ private fun ReadStrip(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        color = surface.copy(alpha = 0.96f),
-        shape = RoundedCornerShape(24.dp),
-        tonalElevation = 8.dp,
-        shadowElevation = 12.dp,
+        color =
+            FloentlyDesignTokens
+                .Colors
+                .surface2,
+        shape = RoundedCornerShape(
+            FloentlyDesignTokens
+                .Radius
+                .l
+        ),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
         modifier = modifier.fillMaxWidth()
     ) {
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(8.dp)
+            verticalAlignment =
+                Alignment.CenterVertically,
+            horizontalArrangement =
+                Arrangement.spacedBy(
+                    FloentlyDesignTokens
+                        .Space
+                        .s2
+                ),
+            modifier = Modifier.padding(
+                horizontal =
+                    FloentlyDesignTokens
+                        .Space
+                        .s1,
+                vertical = 2.dp
+            )
         ) {
             Button(
                 onClick = onReadPage,
-                colors = ButtonDefaults.buttonColors(containerColor = accent),
-                shape = RoundedCornerShape(24.dp),
+                colors = ButtonDefaults
+                    .buttonColors(
+                        containerColor =
+                            FloentlyDesignTokens
+                                .Colors
+                                .brand
+                    ),
+                shape = RoundedCornerShape(
+                    FloentlyDesignTokens
+                        .Radius
+                        .l
+                ),
+                contentPadding = PaddingValues(
+                    horizontal =
+                        FloentlyDesignTokens
+                            .Space
+                            .s4,
+                    vertical = 0.dp
+                ),
                 modifier = Modifier.height(48.dp)
             ) {
-                Text("Read page", fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Read page",
+                    color =
+                        FloentlyDesignTokens
+                            .Colors
+                            .textOnBrand,
+                    fontWeight =
+                        FontWeight.SemiBold
+                )
             }
 
             Button(
                 onClick = onPlayPause,
                 enabled = playEnabled,
-                colors = ButtonDefaults.buttonColors(containerColor = surface),
+                colors = ButtonDefaults
+                    .buttonColors(
+                        containerColor =
+                            FloentlyDesignTokens
+                                .Colors
+                                .surface1
+                    ),
+                shape = RoundedCornerShape(
+                    FloentlyDesignTokens
+                        .Radius
+                        .m
+                ),
+                contentPadding = PaddingValues(
+                    horizontal =
+                        FloentlyDesignTokens
+                            .Space
+                            .s3,
+                    vertical = 0.dp
+                ),
                 modifier = Modifier.height(48.dp)
             ) {
-                Text(if (isPlaying) "Pause" else "Play")
+                Text(
+                    if (isPlaying) {
+                        "Pause"
+                    } else {
+                        "Play"
+                    },
+                    color = textColor
+                )
             }
 
             Button(
                 onClick = onReadSelection,
-                colors = ButtonDefaults.buttonColors(containerColor = surface),
+                colors = ButtonDefaults
+                    .buttonColors(
+                        containerColor =
+                            FloentlyDesignTokens
+                                .Colors
+                                .surface1
+                    ),
+                shape = RoundedCornerShape(
+                    FloentlyDesignTokens
+                        .Radius
+                        .m
+                ),
+                contentPadding = PaddingValues(
+                    horizontal =
+                        FloentlyDesignTokens
+                            .Space
+                            .s3,
+                    vertical = 0.dp
+                ),
                 modifier = Modifier.height(48.dp)
             ) {
-                Text("Select")
+                Text(
+                    "Select",
+                    color = textColor
+                )
             }
 
             Text(
                 text = status,
-                color = textColor.copy(alpha = 0.84f),
-                style = MaterialTheme.typography.bodySmall,
+                color =
+                    FloentlyDesignTokens
+                        .Colors
+                        .textSecondary,
+                style =
+                    MaterialTheme.typography
+                        .bodySmall,
                 maxLines = 2,
                 modifier = Modifier.weight(1f)
             )
