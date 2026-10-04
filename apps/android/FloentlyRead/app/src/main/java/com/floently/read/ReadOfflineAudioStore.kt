@@ -401,6 +401,21 @@ object ReadOfflineAudioStore {
         Unit
     }
 
+    suspend fun removeDocument(
+        context: Context,
+        accountIdentity: String,
+        documentId: String
+    ) = withContext(Dispatchers.IO) {
+        File(
+            File(
+                root(context),
+                storageKey(accountIdentity)
+            ),
+            storageKey(documentId)
+        ).deleteRecursively()
+        Unit
+    }
+
     suspend fun clearAll(
         context: Context
     ) = withContext(Dispatchers.IO) {
