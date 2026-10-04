@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   deleteLibraryDocument,
   listLibraryDocuments,
@@ -16,6 +16,7 @@ import {
 } from "../content/localOriginalDocuments";
 import { navigateTo } from "../routing/navigation";
 import { useAuthState } from "../auth/useAuthState";
+import { LibraryOwnerGate } from "./libraryOwnerGate";
 
 function formatUpdatedAt(value: string | number): string {
   const date = new Date(value);
@@ -63,6 +64,16 @@ function localOriginalType(record: LocalOriginalDocumentRecord): string {
 export function LibraryPage() {
   const auth = useAuthState();
   const ownerId = auth.session?.user.id ?? null;
+  const ownerGateRef = useRef<LibraryOwnerGate | null>(null);
+  // Advance the owner epoch during render so promises from the previous owner
+  // are already stale before the new owner's effects start asynchronous work.
+  if (!ownerGateRef.current) {
+    ownerGateRef.current = new LibraryOwnerGate(ownerId);
+  } else {
+    ownerGateRef.current.setOwner(ownerId);
+  }
+  const ownerGate = ownerGateRef.current;
+
   const [projects, setProjects] = useState<ContentProject[]>([]);
   const [originals, setOriginals] =
     useState<LocalOriginalDocumentRecord[]>([]);
@@ -74,7 +85,8 @@ export function LibraryPage() {
   const [error, setError] = useState<string | null>(null);
 
   async function refresh(): Promise<void> {
-    if (!ownerId) return;
+    const refreshToken = ownerGate.beginRefresh(ownerId);
+    if (!refreshToken) return;
 
     setStatus("loading");
     setError(null);
@@ -82,9 +94,13 @@ export function LibraryPage() {
     const [cloudResult, originalsResult, legacyResult] =
       await Promise.allSettled([
         listContentProjects(100, 0),
-        listLocalOriginalDocuments(ownerId, 100),
-        listLibraryDocuments(ownerId),
+        listLocalOriginalDocuments(refreshToken.ownerId, 100),
+        listLibraryDocuments(refreshToken.ownerId),
       ]);
+
+    if (!ownerGate.isRefreshCurrent(refreshToken)) {
+      return;
+    }
 
     if (cloudResult.status === "fulfilled") {
       setProjects(cloudResult.value);
@@ -121,6 +137,9 @@ export function LibraryPage() {
     setProjects([]);
     setOriginals([]);
     setLegacyDocuments([]);
+    setError(null);
+    setStatus(ownerId ? "loading" : "ready");
+
     if (ownerId) {
       void refresh();
     }
@@ -198,13 +217,21 @@ export function LibraryPage() {
       return;
     }
 
+    const ownerToken = ownerGate.capture(ownerId);
+    if (!ownerToken) return;
+
     try {
       await deleteContentProject(project.id);
+      if (!ownerGate.isOwnerCurrent(ownerToken)) return;
+
+      ownerGate.invalidateRefresh(ownerToken.ownerId);
       setProjects((current) =>
         current.filter((item) => item.id !== project.id),
       );
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
+      if (ownerGate.isOwnerCurrent(ownerToken)) {
+        setError(reason instanceof Error ? reason.message : String(reason));
+      }
     }
   }
 
@@ -219,15 +246,21 @@ export function LibraryPage() {
       return;
     }
 
-    if (!ownerId) return;
+    const ownerToken = ownerGate.capture(ownerId);
+    if (!ownerToken) return;
 
     try {
-      await removeLocalOriginalDocument(ownerId, record.id);
+      await removeLocalOriginalDocument(ownerToken.ownerId, record.id);
+      if (!ownerGate.isOwnerCurrent(ownerToken)) return;
+
+      ownerGate.invalidateRefresh(ownerToken.ownerId);
       setOriginals((current) =>
         current.filter((item) => item.id !== record.id),
       );
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
+      if (ownerGate.isOwnerCurrent(ownerToken)) {
+        setError(reason instanceof Error ? reason.message : String(reason));
+      }
     }
   }
 
@@ -236,15 +269,21 @@ export function LibraryPage() {
       return;
     }
 
-    if (!ownerId) return;
+    const ownerToken = ownerGate.capture(ownerId);
+    if (!ownerToken) return;
 
     try {
-      await deleteLibraryDocument(ownerId, document.id);
+      await deleteLibraryDocument(ownerToken.ownerId, document.id);
+      if (!ownerGate.isOwnerCurrent(ownerToken)) return;
+
+      ownerGate.invalidateRefresh(ownerToken.ownerId);
       setLegacyDocuments((current) =>
         current.filter((item) => item.id !== document.id),
       );
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
+      if (ownerGate.isOwnerCurrent(ownerToken)) {
+        setError(reason instanceof Error ? reason.message : String(reason));
+      }
     }
   }
 
