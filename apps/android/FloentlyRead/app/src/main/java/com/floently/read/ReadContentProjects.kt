@@ -20,6 +20,48 @@ import java.net.URL
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 
+data class ReadProjectProgress(
+    val projectId: String,
+    val currentSegmentIndex: Int,
+    val currentCharacterOffset: Int,
+    val progressPercent: Double,
+    val voiceId: String?,
+    val playbackRate: Double?,
+    val updatedAt: String
+)
+
+private fun projectProgressFromJson(
+    value: JSONObject?
+): ReadProjectProgress? {
+    value ?: return null
+
+    return ReadProjectProgress(
+        projectId = value.optString("projectId"),
+        currentSegmentIndex = value
+            .optInt("currentSegmentIndex", 0)
+            .coerceAtLeast(0),
+        currentCharacterOffset = value
+            .optInt("currentCharacterOffset", 0)
+            .coerceAtLeast(0),
+        progressPercent = value
+            .optDouble("progressPercent", 0.0)
+            .coerceIn(0.0, 100.0),
+        voiceId = value
+            .optString("voiceId")
+            .takeIf { it.isNotBlank() },
+        playbackRate = if (
+            value.has("playbackRate")
+            && !value.isNull("playbackRate")
+        ) {
+            value.optDouble("playbackRate")
+                .takeIf { it.isFinite() }
+        } else {
+            null
+        },
+        updatedAt = value.optString("updatedAt")
+    )
+}
+
 data class ReadContentProject(
     val id: String,
     val title: String,
@@ -34,7 +76,8 @@ data class ReadContentProject(
     val createdAt: String,
     val updatedAt: String,
     val lastOpenedAt: String?,
-    val rawText: String?
+    val rawText: String?,
+    val progress: ReadProjectProgress? = null
 ) {
     val revisionId: String
         get() = textHash.trim().takeIf { it.isNotEmpty() }
@@ -106,7 +149,10 @@ private fun projectFromJson(value: JSONObject): ReadContentProject? {
             "last_opened_at"
         ).takeIf { it.isNotBlank() },
         rawText = string("rawText", "raw_text", "text", "content")
-            .takeIf { it.isNotBlank() }
+            .takeIf { it.isNotBlank() },
+        progress = projectProgressFromJson(
+            value.optJSONObject("progress")
+        )
     )
 }
 
@@ -274,6 +320,63 @@ class ReadContentProjectClient(
             ?: throw IllegalStateException(
                 "The imported link did not contain readable content."
             )
+    }
+
+    suspend fun updateProgress(
+        projectId: String,
+        currentSegmentIndex: Int,
+        currentCharacterOffset: Int,
+        progressPercent: Double,
+        voiceId: String?,
+        playbackRate: Double?,
+        accessToken: String
+    ): ReadProjectProgress? {
+        val encoded = URLEncoder.encode(
+            projectId,
+            StandardCharsets.UTF_8.name()
+        ).replace("+", "%20")
+
+        val body = JSONObject()
+            .put(
+                "currentSegmentIndex",
+                currentSegmentIndex.coerceAtLeast(0)
+            )
+            .put(
+                "currentCharacterOffset",
+                currentCharacterOffset.coerceAtLeast(0)
+            )
+            .put(
+                "progressPercent",
+                progressPercent.coerceIn(0.0, 100.0)
+            )
+
+        voiceId?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            body.put("voiceId", it)
+        }
+        playbackRate
+            ?.takeIf { it.isFinite() }
+            ?.let {
+                body.put(
+                    "playbackRate",
+                    it.coerceIn(0.5, 3.0)
+                )
+            }
+
+        val payload = unwrap(
+            requestPayload(
+                url = baseUrl.trimEnd('/') +
+                    "/api/v1/documents/$encoded/progress",
+                method = "PUT",
+                accessToken = accessToken,
+                body = body
+            )
+        )
+        val objectValue = payload as? JSONObject
+            ?: return null
+
+        return projectProgressFromJson(
+            objectValue.optJSONObject("progress")
+        )
     }
 
     suspend fun deleteProject(
@@ -638,6 +741,38 @@ class ReadProjectStore {
         } finally {
             activity = "idle"
         }
+    }
+
+    suspend fun syncProgress(
+        projectId: String,
+        currentSegmentIndex: Int,
+        currentCharacterOffset: Int,
+        progressPercent: Double,
+        voiceId: String?,
+        playbackRate: Double?,
+        accessToken: String
+    ) {
+        runCatching {
+            client.updateProgress(
+                projectId = projectId,
+                currentSegmentIndex = currentSegmentIndex,
+                currentCharacterOffset = currentCharacterOffset,
+                progressPercent = progressPercent,
+                voiceId = voiceId,
+                playbackRate = playbackRate,
+                accessToken = accessToken
+            )
+        }.getOrNull()?.let { progress ->
+            projects = projects.map { project ->
+                if (project.id == projectId) {
+                    project.copy(progress = progress)
+                } else {
+                    project
+                }
+            }
+        }
+        // Network progress sync is best-effort. Local resume remains
+        // authoritative when the service cannot be reached.
     }
 
     fun reset() {
