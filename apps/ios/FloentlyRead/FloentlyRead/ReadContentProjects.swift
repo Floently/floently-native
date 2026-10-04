@@ -510,6 +510,12 @@ final class ReadProjectStore: ObservableObject {
         return project
     }
 
+    func reset() {
+        projects = []
+        activity = .idle
+        errorMessage = nil
+    }
+
     private func upsert(_ project: ReadContentProject) {
         projects.removeAll { $0.id == project.id }
         projects.insert(project, at: 0)
