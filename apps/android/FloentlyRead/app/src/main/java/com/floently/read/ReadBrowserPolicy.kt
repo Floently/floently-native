@@ -214,6 +214,10 @@ object ReadBrowserPolicy {
             (() => {
               const active = __ACTIVE__;
               const pulse = __PULSE__;
+              const reduceMotion =
+                window.matchMedia?.(
+                  "(prefers-reduced-motion: reduce)"
+                )?.matches === true;
               const root = document.querySelector(
                 "[data-floently-read-root='true']"
               );
@@ -261,6 +265,14 @@ object ReadBrowserPolicy {
                         0 0 22px rgba(75, 195, 255, 0.12);
                     }
                   }
+                  @media (prefers-reduced-motion: reduce) {
+                    [data-floently-read-root='true'] {
+                      transition: none;
+                    }
+                    [data-floently-read-root='true'].floently-read-pulse {
+                      animation: none;
+                    }
+                  }
                 `;
                 document.head.appendChild(style);
               }
@@ -277,7 +289,7 @@ object ReadBrowserPolicy {
                 return;
               }
 
-              if (pulse) {
+              if (pulse && !reduceMotion) {
                 root.classList.remove(
                   "floently-read-pulse"
                 );
