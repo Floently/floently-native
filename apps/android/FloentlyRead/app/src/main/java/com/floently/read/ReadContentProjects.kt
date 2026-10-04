@@ -831,6 +831,11 @@ class ReadProjectStore(
                 accountIdentity = it,
                 projectId = project.id
             )
+            ReadSourceHighlightStore.removeProject(
+                context = applicationContext,
+                accountIdentity = it,
+                projectId = project.id
+            )
         }
         projects = projects.filterNot {
             it.id == project.id
