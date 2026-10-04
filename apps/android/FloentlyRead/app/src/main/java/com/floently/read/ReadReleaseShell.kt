@@ -1069,6 +1069,8 @@ private fun ReadAccessAccountDeletionControl(
                                     .clearAll(context)
                                 ReadProgressOutboxStore
                                     .clearAll(context)
+                                ReadSourceHighlightStore
+                                    .clearAll(context)
                             }
                                 .onSuccess {
                                     showDialog = false
@@ -3031,6 +3033,8 @@ private fun ReadSettingsScreen(
                                 ReadAccessLeaseStore
                                     .clearAll(context)
                                 ReadProgressOutboxStore
+                                    .clearAll(context)
+                                ReadSourceHighlightStore
                                     .clearAll(context)
                             }
                                 .onSuccess {
