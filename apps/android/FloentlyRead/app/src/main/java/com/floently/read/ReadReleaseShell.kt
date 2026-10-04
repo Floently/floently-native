@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -63,7 +64,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -2774,6 +2778,29 @@ private fun ReadProjectReaderScreen(
     var showingAppearance by remember {
         mutableStateOf(false)
     }
+    var isSearching by remember {
+        mutableStateOf(false)
+    }
+    var searchQuery by remember {
+        mutableStateOf("")
+    }
+    var searchMatchIndex by remember {
+        mutableIntStateOf(0)
+    }
+    var searchReturnIndex by remember {
+        mutableIntStateOf(0)
+    }
+    var searchReturnOffset by remember {
+        mutableIntStateOf(0)
+    }
+    val readerListState =
+        rememberLazyListState()
+    val searchFocusRequester =
+        remember {
+            FocusRequester()
+        }
+    val keyboardController =
+        LocalSoftwareKeyboardController.current
     val originalPdfFile = remember(
         project.id
     ) {
@@ -2782,6 +2809,61 @@ private fun ReadProjectReaderScreen(
             projectId = project.id
         )
     }
+    val searchableParagraphs =
+        remember(hydrated?.rawText) {
+            val source =
+                hydrated?.rawText
+                    .orEmpty()
+            if (source.isBlank()) {
+                emptyList()
+            } else {
+                source.replace(
+                    "\r\n",
+                    "\n"
+                )
+                    .split(
+                        Regex(
+                            "\\n\\s*\\n"
+                        )
+                    )
+                    .map {
+                        it.trim()
+                    }
+                    .filter {
+                        it.isNotEmpty()
+                    }
+                    .ifEmpty {
+                        listOf(source)
+                    }
+            }
+        }
+    val searchMatches =
+        remember(
+            searchableParagraphs,
+            searchQuery
+        ) {
+            val query =
+                searchQuery.trim()
+            if (query.isBlank()) {
+                emptyList()
+            } else {
+                buildList {
+                    searchableParagraphs
+                        .forEachIndexed {
+                            index,
+                            paragraph ->
+                            repeat(
+                                readSearchOccurrenceCount(
+                                    query = query,
+                                    text = paragraph
+                                )
+                            ) {
+                                add(index)
+                            }
+                        }
+                }
+            }
+        }
     val offlineVoiceId = manifest?.let {
         value ->
         if (
@@ -2821,6 +2903,60 @@ private fun ReadProjectReaderScreen(
             voiceId = voice,
             autoplay = true
         )
+    }
+
+    fun beginSearch() {
+        searchReturnIndex =
+            readerListState
+                .firstVisibleItemIndex
+        searchReturnOffset =
+            readerListState
+                .firstVisibleItemScrollOffset
+        isSearching = true
+    }
+
+    fun endSearch() {
+        isSearching = false
+        searchQuery = ""
+        searchMatchIndex = 0
+        keyboardController?.hide()
+
+        scope.launch {
+            readerListState.scrollToItem(
+                index =
+                    searchReturnIndex,
+                scrollOffset =
+                    searchReturnOffset
+            )
+        }
+    }
+
+    fun moveSearchResult(
+        delta: Int
+    ) {
+        if (searchMatches.isEmpty()) {
+            return
+        }
+
+        val count =
+            searchMatches.size
+        searchMatchIndex =
+            (
+                searchMatchIndex
+                    + delta
+                    + count
+                ) % count
+
+        val paragraphIndex =
+            searchMatches[
+                searchMatchIndex
+            ]
+        scope.launch {
+            readerListState
+                .animateScrollToItem(
+                    paragraphIndex
+                )
+        }
     }
 
     fun toggleOffline() {
@@ -2891,6 +3027,30 @@ private fun ReadProjectReaderScreen(
                 offlineBusy = false
             }
         }
+    }
+
+    LaunchedEffect(isSearching) {
+        if (isSearching) {
+            searchFocusRequester
+                .requestFocus()
+        }
+    }
+
+    LaunchedEffect(
+        searchQuery,
+        searchMatches
+    ) {
+        if (!isSearching) {
+            return@LaunchedEffect
+        }
+
+        searchMatchIndex = 0
+        val first =
+            searchMatches
+                .firstOrNull()
+                ?: return@LaunchedEffect
+        readerListState
+            .animateScrollToItem(first)
     }
 
     LaunchedEffect(
@@ -2979,6 +3139,33 @@ private fun ReadProjectReaderScreen(
             .fillMaxSize()
             .background(palette.backgroundTop)
     ) {
+        if (isSearching) {
+            ReadReaderSearchToolbar(
+                query = searchQuery,
+                onQueryChange = {
+                    searchQuery = it
+                },
+                resultIndex =
+                    searchMatchIndex,
+                resultCount =
+                    searchMatches.size,
+                focusRequester =
+                    searchFocusRequester,
+                onClose = {
+                    endSearch()
+                },
+                onPrevious = {
+                    moveSearchResult(
+                        -1
+                    )
+                },
+                onNext = {
+                    moveSearchResult(
+                        1
+                    )
+                }
+            )
+        } else {
         Row(
             verticalAlignment =
                 Alignment.CenterVertically,
@@ -3062,6 +3249,22 @@ private fun ReadProjectReaderScreen(
 
                     DropdownMenuItem(
                         text = {
+                            Text(
+                                "Search in document"
+                            )
+                        },
+                        enabled =
+                            originalPdfFile == null
+                            && searchableParagraphs
+                                .isNotEmpty(),
+                        onClick = {
+                            readerMenuExpanded = false
+                            beginSearch()
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = {
                             Text("Appearance")
                         },
                         onClick = {
@@ -3098,6 +3301,7 @@ private fun ReadProjectReaderScreen(
                     )
                 }
             }
+        }
         }
 
         val duration = playbackController
@@ -3227,14 +3431,6 @@ private fun ReadProjectReaderScreen(
                 )
             }
 
-            val paragraphs = remember(text) {
-                text.replace("\r\n", "\n")
-                    .split(Regex("\\n\\s*\\n"))
-                    .map { it.trim() }
-                    .filter { it.isNotEmpty() }
-                    .ifEmpty { listOf(text) }
-            }
-
             Box(
                 contentAlignment =
                     Alignment.TopCenter,
@@ -3243,6 +3439,7 @@ private fun ReadProjectReaderScreen(
                     .fillMaxWidth()
             ) {
                 LazyColumn(
+                    state = readerListState,
                     verticalArrangement =
                         Arrangement.spacedBy(
                             18.dp
@@ -3260,8 +3457,25 @@ private fun ReadProjectReaderScreen(
                             max = 680.dp
                         )
                 ) {
-                    items(paragraphs) {
-                        paragraph ->
+                    items(
+                        count =
+                            searchableParagraphs
+                                .size,
+                        key = { index ->
+                            index
+                        }
+                    ) { index ->
+                        val paragraph =
+                            searchableParagraphs[
+                                index
+                            ]
+                        val highlighted =
+                            isSearching
+                            && searchQuery
+                                .isNotBlank()
+                            && searchMatches
+                                .contains(index)
+
                         Text(
                             paragraph,
                             color = palette.text,
@@ -3278,7 +3492,20 @@ private fun ReadProjectReaderScreen(
                                             appearance
                                                 .lineHeightSp
                                                 .sp
-                                    )
+                                    ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    if (
+                                        highlighted
+                                    ) {
+                                        FloentlyDesignTokens
+                                            .Colors
+                                            .brandTint
+                                    } else {
+                                        Color.Transparent
+                                    }
+                                )
                         )
                     }
                 }
@@ -3292,6 +3519,123 @@ private fun ReadProjectReaderScreen(
             onDismiss = {
                 showingAppearance = false
             }
+        )
+    }
+}
+
+@Composable
+private fun ReadReaderSearchToolbar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    resultIndex: Int,
+    resultCount: Int,
+    focusRequester: FocusRequester,
+    onClose: () -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit
+) {
+    val palette =
+        floentlyPalette(
+            FloentlyProduct.Read
+        )
+    val hasResults =
+        resultCount > 0
+    val resultLabel =
+        if (hasResults) {
+            val bounded =
+                resultIndex.coerceIn(
+                    0,
+                    resultCount - 1
+                )
+            (bounded + 1).toString()
+                + "/"
+                + resultCount.toString()
+        } else {
+            "0/0"
+        }
+
+    Row(
+        verticalAlignment =
+            Alignment.CenterVertically,
+        horizontalArrangement =
+            Arrangement.spacedBy(
+                FloentlyDesignTokens
+                    .Space
+                    .s1
+            ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .background(
+                FloentlyDesignTokens
+                    .Colors
+                    .surface1
+            )
+            .padding(
+                horizontal =
+                    FloentlyDesignTokens
+                        .Space
+                        .s1
+            )
+    ) {
+        ReadReaderToolbarButton(
+            symbol =
+                ReadReaderToolbarSymbol
+                    .Close,
+            contentDescription =
+                "Close search",
+            onClick = onClose
+        )
+
+        OutlinedTextField(
+            value = query,
+            onValueChange =
+                onQueryChange,
+            placeholder = {
+                Text(
+                    "Search in document"
+                )
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(
+                FloentlyDesignTokens
+                    .Radius
+                    .m
+            ),
+            modifier = Modifier
+                .weight(1f)
+                .height(48.dp)
+                .focusRequester(
+                    focusRequester
+                )
+        )
+
+        Text(
+            resultLabel,
+            color = palette.muted,
+            style =
+                MaterialTheme.typography
+                    .labelMedium
+        )
+
+        ReadReaderToolbarButton(
+            symbol =
+                ReadReaderToolbarSymbol
+                    .Previous,
+            contentDescription =
+                "Previous search result",
+            enabled = hasResults,
+            onClick = onPrevious
+        )
+
+        ReadReaderToolbarButton(
+            symbol =
+                ReadReaderToolbarSymbol
+                    .Next,
+            contentDescription =
+                "Next search result",
+            enabled = hasResults,
+            onClick = onNext
         )
     }
 }
@@ -3617,13 +3961,17 @@ private fun ReadAppearanceChoice(
 
 private enum class ReadReaderToolbarSymbol {
     Back,
-    More
+    More,
+    Close,
+    Previous,
+    Next
 }
 
 @Composable
 private fun ReadReaderToolbarButton(
     symbol: ReadReaderToolbarSymbol,
     contentDescription: String,
+    enabled: Boolean = true,
     onClick: () -> Unit
 ) {
     val color =
@@ -3633,6 +3981,7 @@ private fun ReadReaderToolbarButton(
 
     Button(
         onClick = onClick,
+        enabled = enabled,
         colors = ButtonDefaults
             .buttonColors(
                 containerColor =
@@ -3684,6 +4033,90 @@ private fun ReadReaderToolbarButton(
                         end = Offset(
                             size.width * 0.62f,
                             size.height * 0.78f
+                        ),
+                        strokeWidth = stroke
+                    )
+                }
+
+                ReadReaderToolbarSymbol
+                    .Close -> {
+                    drawLine(
+                        color = color,
+                        start = Offset(
+                            size.width * 0.28f,
+                            size.height * 0.28f
+                        ),
+                        end = Offset(
+                            size.width * 0.72f,
+                            size.height * 0.72f
+                        ),
+                        strokeWidth = stroke
+                    )
+                    drawLine(
+                        color = color,
+                        start = Offset(
+                            size.width * 0.72f,
+                            size.height * 0.28f
+                        ),
+                        end = Offset(
+                            size.width * 0.28f,
+                            size.height * 0.72f
+                        ),
+                        strokeWidth = stroke
+                    )
+                }
+
+                ReadReaderToolbarSymbol
+                    .Previous -> {
+                    drawLine(
+                        color = color,
+                        start = Offset(
+                            size.width * 0.28f,
+                            size.height * 0.60f
+                        ),
+                        end = Offset(
+                            size.width * 0.50f,
+                            size.height * 0.38f
+                        ),
+                        strokeWidth = stroke
+                    )
+                    drawLine(
+                        color = color,
+                        start = Offset(
+                            size.width * 0.50f,
+                            size.height * 0.38f
+                        ),
+                        end = Offset(
+                            size.width * 0.72f,
+                            size.height * 0.60f
+                        ),
+                        strokeWidth = stroke
+                    )
+                }
+
+                ReadReaderToolbarSymbol
+                    .Next -> {
+                    drawLine(
+                        color = color,
+                        start = Offset(
+                            size.width * 0.28f,
+                            size.height * 0.40f
+                        ),
+                        end = Offset(
+                            size.width * 0.50f,
+                            size.height * 0.62f
+                        ),
+                        strokeWidth = stroke
+                    )
+                    drawLine(
+                        color = color,
+                        start = Offset(
+                            size.width * 0.50f,
+                            size.height * 0.62f
+                        ),
+                        end = Offset(
+                            size.width * 0.72f,
+                            size.height * 0.40f
                         ),
                         strokeWidth = stroke
                     )
@@ -3886,6 +4319,37 @@ private fun ReadStatusBanner(
             }
         }
     }
+}
+
+private fun readSearchOccurrenceCount(
+    query: String,
+    text: String
+): Int {
+    val needle = query.trim()
+    if (needle.isEmpty()) {
+        return 0
+    }
+
+    var count = 0
+    var start = 0
+
+    while (start < text.length) {
+        val index = text.indexOf(
+            string = needle,
+            startIndex = start,
+            ignoreCase = true
+        )
+        if (index < 0) {
+            break
+        }
+
+        count += 1
+        start =
+            index + needle.length
+                .coerceAtLeast(1)
+    }
+
+    return count
 }
 
 private fun accountInitial(
