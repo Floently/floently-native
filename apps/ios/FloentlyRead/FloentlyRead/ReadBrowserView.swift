@@ -48,6 +48,14 @@ struct ReadBrowserView: View {
                 controller.open(url: initialURL)
             }
         }
+        .onChange(of: controller.currentURL) { previous, current in
+            if
+                let previous,
+                previous != current
+            {
+                clearReadingVisualAssociation()
+            }
+        }
         .onChange(of: playbackSession.state) { _, state in
             let active =
                 state == .playing
