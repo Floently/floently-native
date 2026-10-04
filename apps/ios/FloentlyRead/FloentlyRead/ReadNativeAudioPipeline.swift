@@ -58,11 +58,8 @@ enum ReadNativeAudioIdentity {
 
                     return String(
                         Int64(
-                            (
-                                value
-                                * 1_000
-                            )
-                            .rounded()
+                            value
+                            * 1_000
                         )
                     )
                 }
