@@ -268,6 +268,15 @@ playback remains the fallback when browser storage is unavailable.
 Media Session publishes one logical document item even while hidden synthesis
 assets change underneath it.
 
+Cache Storage quota pressure is fail-soft. If a browser rejects a new audio
+write with `QuotaExceededError`, Read first evicts least-recently-used
+**unleased** audio to create bounded headroom and retries the write once.
+Currently-playing/leased assets are never pressure-evicted. If persistence is
+still denied, the already-downloaded response body remains playable through a
+temporary object URL, so quota pressure does not force a second audio download
+or interrupt the logical document session. Unrelated cache failures do not
+trigger pressure eviction.
+
 ## Runtime variables
 
 See `.env.example`.
