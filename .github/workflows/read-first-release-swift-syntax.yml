@@ -6,6 +6,7 @@ on:
       - build/read-native-first-release-shell-20261004
     paths:
       - "apps/ios/**/*.swift"
+      - "apps/ios/**/PrivacyInfo.xcprivacy"
       - ".github/workflows/read-first-release-swift-syntax.yml"
 
 concurrency:
@@ -34,6 +35,44 @@ jobs:
           done < <(
             find apps/ios/FloentlyRead/FloentlyRead                  apps/ios/FloentlyShared/Sources                  -type f -name '*.swift' -print0
           )
+      - name: Validate Read privacy manifest
+        run: |
+          python3 - <<'PY'
+          import plistlib
+          from pathlib import Path
+
+          path = Path("apps/ios/FloentlyRead/FloentlyRead/PrivacyInfo.xcprivacy")
+          payload = plistlib.loads(path.read_bytes())
+
+          assert payload.get("NSPrivacyTracking") is False
+          accessed = {
+              item["NSPrivacyAccessedAPIType"]: set(
+                  item["NSPrivacyAccessedAPITypeReasons"]
+              )
+              for item in payload.get("NSPrivacyAccessedAPITypes", [])
+          }
+          assert "CA92.1" in accessed.get(
+              "NSPrivacyAccessedAPICategoryUserDefaults",
+              set(),
+          )
+          file_reasons = accessed.get(
+              "NSPrivacyAccessedAPICategoryFileTimestamp",
+              set(),
+          )
+          assert {"C617.1", "3B52.1"} <= file_reasons
+
+          collected = {
+              item["NSPrivacyCollectedDataType"]
+              for item in payload.get("NSPrivacyCollectedDataTypes", [])
+          }
+          assert {
+              "NSPrivacyCollectedDataTypeName",
+              "NSPrivacyCollectedDataTypeEmailAddress",
+              "NSPrivacyCollectedDataTypeUserID",
+              "NSPrivacyCollectedDataTypeOtherUserContent",
+              "NSPrivacyCollectedDataTypeBrowsingHistory",
+          } <= collected
+          PY
       - name: Type-check pure access model
         run: |
           swiftc -typecheck             apps/ios/FloentlyShared/Sources/FloentlyShared/Billing/FloentlyAccessModels.swift
