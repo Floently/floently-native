@@ -200,6 +200,7 @@ fun ReadReleaseApp(
 
         accessState.phase == ReadAccessPhase.Failed -> {
             ReadAccessFailureScreen(
+                sessionStore = sessionStore,
                 message = accessState.errorMessage
                     ?: "Could not verify Read access.",
                 onRetry = {
@@ -626,6 +627,11 @@ private fun ReadEntitlementScreen(
                 }
             }
 
+            ReadAccessAccountDeletionControl(
+                sessionStore = sessionStore,
+                onDeleted = onSignedOut
+            )
+
             TextButton(
                 onClick = onSignedOut
             ) {
@@ -652,6 +658,7 @@ private fun BenefitLine(text: String) {
 
 @Composable
 private fun ReadAccessFailureScreen(
+    sessionStore: FloentlySecureSessionStore,
     message: String,
     onRetry: () -> Unit,
     onSignedOut: () -> Unit
@@ -685,10 +692,131 @@ private fun ReadAccessFailureScreen(
             ) {
                 Text("Try again")
             }
+            ReadAccessAccountDeletionControl(
+                sessionStore = sessionStore,
+                onDeleted = onSignedOut
+            )
             TextButton(onClick = onSignedOut) {
                 Text("Sign out", color = palette.muted)
             }
         }
+    }
+}
+
+@Composable
+private fun ReadAccessAccountDeletionControl(
+    sessionStore: FloentlySecureSessionStore,
+    onDeleted: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var showDialog by remember { mutableStateOf(false) }
+    var deleting by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        TextButton(
+            enabled = !deleting,
+            onClick = {
+                showDialog = true
+            }
+        ) {
+            Text(
+                if (deleting) {
+                    "Deleting account…"
+                } else {
+                    "Delete account"
+                },
+                color = Color(0xFFFF6B7A)
+            )
+        }
+
+        error?.let {
+            Text(
+                it,
+                color = Color(0xFFFFB86B),
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!deleting) {
+                    showDialog = false
+                }
+            },
+            title = {
+                Text("Delete your Floently account?")
+            },
+            text = {
+                Text(
+                    "This starts permanent deletion of your Floently account and associated personal data where deletion is legally possible. Store subscriptions must be cancelled separately in the App Store or Google Play."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !deleting,
+                    onClick = {
+                        val token =
+                            sessionStore.session?.token
+                        if (token.isNullOrBlank()) {
+                            showDialog = false
+                            error =
+                                "Your session expired. Sign in again before deleting your account."
+                            return@TextButton
+                        }
+
+                        deleting = true
+                        error = null
+
+                        scope.launch {
+                            runCatching {
+                                val api = FloentlyApiClient(
+                                    baseUrl =
+                                        "https://learn-api.floently.com",
+                                    tokenProvider = { token }
+                                )
+                                FloentlyAuthService(
+                                    api,
+                                    sessionStore
+                                ).deleteAccount(
+                                    "read_native_access_screen"
+                                )
+                            }
+                                .onSuccess {
+                                    showDialog = false
+                                    onDeleted()
+                                }
+                                .onFailure {
+                                    showDialog = false
+                                    error =
+                                        it.message
+                                            ?: "Account deletion failed."
+                                }
+                            deleting = false
+                        }
+                    }
+                ) {
+                    Text(
+                        "Delete account permanently",
+                        color = Color(0xFFFF6B7A)
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !deleting,
+                    onClick = {
+                        showDialog = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
