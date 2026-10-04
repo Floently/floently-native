@@ -37,7 +37,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
     private var activeAccessToken: String?
     private var activeAccountIdentity: String?
     private var lastUnderrunBoundaryIndex: Int?
-    private var lastAnchoredSegmentIndex: Int?
+    private var lastAnchoredScalarBucket: Int?
     private var nextRefillAllowedAt = Date.distantPast
 
     init() {
@@ -70,7 +70,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
             activeAccountIdentity = nil
         }
         lastUnderrunBoundaryIndex = nil
-        lastAnchoredSegmentIndex = nil
+        lastAnchoredScalarBucket = nil
         nextRefillAllowedAt = .distantPast
         refillTelemetry = ReadProgressiveRefillTelemetry()
 
@@ -185,7 +185,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         cancelTasks()
         preparedSegments.removeAll()
         lastUnderrunBoundaryIndex = nil
-        lastAnchoredSegmentIndex = nil
+        lastAnchoredScalarBucket = nil
         nextRefillAllowedAt = .distantPast
         activeVoiceId = newVoice
         state = .preparing
@@ -394,7 +394,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         activeAccessToken = nil
         activeAccountIdentity = nil
         lastUnderrunBoundaryIndex = nil
-        lastAnchoredSegmentIndex = nil
+        lastAnchoredScalarBucket = nil
         nextRefillAllowedAt = .distantPast
         boundPlayback?.onUnpreparedSeek = nil
         boundPlayback = nil
@@ -451,7 +451,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         } ?? manifest.segments.indices.last ?? 0
 
         state = .preparing
-        lastAnchoredSegmentIndex = nil
+        lastAnchoredScalarBucket = nil
         refillTelemetry.refillAttempts += 1
 
         seekTask = Task { [weak self, weak playback] in
@@ -672,42 +672,60 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
             return
         }
 
-        let cursorMs = Int64(
-            max(0, playback.elapsedTime) * 1_000
-        )
-        let segment =
-            playback.activeSegmentIndex.flatMap { activeIndex in
-                manifest.segments.first {
-                    $0.index == activeIndex
-                }
-            }
-            ?? manifest.segments.first {
-                cursorMs < $0.logicalEndMs
-            }
-            ?? manifest.segments.last
-
+        let logicalTime =
+            min(
+                max(0, playback.elapsedTime),
+                max(0, playback.duration)
+            )
         guard
-            let segment,
-            segment.index != lastAnchoredSegmentIndex
+            let anchor =
+                resumeStore.sourceAnchor(
+                    manifest: manifest,
+                    logicalTime:
+                        logicalTime
+                )
         else {
             return
         }
 
-        lastAnchoredSegmentIndex = segment.index
+        let scalarBucket =
+            anchor.scalarOffset / 32
+        guard
+            scalarBucket
+                != lastAnchoredScalarBucket
+        else {
+            return
+        }
+
+        lastAnchoredScalarBucket =
+            scalarBucket
         resumeStore.save(
             ReadPlaybackResumeSnapshot(
-                documentId: manifest.documentId,
-                revisionId: manifest.revisionId,
-                logicalTime: min(
-                    max(0, playback.elapsedTime),
-                    max(0, playback.duration)
-                ),
-                playbackRate: playback.playbackRate,
+                documentId:
+                    manifest.documentId,
+                revisionId:
+                    manifest.revisionId,
+                logicalTime:
+                    logicalTime,
+                playbackRate:
+                    playback.playbackRate,
                 updatedAt: Date(),
-                sourceScalarOffset: segment.scalarStart,
-                sourceSegmentId: segment.id,
-                sourceSegmentIndex: segment.index,
-                voiceId: activeVoiceId
+                sourceScalarOffset:
+                    anchor.scalarOffset,
+                sourceSegmentId:
+                    anchor.segmentId,
+                sourceSegmentIndex:
+                    anchor.segmentIndex,
+                voiceId:
+                    activeVoiceId,
+                sourceAnchorQuote:
+                    anchor.quote,
+                sourceAnchorPrefixContext:
+                    anchor.prefixContext,
+                sourceAnchorSuffixContext:
+                    anchor.suffixContext,
+                sourceAnchorCursorOffset:
+                    anchor.cursorOffset
             )
         )
     }
@@ -727,10 +745,10 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
     ) -> Int {
         guard
             requestedIndex == 0,
-            let snapshot = resumeStore.load(
-                documentId: manifest.documentId,
-                revisionId: manifest.revisionId
-            ),
+            let snapshot =
+                resumeStore.loadOrMigrate(
+                    manifest: manifest
+                ),
             !manifest.segments.isEmpty
         else {
             return requestedIndex
