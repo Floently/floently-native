@@ -3,10 +3,14 @@ package com.floently.read
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -95,35 +99,13 @@ fun ReadPersistentPlayerDock(
                 }
 
                 PlayerButton(
-                    label = "−15",
-                    surface = palette.backgroundTop,
-                    textColor = palette.text
-                ) {
-                    controller.seekBy(-15_000)
-                }
-
-                PlayerButton(
-                    label = if (snapshot.isPlaying) "Pause" else "Play",
-                    surface = palette.accent,
-                    textColor = Color.White
-                ) {
-                    controller.togglePlayPause()
-                }
-
-                PlayerButton(
-                    label = "+15",
-                    surface = palette.backgroundTop,
-                    textColor = palette.text
-                ) {
-                    controller.seekBy(15_000)
-                }
-
-                PlayerButton(
                     label = speedLabel(snapshot.speed),
                     surface = palette.backgroundTop,
                     textColor = palette.text
                 ) {
-                    controller.setSpeed(nextSpeed(snapshot.speed))
+                    controller.setSpeed(
+                        nextSpeed(snapshot.speed)
+                    )
                 }
 
                 Box {
@@ -145,7 +127,10 @@ fun ReadPersistentPlayerDock(
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        if (voice.id == currentVoiceId) {
+                                        if (
+                                            voice.id
+                                                == currentVoiceId
+                                        ) {
                                             "✓ " + voice.name
                                         } else {
                                             voice.name
@@ -166,6 +151,45 @@ fun ReadPersistentPlayerDock(
                         }
                     }
                 }
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Spacer(Modifier.weight(1f))
+
+                PlayerButton(
+                    label = "−15",
+                    surface = palette.backgroundTop,
+                    textColor = palette.text
+                ) {
+                    controller.seekBy(-15_000)
+                }
+
+                PlayerButton(
+                    label =
+                        if (snapshot.isPlaying) {
+                            "Pause"
+                        } else {
+                            "Play"
+                        },
+                    surface = palette.accent,
+                    textColor = Color.White
+                ) {
+                    controller.togglePlayPause()
+                }
+
+                PlayerButton(
+                    label = "+15",
+                    surface = palette.backgroundTop,
+                    textColor = palette.text
+                ) {
+                    controller.seekBy(15_000)
+                }
+
+                Spacer(Modifier.weight(1f))
             }
 
             Row(
@@ -223,9 +247,18 @@ private fun PlayerButton(
         colors = ButtonDefaults.buttonColors(
             containerColor = surface,
             contentColor = textColor
-        )
+        ),
+        shape = RoundedCornerShape(14.dp),
+        contentPadding = PaddingValues(
+            horizontal = 12.dp,
+            vertical = 0.dp
+        ),
+        modifier = Modifier.height(40.dp)
     ) {
-        Text(label, fontWeight = FontWeight.SemiBold)
+        Text(
+            label,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 
