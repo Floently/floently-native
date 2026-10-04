@@ -447,24 +447,40 @@ object ReadOfflineAudioStore {
                         .Empty
             }
 
-            val documentCount =
+            val documentDirectories =
                 account.listFiles()
-                    ?.count {
+                    ?.filter {
                         it.isDirectory
                     }
-                    ?: 0
+                    .orEmpty()
+            var documentCount = 0
             var bundleCount = 0
             var bytes = 0L
 
-            account.walkTopDown()
-                .filter { it.isFile }
-                .forEach { file ->
-                    bytes += file.length()
-                    if (
-                        file.name
-                            == "bundle.json"
-                    ) {
-                        bundleCount += 1
+            documentDirectories
+                .forEach { document ->
+                    var documentHasBundle =
+                        false
+
+                    document.walkTopDown()
+                        .filter {
+                            it.isFile
+                        }
+                        .forEach { file ->
+                            bytes +=
+                                file.length()
+                            if (
+                                file.name
+                                    == "bundle.json"
+                            ) {
+                                bundleCount += 1
+                                documentHasBundle =
+                                    true
+                            }
+                        }
+
+                    if (documentHasBundle) {
+                        documentCount += 1
                     }
                 }
 
