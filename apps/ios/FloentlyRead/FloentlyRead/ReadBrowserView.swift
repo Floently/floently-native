@@ -121,22 +121,32 @@ struct ReadBrowserView: View {
             .onSubmit {
                 controller.open(controller.addressText)
             }
-            .padding(.horizontal, 14)
-            .frame(height: 44)
-            .background(palette.elevated.opacity(0.92))
+            .padding(
+                .horizontal,
+                FloentlyDesignTokens.Space.s4
+            )
+            .frame(height: 52)
+            .background(
+                FloentlyDesignTokens.Colors.surface1
+            )
             .foregroundStyle(palette.text)
             .clipShape(
                 RoundedRectangle(
-                    cornerRadius: 16,
+                    cornerRadius:
+                        FloentlyDesignTokens.Radius.m,
                     style: .continuous
                 )
             )
             .overlay(
                 RoundedRectangle(
-                    cornerRadius: 16,
+                    cornerRadius:
+                        FloentlyDesignTokens.Radius.m,
                     style: .continuous
                 )
-                .stroke(palette.border, lineWidth: 1)
+                .stroke(
+                    FloentlyDesignTokens.Colors.border,
+                    lineWidth: 1
+                )
             )
             .accessibilityLabel("Website address")
 
@@ -166,10 +176,21 @@ struct ReadBrowserView: View {
                 dismiss()
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .frame(minHeight: 56)
-        .background(palette.surface)
+        .padding(
+            .horizontal,
+            FloentlyDesignTokens.Space.s1
+        )
+        .frame(height: 52)
+        .background(
+            FloentlyDesignTokens.Colors.surface1
+        )
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(
+                    FloentlyDesignTokens.Colors.borderSoft
+                )
+                .frame(height: 1)
+        }
     }
 
     private var browserStart: some View {
@@ -197,7 +218,10 @@ struct ReadBrowserView: View {
 
             Spacer()
         }
-        .padding(.horizontal, 28)
+        .padding(
+            .horizontal,
+            FloentlyDesignTokens.Space.s6
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(palette.background)
     }
@@ -217,11 +241,24 @@ struct ReadBrowserView: View {
                     systemImage: "doc.text.magnifyingglass"
                 )
                 .font(.headline.weight(.semibold))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 16)
+                .foregroundStyle(
+                    FloentlyDesignTokens.Colors.textOnBrand
+                )
+                .padding(
+                    .horizontal,
+                    FloentlyDesignTokens.Space.s4
+                )
                 .frame(height: 48)
-                .background(palette.accent)
-                .clipShape(Capsule())
+                .background(
+                    FloentlyDesignTokens.Colors.brand
+                )
+                .clipShape(
+                    RoundedRectangle(
+                        cornerRadius:
+                            FloentlyDesignTokens.Radius.l,
+                        style: .continuous
+                    )
+                )
             }
             .buttonStyle(.plain)
             .accessibilityHint(
@@ -241,8 +278,16 @@ struct ReadBrowserView: View {
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(palette.text)
                     .frame(width: 48, height: 48)
-                    .background(palette.elevated)
-                    .clipShape(Circle())
+                    .background(
+                        FloentlyDesignTokens.Colors.surface1
+                    )
+                    .clipShape(
+                        RoundedRectangle(
+                            cornerRadius:
+                                FloentlyDesignTokens.Radius.m,
+                            style: .continuous
+                        )
+                    )
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Read selected text")
@@ -259,8 +304,16 @@ struct ReadBrowserView: View {
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(palette.text)
                 .frame(width: 48, height: 48)
-                .background(palette.elevated)
-                .clipShape(Circle())
+                .background(
+                    FloentlyDesignTokens.Colors.surface1
+                )
+                .clipShape(
+                    RoundedRectangle(
+                        cornerRadius:
+                            FloentlyDesignTokens.Radius.m,
+                        style: .continuous
+                    )
+                )
             }
             .buttonStyle(.plain)
             .disabled(
@@ -288,20 +341,32 @@ struct ReadBrowserView: View {
                     alignment: .leading
                 )
         }
-        .padding(8)
-        .background(.ultraThinMaterial)
+        .padding(
+            .horizontal,
+            FloentlyDesignTokens.Space.s1
+        )
+        .padding(.vertical, 2)
+        .frame(minHeight: 52)
+        .background(
+            FloentlyDesignTokens.Colors.surface2
+        )
         .clipShape(
             RoundedRectangle(
-                cornerRadius: 24,
+                cornerRadius:
+                    FloentlyDesignTokens.Radius.l,
                 style: .continuous
             )
         )
         .overlay(
             RoundedRectangle(
-                cornerRadius: 24,
+                cornerRadius:
+                    FloentlyDesignTokens.Radius.l,
                 style: .continuous
             )
-            .stroke(palette.border, lineWidth: 1)
+            .stroke(
+                FloentlyDesignTokens.Colors.borderSoft,
+                lineWidth: 1
+            )
         )
         .accessibilityElement(children: .contain)
     }
@@ -451,7 +516,12 @@ struct ReadBrowserView: View {
                     ? palette.text
                     : palette.muted.opacity(0.5)
                 )
-                .frame(width: 44, height: 44)
+                .frame(
+                    width:
+                        FloentlyDesignTokens.Control.iconTarget,
+                    height:
+                        FloentlyDesignTokens.Control.iconTarget
+                )
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
