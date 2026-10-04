@@ -74,6 +74,7 @@ import com.floently.shared.design.floentlyPalette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 private enum class ReadReleaseTab {
     Home,
@@ -1152,6 +1153,21 @@ private fun ReadHomeScreen(
     val palette = floentlyPalette(FloentlyProduct.Read)
     val scope = rememberCoroutineScope()
     val session = sessionStore.session
+    val continueProject = remember(
+        projectStore.projects,
+        playbackController.snapshot.visible
+    ) {
+        if (playbackController.snapshot.visible) {
+            null
+        } else {
+            projectStore.projects.firstOrNull { project ->
+                val percent =
+                    project.progress?.progressPercent
+                        ?: 0.0
+                percent > 0.0 && percent < 99.5
+            }
+        }
+    }
 
     FloentlyScreen(product = FloentlyProduct.Read) {
         LazyColumn(
@@ -1267,6 +1283,113 @@ private fun ReadHomeScreen(
                                         .toFloat()
                                         / duration.toFloat()
                                     ).coerceIn(0f, 1f)
+                            },
+                            color = palette.accent,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
+            if (continueProject != null) {
+                item {
+                    Spacer(Modifier.height(30.dp))
+                    SectionLabel("CONTINUE")
+                    Spacer(Modifier.height(10.dp))
+
+                    ReadSurfaceCard(
+                        modifier = Modifier.clickable {
+                            onOpenProject(continueProject)
+                        }
+                    ) {
+                        Row(
+                            verticalAlignment =
+                                Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                color = palette.backgroundTop,
+                                shape = RoundedCornerShape(15.dp),
+                                modifier = Modifier.size(
+                                    width = 52.dp,
+                                    height = 64.dp
+                                )
+                            ) {
+                                Box(
+                                    contentAlignment =
+                                        Alignment.Center
+                                ) {
+                                    Text(
+                                        when (
+                                            continueProject
+                                                .sourceType
+                                                .lowercase()
+                                        ) {
+                                            "pdf" -> "PDF"
+                                            "web", "website", "url" ->
+                                                "◎"
+                                            else -> "Aa"
+                                        },
+                                        color = palette.accent,
+                                        fontWeight =
+                                            FontWeight.Bold
+                                    )
+                                }
+                            }
+
+                            Spacer(Modifier.width(14.dp))
+
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    continueProject.title,
+                                    color = palette.text,
+                                    style =
+                                        MaterialTheme
+                                            .typography
+                                            .titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 2
+                                )
+                                Spacer(Modifier.height(5.dp))
+                                Text(
+                                    projectProgressLabel(
+                                        continueProject
+                                    ) + "  •  " +
+                                        continueProject
+                                            .displaySource,
+                                    color = palette.muted,
+                                    style =
+                                        MaterialTheme
+                                            .typography
+                                            .bodySmall
+                                )
+                            }
+
+                            Surface(
+                                color = palette.accent,
+                                shape = CircleShape,
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Box(
+                                    contentAlignment =
+                                        Alignment.Center
+                                ) {
+                                    Text(
+                                        "▶",
+                                        color = Color.White,
+                                        fontWeight =
+                                            FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+
+                        LinearProgressIndicator(
+                            progress = {
+                                projectProgressFraction(
+                                    continueProject
+                                )
                             },
                             color = palette.accent,
                             modifier = Modifier.fillMaxWidth()
@@ -1669,12 +1792,37 @@ private fun ReadProjectRow(
                             append(project.wordCount)
                             append(" words")
                         }
+                        if (
+                            (project.progress?.progressPercent
+                                ?: 0.0) > 0.0
+                        ) {
+                            append("  •  ")
+                            append(
+                                projectProgressLabel(project)
+                            )
+                        }
                     },
                     color = palette.muted,
                     style =
                         MaterialTheme.typography.bodySmall,
                     maxLines = 1
                 )
+
+                if (
+                    (project.progress?.progressPercent
+                        ?: 0.0) > 0.0
+                ) {
+                    Spacer(Modifier.height(6.dp))
+                    LinearProgressIndicator(
+                        progress = {
+                            projectProgressFraction(project)
+                        },
+                        color = palette.accent,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(3.dp)
+                    )
+                }
             }
 
             Text(
@@ -2723,6 +2871,31 @@ private fun ReadStatusBanner(
                 )
             }
         }
+    }
+}
+
+private fun projectProgressFraction(
+    project: ReadContentProject
+): Float =
+    (
+        (project.progress?.progressPercent ?: 0.0)
+            / 100.0
+        )
+        .coerceIn(0.0, 1.0)
+        .toFloat()
+
+private fun projectProgressLabel(
+    project: ReadContentProject
+): String {
+    val percent = (
+        project.progress?.progressPercent
+            ?: 0.0
+        ).coerceIn(0.0, 100.0)
+
+    return if (percent >= 99.5) {
+        "Finished"
+    } else {
+        percent.roundToInt().toString() + "%"
     }
 }
 
