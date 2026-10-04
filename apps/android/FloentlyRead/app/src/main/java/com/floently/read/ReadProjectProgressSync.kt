@@ -215,7 +215,7 @@ object ReadRemoteProjectProgressBridge {
     }
 
     private fun logicalTimeForScalarOffset(
-        segment: ReadingSegmentV1,
+        segment: ReadingManifestSegmentV1,
         scalarOffset: Int
     ): Long {
         val scalarSpan = (
