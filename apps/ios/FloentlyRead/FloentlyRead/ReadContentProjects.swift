@@ -599,6 +599,7 @@ final class ReadProjectStore: ObservableObject {
     private let client = ReadContentProjectClient()
     private var progressSyncTail: Task<Void, Never>?
     private var progressSyncGeneration = 0
+    private var progressSyncSequence = 0
 
     func refresh(accessToken: String) async {
         activity = .loading
@@ -710,6 +711,8 @@ final class ReadProjectStore: ObservableObject {
         accessToken: String
     ) async {
         let generation = progressSyncGeneration
+        progressSyncSequence &+= 1
+        let sequence = progressSyncSequence
         let previous = progressSyncTail
         let task = Task { [weak self] in
             if let previous {
@@ -719,7 +722,8 @@ final class ReadProjectStore: ObservableObject {
             guard
                 !Task.isCancelled,
                 let self,
-                generation == self.progressSyncGeneration
+                generation == self.progressSyncGeneration,
+                sequence == self.progressSyncSequence
             else {
                 return
             }
@@ -737,6 +741,7 @@ final class ReadProjectStore: ObservableObject {
                 guard
                     !Task.isCancelled,
                     generation == self.progressSyncGeneration,
+                    sequence == self.progressSyncSequence,
                     let progress
                 else {
                     return
@@ -756,11 +761,13 @@ final class ReadProjectStore: ObservableObject {
         progressSyncTail = task
         await task.value
         // Chaining writes prevents an older cursor from completing after
-        // a newer one and moving cloud progress backwards.
+        // a newer one and moving cloud progress backwards. Waiting writes are
+        // coalesced so only the newest queued cursor reaches the server.
     }
 
     func reset() {
         progressSyncGeneration &+= 1
+        progressSyncSequence &+= 1
         progressSyncTail?.cancel()
         progressSyncTail = nil
         projects = []
