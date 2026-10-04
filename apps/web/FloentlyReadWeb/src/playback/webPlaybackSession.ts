@@ -171,6 +171,7 @@ export class WebPlaybackSession {
   private preferredVoiceLanguage: string | null = "en";
   private lastPersistedAt = 0;
   private lastTransitionAt = 0;
+  private readonly lifecycleDisposers: Array<() => void> = [];
 
   private snapshot: WebPlaybackSnapshot = {
     status: "idle",
@@ -241,6 +242,7 @@ export class WebPlaybackSession {
     this.engine.setRate(initialSpeed);
 
     this.installMediaSessionHandlers();
+    this.installPageLifecycleHandlers();
   }
 
   readonly subscribe = (listener: () => void): (() => void) => {
@@ -468,6 +470,7 @@ export class WebPlaybackSession {
     this.wantsPlayback = false;
     this.persistResumeState(true);
     this.releaseRuntimeAudio();
+    this.removePageLifecycleHandlers();
     this.engine.destroy();
     this.cache.dispose();
     this.clearMediaSession(true);
@@ -939,6 +942,51 @@ export class WebPlaybackSession {
       );
     } catch {
       // Resume storage is best-effort; playback remains functional without it.
+    }
+  }
+
+  private installPageLifecycleHandlers(): void {
+    if (
+      typeof window === "undefined"
+      || typeof document === "undefined"
+    ) {
+      return;
+    }
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        this.persistResumeState(true);
+        return;
+      }
+
+      this.publishMediaMetadata();
+      this.publishMediaState();
+    };
+    const onPageHide = () => {
+      this.persistResumeState(true);
+    };
+    const onPageShow = () => {
+      this.publishMediaMetadata();
+      this.publishMediaState();
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pagehide", onPageHide);
+    window.addEventListener("pageshow", onPageShow);
+
+    this.lifecycleDisposers.push(
+      () => document.removeEventListener(
+        "visibilitychange",
+        onVisibilityChange,
+      ),
+      () => window.removeEventListener("pagehide", onPageHide),
+      () => window.removeEventListener("pageshow", onPageShow),
+    );
+  }
+
+  private removePageLifecycleHandlers(): void {
+    for (const dispose of this.lifecycleDisposers.splice(0)) {
+      dispose();
     }
   }
 

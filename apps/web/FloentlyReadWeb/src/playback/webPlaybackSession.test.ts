@@ -253,6 +253,85 @@ function createHarness(
 
 const originalNavigatorDescriptor =
   Object.getOwnPropertyDescriptor(globalThis, "navigator");
+const originalWindowDescriptor =
+  Object.getOwnPropertyDescriptor(globalThis, "window");
+const originalDocumentDescriptor =
+  Object.getOwnPropertyDescriptor(globalThis, "document");
+const originalLocalStorageDescriptor =
+  Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+const originalMediaMetadataDescriptor =
+  Object.getOwnPropertyDescriptor(globalThis, "MediaMetadata");
+
+function restoreGlobal(
+  name: "window" | "document" | "localStorage" | "MediaMetadata",
+  descriptor: PropertyDescriptor | undefined,
+): void {
+  if (descriptor) {
+    Object.defineProperty(globalThis, name, descriptor);
+  } else {
+    Reflect.deleteProperty(globalThis, name);
+  }
+}
+
+function installFakeBrowserLifecycle(): {
+  pageWindow: EventTarget;
+  pageDocument: EventTarget & { visibilityState: DocumentVisibilityState };
+  storage: Storage;
+} {
+  const values = new Map<string, string>();
+  const storage: Storage = {
+    get length() {
+      return values.size;
+    },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => [...values.keys()][index] ?? null,
+    removeItem: (key) => {
+      values.delete(key);
+    },
+    setItem: (key, value) => {
+      values.set(key, String(value));
+    },
+  };
+
+  const pageWindow = new EventTarget();
+  const pageDocument = Object.assign(new EventTarget(), {
+    visibilityState: "visible" as DocumentVisibilityState,
+  });
+
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: pageWindow,
+  });
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: pageDocument,
+  });
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: storage,
+  });
+  Object.defineProperty(globalThis, "MediaMetadata", {
+    configurable: true,
+    value: class {
+      title?: string;
+      artist?: string;
+      album?: string;
+
+      constructor(init: MediaMetadataInit = {}) {
+        this.title = init.title;
+        this.artist = init.artist;
+        this.album = init.album;
+      }
+    },
+  });
+
+  return {
+    pageWindow,
+    pageDocument,
+    storage,
+  };
+}
 
 beforeEach(() => {
   vi.restoreAllMocks();
@@ -278,6 +357,11 @@ afterEach(() => {
   } else {
     Reflect.deleteProperty(globalThis, "navigator");
   }
+
+  restoreGlobal("window", originalWindowDescriptor);
+  restoreGlobal("document", originalDocumentDescriptor);
+  restoreGlobal("localStorage", originalLocalStorageDescriptor);
+  restoreGlobal("MediaMetadata", originalMediaMetadataDescriptor);
 });
 
 describe("WebPlaybackSession document-wide contract", () => {
@@ -574,6 +658,82 @@ describe("WebPlaybackSession document-wide contract", () => {
     });
 
     session.destroy();
+  });
+
+  it("flushes resume state when the page becomes hidden without forcing pause", async () => {
+    const {
+      pageDocument,
+      storage,
+    } = installFakeBrowserLifecycle();
+    const { session, engine } = createHarness();
+
+    session.loadDocument(makeManifest());
+    await session.play();
+    engine.emitTime(4_200, 10_000);
+
+    const key = "floently-read-resume-v1:doc:rev";
+    storage.removeItem(key);
+    pageDocument.visibilityState = "hidden";
+    pageDocument.dispatchEvent(new Event("visibilitychange"));
+
+    expect(engine.paused).toBe(false);
+    expect(JSON.parse(storage.getItem(key) ?? "{}")).toMatchObject({
+      elapsedMs: 4_200,
+      speed: 1,
+    });
+
+    session.destroy();
+  });
+
+  it("republishes Media Session state after page restoration", () => {
+    const { pageWindow } = installFakeBrowserLifecycle();
+    const fakeMediaSession = {
+      metadata: null,
+      playbackState: "none",
+      setActionHandler: vi.fn(),
+      setPositionState: vi.fn(),
+    };
+
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: {
+        mediaSession: fakeMediaSession,
+      },
+    });
+
+    const { session } = createHarness();
+    session.loadDocument(makeManifest());
+
+    fakeMediaSession.setPositionState.mockClear();
+    fakeMediaSession.metadata = null;
+
+    pageWindow.dispatchEvent(new Event("pageshow"));
+
+    expect(fakeMediaSession.metadata).not.toBeNull();
+    expect(fakeMediaSession.setPositionState).toHaveBeenCalledWith({
+      duration: 30,
+      playbackRate: 1,
+      position: 0,
+    });
+
+    session.destroy();
+  });
+
+  it("removes page lifecycle listeners when destroyed", () => {
+    const {
+      pageWindow,
+      storage,
+    } = installFakeBrowserLifecycle();
+    const { session } = createHarness();
+
+    session.loadDocument(makeManifest());
+    session.destroy();
+
+    const key = "floently-read-resume-v1:doc:rev";
+    storage.removeItem(key);
+    pageWindow.dispatchEvent(new Event("pagehide"));
+
+    expect(storage.getItem(key)).toBeNull();
   });
 
   it("publishes document time to Media Session instead of clip duration", async () => {
