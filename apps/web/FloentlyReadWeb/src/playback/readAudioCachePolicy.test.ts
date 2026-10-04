@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   planReadAudioCacheEvictions,
+  planReadAudioCachePressureEvictions,
   resolveReadAudioCacheKey,
   type ReadAudioCacheBudget,
   type ReadAudioCacheBudgetEntry,
@@ -106,5 +107,49 @@ describe("Read audio cache eviction policy", () => {
         budget,
       ),
     ).toEqual([]);
+  });
+});
+
+
+describe("Read audio cache quota-pressure eviction policy", () => {
+  it("evicts oldest unleased assets until requested headroom is freed", () => {
+    expect(
+      planReadAudioCachePressureEvictions(
+        [
+          entry("oldest", 20, 1),
+          entry("middle", 30, 2),
+          entry("newest", 40, 3),
+        ],
+        new Set(),
+        45,
+      ),
+    ).toEqual(["oldest", "middle"]);
+  });
+
+  it("never pressure-evicts active leased assets", () => {
+    expect(
+      planReadAudioCachePressureEvictions(
+        [
+          entry("active-oldest", 80, 1),
+          entry("idle-middle", 30, 2),
+          entry("idle-newest", 40, 3),
+        ],
+        new Set(["active-oldest"]),
+        50,
+      ),
+    ).toEqual(["idle-middle", "idle-newest"]);
+  });
+
+  it("returns every available idle entry when the requested headroom cannot be reached", () => {
+    expect(
+      planReadAudioCachePressureEvictions(
+        [
+          entry("idle", 10, 1),
+          entry("active", 100, 2),
+        ],
+        new Set(["active"]),
+        80,
+      ),
+    ).toEqual(["idle"]);
   });
 });
