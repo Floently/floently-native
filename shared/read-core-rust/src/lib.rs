@@ -446,7 +446,7 @@ mod tests {
     fn counts_unicode_scalars_not_utf16_units_or_graphemes() {
         let cases = [
             ("Floently Read", 13usize),
-            ("Hyvää päivää", 11usize),
+            ("Hyvää päivää", 12usize),
             ("e\u{0301}", 2usize),
             ("🙂", 1usize),
             ("👩‍💻", 3usize),
