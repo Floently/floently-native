@@ -40,11 +40,26 @@ function hasCacheStorage(): boolean {
 }
 
 function isQuotaExceededError(error: unknown): boolean {
-  return Boolean(
-    error
-    && typeof error === "object"
-    && "name" in error
-    && (error as { name?: unknown }).name === "QuotaExceededError",
+  if (!error || typeof error !== "object") return false;
+
+  const value = error as {
+    name?: unknown;
+    code?: unknown;
+  };
+  const name =
+    typeof value.name === "string"
+      ? value.name
+      : "";
+  const code =
+    typeof value.code === "number"
+      ? value.code
+      : null;
+
+  return (
+    name === "QuotaExceededError"
+    || name === "NS_ERROR_DOM_QUOTA_REACHED"
+    || code === 22
+    || code === 1014
   );
 }
 
