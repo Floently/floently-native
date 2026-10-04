@@ -169,6 +169,34 @@ fun ReadReleaseApp(
         accessState.refresh(sessionStore)
     }
 
+    val activeManifest = playbackController.activeManifest
+    val activeProject = remember(
+        projectStore.projects,
+        activeManifest?.documentId,
+        activeManifest?.revisionId
+    ) {
+        activeManifest?.let { manifest ->
+            projectStore.projects.firstOrNull { project ->
+                project.id == manifest.documentId
+                    && project.revisionId == manifest.revisionId
+            }
+        }
+    }
+
+    if (
+        session != null
+        && activeManifest != null
+        && activeProject != null
+    ) {
+        ReadProjectProgressSyncEffect(
+            project = activeProject,
+            manifest = activeManifest,
+            sessionStore = sessionStore,
+            projectStore = projectStore,
+            playbackController = playbackController
+        )
+    }
+
     when {
         session == null -> {
             ReadAuthScreen(
@@ -2437,15 +2465,6 @@ private fun ReadProjectReaderScreen(
 
         preparing = false
     }
-
-    ReadProjectProgressSyncEffect(
-        project = hydrated ?: project,
-        manifest = manifest,
-        sessionStore = sessionStore,
-        projectStore = projectStore,
-        playbackController = playbackController,
-        voiceSettings = voiceSettings
-    )
 
     Column(
         modifier = Modifier
