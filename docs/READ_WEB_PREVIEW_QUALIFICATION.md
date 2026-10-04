@@ -62,6 +62,56 @@ that is not a pure origin, and any production Floently hostname used as the
 preview origin. It prints only origins/configured booleans, never API keys or
 tokens.
 
+## Manual preview deployment lane
+
+The repository contains a deliberately manual deployment workflow:
+
+- `.github/workflows/read-web-preview-deploy.yml`
+- GitHub Environment: `read-web-preview`
+- trigger: `workflow_dispatch` only
+
+The workflow never uses `--prod` and never runs from a push or pull request.
+It builds the existing Rust/WASM + React production bundle on the GitHub Linux
+runner, runs the preview validator and web contract tests, then packages only
+`dist` into Vercel Build Output API v3. Static files are resolved first and
+unknown paths fall back to `index.html`, so a direct request such as
+`/app/library` exercises the same SPA bootstrap as `/`.
+
+Configure these **Environment secrets** on `read-web-preview`:
+
+- `VERCEL_TOKEN`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+
+Configure these **Environment variables**:
+
+- `READ_PREVIEW_ORIGIN`
+- `VITE_API_URL`
+- `VITE_AUTH_API_URL`
+- `VITE_READ_API_BASE_URL`
+- `VITE_BROWSER_V2_ORIGIN`
+
+Optional public Environment variables remain:
+
+- `VITE_GOOGLE_DRIVE_API_KEY`
+- `VITE_GOOGLE_DRIVE_APP_ID`
+- `VITE_STRIPE_READ_BILLING_PORTAL_URL`
+
+`READ_PREVIEW_ORIGIN` is also the stable, non-production alias assigned to the
+immutable preview deployment. The existing fail-closed validator rejects a
+Floently production hostname before any deployment starts.
+
+After the repository workflow exists on the default branch, start it manually
+from **Actions -> Read web isolated preview deploy -> Run workflow**. The run
+summary records both the immutable Vercel deployment URL and the stable preview
+origin. The workflow additionally requests a direct `/app/library` path from
+the immutable deployment and fails unless Vercel returns the SPA shell.
+
+Provisioning the Vercel project, creating/owning the stable preview hostname,
+and configuring backend origin allowlists are still external prerequisites.
+The workflow does not create production DNS, production aliases or entitlement
+shortcuts.
+
 ## Backend allowlist gate
 
 A successful frontend build is not enough. Before live qualification:
