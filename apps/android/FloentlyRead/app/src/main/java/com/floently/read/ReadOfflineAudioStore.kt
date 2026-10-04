@@ -15,6 +15,20 @@ data class ReadOfflineAudioAsset(
     val durationMs: Long?
 )
 
+data class ReadOfflineAudioSummary(
+    val documentCount: Int,
+    val bundleCount: Int,
+    val bytes: Long
+) {
+    companion object {
+        val Empty = ReadOfflineAudioSummary(
+            documentCount = 0,
+            bundleCount = 0,
+            bytes = 0L
+        )
+    }
+}
+
 object ReadOfflineAudioStore {
     private const val SCHEMA_VERSION = 1
     private const val DIRECTORY_NAME =
@@ -416,6 +430,65 @@ object ReadOfflineAudioStore {
         Unit
     }
 
+    suspend fun summary(
+        context: Context,
+        accountIdentity: String
+    ): ReadOfflineAudioSummary =
+        withContext(Dispatchers.IO) {
+            val account =
+                accountDirectory(
+                    context = context,
+                    accountIdentity =
+                        accountIdentity
+                )
+            if (!account.isDirectory) {
+                return@withContext
+                    ReadOfflineAudioSummary
+                        .Empty
+            }
+
+            val documentCount =
+                account.listFiles()
+                    ?.count {
+                        it.isDirectory
+                    }
+                    ?: 0
+            var bundleCount = 0
+            var bytes = 0L
+
+            account.walkTopDown()
+                .filter { it.isFile }
+                .forEach { file ->
+                    bytes += file.length()
+                    if (
+                        file.name
+                            == "bundle.json"
+                    ) {
+                        bundleCount += 1
+                    }
+                }
+
+            ReadOfflineAudioSummary(
+                documentCount =
+                    documentCount,
+                bundleCount =
+                    bundleCount,
+                bytes = bytes
+            )
+        }
+
+    suspend fun clearAccount(
+        context: Context,
+        accountIdentity: String
+    ) = withContext(Dispatchers.IO) {
+        accountDirectory(
+            context = context,
+            accountIdentity =
+                accountIdentity
+        ).deleteRecursively()
+        Unit
+    }
+
     suspend fun clearAll(
         context: Context
     ) = withContext(Dispatchers.IO) {
@@ -441,6 +514,14 @@ object ReadOfflineAudioStore {
         }.getOrNull()
     }
 
+    private fun accountDirectory(
+        context: Context,
+        accountIdentity: String
+    ): File = File(
+        root(context),
+        storageKey(accountIdentity)
+    )
+
     private fun bundleDirectory(
         context: Context,
         accountIdentity: String,
@@ -451,11 +532,10 @@ object ReadOfflineAudioStore {
         File(
             File(
                 File(
-                    File(
-                        root(context),
-                        storageKey(
+                    accountDirectory(
+                        context = context,
+                        accountIdentity =
                             accountIdentity
-                        )
                     ),
                     storageKey(documentId)
                 ),
