@@ -453,6 +453,7 @@ struct ReadMainShell: View {
     @State private var showingAddSheet = false
     @State private var showingFileImporter = false
     @State private var showingPasteSheet = false
+    @State private var showingURLSheet = false
     @State private var activeProject: ReadContentProject?
 
     var body: some View {
@@ -522,6 +523,10 @@ struct ReadMainShell: View {
                     showingAddSheet = false
                     showingPasteSheet = true
                 },
+                onLink: {
+                    showingAddSheet = false
+                    showingURLSheet = true
+                },
                 onWebsite: {
                     showingAddSheet = false
                     browserRouter.openBrowser()
@@ -532,6 +537,11 @@ struct ReadMainShell: View {
         }
         .sheet(isPresented: $showingPasteSheet) {
             ReadPasteTextSheet { project in
+                activeProject = project
+            }
+        }
+        .sheet(isPresented: $showingURLSheet) {
+            ReadURLImportSheet { project in
                 activeProject = project
             }
         }
@@ -810,6 +820,7 @@ private struct ReadLibraryScreen: View {
     @EnvironmentObject private var sessionStore: FloentlySessionStore
 
     @State private var searchText = ""
+    @State private var pendingDelete: ReadContentProject?
 
     let addSource: () -> Void
     let openProject: (ReadContentProject) -> Void
@@ -888,6 +899,51 @@ private struct ReadLibraryScreen: View {
             .frame(maxWidth: 760)
             .frame(maxWidth: .infinity)
         }
+        .confirmationDialog(
+            "Remove this reading?",
+            isPresented: Binding(
+                get: { pendingDelete != nil },
+                set: { presented in
+                    if !presented {
+                        pendingDelete = nil
+                    }
+                }
+            ),
+            titleVisibility: .visible,
+            presenting: pendingDelete
+        ) { project in
+            Button("Remove from Library", role: .destructive) {
+                delete(project)
+            }
+            Button("Cancel", role: .cancel) {
+                pendingDelete = nil
+            }
+        } message: { project in
+            Text(
+                "“\(project.title)” will be removed from your synced Read library."
+            )
+        }
+    }
+
+    private func delete(_ project: ReadContentProject) {
+        guard let token = sessionStore.session?.token else {
+            projectStore.errorMessage = "Sign in again to change your library."
+            return
+        }
+
+        pendingDelete = nil
+
+        Task {
+            do {
+                try await projectStore.delete(
+                    project,
+                    accessToken: token
+                )
+            } catch {
+                projectStore.errorMessage =
+                    error.localizedDescription
+            }
+        }
     }
 
     private var filteredProjects: [ReadContentProject] {
@@ -908,13 +964,18 @@ private struct ReadLibraryScreen: View {
 private struct ReadProjectRow: View {
     let project: ReadContentProject
     let action: () -> Void
+    var onDelete: (() -> Void)? = nil
 
     private let palette = FloentlyPalette.read
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 14) {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+        HStack(spacing: 4) {
+            Button(action: action) {
+                HStack(spacing: 14) {
+                    RoundedRectangle(
+                        cornerRadius: 14,
+                        style: .continuous
+                    )
                     .fill(palette.elevated)
                     .frame(width: 48, height: 62)
                     .overlay {
@@ -922,51 +983,72 @@ private struct ReadProjectRow: View {
                             .foregroundStyle(palette.accent2)
                     }
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(project.title)
-                        .font(.headline)
-                        .foregroundStyle(palette.text)
-                        .lineLimit(2)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(project.title)
+                            .font(.headline)
+                            .foregroundStyle(palette.text)
+                            .lineLimit(2)
 
-                    HStack(spacing: 7) {
-                        Text(project.displaySource)
-                        if project.wordCount > 0 {
-                            Text("•")
-                            Text("\(project.wordCount.formatted()) words")
+                        HStack(spacing: 7) {
+                            Text(project.displaySource)
+                            if project.wordCount > 0 {
+                                Text("•")
+                                Text(
+                                    "\(project.wordCount.formatted()) words"
+                                )
+                            }
                         }
+                        .font(.caption)
+                        .foregroundStyle(palette.muted)
+                        .lineLimit(1)
                     }
-                    .font(.caption)
-                    .foregroundStyle(palette.muted)
-                    .lineLimit(1)
+
+                    Spacer(minLength: 8)
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(palette.muted)
                 }
-
-                Spacer(minLength: 8)
-
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(palette.muted)
-                    .frame(width: 36, height: 48)
+                .padding(.vertical, 11)
+                .contentShape(Rectangle())
             }
-            .padding(.vertical, 11)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity)
+
+            if let onDelete {
+                Menu {
+                    Button(
+                        "Remove from Library",
+                        systemImage: "trash",
+                        role: .destructive,
+                        action: onDelete
+                    )
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.headline)
+                        .foregroundStyle(palette.muted)
+                        .frame(width: 44, height: 52)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel(
+                    "More actions for \(project.title)"
+                )
+            }
         }
-        .buttonStyle(.plain)
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(palette.border)
                 .frame(height: 1)
                 .padding(.leading, 62)
         }
-        .accessibilityLabel(
-            "\(project.title), \(project.displaySource)"
-        )
+        .accessibilityElement(children: .contain)
     }
 
     private var projectIcon: String {
         switch project.sourceType.lowercased() {
         case "pdf":
             return "doc.richtext"
-        case "web", "website":
+        case "web", "website", "url":
             return "globe"
         case "text", "txt", "markdown", "md":
             return "text.alignleft"
@@ -981,6 +1063,7 @@ private struct ReadAddSourceSheet: View {
 
     let onFiles: () -> Void
     let onPaste: () -> Void
+    let onLink: () -> Void
     let onWebsite: () -> Void
 
     var body: some View {
@@ -1010,6 +1093,15 @@ private struct ReadAddSourceSheet: View {
             ) {
                 dismiss()
                 onPaste()
+            }
+
+            ReadSourceRow(
+                icon: "link",
+                title: "Import link",
+                subtitle: "Save an article or public page into your library"
+            ) {
+                dismiss()
+                onLink()
             }
 
             ReadSourceRow(
@@ -1160,6 +1252,104 @@ private struct ReadPasteTextSheet: View {
                 let project = try await projectStore.addText(
                     title: title,
                     text: text,
+                    accessToken: token
+                )
+                dismiss()
+                onCreated(project)
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+}
+
+private struct ReadURLImportSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var sessionStore: FloentlySessionStore
+    @EnvironmentObject private var projectStore: ReadProjectStore
+
+    @State private var title = ""
+    @State private var sourceURL = ""
+    @State private var busy = false
+    @State private var errorMessage: String?
+
+    let onCreated: (ReadContentProject) -> Void
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16) {
+                Text(
+                    "Save a public article or page as a reading. For signed-in or interactive sites, use Live website instead."
+                )
+                .foregroundStyle(.secondary)
+
+                TextField("Title optional", text: $title)
+                    .readFieldStyle()
+
+                TextField(
+                    "https://example.com/article",
+                    text: $sourceURL
+                )
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .keyboardType(.URL)
+                .textContentType(.URL)
+                .readFieldStyle()
+
+                if let errorMessage {
+                    Label(
+                        errorMessage,
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+                }
+
+                FloentlyPrimaryButton(
+                    busy ? "Importing…" : "Save and open",
+                    product: .read
+                ) {
+                    create()
+                }
+                .disabled(
+                    busy
+                    || sourceURL.trimmingCharacters(
+                        in: .whitespacesAndNewlines
+                    ).isEmpty
+                )
+
+                Spacer()
+            }
+            .padding(20)
+            .navigationTitle("Import link")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func create() {
+        guard let token = sessionStore.session?.token else {
+            errorMessage = "Sign in again to save this link."
+            return
+        }
+
+        busy = true
+        errorMessage = nil
+
+        Task {
+            defer { busy = false }
+
+            do {
+                let project = try await projectStore.addURL(
+                    title: title,
+                    sourceURL: sourceURL,
                     accessToken: token
                 )
                 dismiss()
