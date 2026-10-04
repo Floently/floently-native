@@ -16,6 +16,11 @@ char *floently_read_build_manifest_json(
     size_t max_scalars
 );
 
+char *floently_read_extract_epub_json(
+    const char *input_path,
+    const char *output_directory
+);
+
 void floently_read_string_free(char *pointer);
 
 #ifdef __cplusplus
