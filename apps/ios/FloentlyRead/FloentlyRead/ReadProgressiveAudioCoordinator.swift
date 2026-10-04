@@ -64,6 +64,39 @@ actor ReadProgressiveAudioCoordinator {
                     segment: segment
                 )
             {
+                let renditionId =
+                    offline.renditionId
+                    ?? ReadNativeAudioIdentity
+                        .renditionId(
+                            documentId:
+                                manifest.documentId,
+                            revisionId:
+                                manifest.revisionId,
+                            language:
+                                manifest.language,
+                            voiceId:
+                                voiceId,
+                            provider: nil,
+                            model: nil
+                        )
+                let timingMapId =
+                    offline.timingMapId
+                    ?? ReadNativeAudioIdentity
+                        .timingMapId(
+                            renditionId:
+                                renditionId,
+                            segmentId:
+                                segment.id,
+                            segmentIndex:
+                                segment.index,
+                            logicalStartMs:
+                                segment.logicalStartMs,
+                            logicalEndMs:
+                                segment.logicalEndMs,
+                            physicalDuration:
+                                offline.duration
+                        )
+
                 result.append(
                     ReadPlayableSegment(
                         id: segment.id,
@@ -78,9 +111,9 @@ actor ReadProgressiveAudioCoordinator {
                         physicalDuration:
                             offline.duration,
                         renditionId:
-                            offline.renditionId,
+                            renditionId,
                         timingMapId:
-                            offline.timingMapId
+                            timingMapId
                     )
                 )
                 continue
