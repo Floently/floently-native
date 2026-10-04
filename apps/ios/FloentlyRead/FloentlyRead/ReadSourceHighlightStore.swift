@@ -15,6 +15,7 @@ struct ReadSourceHighlight:
     let quote: String
     let prefixContext: String
     let suffixContext: String
+    let note: String?
     let createdAt: Date
 }
 
@@ -162,6 +163,7 @@ actor ReadSourceHighlightStore {
                 quote: quote,
                 prefixContext: prefix,
                 suffixContext: suffix,
+                note: nil,
                 createdAt: Date()
             )
         values.append(value)
@@ -174,6 +176,69 @@ actor ReadSourceHighlightStore {
         )
 
         return value
+    }
+
+    func updateNote(
+        accountIdentity: String,
+        projectId: String,
+        id: String,
+        note: String?
+    ) throws {
+        var values = load(
+            accountIdentity:
+                accountIdentity,
+            projectId: projectId
+        )
+        guard
+            let index =
+                values.firstIndex(
+                    where: {
+                        $0.id == id
+                    }
+                )
+        else {
+            return
+        }
+
+        let normalized =
+            note?
+                .trimmingCharacters(
+                    in:
+                        .whitespacesAndNewlines
+                )
+                .nilIfBlank
+
+        let current =
+            values[index]
+        values[index] =
+            ReadSourceHighlight(
+                id: current.id,
+                projectId:
+                    current.projectId,
+                revisionId:
+                    current.revisionId,
+                sourceScalarStart:
+                    current
+                        .sourceScalarStart,
+                sourceScalarLength:
+                    current
+                        .sourceScalarLength,
+                quote: current.quote,
+                prefixContext:
+                    current.prefixContext,
+                suffixContext:
+                    current.suffixContext,
+                note: normalized,
+                createdAt:
+                    current.createdAt
+            )
+
+        try persist(
+            values,
+            accountIdentity:
+                accountIdentity,
+            projectId: projectId
+        )
     }
 
     func remove(
