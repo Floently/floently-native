@@ -141,6 +141,10 @@ class ReadPlaybackService : MediaSessionService() {
                                 ReadPlaybackCommandContract
                                     .changeVoiceCommand
                             )
+                            commandsBuilder.add(
+                                ReadPlaybackCommandContract
+                                    .clearPlaybackCommand
+                            )
                         }
 
                         return MediaSession.ConnectionResult
@@ -198,6 +202,11 @@ class ReadPlaybackService : MediaSessionService() {
                                         )
 
                                 loadPlayableDocument(decoded)
+                            }
+
+                            ReadPlaybackCommandContract
+                                .ACTION_CLEAR_PLAYBACK -> {
+                                clearPlayback()
                             }
 
                             ReadPlaybackCommandContract
@@ -260,6 +269,27 @@ class ReadPlaybackService : MediaSessionService() {
         coordinator = null
 
         super.onDestroy()
+    }
+
+    private fun clearPlayback(): ListenableFuture<SessionResult> {
+        persistResume()
+        cancelProgressiveWork(
+            completePendingLoad = true,
+            clearActiveManifest = true
+        )
+        documentPlayer?.clearDocument()
+
+        serviceScope.launch {
+            coordinator?.replaceProtectedSegments(
+                emptyList()
+            )
+        }
+
+        return Futures.immediateFuture(
+            SessionResult(
+                SessionResult.RESULT_SUCCESS
+            )
+        )
     }
 
     private fun startManifestLoad(
