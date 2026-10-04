@@ -949,6 +949,11 @@ class ReadPlaybackService : MediaSessionService() {
                         logicalTimeMs
                 )
             }
+        val preparedSegment =
+            sourceAnchor?.segmentIndex
+                ?.let {
+                    preparedSegments[it]
+                }
 
         store.save(
             ReadPlaybackResumeSnapshot(
@@ -966,6 +971,12 @@ class ReadPlaybackService : MediaSessionService() {
                 sourceSegmentIndex =
                     sourceAnchor?.segmentIndex,
                 voiceId = activeVoiceId,
+                renditionId =
+                    preparedSegment
+                        ?.renditionId,
+                timingMapId =
+                    preparedSegment
+                        ?.timingMapId,
                 sourceAnchorQuote =
                     sourceAnchor?.quote,
                 sourceAnchorPrefixContext =
