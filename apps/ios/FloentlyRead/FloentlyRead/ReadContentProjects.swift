@@ -1,6 +1,6 @@
 import Foundation
 
-struct ReadContentProject: Identifiable, Equatable {
+struct ReadContentProject: Identifiable, Equatable, Sendable {
     let id: String
     let title: String
     let kind: String
