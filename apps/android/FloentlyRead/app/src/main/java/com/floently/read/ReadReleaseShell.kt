@@ -64,6 +64,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.floently.shared.api.FloentlyApiClient
+import com.floently.shared.api.FloentlyApiError
 import com.floently.shared.auth.FloentlyAuthService
 import com.floently.shared.auth.FloentlySecureSessionStore
 import com.floently.shared.billing.FloentlyAccessService
@@ -176,31 +177,33 @@ private class ReadAccessState(
         ) {
             throw error
         } catch (error: IOException) {
-            val lease =
-                accountIdentity?.let {
-                    ReadAccessLeaseStore
-                        .validGrantedLease(
-                            context =
-                                applicationContext,
-                            accountIdentity = it
-                        )
-                }
-
-            if (lease != null) {
-                status = lease.status
-                offlineVerifiedAtMs =
-                    lease.verifiedAtMs
-                phase =
-                    ReadAccessPhase
-                        .GrantedOffline
-            } else {
-                status = null
-                errorMessage =
-                    error.message
-                        ?: "Could not verify Read access."
-                phase =
-                    ReadAccessPhase.Failed
+            if (
+                restoreOfflineLease(
+                    accountIdentity
+                )
+            ) {
+                return
             }
+
+            status = null
+            errorMessage =
+                error.message
+                    ?: "Could not verify Read access."
+            phase = ReadAccessPhase.Failed
+        } catch (error: FloentlyApiError) {
+            if (
+                isTransientAccessError(error)
+                && restoreOfflineLease(
+                    accountIdentity
+                )
+            ) {
+                return
+            }
+
+            status = null
+            errorMessage =
+                error.message
+            phase = ReadAccessPhase.Failed
         } catch (error: Exception) {
             status = null
             errorMessage =
@@ -208,6 +211,58 @@ private class ReadAccessState(
                     ?: "Could not verify Read access."
             phase = ReadAccessPhase.Failed
         }
+    }
+
+    private suspend fun restoreOfflineLease(
+        accountIdentity: String?
+    ): Boolean {
+        val identity =
+            accountIdentity
+                ?: return false
+        val lease =
+            ReadAccessLeaseStore
+                .validGrantedLease(
+                    context =
+                        applicationContext,
+                    accountIdentity = identity
+                )
+                ?: return false
+
+        status = lease.status
+        offlineVerifiedAtMs =
+            lease.verifiedAtMs
+        phase =
+            ReadAccessPhase.GrantedOffline
+        return true
+    }
+
+    private fun isTransientAccessError(
+        error: FloentlyApiError
+    ): Boolean {
+        if (error.retryable) {
+            return true
+        }
+
+        val code =
+            error.code.uppercase()
+        if (
+            code == "HTTP_408"
+            || code == "HTTP_429"
+        ) {
+            return true
+        }
+
+        val status =
+            code.removePrefix("HTTP_")
+                .takeIf {
+                    code.startsWith(
+                        "HTTP_"
+                    )
+                }
+                ?.toIntOrNull()
+                ?: return false
+
+        return status in 500..599
     }
 }
 
