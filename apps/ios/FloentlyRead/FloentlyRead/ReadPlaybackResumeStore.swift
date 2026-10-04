@@ -11,6 +11,10 @@ struct ReadPlaybackResumeSnapshot: Codable, Equatable {
     let sourceSegmentIndex: Int?
     let voiceId: String?
     let renditionId: String?
+    let sourceAnchorQuote: String?
+    let sourceAnchorPrefixContext: String?
+    let sourceAnchorSuffixContext: String?
+    let sourceAnchorCursorOffset: Int?
 
     init(
         documentId: String,
@@ -22,7 +26,11 @@ struct ReadPlaybackResumeSnapshot: Codable, Equatable {
         sourceSegmentId: String? = nil,
         sourceSegmentIndex: Int? = nil,
         voiceId: String? = nil,
-        renditionId: String? = nil
+        renditionId: String? = nil,
+        sourceAnchorQuote: String? = nil,
+        sourceAnchorPrefixContext: String? = nil,
+        sourceAnchorSuffixContext: String? = nil,
+        sourceAnchorCursorOffset: Int? = nil
     ) {
         self.documentId = documentId
         self.revisionId = revisionId
@@ -34,6 +42,13 @@ struct ReadPlaybackResumeSnapshot: Codable, Equatable {
         self.sourceSegmentIndex = sourceSegmentIndex
         self.voiceId = voiceId
         self.renditionId = renditionId
+        self.sourceAnchorQuote = sourceAnchorQuote
+        self.sourceAnchorPrefixContext =
+            sourceAnchorPrefixContext
+        self.sourceAnchorSuffixContext =
+            sourceAnchorSuffixContext
+        self.sourceAnchorCursorOffset =
+            sourceAnchorCursorOffset
     }
 }
 
@@ -73,6 +88,40 @@ final class ReadPlaybackResumeStore {
         return snapshot
     }
 
+    func loadLatest(
+        documentId: String,
+        excludingRevisionId: String
+    ) -> ReadPlaybackResumeSnapshot? {
+        let keyPrefix =
+            prefix + documentId + "::"
+
+        return defaults.dictionaryRepresentation()
+            .compactMap { entry in
+                guard
+                    entry.key.hasPrefix(keyPrefix),
+                    let data = entry.value as? Data,
+                    let snapshot =
+                        try? JSONDecoder().decode(
+                            ReadPlaybackResumeSnapshot.self,
+                            from: data
+                        ),
+                    snapshot.documentId == documentId,
+                    snapshot.revisionId
+                        != excludingRevisionId,
+                    snapshot.logicalTime.isFinite,
+                    snapshot.logicalTime >= 0,
+                    snapshot.playbackRate.isFinite
+                else {
+                    return nil
+                }
+
+                return snapshot
+            }
+            .max {
+                $0.updatedAt < $1.updatedAt
+            }
+    }
+
     func save(_ snapshot: ReadPlaybackResumeSnapshot) {
         guard
             snapshot.logicalTime.isFinite,
@@ -107,7 +156,19 @@ final class ReadPlaybackResumeStore {
             voiceId: snapshot.voiceId ?? existing?.voiceId,
             renditionId:
                 snapshot.renditionId
-                ?? existing?.renditionId
+                ?? existing?.renditionId,
+            sourceAnchorQuote:
+                snapshot.sourceAnchorQuote
+                ?? existing?.sourceAnchorQuote,
+            sourceAnchorPrefixContext:
+                snapshot.sourceAnchorPrefixContext
+                ?? existing?.sourceAnchorPrefixContext,
+            sourceAnchorSuffixContext:
+                snapshot.sourceAnchorSuffixContext
+                ?? existing?.sourceAnchorSuffixContext,
+            sourceAnchorCursorOffset:
+                snapshot.sourceAnchorCursorOffset
+                ?? existing?.sourceAnchorCursorOffset
         )
 
         guard let data = try? JSONEncoder().encode(resolved) else {
