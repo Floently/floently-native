@@ -53,6 +53,15 @@ actor ReadOriginalDocumentStore {
             at: temporary,
             to: target
         )
+
+        try? fileManager.setAttributes(
+            [
+                .protectionKey:
+                    FileProtectionType
+                        .completeUntilFirstUserAuthentication
+            ],
+            ofItemAtPath: target.path
+        )
     }
 
     func pdfURL(
@@ -81,6 +90,11 @@ actor ReadOriginalDocumentStore {
             at: directoryURL,
             withIntermediateDirectories: true
         )
+
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        var directory = directoryURL
+        try? directory.setResourceValues(values)
     }
 
     private func pdfURL(
