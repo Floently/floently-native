@@ -25,22 +25,15 @@ export type ReadAudioEngineFactory = (
 ) => ReadAudioEngine;
 
 export class BrowserAudioEngine implements ReadAudioEngine {
-  private readonly audio = new Audio();
+  private audio: HTMLAudioElement;
   private readonly preloaded = new Map<string, HTMLAudioElement>();
   private readonly callbacks: BrowserAudioEngineCallbacks;
   private currentUrl: string | null = null;
 
   constructor(callbacks: BrowserAudioEngineCallbacks) {
     this.callbacks = callbacks;
-    this.audio.preload = "auto";
-
-    this.audio.addEventListener("timeupdate", this.handleTime);
-    this.audio.addEventListener("durationchange", this.handleTime);
-    this.audio.addEventListener("ended", this.handleEnded);
-    this.audio.addEventListener("waiting", this.handleWaiting);
-    this.audio.addEventListener("stalled", this.handleWaiting);
-    this.audio.addEventListener("playing", this.handlePlaying);
-    this.audio.addEventListener("error", this.handleError);
+    this.audio = this.createAudioElement();
+    this.attachActiveListeners(this.audio);
   }
 
   get paused(): boolean {
@@ -53,9 +46,22 @@ export class BrowserAudioEngine implements ReadAudioEngine {
     playbackRate: number,
   ): Promise<number | null> {
     if (this.currentUrl !== url) {
-      this.audio.pause();
-      this.audio.src = url;
-      this.audio.load();
+      const previous = this.audio;
+      const prepared = this.preloaded.get(url) ?? null;
+
+      previous.pause();
+
+      if (prepared) {
+        this.preloaded.delete(url);
+        this.detachActiveListeners(previous);
+        this.retireElement(previous);
+        this.audio = prepared;
+        this.attachActiveListeners(this.audio);
+      } else {
+        this.audio.src = url;
+        this.audio.load();
+      }
+
       this.currentUrl = url;
     }
 
@@ -88,15 +94,13 @@ export class BrowserAudioEngine implements ReadAudioEngine {
 
     for (const [url, element] of this.preloaded) {
       if (desired.has(url)) continue;
-      element.src = "";
-      element.load();
+      this.retireElement(element);
       this.preloaded.delete(url);
     }
 
     for (const url of desired) {
       if (url === this.currentUrl || this.preloaded.has(url)) continue;
-      const element = new Audio();
-      element.preload = "auto";
+      const element = this.createAudioElement();
       element.src = url;
       element.load();
       this.preloaded.set(url, element);
@@ -104,22 +108,46 @@ export class BrowserAudioEngine implements ReadAudioEngine {
   }
 
   destroy(): void {
-    this.audio.pause();
-    this.audio.removeEventListener("timeupdate", this.handleTime);
-    this.audio.removeEventListener("durationchange", this.handleTime);
-    this.audio.removeEventListener("ended", this.handleEnded);
-    this.audio.removeEventListener("waiting", this.handleWaiting);
-    this.audio.removeEventListener("stalled", this.handleWaiting);
-    this.audio.removeEventListener("playing", this.handlePlaying);
-    this.audio.removeEventListener("error", this.handleError);
-    this.audio.src = "";
-    this.audio.load();
+    this.detachActiveListeners(this.audio);
+    this.retireElement(this.audio);
+    this.currentUrl = null;
 
     for (const element of this.preloaded.values()) {
-      element.src = "";
-      element.load();
+      this.retireElement(element);
     }
     this.preloaded.clear();
+  }
+
+  private createAudioElement(): HTMLAudioElement {
+    const element = new Audio();
+    element.preload = "auto";
+    return element;
+  }
+
+  private attachActiveListeners(element: HTMLAudioElement): void {
+    element.addEventListener("timeupdate", this.handleTime);
+    element.addEventListener("durationchange", this.handleTime);
+    element.addEventListener("ended", this.handleEnded);
+    element.addEventListener("waiting", this.handleWaiting);
+    element.addEventListener("stalled", this.handleWaiting);
+    element.addEventListener("playing", this.handlePlaying);
+    element.addEventListener("error", this.handleError);
+  }
+
+  private detachActiveListeners(element: HTMLAudioElement): void {
+    element.removeEventListener("timeupdate", this.handleTime);
+    element.removeEventListener("durationchange", this.handleTime);
+    element.removeEventListener("ended", this.handleEnded);
+    element.removeEventListener("waiting", this.handleWaiting);
+    element.removeEventListener("stalled", this.handleWaiting);
+    element.removeEventListener("playing", this.handlePlaying);
+    element.removeEventListener("error", this.handleError);
+  }
+
+  private retireElement(element: HTMLAudioElement): void {
+    element.pause();
+    element.src = "";
+    element.load();
   }
 
   private waitForMetadata(): Promise<number | null> {
