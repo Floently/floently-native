@@ -268,6 +268,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                         startingAt: targetIndex,
                         voiceId: previousVoice,
                         accessToken: activeAccessToken,
+                        accountIdentity: activeAccountIdentity,
                         maxSegments: 1
                     )
 
