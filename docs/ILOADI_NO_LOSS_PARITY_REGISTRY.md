@@ -70,11 +70,69 @@ The website must remain intact and interactive. Read extracts from the live rend
 
 Some identity providers intentionally reject embedded user agents. Do not weaken security controls or spoof login flows to bypass those policies. Where an embedded login is provider-blocked, use an approved external/native authentication handoff and return flow.
 
-### Web/desktop architecture
+### Web/desktop authenticated-page architecture
 
-A normal Read website cannot safely inject itself into arbitrary third-party authenticated pages because of browser same-origin rules, CSP and frame restrictions. Authenticated arbitrary-site reading on desktop therefore remains **extension-first**: the user signs into the target page in their normal browser and the Read extension runs on that already-authenticated page.
+A normal Read page still cannot inject itself into an arbitrary third-party page
+that is already authenticated in the person's local browser. Same-origin rules,
+CSP, frame restrictions and cookie isolation remain authoritative.
 
-Do not implement a fake web browser by iframe/proxying third-party signed-in sessions through the Read web app.
+Read therefore has **two explicit desktop authenticated-page modes**. They solve
+different session-ownership problems and neither may silently impersonate the
+other.
+
+#### 1. Existing browser + Read extension
+
+The extension remains a protected compatibility path. The person signs into the
+target site in their normal browser, and the Read extension operates on that
+already-authenticated local page under its declared extension permissions.
+
+Use this mode when the intended source is specifically the person's existing
+local-browser tab/session or when extension parity requires it. The migration
+must not delete the extension, rename its technical storage contracts, or assume
+that Browser V2 automatically inherits the person's local cookies.
+
+#### 2. Read Browser V2 + isolated remote Chromium
+
+The next-generation Read web app may also provide its own authenticated Browser
+V2 session. Browser V2 is **not** an iframe of the third-party page and is not a
+proxy that steals/replays the person's local browser cookies. It allocates an
+isolated remote Chromium session behind the authenticated Browser V2 service and
+renders that session's page into Read through the owner-authorized display
+transport.
+
+For Browser V2:
+
+- the remote Chromium-rendered page remains the primary visible source surface;
+- the person authenticates inside that isolated browser when a site requires it;
+- DOM extraction is private semantic input and must never replace the page with
+  extracted text;
+- highlighting, Read From Here and scrolling use revision-fenced source anchors;
+- the Read app owns one authenticated control/display channel; public CDP,
+  public VNC and credential-bearing display URLs are forbidden;
+- Browser V2 session/display tickets are transport credentials and must never be
+  exposed as document identity, analytics fields or ordinary URLs;
+- one app-owned WebPlaybackSession remains the logical media owner above hidden
+  TTS assets;
+- navigation/reconnect/page revision changes must fail closed against stale
+  extraction, input, highlight and speech work.
+
+The extension and Browser V2 may coexist indefinitely. Choosing Browser V2 does
+not retire extension parity, and preserving extension parity does not prohibit
+the isolated Browser V2 product surface.
+
+#### Prohibited shortcuts
+
+Do not implement authenticated arbitrary-site reading by:
+
+- embedding third-party signed-in pages in a normal iframe;
+- copying local-browser cookies into Read;
+- exposing a public CDP/VNC endpoint;
+- proxying a user's authenticated local session through an untrusted web relay;
+- replacing the rendered page with extracted Reader text and calling that a
+  browser.
+
+Those shortcuts remain prohibited even though secure Browser V2 is now an
+approved architecture.
 
 ### Remaining parity gate
 
@@ -97,7 +155,8 @@ Before Read is declared complete, verify at minimum:
 - FunctionGuide/FunctionSearch or approved mobile equivalents
 - language selection/detection
 - accessibility settings
-- extension parity and authenticated-page smoke tests
+- extension parity and existing-local-browser authenticated-page smoke tests
+- Browser V2 isolated-session/page-preservation/reconnect smoke tests
 - Read web public/document flows remain operational
 
 ## Chrome extension parity
