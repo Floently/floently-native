@@ -617,6 +617,7 @@ class ReadProjectStore {
 
     private val client = ReadContentProjectClient()
     private val progressSyncMutex = Mutex()
+    private var progressSyncGeneration = 0L
 
     suspend fun refresh(accessToken: String) {
         activity = "loading"
@@ -726,7 +727,13 @@ class ReadProjectStore {
         playbackRate: Double?,
         accessToken: String
     ) {
+        val generation = progressSyncGeneration
+
         progressSyncMutex.withLock {
+            if (generation != progressSyncGeneration) {
+                return@withLock
+            }
+
             runCatching {
                 client.updateProgress(
                     projectId = projectId,
@@ -738,6 +745,10 @@ class ReadProjectStore {
                     accessToken = accessToken
                 )
             }.getOrNull()?.let { progress ->
+                if (generation != progressSyncGeneration) {
+                    return@let
+                }
+
                 projects = projects.map { project ->
                     if (project.id == projectId) {
                         project.copy(progress = progress)
@@ -753,6 +764,7 @@ class ReadProjectStore {
     }
 
     fun reset() {
+        progressSyncGeneration += 1L
         projects = emptyList()
         activity = "idle"
         errorMessage = null
