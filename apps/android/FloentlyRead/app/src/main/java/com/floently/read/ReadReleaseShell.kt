@@ -2481,11 +2481,25 @@ private fun ReadProjectReaderScreen(
     }
     val offlineVoiceId = manifest?.let {
         value ->
-        hydrated?.progress?.voiceId
-            ?: project.progress?.voiceId
-            ?: voiceSettings.voiceId(
-                value.language
-            )
+        if (
+            playbackController.activeDocumentId
+                == value.documentId
+            && playbackController.activeRevisionId
+                == value.revisionId
+        ) {
+            playbackController.activeVoiceId
+                ?: hydrated?.progress?.voiceId
+                ?: project.progress?.voiceId
+                ?: voiceSettings.voiceId(
+                    value.language
+                )
+        } else {
+            hydrated?.progress?.voiceId
+                ?: project.progress?.voiceId
+                ?: voiceSettings.voiceId(
+                    value.language
+                )
+        }
     }
     val offlineAccountIdentity =
         sessionStore.session?.user?.let {
