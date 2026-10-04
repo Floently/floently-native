@@ -23,6 +23,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         ReadProgressiveRefillTelemetry()
     @Published private(set) var activeVoiceId: String?
     @Published private(set) var activeLanguage = "auto"
+    @Published private(set) var activeManifest: ReadingManifestV1?
 
     private let coordinator: ReadProgressiveAudioCoordinator?
     private let resumeStore = ReadPlaybackResumeStore()
@@ -33,7 +34,6 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
     private var seekTask: Task<Void, Never>?
     private weak var boundPlayback: ReadPlaybackSession?
     private var preparedSegments: [Int: ReadPlayableSegment] = [:]
-    private var activeManifest: ReadingManifestV1?
     private var activeAccessToken: String?
     private var lastUnderrunBoundaryIndex: Int?
     private var lastAnchoredSegmentIndex: Int?
