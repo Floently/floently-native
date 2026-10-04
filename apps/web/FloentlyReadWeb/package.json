@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "vitest run && node --test scripts/validate-preview-config.test.mjs",
+    "test": "vitest run && node --test scripts/validate-preview-config.node-test.mjs",
     "test:e2e": "playwright test",
     "validate:preview-config": "node scripts/validate-preview-config.mjs"
   },
