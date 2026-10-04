@@ -150,7 +150,9 @@ fun ReadReleaseApp(
         FloentlySecureSessionStore(context)
     }
     val accessState = remember { ReadAccessState() }
-    val projectStore = remember { ReadProjectStore() }
+    val projectStore = remember(context) {
+        ReadProjectStore(context)
+    }
     var sessionRevision by remember { mutableIntStateOf(0) }
 
     fun clearAccountState() {
