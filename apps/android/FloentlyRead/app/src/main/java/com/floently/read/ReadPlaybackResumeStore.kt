@@ -76,9 +76,9 @@ class ReadPlaybackResumeStore(
         val existing =
             load(
                 documentId =
-                    resolved.documentId,
+                    snapshot.documentId,
                 revisionId =
-                    resolved.revisionId
+                    snapshot.revisionId
             )
         val resolved =
             snapshot.copy(
