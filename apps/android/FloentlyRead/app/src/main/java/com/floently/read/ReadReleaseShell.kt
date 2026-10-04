@@ -1060,6 +1060,8 @@ private fun ReadMainShell(
                         arrayOf(
                             "application/pdf",
                             "text/plain",
+                            "text/markdown",
+                            "text/html",
                             "application/rtf",
                             "application/epub+zip",
                             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
