@@ -58,7 +58,7 @@ function installCacheHarness(
     delete: vi.fn(async () => true),
   } as unknown as Cache;
 
-  const open = vi.fn(async () => cache);
+  const open = vi.fn(async (_cacheName: string) => cache);
   Object.defineProperty(globalThis, "caches", {
     configurable: true,
     value: { open },
