@@ -1179,8 +1179,16 @@ export class WebPlaybackSession {
     }
 
     const session = navigator.mediaSession;
+    const logicallyPlaying =
+      this.wantsPlayback
+      && (
+        this.snapshot.status === "preparing"
+        || this.snapshot.status === "buffering"
+        || this.snapshot.status === "playing"
+      );
+
     session.playbackState =
-      this.snapshot.status === "playing"
+      logicallyPlaying
         ? "playing"
         : this.snapshot.status === "idle"
           ? "none"
