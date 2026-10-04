@@ -1,5 +1,6 @@
 package com.floently.read
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,8 +29,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.floently.shared.design.FloentlyDesignTokens
@@ -182,14 +187,16 @@ fun ReadPersistentPlayerDock(
                         contentAlignment =
                             Alignment.Center
                     ) {
-                        Text(
-                            "≈",
+                        MiniPlayerGlyph(
+                            symbol =
+                                MiniPlayerSymbol
+                                    .Waveform,
                             color =
                                 FloentlyDesignTokens
                                     .Colors
                                     .brandBright,
-                            fontWeight =
-                                FontWeight.Bold
+                            modifier =
+                                Modifier.size(22.dp)
                         )
                     }
                 }
@@ -219,28 +226,42 @@ fun ReadPersistentPlayerDock(
                 }
 
                 MiniPlayerButton(
-                    label =
+                    symbol =
                         if (
                             snapshot.isPlaying
                         ) {
-                            "Ⅱ"
+                            MiniPlayerSymbol.Pause
                         } else {
-                            "▶"
+                            MiniPlayerSymbol.Play
                         },
-                    primary = true
+                    primary = true,
+                    contentDescription =
+                        if (
+                            snapshot.isPlaying
+                        ) {
+                            "Pause reading"
+                        } else {
+                            "Play reading"
+                        }
                 ) {
                     controller
                         .togglePlayPause()
                 }
 
                 MiniPlayerButton(
-                    label =
+                    symbol =
                         if (toolsExpanded) {
-                            "⌄"
+                            MiniPlayerSymbol.Collapse
                         } else {
-                            "⋯"
+                            MiniPlayerSymbol.More
                         },
-                    primary = false
+                    primary = false,
+                    contentDescription =
+                        if (toolsExpanded) {
+                            "Hide player tools"
+                        } else {
+                            "Show player tools"
+                        }
                 ) {
                     toolsExpanded =
                         !toolsExpanded
@@ -451,12 +472,32 @@ fun ReadPersistentPlayerDock(
     }
 }
 
+private enum class MiniPlayerSymbol {
+    Waveform,
+    Play,
+    Pause,
+    More,
+    Collapse
+}
+
 @Composable
 private fun MiniPlayerButton(
-    label: String,
+    symbol: MiniPlayerSymbol,
     primary: Boolean,
+    contentDescription: String,
     onClick: () -> Unit
 ) {
+    val symbolColor =
+        if (primary) {
+            FloentlyDesignTokens
+                .Colors
+                .textOnBrand
+        } else {
+            FloentlyDesignTokens
+                .Colors
+                .textPrimary
+        }
+
     Button(
         onClick = onClick,
         colors = ButtonDefaults
@@ -471,16 +512,7 @@ private fun MiniPlayerButton(
                             .Colors
                             .surface1
                     },
-                contentColor =
-                    if (primary) {
-                        FloentlyDesignTokens
-                            .Colors
-                            .textOnBrand
-                    } else {
-                        FloentlyDesignTokens
-                            .Colors
-                            .textPrimary
-                    }
+                contentColor = symbolColor
             ),
         shape = RoundedCornerShape(
             FloentlyDesignTokens
@@ -488,17 +520,163 @@ private fun MiniPlayerButton(
                 .m
         ),
         contentPadding = PaddingValues(0.dp),
-        modifier = Modifier.size(
-            FloentlyDesignTokens
-                .Control
-                .iconTarget
-        )
+        modifier = Modifier
+            .size(
+                FloentlyDesignTokens
+                    .Control
+                    .iconTarget
+            )
+            .semantics {
+                this.contentDescription =
+                    contentDescription
+            }
     ) {
-        Text(
-            label,
-            fontWeight =
-                FontWeight.Bold
+        MiniPlayerGlyph(
+            symbol = symbol,
+            color = symbolColor,
+            modifier = Modifier.size(22.dp)
         )
+    }
+}
+
+@Composable
+private fun MiniPlayerGlyph(
+    symbol: MiniPlayerSymbol,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier) {
+        val stroke = 2.dp.toPx()
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+
+        when (symbol) {
+            MiniPlayerSymbol.Waveform -> {
+                val xs = listOf(
+                    size.width * 0.18f,
+                    size.width * 0.36f,
+                    size.width * 0.54f,
+                    size.width * 0.72f,
+                    size.width * 0.88f
+                )
+                val halves = listOf(
+                    size.height * 0.20f,
+                    size.height * 0.36f,
+                    size.height * 0.48f,
+                    size.height * 0.30f,
+                    size.height * 0.16f
+                )
+
+                xs.zip(halves).forEach {
+                    (x, half) ->
+                    drawLine(
+                        color = color,
+                        start = Offset(
+                            x,
+                            cy - half
+                        ),
+                        end = Offset(
+                            x,
+                            cy + half
+                        ),
+                        strokeWidth = stroke
+                    )
+                }
+            }
+
+            MiniPlayerSymbol.Play -> {
+                val path = Path().apply {
+                    moveTo(
+                        size.width * 0.34f,
+                        size.height * 0.22f
+                    )
+                    lineTo(
+                        size.width * 0.78f,
+                        cy
+                    )
+                    lineTo(
+                        size.width * 0.34f,
+                        size.height * 0.78f
+                    )
+                    close()
+                }
+                drawPath(
+                    path = path,
+                    color = color
+                )
+            }
+
+            MiniPlayerSymbol.Pause -> {
+                drawLine(
+                    color = color,
+                    start = Offset(
+                        size.width * 0.40f,
+                        size.height * 0.24f
+                    ),
+                    end = Offset(
+                        size.width * 0.40f,
+                        size.height * 0.76f
+                    ),
+                    strokeWidth = stroke * 1.7f
+                )
+                drawLine(
+                    color = color,
+                    start = Offset(
+                        size.width * 0.62f,
+                        size.height * 0.24f
+                    ),
+                    end = Offset(
+                        size.width * 0.62f,
+                        size.height * 0.76f
+                    ),
+                    strokeWidth = stroke * 1.7f
+                )
+            }
+
+            MiniPlayerSymbol.More -> {
+                listOf(
+                    size.width * 0.30f,
+                    size.width * 0.50f,
+                    size.width * 0.70f
+                ).forEach { x ->
+                    drawCircle(
+                        color = color,
+                        radius = stroke * 0.9f,
+                        center = Offset(
+                            x,
+                            cy
+                        )
+                    )
+                }
+            }
+
+            MiniPlayerSymbol.Collapse -> {
+                drawLine(
+                    color = color,
+                    start = Offset(
+                        size.width * 0.28f,
+                        size.height * 0.58f
+                    ),
+                    end = Offset(
+                        cx,
+                        size.height * 0.38f
+                    ),
+                    strokeWidth = stroke
+                )
+                drawLine(
+                    color = color,
+                    start = Offset(
+                        cx,
+                        size.height * 0.38f
+                    ),
+                    end = Offset(
+                        size.width * 0.72f,
+                        size.height * 0.58f
+                    ),
+                    strokeWidth = stroke
+                )
+            }
+        }
     }
 }
 
