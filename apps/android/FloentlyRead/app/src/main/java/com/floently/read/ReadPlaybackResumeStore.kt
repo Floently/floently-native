@@ -251,10 +251,8 @@ class ReadPlaybackResumeStore(
                     segment.index,
                 voiceId =
                     previous.voiceId,
-                renditionId =
-                    previous.renditionId,
-                timingMapId =
-                    previous.timingMapId,
+                renditionId = null,
+                timingMapId = null,
                 sourceAnchorQuote =
                     quote,
                 sourceAnchorPrefixContext =
