@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -16,6 +17,7 @@ import {
   preloadBrowserV2VncRfb,
   type BrowserV2VncStage,
 } from "./BrowserV2VncDisplay";
+import { BrowserV2VncAttachGate } from "./BrowserV2VncAttachGate";
 import { browserVideoPoint } from "./transport/cloudWebRtcTransport.mjs";
 import type {
   BrowserSnapshot,
@@ -136,6 +138,11 @@ export function BrowserWorkspace({
   const vncTargetRef = useRef<HTMLDivElement | null>(null);
   const vncDisplayRef = useRef<BrowserV2VncDisplay | null>(null);
   const vncAutoRetryRef = useRef(0);
+  const vncAttachGateRef = useRef<BrowserV2VncAttachGate | null>(null);
+  if (!vncAttachGateRef.current) {
+    vncAttachGateRef.current = new BrowserV2VncAttachGate(active);
+  }
+  const vncAttachGate = vncAttachGateRef.current;
   const mobileKeyboardRef = useRef<HTMLTextAreaElement | null>(null);
   const gestureUnbindRef = useRef<(() => void) | null>(null);
   const startedRef = useRef(false);
@@ -186,6 +193,10 @@ export function BrowserWorkspace({
   const isPlaying =
     ownsBrowserPlayback
     && ["preparing", "buffering", "playing"].includes(playback.status);
+
+  useLayoutEffect(() => {
+    vncAttachGate.setActive(active);
+  }, [active, vncAttachGate]);
 
   useEffect(() => {
     if (!runtime || !active || voices.length > 0 || voicesLoading) return;
@@ -281,22 +292,56 @@ export function BrowserWorkspace({
 
       const display = vncDisplayRef.current;
       if (!display.frameReady && vncStage !== "DISPLAY_CONNECTING") {
-        if (vncAutoRetryRef.current >= 3) return;
+        const attachToken = vncAttachGate.begin();
+        if (!attachToken) return;
+
+        if (vncAutoRetryRef.current >= 3) {
+          vncAttachGate.finish(attachToken);
+          return;
+        }
         vncAutoRetryRef.current += 1;
 
         try {
           let grant = cloud.takeVncDisplayGrant();
           if (!grant) {
             await cloud.refreshVncDisplayGrant();
+
+            if (!vncAttachGate.isCurrent(attachToken)) {
+              // The one-use ticket arrived for a route generation that is no
+              // longer visible. Consume it from client state without ever
+              // handing it to noVNC; a visible route will request a fresh one.
+              cloud.takeVncDisplayGrant();
+              return;
+            }
+
             grant = cloud.takeVncDisplayGrant();
           }
+
           if (!grant) {
             throw new Error("DISPLAY_UNAVAILABLE");
           }
+
+          if (!vncAttachGate.isCurrent(attachToken)) {
+            return;
+          }
+
           await display.connect(grant);
         } catch (reason) {
+          if (!vncAttachGate.isCurrent(attachToken)) {
+            return;
+          }
+
           setVncStage("DISPLAY_UNAVAILABLE");
           setError(friendlyBrowserError(reason));
+        } finally {
+          const stale = !vncAttachGate.isCurrent(attachToken);
+          vncAttachGate.finish(attachToken);
+
+          if (stale && vncAttachGate.isActive) {
+            queueMicrotask(() => {
+              void attachDisplay();
+            });
+          }
         }
       }
       return;
@@ -339,7 +384,7 @@ export function BrowserWorkspace({
     } finally {
       attachingVideoRef.current = false;
     }
-  }, [cloud, vncStage]);
+  }, [cloud, vncAttachGate, vncStage]);
 
   useEffect(() => {
     if (!cloud || !active || startedRef.current || started) return;
@@ -399,6 +444,8 @@ export function BrowserWorkspace({
     // Keep the authenticated Chromium/profile alive, but stop hidden
     // framebuffer traffic. Returning to Browser requests a fresh one-use
     // display ticket and reconnects this same app-owned session.
+    vncAutoRetryRef.current = 0;
+    cloud.takeVncDisplayGrant();
     vncDisplayRef.current?.disconnect();
     cloud.setVncFrameReady(false);
     setMediaReady(false);
