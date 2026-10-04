@@ -200,13 +200,16 @@ actor ReadSourceHighlightStore {
             return
         }
 
-        let normalized =
+        let trimmed =
             note?
                 .trimmingCharacters(
                     in:
                         .whitespacesAndNewlines
                 )
-                .nilIfBlank
+        let normalized =
+            trimmed?.isEmpty == false
+            ? trimmed
+            : nil
 
         let current =
             values[index]
