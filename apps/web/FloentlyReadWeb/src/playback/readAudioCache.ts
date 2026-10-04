@@ -253,7 +253,6 @@ export class ReadAudioCache implements ReadAudioCachePort {
       }
 
       const firstCacheResponse = response.clone();
-      const retryCacheResponse = response.clone();
       const blob = await response.blob();
 
       let cache: Cache | null = null;
@@ -276,7 +275,18 @@ export class ReadAudioCache implements ReadAudioCachePort {
           );
 
           try {
-            await cache.put(cacheUrl, retryCacheResponse);
+            await cache.put(
+              cacheUrl,
+              new Response(blob, {
+                status: 200,
+                headers: {
+                  "Content-Type":
+                    blob.type
+                    || response.headers.get("Content-Type")
+                    || "application/octet-stream",
+                },
+              }),
+            );
             persisted = true;
           } catch {
             // A single pressure-recovery retry is enough. The fetched bytes
