@@ -513,12 +513,13 @@ export function BrowserWorkspace({
 
   useEffect(() => {
     return () => {
+      vncAttachGate.setActive(false);
       gestureUnbindRef.current?.();
       gestureUnbindRef.current = null;
       vncDisplayRef.current?.close();
       vncDisplayRef.current = null;
     };
-  }, []);
+  }, [vncAttachGate]);
 
   useEffect(() => {
     if (!cloud || !started || !surfaceRef.current) return;
