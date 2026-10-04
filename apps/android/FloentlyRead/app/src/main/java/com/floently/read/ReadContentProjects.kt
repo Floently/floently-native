@@ -618,6 +618,7 @@ class ReadProjectStore {
     private val client = ReadContentProjectClient()
     private val progressSyncMutex = Mutex()
     private var progressSyncGeneration = 0L
+    private var progressSyncSequence = 0L
 
     suspend fun refresh(accessToken: String) {
         activity = "loading"
@@ -728,9 +729,14 @@ class ReadProjectStore {
         accessToken: String
     ) {
         val generation = progressSyncGeneration
+        progressSyncSequence += 1L
+        val sequence = progressSyncSequence
 
         progressSyncMutex.withLock {
-            if (generation != progressSyncGeneration) {
+            if (
+                generation != progressSyncGeneration
+                || sequence != progressSyncSequence
+            ) {
                 return@withLock
             }
 
@@ -760,11 +766,13 @@ class ReadProjectStore {
         }
         // Best effort: local resume remains authoritative offline.
         // Serializing writes prevents an older cursor from completing after
-        // a newer one and moving cloud progress backwards.
+        // a newer one and moving cloud progress backwards. Waiting writes are
+        // coalesced so only the newest queued cursor reaches the server.
     }
 
     fun reset() {
         progressSyncGeneration += 1L
+        progressSyncSequence += 1L
         projects = emptyList()
         activity = "idle"
         errorMessage = null
