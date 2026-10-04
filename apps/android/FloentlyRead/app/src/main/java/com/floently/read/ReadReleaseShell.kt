@@ -1058,6 +1058,8 @@ private fun ReadAccessAccountDeletionControl(
                                 )
                                 ReadOriginalDocumentStore
                                     .clearAll(context)
+                                ReadEpubSourceStore
+                                    .clearAll(context)
                                 ReadProjectSnapshotStore
                                     .clearAll(context)
                                 ReadOfflineAudioStore
@@ -2653,6 +2655,8 @@ private fun ReadSettingsScreen(
                                     "in_app_settings"
                                 )
                                 ReadOriginalDocumentStore
+                                    .clearAll(context)
+                                ReadEpubSourceStore
                                     .clearAll(context)
                                 ReadProjectSnapshotStore
                                     .clearAll(context)
