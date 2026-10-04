@@ -56,6 +56,39 @@ class ReadProgressiveAudioCoordinator(
             }
 
             if (offline != null) {
+                val renditionId =
+                    offline.renditionId
+                        ?: ReadNativeAudioIdentity
+                            .renditionId(
+                                documentId =
+                                    manifest.documentId,
+                                revisionId =
+                                    manifest.revisionId,
+                                language =
+                                    manifest.language,
+                                voiceId =
+                                    voiceId,
+                                provider = null,
+                                model = null
+                            )
+                val timingMapId =
+                    offline.timingMapId
+                        ?: ReadNativeAudioIdentity
+                            .timingMapId(
+                                renditionId =
+                                    renditionId,
+                                segmentId =
+                                    segment.id,
+                                segmentIndex =
+                                    segment.index,
+                                logicalStartMs =
+                                    segment.logicalStartMs,
+                                logicalEndMs =
+                                    segment.logicalEndMs,
+                                physicalDurationMs =
+                                    offline.durationMs
+                            )
+
                 ReadPlaybackSegment(
                     id = segment.id,
                     index = segment.index,
@@ -67,9 +100,9 @@ class ReadProgressiveAudioCoordinator(
                     actualDurationMs =
                         offline.durationMs,
                     renditionId =
-                        offline.renditionId,
+                        renditionId,
                     timingMapId =
-                        offline.timingMapId
+                        timingMapId
                 )
             } else {
                 val cached = cache.cachedAsset(
