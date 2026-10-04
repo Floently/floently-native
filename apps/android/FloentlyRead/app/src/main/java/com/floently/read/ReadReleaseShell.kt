@@ -4077,7 +4077,9 @@ private fun ReadProjectReaderScreen(
                             projectId =
                                 project.id,
                             revisionId =
-                                revisionId
+                                revisionId,
+                            sourceText =
+                                hydrated?.rawText
                         )
             } catch (
                 error: CancellationException
@@ -4160,7 +4162,9 @@ private fun ReadProjectReaderScreen(
                             projectId =
                                 project.id,
                             revisionId =
-                                revisionId
+                                revisionId,
+                            sourceText =
+                                hydrated?.rawText
                         )
             } catch (
                 error: CancellationException
@@ -4208,7 +4212,9 @@ private fun ReadProjectReaderScreen(
                             projectId =
                                 project.id,
                             revisionId =
-                                revisionId
+                                revisionId,
+                            sourceText =
+                                hydrated?.rawText
                         )
             } catch (
                 error: CancellationException
