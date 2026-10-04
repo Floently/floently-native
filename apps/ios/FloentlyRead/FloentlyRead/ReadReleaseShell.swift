@@ -796,6 +796,96 @@ private struct ReadHomeDashboard: View {
                         .padding(.top, 30)
                     }
 
+                    if playback.document == nil,
+                       let project = continueProject {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("CONTINUE")
+                                .readSectionLabel()
+
+                            Button {
+                                openProject(project)
+                            } label: {
+                                VStack(alignment: .leading, spacing: 14) {
+                                    HStack(spacing: 14) {
+                                        RoundedRectangle(
+                                            cornerRadius: 15,
+                                            style: .continuous
+                                        )
+                                        .fill(palette.backgroundBottom)
+                                        .frame(width: 52, height: 64)
+                                        .overlay {
+                                            Image(
+                                                systemName:
+                                                    continueIcon(project)
+                                            )
+                                            .font(.title3)
+                                            .foregroundStyle(
+                                                palette.accent2
+                                            )
+                                        }
+
+                                        VStack(
+                                            alignment: .leading,
+                                            spacing: 5
+                                        ) {
+                                            Text(project.title)
+                                                .font(
+                                                    .title3.weight(.bold)
+                                                )
+                                                .foregroundStyle(
+                                                    palette.text
+                                                )
+                                                .lineLimit(2)
+
+                                            Text(
+                                                continueSubtitle(project)
+                                            )
+                                            .font(.subheadline)
+                                            .foregroundStyle(
+                                                palette.muted
+                                            )
+                                            .lineLimit(1)
+                                        }
+
+                                        Spacer(minLength: 8)
+
+                                        Image(systemName: "play.fill")
+                                            .foregroundStyle(.white)
+                                            .frame(width: 46, height: 46)
+                                            .background(palette.accent)
+                                            .clipShape(Circle())
+                                    }
+
+                                    ProgressView(
+                                        value:
+                                            continueFraction(project)
+                                    )
+                                    .tint(palette.accent)
+                                }
+                                .padding(20)
+                                .frame(
+                                    maxWidth: .infinity,
+                                    minHeight: 152
+                                )
+                                .background(
+                                    RoundedRectangle(
+                                        cornerRadius: 24,
+                                        style: .continuous
+                                    )
+                                    .fill(
+                                        palette.elevated.opacity(0.92)
+                                    )
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(
+                                "Continue \(project.title), " +
+                                continueSubtitle(project)
+                            )
+                        }
+                        .padding(.top, 30)
+                    }
+
                     HStack {
                         Text("LIBRARY")
                             .readSectionLabel()
@@ -884,6 +974,52 @@ private struct ReadHomeDashboard: View {
                 .frame(maxWidth: 720)
                 .frame(maxWidth: .infinity, alignment: .center)
             }
+        }
+    }
+
+    private var continueProject: ReadContentProject? {
+        projectStore.projects.first { project in
+            guard let progress = project.progress else {
+                return false
+            }
+            return progress.progressPercent > 0
+                && progress.progressPercent < 99.5
+        }
+    }
+
+    private func continueFraction(
+        _ project: ReadContentProject
+    ) -> Double {
+        min(
+            1,
+            max(
+                0,
+                (project.progress?.progressPercent ?? 0)
+                    / 100
+            )
+        )
+    }
+
+    private func continueSubtitle(
+        _ project: ReadContentProject
+    ) -> String {
+        let percent = Int(
+            (project.progress?.progressPercent ?? 0)
+                .rounded()
+        )
+        return "\(percent)% • \(project.displaySource)"
+    }
+
+    private func continueIcon(
+        _ project: ReadContentProject
+    ) -> String {
+        switch project.sourceType.lowercased() {
+        case "pdf":
+            return "doc.richtext"
+        case "web", "website", "url":
+            return "globe"
+        default:
+            return "doc.text"
         }
     }
 
@@ -1114,10 +1250,24 @@ private struct ReadProjectRow: View {
                                     "\(project.wordCount.formatted()) words"
                                 )
                             }
+                            if let progressLabel {
+                                Text("•")
+                                Text(progressLabel)
+                                    .foregroundStyle(palette.accent2)
+                            }
                         }
                         .font(.caption)
                         .foregroundStyle(palette.muted)
                         .lineLimit(1)
+
+                        if let progressFraction {
+                            ProgressView(value: progressFraction)
+                                .tint(palette.accent)
+                                .frame(maxWidth: 220)
+                                .accessibilityLabel(
+                                    progressLabel ?? "Reading progress"
+                                )
+                        }
                     }
 
                     Spacer(minLength: 8)
@@ -1159,6 +1309,31 @@ private struct ReadProjectRow: View {
                 .padding(.leading, 62)
         }
         .accessibilityElement(children: .contain)
+    }
+
+    private var progressFraction: Double? {
+        guard
+            let percent = project.progress?.progressPercent,
+            percent > 0
+        else {
+            return nil
+        }
+        return min(1, max(0, percent / 100))
+    }
+
+    private var progressLabel: String? {
+        guard
+            let percent = project.progress?.progressPercent,
+            percent > 0
+        else {
+            return nil
+        }
+
+        if percent >= 99.5 {
+            return "Finished"
+        }
+
+        return "\(Int(percent.rounded()))%"
     }
 
     private var projectIcon: String {
