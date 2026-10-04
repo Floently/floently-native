@@ -678,19 +678,11 @@ class ReadProjectStore(
         userId: String,
         email: String
     ) {
-        val id = userId.trim()
-        if (id.isNotEmpty()) {
-            snapshotAccountIdentity = "id:" + id
-            return
-        }
-
-        val normalizedEmail = email
-            .trim()
-            .lowercase()
         snapshotAccountIdentity =
-            normalizedEmail
-                .takeIf { it.isNotEmpty() }
-                ?.let { "email:" + it }
+            readAccountIdentity(
+                userId = userId,
+                email = email
+            )
     }
 
     suspend fun refresh(accessToken: String) {
