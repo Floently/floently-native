@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run && node --test scripts/validate-preview-config.node-test.mjs",
     "test:e2e": "playwright test",
+    "test:e2e:cross-browser": "playwright test --config playwright.cross-browser.config.ts",
     "validate:preview-config": "node scripts/validate-preview-config.mjs"
   },
   "dependencies": {
