@@ -71,6 +71,7 @@ import com.floently.shared.billing.FloentlyAccessStatus
 import com.floently.shared.design.FloentlyProduct
 import com.floently.shared.design.FloentlyScreen
 import com.floently.shared.design.floentlyPalette
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -2421,6 +2422,17 @@ private fun ReadProjectReaderScreen(
 ) {
     val context = LocalContext.current
     val palette = floentlyPalette(FloentlyProduct.Read)
+    val scope = rememberCoroutineScope()
+    val offlineCoordinator = remember(context) {
+        ReadProgressiveAudioCoordinator(
+            context = context,
+            cache = ReadNativeAudioCache(
+                context = context,
+                maximumBytes =
+                    Long.MAX_VALUE / 4L
+            )
+        )
+    }
     var hydrated by remember {
         mutableStateOf<ReadContentProject?>(null)
     }
@@ -2432,6 +2444,15 @@ private fun ReadProjectReaderScreen(
     }
     var preparing by remember { mutableStateOf(true) }
     var retryRevision by remember { mutableIntStateOf(0) }
+    var offlineSaved by remember {
+        mutableStateOf(false)
+    }
+    var offlineBusy by remember {
+        mutableStateOf(false)
+    }
+    var offlineError by remember {
+        mutableStateOf<String?>(null)
+    }
     val originalPdfFile = remember(
         project.id
     ) {
@@ -2439,6 +2460,48 @@ private fun ReadProjectReaderScreen(
             context = context,
             projectId = project.id
         )
+    }
+    val offlineVoiceId = manifest?.let {
+        value ->
+        hydrated?.progress?.voiceId
+            ?: project.progress?.voiceId
+            ?: voiceSettings.voiceId(
+                value.language
+            )
+    }
+    val offlineAccountIdentity =
+        sessionStore.session?.user?.let {
+            readAccountIdentity(
+                userId = it.id,
+                email = it.email
+            )
+        }
+
+    LaunchedEffect(
+        manifest?.revisionId,
+        offlineVoiceId,
+        offlineAccountIdentity
+    ) {
+        val value = manifest
+        val voice = offlineVoiceId
+        val identity =
+            offlineAccountIdentity
+
+        offlineSaved =
+            if (
+                value != null
+                && voice != null
+                && identity != null
+            ) {
+                offlineCoordinator
+                    .isAvailableOffline(
+                        manifest = value,
+                        voiceId = voice,
+                        accountIdentity = identity
+                    )
+            } else {
+                false
+            }
     }
 
     LaunchedEffect(
@@ -2534,14 +2597,115 @@ private fun ReadProjectReaderScreen(
             )
 
             Button(
+                enabled =
+                    manifest != null
+                    && offlineVoiceId != null
+                    && offlineAccountIdentity != null
+                    && !offlineBusy,
+                onClick = {
+                    val value = manifest
+                        ?: return@Button
+                    val voice = offlineVoiceId
+                        ?: return@Button
+                    val identity =
+                        offlineAccountIdentity
+                            ?: return@Button
+                    val token =
+                        sessionStore.session?.token
+                            ?: return@Button
+
+                    scope.launch {
+                        offlineBusy = true
+                        offlineError = null
+
+                        try {
+                            if (offlineSaved) {
+                                offlineCoordinator
+                                    .removeOffline(
+                                        manifest = value,
+                                        voiceId = voice,
+                                        accountIdentity =
+                                            identity
+                                    )
+                                offlineSaved = false
+                            } else {
+                                offlineCoordinator
+                                    .saveOffline(
+                                        manifest = value,
+                                        voiceId = voice,
+                                        accessToken = token,
+                                        accountIdentity =
+                                            identity
+                                    )
+                                offlineSaved =
+                                    offlineCoordinator
+                                        .isAvailableOffline(
+                                            manifest = value,
+                                            voiceId = voice,
+                                            accountIdentity =
+                                                identity
+                                        )
+                            }
+                        } catch (
+                            error: CancellationException
+                        ) {
+                            throw error
+                        } catch (error: Exception) {
+                            offlineError =
+                                error.localizedMessage
+                                    ?: "Could not save this document offline."
+                        } finally {
+                            offlineBusy = false
+                        }
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor =
+                        palette.backgroundBottom
+                ),
+                shape = RoundedCornerShape(14.dp),
+                contentPadding = PaddingValues(
+                    horizontal = 10.dp,
+                    vertical = 0.dp
+                ),
+                modifier = Modifier.height(42.dp)
+            ) {
+                if (offlineBusy) {
+                    CircularProgressIndicator(
+                        strokeWidth = 2.dp,
+                        color = palette.accent,
+                        modifier = Modifier.size(18.dp)
+                    )
+                } else {
+                    Text(
+                        if (offlineSaved) {
+                            "✓ Offline"
+                        } else {
+                            "↓ Offline"
+                        },
+                        color =
+                            if (offlineSaved) {
+                                palette.accent
+                            } else {
+                                palette.text
+                            },
+                        style =
+                            MaterialTheme.typography
+                                .labelMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            Button(
                 enabled = manifest != null && !preparing,
                 onClick = {
                     val value = manifest
                         ?: return@Button
-                    val voice =
-                        hydrated?.progress?.voiceId
-                            ?: project.progress?.voiceId
-                            ?: voiceSettings.voiceId(value.language)
+                    val voice = offlineVoiceId
+                        ?: return@Button
                     playbackController.loadManifest(
                         manifest = value,
                         voiceId = voice,
@@ -2604,6 +2768,12 @@ private fun ReadProjectReaderScreen(
             ) {
                 retryRevision += 1
             }
+        }
+
+        offlineError?.let {
+            ReadStatusBanner(
+                text = it
+            )
         }
 
         val text = hydrated?.rawText
