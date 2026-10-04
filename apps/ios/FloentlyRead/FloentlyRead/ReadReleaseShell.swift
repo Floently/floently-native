@@ -1493,6 +1493,7 @@ private struct ReadProjectReaderView: View {
 
     @State private var hydrated: ReadContentProject?
     @State private var manifest: ReadingManifestV1?
+    @State private var originalPDFURL: URL?
     @State private var errorMessage: String?
     @State private var preparing = false
 
@@ -1566,7 +1567,27 @@ private struct ReadProjectReaderView: View {
                     .padding(18)
                 }
 
-                if let text = hydrated?.rawText {
+                if let originalPDFURL {
+                    VStack(spacing: 0) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "doc.richtext")
+                                .foregroundStyle(palette.accent2)
+                            Text(
+                                "Original PDF pages · native reading layer ready"
+                            )
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(palette.muted)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 8)
+                        .background(palette.elevated.opacity(0.72))
+
+                        ReadOriginalPDFView(
+                            url: originalPDFURL
+                        )
+                    }
+                } else if let text = hydrated?.rawText {
                     ScrollView {
                         LazyVStack(
                             alignment: .leading,
@@ -1622,6 +1643,7 @@ private struct ReadProjectReaderView: View {
 
         preparing = true
         errorMessage = nil
+        originalPDFURL = nil
         defer { preparing = false }
 
         do {
@@ -1630,6 +1652,12 @@ private struct ReadProjectReaderView: View {
                 accessToken: token
             )
             hydrated = value
+
+            if value.sourceType.lowercased() == "pdf" {
+                originalPDFURL =
+                    await ReadOriginalDocumentStore.shared
+                        .pdfURL(for: value.id)
+            }
 
             guard let text = value.rawText, !text.isEmpty else {
                 throw ReadProjectClientError.invalidProject
