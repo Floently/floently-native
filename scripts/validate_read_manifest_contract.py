@@ -138,10 +138,12 @@ def main() -> int:
             [
                 case["documentId"],
                 case["revisionId"],
-                case["language"] or "auto",
-                case["voiceId"],
-                case.get("provider") or "unknown-provider",
-                case.get("model") or "unknown-model",
+                (case["language"] or "").strip() or "auto",
+                case["voiceId"].strip(),
+                (case.get("provider") or "").strip()
+                or "unknown-provider",
+                (case.get("model") or "").strip()
+                or "unknown-model",
                 "read-audio-rendition-v1",
             ]
         )
@@ -159,7 +161,7 @@ def main() -> int:
                 str(case["segmentIndex"]),
                 str(case["logicalStartMs"]),
                 str(case["logicalEndMs"]),
-                str(duration)
+                str(max(0, duration))
                 if duration is not None
                 else "unknown-duration",
                 "read-timing-map-v1",
