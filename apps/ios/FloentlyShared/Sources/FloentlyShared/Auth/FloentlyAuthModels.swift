@@ -132,6 +132,24 @@ public struct GoogleAuthRequest: Encodable {
     }
 }
 
+public struct DeleteAccountRequest: Encodable {
+    public let confirmDelete: Bool
+    public let deletionReason: String?
+
+    public init(
+        confirmDelete: Bool,
+        deletionReason: String? = nil
+    ) {
+        self.confirmDelete = confirmDelete
+        self.deletionReason = deletionReason
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case confirmDelete = "confirm_delete"
+        case deletionReason = "deletion_reason"
+    }
+}
+
 public struct LogoutRequest: Encodable {
     public let refreshToken: String?
 
