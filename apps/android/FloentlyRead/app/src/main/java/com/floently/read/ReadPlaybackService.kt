@@ -848,10 +848,12 @@ class ReadPlaybackService : MediaSessionService() {
             return boundedRequested
         }
 
-        val saved = resumeStore?.load(
-            documentId = manifest.documentId,
-            revisionId = manifest.revisionId
-        ) ?: return boundedRequested
+        val saved =
+            resumeStore
+                ?.loadOrMigrate(
+                    manifest
+                )
+                ?: return boundedRequested
 
         saved.sourceScalarOffset?.let { sourceScalarOffset ->
             return manifest.segments.indexOfFirst {
@@ -938,12 +940,15 @@ class ReadPlaybackService : MediaSessionService() {
                     document.logicalDurationMs
                         .coerceAtLeast(0L)
                 )
-        val sourceSegment = activeManifest
-            ?.segments
-            ?.firstOrNull {
-                logicalTimeMs < it.logicalEndMs
+        val sourceAnchor =
+            activeManifest?.let {
+                manifest ->
+                store.sourceAnchor(
+                    manifest = manifest,
+                    logicalTimeMs =
+                        logicalTimeMs
+                )
             }
-            ?: activeManifest?.segments?.lastOrNull()
 
         store.save(
             ReadPlaybackResumeSnapshot(
@@ -955,12 +960,23 @@ class ReadPlaybackService : MediaSessionService() {
                 updatedAtMs =
                     System.currentTimeMillis(),
                 sourceScalarOffset =
-                    sourceSegment?.scalarStart,
+                    sourceAnchor?.scalarOffset,
                 sourceSegmentId =
-                    sourceSegment?.id,
+                    sourceAnchor?.segmentId,
                 sourceSegmentIndex =
-                    sourceSegment?.index,
-                voiceId = activeVoiceId
+                    sourceAnchor?.segmentIndex,
+                voiceId = activeVoiceId,
+                sourceAnchorQuote =
+                    sourceAnchor?.quote,
+                sourceAnchorPrefixContext =
+                    sourceAnchor
+                        ?.prefixContext,
+                sourceAnchorSuffixContext =
+                    sourceAnchor
+                        ?.suffixContext,
+                sourceAnchorCursorOffset =
+                    sourceAnchor
+                        ?.cursorOffset
             )
         )
     }
