@@ -13,7 +13,7 @@ export interface LocalOriginalDocumentRecord {
   size: number;
   lastModified: number;
   quickSignature: string;
-  contentHash: string | null;
+  contentHash?: string | null;
   projectId: string | null;
   createdAt: number;
   updatedAt: number;
@@ -167,6 +167,22 @@ async function getByIndex(
   }
 }
 
+export function originalRecordForStorage(
+  record: LocalOriginalDocumentRecord,
+): LocalOriginalDocumentRecord {
+  if (record.contentHash) return record;
+
+  // IndexedDB indexes only records whose key path resolves to a valid key.
+  // A missing contentHash correctly means "not indexed yet"; a present null
+  // is not a valid IndexedDB key and aborts the transaction in WebKit.
+  const {
+    contentHash: _pendingContentHash,
+    ...withoutPendingHash
+  } = record;
+
+  return withoutPendingHash;
+}
+
 export function withCompletedContentHash(
   record: LocalOriginalDocumentRecord,
   contentHash: string,
@@ -188,7 +204,9 @@ async function putRecord(
 
   try {
     const transaction = database.transaction(STORE_NAME, "readwrite");
-    transaction.objectStore(STORE_NAME).put(record);
+    transaction.objectStore(STORE_NAME).put(
+      originalRecordForStorage(record),
+    );
     await transactionComplete(transaction);
   } finally {
     database.close();
@@ -339,7 +357,6 @@ export async function handoffOriginalDocument(
     size: file.size,
     lastModified: file.lastModified || 0,
     quickSignature,
-    contentHash: null,
     projectId: null,
     createdAt: now,
     updatedAt: now,
