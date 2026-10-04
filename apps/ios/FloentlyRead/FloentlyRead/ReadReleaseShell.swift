@@ -1931,6 +1931,8 @@ private struct ReadProjectReaderView: View {
     @State private var hydrated: ReadContentProject?
     @State private var manifest: ReadingManifestV1?
     @State private var originalPDFURL: URL?
+    @State private var epubPackage: ReadLocalEpubPackage?
+    @State private var epubPackageError: String?
     @State private var errorMessage: String?
     @State private var preparing = false
     @State private var offlineAvailable = false
@@ -2040,6 +2042,7 @@ private struct ReadProjectReaderView: View {
                         }
                         .disabled(
                             originalPDFURL != nil
+                            || epubPackage != nil
                             || searchableParagraphs
                                 .isEmpty
                         )
@@ -2153,6 +2156,15 @@ private struct ReadProjectReaderView: View {
                     .padding(.bottom, 10)
                 }
 
+                if let epubPackageError {
+                    ReadStatusBanner(
+                        icon: "book.closed",
+                        text: epubPackageError
+                    )
+                    .padding(.horizontal, 18)
+                    .padding(.bottom, 10)
+                }
+
                 if let originalPDFURL {
                     VStack(spacing: 0) {
                         HStack(spacing: 8) {
@@ -2171,6 +2183,61 @@ private struct ReadProjectReaderView: View {
 
                         ReadOriginalPDFView(
                             url: originalPDFURL
+                        )
+                    }
+                } else if let epubPackage {
+                    VStack(spacing: 0) {
+                        HStack(
+                            spacing:
+                                FloentlyDesignTokens
+                                    .Space
+                                    .s2
+                        ) {
+                            Image(
+                                systemName:
+                                    "book.closed"
+                            )
+                            .foregroundStyle(
+                                FloentlyDesignTokens
+                                    .Colors
+                                    .brandBright
+                            )
+
+                            Text(
+                                "Original EPUB chapters · native reading layer ready"
+                            )
+                            .font(
+                                .caption.weight(
+                                    .semibold
+                                )
+                            )
+                            .foregroundStyle(
+                                palette.muted
+                            )
+
+                            Spacer()
+                        }
+                        .padding(
+                            .horizontal,
+                            FloentlyDesignTokens
+                                .Space
+                                .s4
+                        )
+                        .padding(
+                            .vertical,
+                            FloentlyDesignTokens
+                                .Space
+                                .s2
+                        )
+                        .background(
+                            FloentlyDesignTokens
+                                .Colors
+                                .surface1
+                        )
+
+                        ReadOriginalEpubView(
+                            package:
+                                epubPackage
                         )
                     }
                 } else if let text = hydrated?.rawText {
@@ -2722,6 +2789,8 @@ private struct ReadProjectReaderView: View {
         preparing = true
         errorMessage = nil
         originalPDFURL = nil
+        epubPackage = nil
+        epubPackageError = nil
         defer { preparing = false }
 
         do {
@@ -2734,6 +2803,38 @@ private struct ReadProjectReaderView: View {
             originalPDFURL =
                 await ReadOriginalDocumentStore.shared
                     .pdfURL(for: value.id)
+
+            if
+                originalPDFURL == nil,
+                value.sourceType
+                    .lowercased()
+                    == "epub",
+                let epubURL =
+                    await ReadOriginalDocumentStore
+                        .shared
+                        .epubURL(
+                            for: value.id
+                        )
+            {
+                do {
+                    epubPackage =
+                        try await ReadEpubSourceStore
+                            .shared
+                            .package(
+                                projectId:
+                                    value.id,
+                                revisionId:
+                                    value.revisionId,
+                                sourceURL:
+                                    epubURL
+                            )
+                } catch is CancellationError {
+                    return
+                } catch {
+                    epubPackageError =
+                        "The original EPUB could not be prepared on this device. The semantic reading layer remains available."
+                }
+            }
 
             guard let text = value.rawText, !text.isEmpty else {
                 throw ReadProjectClientError.invalidProject
