@@ -751,7 +751,10 @@ class ReadProjectStore {
                     accessToken = accessToken
                 )
             }.getOrNull()?.let { progress ->
-                if (generation != progressSyncGeneration) {
+                if (
+                    generation != progressSyncGeneration
+                    || sequence != progressSyncSequence
+                ) {
                     return@let
                 }
 
