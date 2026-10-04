@@ -619,10 +619,16 @@ struct ReadMainShell: View {
         }
         .tint(FloentlyPalette.read.accent)
         .task(id: sessionStore.session?.token) {
-            guard let token = sessionStore.session?.token else {
+            guard let session = sessionStore.session else {
                 return
             }
-            await projectStore.refresh(accessToken: token)
+            projectStore.bindAccount(
+                userId: session.user.id,
+                email: session.user.email
+            )
+            await projectStore.refresh(
+                accessToken: session.token
+            )
 
             if let incoming = browserRouter.consumePendingIncomingURL() {
                 browserRouter.openBrowser(incoming)
