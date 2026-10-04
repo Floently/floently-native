@@ -244,6 +244,52 @@ class ReadPlaybackController(
         )
     }
 
+    fun clear() {
+        pendingDocumentLoad = null
+        pendingManifestLoad = null
+        activeVoiceId = null
+        activeLanguage = "auto"
+
+        val player = controller
+        if (player == null) {
+            snapshot = ReadPlayerUiSnapshot()
+            return
+        }
+
+        snapshot = snapshot.copy(
+            status = "Stopping"
+        )
+
+        val request = player.sendCustomCommand(
+            ReadPlaybackCommandContract.clearPlaybackCommand,
+            android.os.Bundle.EMPTY
+        )
+
+        request.addListener(
+            {
+                runCatching { request.get() }
+                    .onSuccess { result ->
+                        if (
+                            result.resultCode
+                            == SessionResult.RESULT_SUCCESS
+                        ) {
+                            publish(player)
+                        } else {
+                            snapshot = ReadPlayerUiSnapshot(
+                                connected = true
+                            )
+                        }
+                    }
+                    .onFailure {
+                        snapshot = ReadPlayerUiSnapshot(
+                            connected = true
+                        )
+                    }
+            },
+            mainExecutor
+        )
+    }
+
     fun release() {
         pendingDocumentLoad = null
         pendingManifestLoad = null
