@@ -18,6 +18,7 @@ data class ReadSourceHighlight(
     val quote: String,
     val prefixContext: String,
     val suffixContext: String,
+    val note: String?,
     val createdAtMs: Long
 )
 
@@ -150,6 +151,7 @@ object ReadSourceHighlightStore {
                         prefix,
                     suffixContext =
                         suffix,
+                    note = null,
                     createdAtMs =
                         System.currentTimeMillis()
                 )
@@ -166,6 +168,45 @@ object ReadSourceHighlightStore {
 
             value
         }
+
+    suspend fun updateNote(
+        context: Context,
+        accountIdentity: String,
+        projectId: String,
+        id: String,
+        note: String?
+    ) = withContext(Dispatchers.IO) {
+        val values =
+            load(
+                context = context,
+                accountIdentity =
+                    accountIdentity,
+                projectId = projectId
+            )
+                .map {
+                    value ->
+                    if (value.id == id) {
+                        value.copy(
+                            note =
+                                note
+                                    ?.trim()
+                                    ?.takeIf {
+                                        it.isNotEmpty()
+                                    }
+                        )
+                    } else {
+                        value
+                    }
+                }
+
+        persist(
+            context = context,
+            accountIdentity =
+                accountIdentity,
+            projectId = projectId,
+            highlights = values
+        )
+    }
 
     suspend fun remove(
         context: Context,
@@ -375,6 +416,11 @@ object ReadSourceHighlightStore {
                 "suffixContext",
                 value.suffixContext
             )
+            .apply {
+                value.note?.let {
+                    put("note", it)
+                }
+            }
             .put(
                 "createdAtMs",
                 value.createdAtMs
@@ -443,6 +489,12 @@ object ReadSourceHighlightStore {
                 value.optString(
                     "suffixContext"
                 ),
+            note =
+                value.optString(
+                    "note"
+                ).takeIf {
+                    it.isNotBlank()
+                },
             createdAtMs =
                 value.optLong(
                     "createdAtMs",
