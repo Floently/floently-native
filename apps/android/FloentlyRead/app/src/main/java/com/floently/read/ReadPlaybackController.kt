@@ -130,11 +130,9 @@ class ReadPlaybackController(
         autoplay: Boolean = false,
         startingAt: Int = 0
     ) {
-        activeLanguage = manifest.language
-        activeVoiceId = voiceId
-        activeDocumentId = manifest.documentId
-        activeRevisionId = manifest.revisionId
-        activeManifest = manifest
+        activeDocumentId = null
+        activeRevisionId = null
+        activeManifest = null
 
         val request = ReadManifestLoadRequest(
             manifest = manifest,
@@ -164,8 +162,8 @@ class ReadPlaybackController(
         autoplay: Boolean = false
     ) {
         pendingManifestLoad = null
-        activeDocumentId = document.id
-        activeRevisionId = document.revisionId
+        activeDocumentId = null
+        activeRevisionId = null
         activeManifest = null
 
         val player = controller
@@ -361,6 +359,14 @@ class ReadPlaybackController(
                                 status = "Document load failed"
                             )
                         } else {
+                            activeLanguage =
+                                request.manifest.language
+                            activeVoiceId = request.voiceId
+                            activeDocumentId =
+                                request.manifest.documentId
+                            activeRevisionId =
+                                request.manifest.revisionId
+                            activeManifest = request.manifest
                             publish(player)
                         }
                     }
@@ -406,6 +412,9 @@ class ReadPlaybackController(
                                 status = "Document load failed"
                             )
                         } else {
+                            activeDocumentId = document.id
+                            activeRevisionId = document.revisionId
+                            activeManifest = null
                             publish(player)
                         }
                     }
