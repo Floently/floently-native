@@ -9,6 +9,12 @@ class ReadCoreNative private constructor() {
         }
 
         @JvmStatic
+        private external fun nativeExtractEpubJson(
+            inputPath: String,
+            outputDirectory: String
+        ): String
+
+        @JvmStatic
         private external fun nativeBuildManifestJson(
             documentId: String,
             revisionId: String,
@@ -36,6 +42,27 @@ class ReadCoreNative private constructor() {
             )
 
             return ReadingManifestV1Codec.decode(json)
+        }
+
+        fun extractEpub(
+            inputFile: java.io.File,
+            outputDirectory: java.io.File
+        ): ReadEpubPackage {
+            require(inputFile.isFile) {
+                "EPUB input file is missing."
+            }
+
+            val json =
+                nativeExtractEpubJson(
+                    inputPath =
+                        inputFile.absolutePath,
+                    outputDirectory =
+                        outputDirectory
+                            .absolutePath
+                )
+
+            return ReadEpubPackage
+                .decode(json)
         }
     }
 }
