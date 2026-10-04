@@ -29,6 +29,7 @@ export class BrowserAudioEngine implements ReadAudioEngine {
   private readonly preloaded = new Map<string, HTMLAudioElement>();
   private readonly callbacks: BrowserAudioEngineCallbacks;
   private currentUrl: string | null = null;
+  private cancelMetadataWait: (() => void) | null = null;
 
   constructor(callbacks: BrowserAudioEngineCallbacks) {
     this.callbacks = callbacks;
@@ -45,6 +46,8 @@ export class BrowserAudioEngine implements ReadAudioEngine {
     localOffsetMs: number,
     playbackRate: number,
   ): Promise<number | null> {
+    this.cancelPendingMetadataWait();
+
     if (this.currentUrl !== url) {
       const previous = this.audio;
       const prepared = this.preloaded.get(url) ?? null;
@@ -66,13 +69,14 @@ export class BrowserAudioEngine implements ReadAudioEngine {
     }
 
     this.audio.playbackRate = playbackRate;
-    const durationMs = await this.waitForMetadata();
+    const audio = this.audio;
+    const durationMs = await this.waitForMetadata(audio);
 
-    const maxTime = Number.isFinite(this.audio.duration)
-      ? Math.max(0, this.audio.duration - 0.01)
+    const maxTime = Number.isFinite(audio.duration)
+      ? Math.max(0, audio.duration - 0.01)
       : Number.POSITIVE_INFINITY;
     const requestedSeconds = Math.max(0, localOffsetMs / 1_000);
-    this.audio.currentTime = Math.min(requestedSeconds, maxTime);
+    audio.currentTime = Math.min(requestedSeconds, maxTime);
 
     return durationMs;
   }
@@ -108,6 +112,7 @@ export class BrowserAudioEngine implements ReadAudioEngine {
   }
 
   destroy(): void {
+    this.cancelPendingMetadataWait();
     this.detachActiveListeners(this.audio);
     this.retireElement(this.audio);
     this.currentUrl = null;
@@ -150,33 +155,62 @@ export class BrowserAudioEngine implements ReadAudioEngine {
     element.load();
   }
 
-  private waitForMetadata(): Promise<number | null> {
-    if (this.audio.readyState >= HTMLMediaElement.HAVE_METADATA) {
-      return Promise.resolve(this.physicalDurationMs());
+  private cancelPendingMetadataWait(): void {
+    const cancel = this.cancelMetadataWait;
+    this.cancelMetadataWait = null;
+    cancel?.();
+  }
+
+  private waitForMetadata(
+    element: HTMLAudioElement,
+  ): Promise<number | null> {
+    if (element.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      return Promise.resolve(this.physicalDurationMs(element));
     }
 
     return new Promise((resolve, reject) => {
+      let settled = false;
+
       const cleanup = () => {
-        this.audio.removeEventListener("loadedmetadata", onLoaded);
-        this.audio.removeEventListener("error", onError);
+        element.removeEventListener("loadedmetadata", onLoaded);
+        element.removeEventListener("error", onError);
+        if (this.cancelMetadataWait === cancel) {
+          this.cancelMetadataWait = null;
+        }
+      };
+      const finish = (
+        action: () => void,
+      ) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        action();
       };
       const onLoaded = () => {
-        cleanup();
-        resolve(this.physicalDurationMs());
+        finish(() => resolve(this.physicalDurationMs(element)));
       };
       const onError = () => {
-        cleanup();
-        reject(new Error("Browser media failed while loading audio metadata."));
+        finish(() => reject(
+          new Error("Browser media failed while loading audio metadata."),
+        ));
+      };
+      const cancel = () => {
+        finish(() => reject(
+          new Error("Browser media load superseded."),
+        ));
       };
 
-      this.audio.addEventListener("loadedmetadata", onLoaded, { once: true });
-      this.audio.addEventListener("error", onError, { once: true });
+      this.cancelMetadataWait = cancel;
+      element.addEventListener("loadedmetadata", onLoaded, { once: true });
+      element.addEventListener("error", onError, { once: true });
     });
   }
 
-  private physicalDurationMs(): number | null {
-    return Number.isFinite(this.audio.duration) && this.audio.duration >= 0
-      ? this.audio.duration * 1_000
+  private physicalDurationMs(
+    element: HTMLAudioElement = this.audio,
+  ): number | null {
+    return Number.isFinite(element.duration) && element.duration >= 0
+      ? element.duration * 1_000
       : null;
   }
 
