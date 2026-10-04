@@ -769,11 +769,24 @@ final class ReadProjectStore: ObservableObject {
             accessToken: accessToken
         )
 
+        let sourceType =
+            project.sourceType.lowercased()
+        let fileExtension =
+            url.pathExtension.lowercased()
+
         if
-            project.sourceType.lowercased() == "pdf"
-            || url.pathExtension.lowercased() == "pdf"
+            sourceType == "pdf"
+            || fileExtension == "pdf"
         {
             try? await originalStore.savePDF(
+                projectId: project.id,
+                sourceURL: url
+            )
+        } else if
+            sourceType == "epub"
+            || fileExtension == "epub"
+        {
+            try? await originalStore.saveEPUB(
                 projectId: project.id,
                 sourceURL: url
             )
