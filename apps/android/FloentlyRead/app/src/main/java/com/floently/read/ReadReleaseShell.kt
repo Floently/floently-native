@@ -67,7 +67,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -2799,8 +2798,6 @@ private fun ReadProjectReaderScreen(
         remember {
             FocusRequester()
         }
-    val keyboardController =
-        LocalSoftwareKeyboardController.current
     val originalPdfFile = remember(
         project.id
     ) {
@@ -2919,8 +2916,6 @@ private fun ReadProjectReaderScreen(
         isSearching = false
         searchQuery = ""
         searchMatchIndex = 0
-        keyboardController?.hide()
-
         scope.launch {
             readerListState.scrollToItem(
                 index =
