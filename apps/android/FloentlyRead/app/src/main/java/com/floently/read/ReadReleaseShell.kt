@@ -917,9 +917,13 @@ private fun ReadMainShell(
     LaunchedEffect(
         sessionStore.session?.token
     ) {
-        val token = sessionStore.session?.token
+        val session = sessionStore.session
             ?: return@LaunchedEffect
-        projectStore.refresh(token)
+        projectStore.bindAccount(
+            userId = session.user.id,
+            email = session.user.email
+        )
+        projectStore.refresh(session.token)
     }
 
     LaunchedEffect(initialUrl) {
