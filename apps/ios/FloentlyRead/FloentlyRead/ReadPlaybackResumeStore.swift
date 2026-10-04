@@ -11,6 +11,7 @@ struct ReadPlaybackResumeSnapshot: Codable, Equatable {
     let sourceSegmentIndex: Int?
     let voiceId: String?
     let renditionId: String?
+    let timingMapId: String?
     let sourceAnchorQuote: String?
     let sourceAnchorPrefixContext: String?
     let sourceAnchorSuffixContext: String?
@@ -27,6 +28,7 @@ struct ReadPlaybackResumeSnapshot: Codable, Equatable {
         sourceSegmentIndex: Int? = nil,
         voiceId: String? = nil,
         renditionId: String? = nil,
+        timingMapId: String? = nil,
         sourceAnchorQuote: String? = nil,
         sourceAnchorPrefixContext: String? = nil,
         sourceAnchorSuffixContext: String? = nil,
@@ -42,6 +44,7 @@ struct ReadPlaybackResumeSnapshot: Codable, Equatable {
         self.sourceSegmentIndex = sourceSegmentIndex
         self.voiceId = voiceId
         self.renditionId = renditionId
+        self.timingMapId = timingMapId
         self.sourceAnchorQuote = sourceAnchorQuote
         self.sourceAnchorPrefixContext =
             sourceAnchorPrefixContext
@@ -310,6 +313,8 @@ final class ReadPlaybackResumeStore {
                     previous.voiceId,
                 renditionId:
                     previous.renditionId,
+                timingMapId:
+                    previous.timingMapId,
                 sourceAnchorQuote:
                     quote,
                 sourceAnchorPrefixContext:
@@ -536,6 +541,9 @@ final class ReadPlaybackResumeStore {
             renditionId:
                 snapshot.renditionId
                 ?? existing?.renditionId,
+            timingMapId:
+                snapshot.timingMapId
+                ?? existing?.timingMapId,
             sourceAnchorQuote:
                 snapshot.sourceAnchorQuote
                 ?? existing?.sourceAnchorQuote,
