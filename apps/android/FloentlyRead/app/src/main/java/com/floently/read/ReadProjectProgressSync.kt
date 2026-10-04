@@ -8,7 +8,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import com.floently.shared.auth.FloentlySecureSessionStore
 import java.time.Instant
 import kotlinx.coroutines.launch
@@ -256,32 +255,14 @@ fun ReadProjectProgressSyncEffect(
     manifest: ReadingManifestV1?,
     sessionStore: FloentlySecureSessionStore,
     projectStore: ReadProjectStore,
-    playbackController: ReadPlaybackController,
-    voiceSettings: ReadVoiceSettings
+    playbackController: ReadPlaybackController
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var lastSyncedBucket by remember(
         project.id,
         project.revisionId
     ) {
         mutableIntStateOf(-1)
-    }
-
-    LaunchedEffect(
-        project.id,
-        project.revisionId,
-        project.progress?.updatedAt,
-        manifest?.revisionId
-    ) {
-        val value = manifest ?: return@LaunchedEffect
-
-        ReadRemoteProjectProgressBridge.apply(
-            context = context,
-            project = project,
-            manifest = value,
-            voiceSettings = voiceSettings
-        )
     }
 
     val snapshot = playbackController.snapshot
