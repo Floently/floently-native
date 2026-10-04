@@ -51,28 +51,67 @@ object ReadRemoteProjectProgressBridge {
 
         val boundedPercent = progress.progressPercent
             .coerceIn(0.0, 100.0)
-        val logicalTimeMs = (
+        val fallbackLogicalTimeMs = (
             manifest.estimatedSourceDurationMs.toDouble()
                 * (boundedPercent / 100.0)
             )
             .toLong()
             .coerceAtLeast(0L)
+        val canonicalScalarOffset =
+            progress.currentCharacterOffset
+                .takeIf {
+                    it > 0 || boundedPercent <= 0.0
+                }
+                ?.coerceIn(
+                    0,
+                    manifest.textScalarLength
+                        .coerceAtLeast(0)
+                )
 
         val preferredIndex = progress.currentSegmentIndex
-        val segmentIndex = if (
-            preferredIndex in manifest.segments.indices
-        ) {
-            preferredIndex
-        } else {
-            manifest.segments.indexOfFirst {
-                logicalTimeMs < it.logicalEndMs
-            }.takeIf { it >= 0 }
-                ?: manifest.segments.indices.lastOrNull()
-                ?: 0
+        val scalarSegmentIndex =
+            canonicalScalarOffset?.let { offset ->
+                manifest.segments.indexOfFirst { segment ->
+                    offset >= segment.scalarStart
+                        && offset < segment.scalarEnd
+                }
+                    .takeIf { it >= 0 }
+                    ?: if (
+                        offset == manifest.textScalarLength
+                    ) {
+                        manifest.segments.indices.lastOrNull()
+                    } else {
+                        null
+                    }
+            }
+        val segmentIndex = when {
+            scalarSegmentIndex != null ->
+                scalarSegmentIndex
+            preferredIndex in manifest.segments.indices ->
+                preferredIndex
+            else ->
+                manifest.segments.indexOfFirst {
+                    fallbackLogicalTimeMs < it.logicalEndMs
+                }.takeIf { it >= 0 }
+                    ?: manifest.segments.indices.lastOrNull()
+                    ?: 0
         }
 
         val segment = manifest.segments
             .getOrNull(segmentIndex)
+        val logicalTimeMs = if (
+            canonicalScalarOffset != null
+            && segment != null
+            && canonicalScalarOffset >= segment.scalarStart
+            && canonicalScalarOffset <= segment.scalarEnd
+        ) {
+            logicalTimeForScalarOffset(
+                segment = segment,
+                scalarOffset = canonicalScalarOffset
+            )
+        } else {
+            fallbackLogicalTimeMs
+        }
         val playbackSpeed = (
             progress.playbackRate
                 ?: local?.playbackSpeed?.toDouble()
@@ -89,7 +128,9 @@ object ReadRemoteProjectProgressBridge {
                 playbackSpeed = playbackSpeed,
                 updatedAtMs = remoteUpdatedAt
                     ?: System.currentTimeMillis(),
-                sourceScalarOffset = segment?.scalarStart,
+                sourceScalarOffset =
+                    canonicalScalarOffset
+                        ?: segment?.scalarStart,
                 sourceSegmentId = segment?.id,
                 sourceSegmentIndex = segment?.index,
                 voiceId = progress.voiceId,
@@ -171,6 +212,34 @@ object ReadRemoteProjectProgressBridge {
             voiceId = voiceId,
             playbackRate = snapshot.speed.toDouble()
         )
+    }
+
+    private fun logicalTimeForScalarOffset(
+        segment: ReadingSegmentV1,
+        scalarOffset: Int
+    ): Long {
+        val scalarSpan = (
+            segment.scalarEnd - segment.scalarStart
+            )
+            .coerceAtLeast(1)
+        val localScalar = (
+            scalarOffset - segment.scalarStart
+            )
+            .coerceIn(0, scalarSpan)
+        val fraction =
+            localScalar.toDouble()
+                / scalarSpan.toDouble()
+        val logicalSpan = (
+            segment.logicalEndMs - segment.logicalStartMs
+            )
+            .coerceAtLeast(0L)
+
+        return (
+            segment.logicalStartMs.toDouble()
+                + logicalSpan.toDouble() * fraction
+            )
+            .toLong()
+            .coerceAtLeast(0L)
     }
 
     private fun parseInstant(
