@@ -10,8 +10,8 @@
     {
       "id": "precomposed-finnish",
       "text": "Hyvää päivää",
-      "scalarLength": 11,
-      "utf16Length": 11
+      "scalarLength": 12,
+      "utf16Length": 12
     },
     {
       "id": "combining-accent",
