@@ -1590,8 +1590,27 @@ private struct ReadProjectReaderView: View {
                         )
                     }
                 } else if let text = hydrated?.rawText {
-                    ScrollView {
-                        LazyVStack(
+                    VStack(spacing: 0) {
+                        if hydrated?.sourceType.lowercased() == "pdf" {
+                            HStack(spacing: 8) {
+                                Image(systemName: "exclamationmark.circle")
+                                    .foregroundStyle(palette.accent2)
+                                Text(
+                                    "The original PDF is not stored on this device. Showing the semantic reading layer."
+                                )
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(palette.muted)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 8)
+                            .background(
+                                palette.elevated.opacity(0.72)
+                            )
+                        }
+
+                        ScrollView {
+                            LazyVStack(
                             alignment: .leading,
                             spacing: 18
                         ) {
@@ -1616,7 +1635,8 @@ private struct ReadProjectReaderView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 24)
                         .padding(.top, 28)
-                        .padding(.bottom, 120)
+                            .padding(.bottom, 120)
+                        }
                     }
                 } else {
                     Spacer()
