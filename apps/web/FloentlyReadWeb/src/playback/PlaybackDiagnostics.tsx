@@ -52,6 +52,35 @@ function finiteNumber(
     : null;
 }
 
+function qualificationTelemetry(
+  events: readonly WebPlaybackTelemetryEvent[],
+): Array<{
+  name: WebPlaybackTelemetryEvent["name"];
+  at: number;
+  data?: Record<string, number | boolean | null>;
+}> {
+  return events.map((event) => {
+    const safeData = Object.fromEntries(
+      Object.entries(event.data ?? {}).filter(
+        (
+          entry,
+        ): entry is [
+          string,
+          number | boolean | null,
+        ] => typeof entry[1] !== "string",
+      ),
+    );
+
+    return {
+      name: event.name,
+      at: event.at,
+      ...(Object.keys(safeData).length > 0
+        ? { data: safeData }
+        : {}),
+    };
+  });
+}
+
 function handoffLatencies(
   events: readonly WebPlaybackTelemetryEvent[],
 ): number[] {
@@ -134,7 +163,7 @@ export function PlaybackDiagnostics({
       maximumMediaStartLatencyMs: maximumLatency,
       bufferingEvents,
     },
-    recentTelemetry: events,
+    recentTelemetry: qualificationTelemetry(events),
   };
 
   async function copyDiagnostics(): Promise<void> {
