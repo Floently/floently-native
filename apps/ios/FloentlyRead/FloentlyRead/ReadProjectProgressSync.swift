@@ -33,16 +33,46 @@ enum ReadRemoteProgressBridge {
             100,
             max(0, progress.progressPercent)
         )
-        let logicalTime = manifest.estimatedSourceDuration
+        let fallbackLogicalTime = manifest.estimatedSourceDuration
             * (boundedPercent / 100)
+        let canonicalScalarOffset = {
+            let offset = progress.currentCharacterOffset
+            guard offset > 0 || boundedPercent <= 0 else {
+                return nil
+            }
+            return min(
+                manifest.textScalarLength,
+                max(0, offset)
+            )
+        }()
 
         let preferredIndex = progress.currentSegmentIndex
+        let scalarSegmentIndex: Int? = {
+            guard let offset = canonicalScalarOffset else {
+                return nil
+            }
+
+            if let index = manifest.segments.firstIndex(where: {
+                offset >= $0.scalarStart
+                    && offset < $0.scalarEnd
+            }) {
+                return index
+            }
+
+            if offset == manifest.textScalarLength {
+                return manifest.segments.indices.last
+            }
+
+            return nil
+        }()
         let segmentIndex: Int
 
-        if manifest.segments.indices.contains(preferredIndex) {
+        if let scalarSegmentIndex {
+            segmentIndex = scalarSegmentIndex
+        } else if manifest.segments.indices.contains(preferredIndex) {
             segmentIndex = preferredIndex
         } else {
-            let cursorMs = Int64(logicalTime * 1_000)
+            let cursorMs = Int64(fallbackLogicalTime * 1_000)
             segmentIndex = manifest.segments.firstIndex {
                 cursorMs < $0.logicalEndMs
             } ?? manifest.segments.indices.last ?? 0
@@ -51,6 +81,20 @@ enum ReadRemoteProgressBridge {
         let segment = manifest.segments.indices.contains(segmentIndex)
             ? manifest.segments[segmentIndex]
             : nil
+        let logicalTime: TimeInterval
+
+        if let canonicalScalarOffset,
+           let segment,
+           canonicalScalarOffset >= segment.scalarStart,
+           canonicalScalarOffset <= segment.scalarEnd
+        {
+            logicalTime = logicalTimeForScalarOffset(
+                segment: segment,
+                scalarOffset: canonicalScalarOffset
+            )
+        } else {
+            logicalTime = fallbackLogicalTime
+        }
 
         let rate = Float(
             min(
@@ -70,7 +114,9 @@ enum ReadRemoteProgressBridge {
                 logicalTime: logicalTime,
                 playbackRate: rate,
                 updatedAt: remoteDate ?? Date(),
-                sourceScalarOffset: segment?.scalarStart,
+                sourceScalarOffset:
+                    canonicalScalarOffset
+                        ?? segment?.scalarStart,
                 sourceSegmentId: segment?.id,
                 sourceSegmentIndex: segment?.index,
                 voiceId: progress.voiceId,
@@ -162,6 +208,32 @@ enum ReadRemoteProgressBridge {
             voiceId,
             Double(playbackRate)
         )
+    }
+
+    private static func logicalTimeForScalarOffset(
+        segment: ReadingManifestSegmentV1,
+        scalarOffset: Int
+    ) -> TimeInterval {
+        let scalarSpan = max(
+            1,
+            segment.scalarEnd - segment.scalarStart
+        )
+        let localScalar = min(
+            scalarSpan,
+            max(
+                0,
+                scalarOffset - segment.scalarStart
+            )
+        )
+        let fraction = Double(localScalar)
+            / Double(scalarSpan)
+        let logicalSpanMs = max(
+            0,
+            segment.logicalEndMs - segment.logicalStartMs
+        )
+        let logicalMs = Double(segment.logicalStartMs)
+            + Double(logicalSpanMs) * fraction
+        return max(0, logicalMs / 1_000)
     }
 
     private static func parseDate(
