@@ -13,10 +13,19 @@ export interface LocalOriginalDocumentRecord {
   size: number;
   lastModified: number;
   quickSignature: string;
-  contentHash: string | null;
+  contentHash?: string | null;
   projectId: string | null;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface StoredLocalOriginalDocumentRecord
+  extends Omit<LocalOriginalDocumentRecord, "blob"> {
+  // Current storage format. Raw bytes avoid WebKit Blob/File structured-clone
+  // failures while the app-facing contract remains Blob-based.
+  bytes?: ArrayBuffer;
+  // Legacy format retained for backward-compatible reads.
+  blob?: Blob;
 }
 
 function openDatabase(): Promise<IDBDatabase> {
@@ -79,6 +88,68 @@ function randomId(): string {
     : `doc_${Date.now().toString(36)}_${Math.random()
         .toString(36)
         .slice(2, 10)}`;
+}
+
+export function storageBlobForFile(file: File): Blob {
+  const type = file.type || "application/octet-stream";
+  return file.slice(0, file.size, type);
+}
+
+export async function originalRecordForStorage(
+  record: LocalOriginalDocumentRecord,
+): Promise<StoredLocalOriginalDocumentRecord> {
+  const {
+    blob,
+    contentHash,
+    ...metadata
+  } = record;
+
+  const stored: StoredLocalOriginalDocumentRecord = {
+    ...metadata,
+    bytes: await blob.arrayBuffer(),
+  };
+
+  // A missing index key means "not indexed yet". A present null is not a
+  // valid IndexedDB key in WebKit and can abort the entire write transaction.
+  if (contentHash) {
+    stored.contentHash = contentHash;
+  }
+
+  return stored;
+}
+
+export function localOriginalFromStorage(
+  stored: StoredLocalOriginalDocumentRecord | null | undefined,
+): LocalOriginalDocumentRecord | null {
+  if (!stored) return null;
+
+  const {
+    bytes,
+    blob: legacyBlob,
+    ...metadata
+  } = stored;
+
+  const blob =
+    bytes instanceof ArrayBuffer
+      ? new Blob(
+          [bytes],
+          {
+            type:
+              metadata.type
+              || legacyBlob?.type
+              || "application/octet-stream",
+          },
+        )
+      : legacyBlob instanceof Blob
+        ? legacyBlob
+        : null;
+
+  if (!blob) return null;
+
+  return {
+    ...metadata,
+    blob,
+  };
 }
 
 function bytesToHex(buffer: ArrayBuffer): string {
@@ -161,7 +232,9 @@ async function getByIndex(
       transaction.objectStore(STORE_NAME).index(indexName).get(value),
     );
 
-    return (record as LocalOriginalDocumentRecord | undefined) ?? null;
+    return localOriginalFromStorage(
+      record as StoredLocalOriginalDocumentRecord | undefined,
+    );
   } finally {
     database.close();
   }
@@ -184,11 +257,14 @@ export function withCompletedContentHash(
 async function putRecord(
   record: LocalOriginalDocumentRecord,
 ): Promise<void> {
+  // Materialize bytes before opening the write transaction. IndexedDB
+  // transactions may auto-close while unrelated async Blob work is pending.
+  const stored = await originalRecordForStorage(record);
   const database = await openDatabase();
 
   try {
     const transaction = database.transaction(STORE_NAME, "readwrite");
-    transaction.objectStore(STORE_NAME).put(record);
+    transaction.objectStore(STORE_NAME).put(stored);
     await transactionComplete(transaction);
   } finally {
     database.close();
@@ -206,7 +282,9 @@ export async function getLocalOriginalDocument(
       transaction.objectStore(STORE_NAME).get(id),
     );
 
-    return (record as LocalOriginalDocumentRecord | undefined) ?? null;
+    return localOriginalFromStorage(
+      record as StoredLocalOriginalDocumentRecord | undefined,
+    );
   } finally {
     database.close();
   }
@@ -219,9 +297,16 @@ async function getAllLocalOriginalRecords(): Promise<
 
   try {
     const transaction = database.transaction(STORE_NAME, "readonly");
-    return await requestResult(
+    const stored = await requestResult(
       transaction.objectStore(STORE_NAME).getAll(),
-    ) as LocalOriginalDocumentRecord[];
+    ) as StoredLocalOriginalDocumentRecord[];
+
+    return stored
+      .map(localOriginalFromStorage)
+      .filter(
+        (record): record is LocalOriginalDocumentRecord =>
+          record !== null,
+      );
   } finally {
     database.close();
   }
@@ -245,38 +330,29 @@ export function sameOriginalIdentity(
 export async function listLocalOriginalDocuments(
   limit = 80,
 ): Promise<LocalOriginalDocumentRecord[]> {
-  const database = await openDatabase();
+  const records = await getAllLocalOriginalRecords();
+  const canonical = new Map<string, LocalOriginalDocumentRecord>();
 
-  try {
-    const transaction = database.transaction(STORE_NAME, "readonly");
-    const records = await requestResult(
-      transaction.objectStore(STORE_NAME).getAll(),
-    ) as LocalOriginalDocumentRecord[];
+  for (const record of records) {
+    const identity =
+      record.contentHash
+      || record.quickSignature
+      || record.id;
+    const existing = canonical.get(identity);
 
-    const canonical = new Map<string, LocalOriginalDocumentRecord>();
-    for (const record of records) {
-      const identity =
-        record.contentHash
-        || record.quickSignature
-        || record.id;
-      const existing = canonical.get(identity);
-
-      if (
-        !existing
-        || Number(record.updatedAt || 0) > Number(existing.updatedAt || 0)
-      ) {
-        canonical.set(identity, record);
-      }
+    if (
+      !existing
+      || Number(record.updatedAt || 0) > Number(existing.updatedAt || 0)
+    ) {
+      canonical.set(identity, record);
     }
-
-    return Array.from(canonical.values())
-      .sort((left, right) =>
-        Number(right.updatedAt || 0) - Number(left.updatedAt || 0),
-      )
-      .slice(0, Math.max(1, limit));
-  } finally {
-    database.close();
   }
+
+  return Array.from(canonical.values())
+    .sort((left, right) =>
+      Number(right.updatedAt || 0) - Number(left.updatedAt || 0),
+    )
+    .slice(0, Math.max(1, limit));
 }
 
 export async function removeLocalOriginalDocument(
@@ -315,7 +391,7 @@ export async function handoffOriginalDocument(
   if (existingQuick) {
     const refreshed: LocalOriginalDocumentRecord = {
       ...existingQuick,
-      blob: file,
+      blob: storageBlobForFile(file),
       name: file.name,
       type: file.type || existingQuick.type,
       size: file.size,
@@ -333,13 +409,12 @@ export async function handoffOriginalDocument(
   const now = Date.now();
   const record: LocalOriginalDocumentRecord = {
     id: randomId(),
-    blob: file,
+    blob: storageBlobForFile(file),
     name: file.name,
     type: file.type || "application/octet-stream",
     size: file.size,
     lastModified: file.lastModified || 0,
     quickSignature,
-    contentHash: null,
     projectId: null,
     createdAt: now,
     updatedAt: now,

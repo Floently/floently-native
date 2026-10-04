@@ -16,6 +16,18 @@ export class DocumentUploadError extends Error {
   }
 }
 
+export function uploadBlobForFile(file: File): Blob {
+  // Safari 26.5+ can hand the networking process a disk-backed File path it
+  // cannot read, producing a multipart request with a zero-byte body. slice()
+  // yields a Blob-backed view while preserving bytes/type and avoids passing
+  // the original filesystem-backed File object to FormData.
+  return file.slice(
+    0,
+    file.size,
+    file.type || "application/octet-stream",
+  );
+}
+
 export async function uploadContentProject(
   file: File,
   options: { title?: string } = {},
@@ -25,7 +37,11 @@ export async function uploadContentProject(
   }
 
   const body = new FormData();
-  body.append("file", file, file.name || "document");
+  body.append(
+    "file",
+    uploadBlobForFile(file),
+    file.name || "document",
+  );
 
   const title = options.title?.trim();
   if (title) body.append("title", title);

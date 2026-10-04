@@ -290,6 +290,24 @@ Key variables:
 
 Known production host routing mirrors the existing web app: `floently.com` can use same-origin auth proxying while `read.floently.com`, `learn.floently.com` and `create.floently.com` resolve auth to `https://learn-api.floently.com`.
 
+## Deterministic browser-engine qualification
+
+The normal Read web CI keeps Chromium as the fast product-journey gate. A
+separate cross-browser lane runs the same mocked-backend journeys in Playwright
+Firefox and WebKit so engine-specific routing, layout, focus, auth-state and
+WASM integration defects are caught before live preview qualification.
+
+After installing Firefox and WebKit through Playwright, run locally with:
+
+```bash
+npm run test:e2e:cross-browser
+```
+
+Playwright WebKit is useful deterministic coverage but is **not** evidence of
+physical Safari qualification. Live Safari/Firefox, real authentication, real
+TTS, Browser V2 transport, storage quotas and acoustic continuity remain part
+of the isolated-preview/device acceptance matrix.
+
 ## Isolated preview qualification
 
 The next-generation web app is intended to be live-qualified on a separate

@@ -479,18 +479,45 @@ test("pasted text opens through the real Rust/WASM synced reader", async ({
 
 test("opening a PDF keeps the original iframe visible when extraction fails", async ({
   page,
+  browserName,
 }) => {
   await installBackend(page, { failUploads: true });
   await page.goto("/app/import");
 
-  const fileInput = page.locator('input[type="file"]');
-  await fileInput.setInputFiles({
-    name: "source-preserved.pdf",
-    mimeType: "application/pdf",
-    buffer: Buffer.from(
-      "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF",
-    ),
-  });
+  if (browserName === "webkit") {
+    // Playwright WebKit currently has an upstream bug where File objects
+    // injected through setInputFiles() can fail when persisted to IndexedDB.
+    // Create the same PDF inside the page and exercise the real drop/import
+    // path instead; physical Safari file-picker qualification remains live.
+    await page.locator(".import-dropzone").evaluate((dropzone) => {
+      const pdf = new File(
+        [
+          "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n"
+          + "trailer<</Root 1 0 R>>\n%%EOF",
+        ],
+        "source-preserved.pdf",
+        { type: "application/pdf" },
+      );
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(pdf);
+      dropzone.dispatchEvent(
+        new DragEvent("drop", {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer,
+        }),
+      );
+    });
+  } else {
+    const fileInput = page.locator('input[type="file"]');
+    await fileInput.setInputFiles({
+      name: "source-preserved.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(
+        "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF",
+      ),
+    });
+  }
 
   await expect(page).toHaveURL(/\/app\/document\//);
   await expect(page.getByText("source-preserved.pdf")).toBeVisible();

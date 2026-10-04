@@ -1,0 +1,57 @@
+name: Read web cross-browser CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "apps/web/FloentlyReadWeb/**"
+      - "shared/read-core-rust/**"
+      - "shared/read-core-wasm/**"
+      - "scripts/build_read_web_wasm.sh"
+      - ".github/workflows/read-web-cross-browser-ci.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/web/FloentlyReadWeb/**"
+      - "shared/read-core-rust/**"
+      - "shared/read-core-wasm/**"
+      - "scripts/build_read_web_wasm.sh"
+      - ".github/workflows/read-web-cross-browser-ci.yml"
+
+concurrency:
+  group: read-web-cross-browser-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  firefox-webkit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install WebAssembly Rust target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked --version 0.15.0
+      - name: Build Rust/WASM + React Read web
+        run: bash scripts/build_read_web_wasm.sh
+      - name: Install Firefox and WebKit
+        working-directory: apps/web/FloentlyReadWeb
+        run: npx playwright install --with-deps firefox webkit
+      - name: Qualify Read web journeys in Firefox and WebKit
+        working-directory: apps/web/FloentlyReadWeb
+        run: npm run test:e2e:cross-browser
+      - name: Upload cross-browser Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FloentlyRead-Web-CrossBrowser-${{ github.sha }}
+          path: apps/web/FloentlyReadWeb/playwright-cross-browser-report
+          if-no-files-found: ignore
+          retention-days: 7
