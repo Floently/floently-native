@@ -2093,7 +2093,7 @@ private struct ReadProjectReaderView: View {
                                                 weight: .regular
                                             )
                                         )
-                                        .lineSpacing(12)
+                                        .lineSpacing(8)
                                         .foregroundStyle(palette.text)
                                         .textSelection(.enabled)
                                 }
