@@ -965,6 +965,8 @@ private struct ReadEmptyLibraryCard: View {
 private struct ReadLibraryScreen: View {
     @EnvironmentObject private var projectStore: ReadProjectStore
     @EnvironmentObject private var sessionStore: FloentlySessionStore
+    @EnvironmentObject private var playback: ReadPlaybackSession
+    @EnvironmentObject private var loader: ReadDocumentPlaybackLoader
 
     @State private var searchText = ""
     @State private var pendingDelete: ReadContentProject?
@@ -1085,6 +1087,11 @@ private struct ReadLibraryScreen: View {
 
         Task {
             do {
+                if playback.document?.id == project.id {
+                    loader.cancel()
+                    playback.clear()
+                }
+
                 try await projectStore.delete(
                     project,
                     accessToken: token
@@ -1801,6 +1808,18 @@ private struct ReadProjectReaderView: View {
         }
 
         if offlineAvailable {
+            if
+                playback.document?.id
+                    == manifest.documentId,
+                playback.document?.revisionId
+                    == manifest.revisionId,
+                loader.activeVoiceId == voiceId
+            {
+                offlineError =
+                    "This offline voice is currently in use. Open another reading or stop the current session before removing it."
+                return
+            }
+
             await loader.removeOffline(
                 manifest: manifest,
                 voiceId: voiceId,
