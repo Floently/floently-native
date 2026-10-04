@@ -7,11 +7,13 @@ class ReadProgressiveAudioCoordinator(
     private val tts: ReadNativeTtsClient = ReadNativeTtsClient(),
     private val cache: ReadNativeAudioCache = ReadNativeAudioCache(context)
 ) {
+    private val appContext = context.applicationContext
     suspend fun prepare(
         manifest: ReadingManifestV1,
         startingAt: Int,
         voiceId: String,
         accessToken: String? = null,
+        accountIdentity: String? = null,
         horizonMs: Long = 120_000L,
         maxSegments: Int = 4
     ): List<ReadPlaybackSegment> {
@@ -43,38 +45,123 @@ class ReadProgressiveAudioCoordinator(
                 language = manifest.language,
                 voiceId = voiceId
             )
-            val cached = cache.cachedAsset(lookupKey)
-
-            if (cached != null) {
-                ReadPlaybackSegment(
-                    id = segment.id,
-                    index = segment.index,
-                    logicalStartMs = segment.logicalStartMs,
-                    logicalEndMs = segment.logicalEndMs,
-                    audioUri = cached.localFile
-                        .toURI()
-                        .toString(),
-                    actualDurationMs = cached.durationMs
-                )
-            } else {
-                val asset = tts.synthesize(
-                    text = segment.text,
-                    language = manifest.language,
+            val offline = accountIdentity?.let {
+                ReadOfflineAudioStore.asset(
+                    context = appContext,
+                    accountIdentity = it,
+                    manifest = manifest,
                     voiceId = voiceId,
-                    accessToken = accessToken
-                )
-                val local = cache.localFile(asset)
-
-                ReadPlaybackSegment(
-                    id = segment.id,
-                    index = segment.index,
-                    logicalStartMs = segment.logicalStartMs,
-                    logicalEndMs = segment.logicalEndMs,
-                    audioUri = local.toURI().toString(),
-                    actualDurationMs = asset.durationMs
+                    segment = segment
                 )
             }
+
+            if (offline != null) {
+                ReadPlaybackSegment(
+                    id = segment.id,
+                    index = segment.index,
+                    logicalStartMs = segment.logicalStartMs,
+                    logicalEndMs = segment.logicalEndMs,
+                    audioUri = offline.localFile
+                        .toURI()
+                        .toString(),
+                    actualDurationMs = offline.durationMs
+                )
+            } else {
+                val cached = cache.cachedAsset(
+                    lookupKey
+                )
+
+                if (cached != null) {
+                    ReadPlaybackSegment(
+                        id = segment.id,
+                        index = segment.index,
+                        logicalStartMs = segment.logicalStartMs,
+                        logicalEndMs = segment.logicalEndMs,
+                        audioUri = cached.localFile
+                            .toURI()
+                            .toString(),
+                        actualDurationMs = cached.durationMs
+                    )
+                } else {
+                    val asset = tts.synthesize(
+                        text = segment.text,
+                        language = manifest.language,
+                        voiceId = voiceId,
+                        accessToken = accessToken
+                    )
+                    val local = cache.localFile(asset)
+
+                    ReadPlaybackSegment(
+                        id = segment.id,
+                        index = segment.index,
+                        logicalStartMs = segment.logicalStartMs,
+                        logicalEndMs = segment.logicalEndMs,
+                        audioUri = local.toURI().toString(),
+                        actualDurationMs = asset.durationMs
+                    )
+                }
+            }
         }
+    }
+
+    suspend fun saveOffline(
+        manifest: ReadingManifestV1,
+        voiceId: String,
+        accessToken: String?,
+        accountIdentity: String
+    ) {
+        val segments = prepare(
+            manifest = manifest,
+            startingAt = 0,
+            voiceId = voiceId,
+            accessToken = accessToken,
+            accountIdentity = accountIdentity,
+            horizonMs = Long.MAX_VALUE / 4L,
+            maxSegments =
+                manifest.segments.size
+                    .coerceAtLeast(1)
+        )
+
+        require(
+            segments.size
+                == manifest.segments.size
+        ) {
+            "Read could not finish the offline audio bundle."
+        }
+
+        ReadOfflineAudioStore.install(
+            context = appContext,
+            accountIdentity = accountIdentity,
+            manifest = manifest,
+            voiceId = voiceId,
+            segments = segments
+        )
+    }
+
+    suspend fun isAvailableOffline(
+        manifest: ReadingManifestV1,
+        voiceId: String,
+        accountIdentity: String
+    ): Boolean =
+        ReadOfflineAudioStore.isComplete(
+            context = appContext,
+            accountIdentity = accountIdentity,
+            manifest = manifest,
+            voiceId = voiceId
+        )
+
+    suspend fun removeOffline(
+        manifest: ReadingManifestV1,
+        voiceId: String,
+        accountIdentity: String
+    ) {
+        ReadOfflineAudioStore.remove(
+            context = appContext,
+            accountIdentity = accountIdentity,
+            documentId = manifest.documentId,
+            revisionId = manifest.revisionId,
+            voiceId = voiceId
+        )
     }
 
     suspend fun replaceProtectedSegments(
