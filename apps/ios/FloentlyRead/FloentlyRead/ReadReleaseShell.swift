@@ -2300,6 +2300,22 @@ private struct ReadURLImportSheet: View {
     }
 }
 
+private struct ReadReaderParagraphAnchor:
+    Identifiable
+{
+    let index: Int
+    let text: String
+    let sourceScalarStart: Int
+
+    var id: Int { index }
+}
+
+private struct ReadReaderSearchMatch {
+    let paragraphIndex: Int
+    let sourceScalarOffset: Int
+    let scalarLength: Int
+}
+
 private struct ReadProjectReaderView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var sessionStore: FloentlySessionStore
@@ -2425,7 +2441,7 @@ private struct ReadProjectReaderView: View {
                         .disabled(
                             originalPDFURL != nil
                             || epubPackage != nil
-                            || searchableParagraphs
+                            || searchableParagraphAnchors
                                 .isEmpty
                         )
 
@@ -2721,13 +2737,9 @@ private struct ReadProjectReaderView: View {
                                 spacing: 18
                             ) {
                                 ForEach(
-                                    Array(
-                                        searchableParagraphs
-                                            .enumerated()
-                                    ),
-                                    id: \.offset
-                                ) { index, paragraph in
-                                    Text(paragraph)
+                                    searchableParagraphAnchors
+                                ) { paragraph in
+                                    Text(paragraph.text)
                                         .font(
                                             .system(
                                                 size:
@@ -2743,7 +2755,7 @@ private struct ReadProjectReaderView: View {
                                         .foregroundStyle(palette.text)
                                         .background(
                                             searchHighlightsParagraph(
-                                                index
+                                                paragraph.index
                                             )
                                             ? FloentlyDesignTokens
                                                 .Colors
@@ -2751,7 +2763,9 @@ private struct ReadProjectReaderView: View {
                                             : Color.clear
                                         )
                                         .textSelection(.enabled)
-                                        .id(index)
+                                        .id(
+                                            paragraph.index
+                                        )
                                 }
                             }
                             .scrollTargetLayout()
@@ -2801,7 +2815,9 @@ private struct ReadProjectReaderView: View {
         }
     }
 
-    private var searchableParagraphs: [String] {
+    private var searchableParagraphAnchors:
+        [ReadReaderParagraphAnchor]
+    {
         guard
             let text =
                 hydrated?.rawText,
@@ -2810,10 +2826,14 @@ private struct ReadProjectReaderView: View {
             return []
         }
 
-        return paragraphs(text)
+        return readerParagraphAnchors(
+            text
+        )
     }
 
-    private var searchMatches: [Int] {
+    private var searchMatches:
+        [ReadReaderSearchMatch]
+    {
         let query = searchQuery
             .trimmingCharacters(
                 in: .whitespacesAndNewlines
@@ -2822,18 +2842,11 @@ private struct ReadProjectReaderView: View {
             return []
         }
 
-        return searchableParagraphs
-            .enumerated()
+        return searchableParagraphAnchors
             .flatMap {
-                index,
-                paragraph in
-                Array(
-                    repeating: index,
-                    count:
-                        occurrenceCount(
-                            query,
-                            in: paragraph
-                        )
+                searchMatches(
+                    query,
+                    in: $0
                 )
             }
     }
@@ -3060,6 +3073,7 @@ private struct ReadProjectReaderView: View {
         )
         readerScrollPosition =
             matches[searchMatchIndex]
+                .paragraphIndex
     }
 
     private func searchHighlightsParagraph(
@@ -3078,21 +3092,176 @@ private struct ReadProjectReaderView: View {
         }
 
         return searchMatches
-            .contains(index)
+            .contains {
+                $0.paragraphIndex == index
+            }
     }
 
-    private func occurrenceCount(
+    private func readerParagraphAnchors(
+        _ rawText: String
+    ) -> [ReadReaderParagraphAnchor] {
+        let source =
+            rawText as NSString
+        let separator =
+            try? NSRegularExpression(
+                pattern:
+                    #"(?:\r\n|\r|\n)[\t ]*(?:\r\n|\r|\n)+"#
+            )
+        let separatorMatches =
+            separator?.matches(
+                in: rawText,
+                range: NSRange(
+                    location: 0,
+                    length: source.length
+                )
+            )
+            ?? []
+
+        var result:
+            [ReadReaderParagraphAnchor] = []
+        var cursor = 0
+
+        func appendChunk(
+            _ range: NSRange
+        ) {
+            guard range.length > 0 else {
+                return
+            }
+
+            let chunk =
+                source.substring(
+                    with: range
+                )
+            let trimmed =
+                chunk.trimmingCharacters(
+                    in:
+                        .whitespacesAndNewlines
+                )
+            guard !trimmed.isEmpty else {
+                return
+            }
+
+            let localRange =
+                (chunk as NSString)
+                    .range(of: trimmed)
+            guard
+                localRange.location
+                    != NSNotFound
+            else {
+                return
+            }
+
+            let sourceUTF16Offset =
+                range.location
+                + localRange.location
+            guard
+                let scalarStart =
+                    ReadScalarOffsets
+                        .scalarOffset(
+                            in: rawText,
+                            utf16Offset:
+                                sourceUTF16Offset
+                        )
+            else {
+                return
+            }
+
+            result.append(
+                ReadReaderParagraphAnchor(
+                    index: result.count,
+                    text: trimmed,
+                    sourceScalarStart:
+                        scalarStart
+                )
+            )
+        }
+
+        for match in separatorMatches {
+            appendChunk(
+                NSRange(
+                    location: cursor,
+                    length:
+                        max(
+                            0,
+                            match.range.location
+                                - cursor
+                        )
+                )
+            )
+            cursor =
+                match.range.location
+                + match.range.length
+        }
+
+        appendChunk(
+            NSRange(
+                location: cursor,
+                length:
+                    max(
+                        0,
+                        source.length
+                            - cursor
+                    )
+            )
+        )
+
+        if
+            result.isEmpty,
+            !rawText
+                .trimmingCharacters(
+                    in:
+                        .whitespacesAndNewlines
+                )
+                .isEmpty
+        {
+            let trimmed =
+                rawText
+                    .trimmingCharacters(
+                        in:
+                            .whitespacesAndNewlines
+                    )
+            let localRange =
+                source.range(of: trimmed)
+            if
+                localRange.location
+                    != NSNotFound,
+                let scalarStart =
+                    ReadScalarOffsets
+                        .scalarOffset(
+                            in: rawText,
+                            utf16Offset:
+                                localRange.location
+                        )
+            {
+                result.append(
+                    ReadReaderParagraphAnchor(
+                        index: 0,
+                        text: trimmed,
+                        sourceScalarStart:
+                            scalarStart
+                    )
+                )
+            }
+        }
+
+        return result
+    }
+
+    private func searchMatches(
         _ query: String,
-        in text: String
-    ) -> Int {
-        let source = text as NSString
+        in paragraph:
+            ReadReaderParagraphAnchor
+    ) -> [ReadReaderSearchMatch] {
+        let source =
+            paragraph.text as NSString
         let needle =
             query as NSString
         guard needle.length > 0 else {
-            return 0
+            return []
         }
 
-        var count = 0
+        var matches:
+            [ReadReaderSearchMatch] = []
         var location = 0
 
         while location < source.length {
@@ -3116,7 +3285,43 @@ private struct ReadProjectReaderView: View {
                 break
             }
 
-            count += 1
+            let endUTF16 =
+                range.location
+                + range.length
+            if
+                let relativeStart =
+                    ReadScalarOffsets
+                        .scalarOffset(
+                            in: paragraph.text,
+                            utf16Offset:
+                                range.location
+                        ),
+                let relativeEnd =
+                    ReadScalarOffsets
+                        .scalarOffset(
+                            in: paragraph.text,
+                            utf16Offset:
+                                endUTF16
+                        )
+            {
+                matches.append(
+                    ReadReaderSearchMatch(
+                        paragraphIndex:
+                            paragraph.index,
+                        sourceScalarOffset:
+                            paragraph
+                                .sourceScalarStart
+                            + relativeStart,
+                        scalarLength:
+                            max(
+                                0,
+                                relativeEnd
+                                    - relativeStart
+                            )
+                    )
+                )
+            }
+
             location =
                 range.location
                 + max(
@@ -3125,7 +3330,7 @@ private struct ReadProjectReaderView: View {
                 )
         }
 
-        return count
+        return matches
     }
 
     private var resolvedVoiceId: String? {
