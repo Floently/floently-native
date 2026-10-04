@@ -5,6 +5,59 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+val releaseSigningProperties = java.util.Properties()
+val releaseSigningPropertiesFile =
+    rootProject.file("keystore.properties")
+
+if (releaseSigningPropertiesFile.isFile) {
+    releaseSigningPropertiesFile.inputStream().use {
+        releaseSigningProperties.load(it)
+    }
+}
+
+fun releaseSigningValue(name: String): String? =
+    System.getenv(name)
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?: releaseSigningProperties
+            .getProperty(name)
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+
+val releaseStoreFilePath =
+    releaseSigningValue("FLOENTLY_UPLOAD_STORE_FILE")
+val releaseStorePassword =
+    releaseSigningValue("FLOENTLY_UPLOAD_STORE_PASSWORD")
+val releaseKeyAlias =
+    releaseSigningValue("FLOENTLY_UPLOAD_KEY_ALIAS")
+val releaseKeyPassword =
+    releaseSigningValue("FLOENTLY_UPLOAD_KEY_PASSWORD")
+
+val releaseSigningConfigured = listOf(
+    releaseStoreFilePath,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword
+).all { !it.isNullOrBlank() }
+
+val releaseTaskRequested =
+    gradle.startParameter.taskNames.any {
+        it.contains("release", ignoreCase = true)
+            || it.contains("bundle", ignoreCase = true)
+            || it.contains("publish", ignoreCase = true)
+    }
+
+if (releaseTaskRequested && !releaseSigningConfigured) {
+    throw GradleException(
+        "Floently Read release signing is not configured. " +
+            "Set FLOENTLY_UPLOAD_STORE_FILE, " +
+            "FLOENTLY_UPLOAD_STORE_PASSWORD, " +
+            "FLOENTLY_UPLOAD_KEY_ALIAS and " +
+            "FLOENTLY_UPLOAD_KEY_PASSWORD in keystore.properties " +
+            "or CI secrets."
+    )
+}
+
 android {
     namespace = "com.floently.read"
     compileSdk = 36
@@ -17,10 +70,33 @@ android {
         versionName = "1.0.0"
     }
 
+    signingConfigs {
+        create("release") {
+            if (releaseSigningConfigured) {
+                storeFile = rootProject.file(
+                    requireNotNull(releaseStoreFilePath)
+                )
+                storePassword =
+                    requireNotNull(releaseStorePassword)
+                keyAlias =
+                    requireNotNull(releaseKeyAlias)
+                keyPassword =
+                    requireNotNull(releaseKeyPassword)
+            }
+        }
+    }
+
     buildTypes {
         getByName("debug") {
             applicationIdSuffix = ".native.dev"
             versionNameSuffix = "-dev"
+        }
+
+        getByName("release") {
+            if (releaseSigningConfigured) {
+                signingConfig =
+                    signingConfigs.getByName("release")
+            }
         }
     }
 
