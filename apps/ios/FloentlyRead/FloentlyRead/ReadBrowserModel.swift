@@ -107,6 +107,17 @@ final class ReadBrowserController: ObservableObject {
         isLoading = false
     }
 
+    func detachBrowser() {
+        invalidateReadableSource()
+        webView?.stopLoading()
+        webView?.navigationDelegate = nil
+        webView?.uiDelegate = nil
+        webView = nil
+        pendingURL = nil
+        isLoading = false
+        estimatedProgress = 0
+    }
+
     func navigationDidStart(from webView: WKWebView) {
         invalidateReadableSource()
         readingStatus = "Loading…"
