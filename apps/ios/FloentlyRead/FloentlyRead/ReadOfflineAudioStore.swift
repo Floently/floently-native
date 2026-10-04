@@ -297,6 +297,27 @@ actor ReadOfflineAudioStore {
         )
     }
 
+    func removeDocument(
+        accountIdentity: String,
+        documentId: String
+    ) {
+        let directory = root
+            .appending(
+                path: storageKey(
+                    accountIdentity
+                ),
+                directoryHint: .isDirectory
+            )
+            .appending(
+                path: storageKey(documentId),
+                directoryHint: .isDirectory
+            )
+
+        try? fileManager.removeItem(
+            at: directory
+        )
+    }
+
     func clearAll() {
         try? fileManager.removeItem(
             at: root
