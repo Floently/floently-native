@@ -108,7 +108,7 @@ export function ProductApp({
   const browserActive = pathname === "/app/browser";
 
   return (
-    <ReadRuntimeProvider>
+    <ReadRuntimeProvider ownerId={user.id}>
       <AppShell pathname={pathname} search={search} user={user}>
         <BrowserWorkspace active={browserActive} userId={user.id} />
         {browserActive ? null : <RouteContent pathname={pathname} />}
