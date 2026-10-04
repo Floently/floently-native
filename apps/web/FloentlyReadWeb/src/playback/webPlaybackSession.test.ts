@@ -709,6 +709,21 @@ describe("WebPlaybackSession document-wide contract", () => {
     session.destroy();
   });
 
+  it("keeps only a bounded recent telemetry history", () => {
+    const { session } = createHarness();
+
+    session.loadDocument(makeManifest());
+    for (let index = 0; index < 140; index += 1) {
+      session.pause();
+    }
+
+    const events = session.getRecentTelemetry();
+    expect(events).toHaveLength(128);
+    expect(events.every((event) => event.name === "pause")).toBe(true);
+
+    session.destroy();
+  });
+
   it("invalidates old-voice audio while preserving the logical cursor", async () => {
     const { session, tts, cache } = createHarness();
 
