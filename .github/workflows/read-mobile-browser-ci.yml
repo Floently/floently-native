@@ -2,6 +2,7 @@ name: Read mobile browser CI
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited]
     paths:
       - "apps/ios/FloentlyRead/**"
       - "apps/ios/FloentlyShared/**"
@@ -182,7 +183,14 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  # iOS qualification is intentionally opt-in. The PR body marker is added
+  # only after explicit user approval for an iOS build. Keeping this job off
+  # normal PR and main-push paths prevents web/native development from
+  # consuming an unauthorized simulator build.
   ios-read:
+    if: >-
+      ${{ github.event_name == 'pull_request' &&
+          contains(github.event.pull_request.body, '<!-- ios-build-approved -->') }}
     runs-on: macos-15
     timeout-minutes: 20
     steps:
