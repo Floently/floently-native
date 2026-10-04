@@ -311,10 +311,8 @@ final class ReadPlaybackResumeStore {
                     match.segment.index,
                 voiceId:
                     previous.voiceId,
-                renditionId:
-                    previous.renditionId,
-                timingMapId:
-                    previous.timingMapId,
+                renditionId: nil,
+                timingMapId: nil,
                 sourceAnchorQuote:
                     quote,
                 sourceAnchorPrefixContext:
