@@ -24,9 +24,11 @@ function AppLoading({ label }: { label: string }) {
 
 function ProtectedApp({
   pathname,
+  search,
   href,
 }: {
   pathname: string;
+  search: string;
   href: string;
 }) {
   const auth = useAuthState();
@@ -48,6 +50,7 @@ function ProtectedApp({
   return (
     <ProductApp
       pathname={pathname}
+      search={search}
       user={auth.session.user}
     />
   );
@@ -98,6 +101,7 @@ export default function App() {
     return (
       <ProtectedApp
         pathname={location.pathname}
+        search={location.search}
         href={location.href}
       />
     );
