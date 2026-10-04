@@ -806,6 +806,13 @@ class ReadProjectStore(
             context = applicationContext,
             projectId = project.id
         )
+        snapshotAccountIdentity?.let {
+            ReadOfflineAudioStore.removeDocument(
+                context = applicationContext,
+                accountIdentity = it,
+                documentId = project.id
+            )
+        }
         projects = projects.filterNot {
             it.id == project.id
         }
