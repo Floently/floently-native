@@ -1542,7 +1542,32 @@ private fun ReadHomeScreen(
 
                     ReadSurfaceCard(
                         modifier = Modifier.clickable {
-                            playbackController.togglePlayPause()
+                            val activeId =
+                                playbackController
+                                    .activeDocumentId
+                            val activeProject =
+                                projectStore
+                                    .projects
+                                    .firstOrNull {
+                                        it.id
+                                            == activeId
+                                    }
+
+                            if (
+                                activeProject
+                                    != null
+                            ) {
+                                onOpenProject(
+                                    activeProject
+                                )
+                            } else if (
+                                !playbackController
+                                    .snapshot
+                                    .isPlaying
+                            ) {
+                                playbackController
+                                    .togglePlayPause()
+                            }
                         }
                     ) {
                         Row(
@@ -1550,48 +1575,60 @@ private fun ReadHomeScreen(
                                 Alignment.CenterVertically
                         ) {
                             Column(
-                                modifier = Modifier.weight(1f)
+                                modifier =
+                                    Modifier.weight(1f)
                             ) {
                                 Text(
-                                    playbackController.snapshot.title,
+                                    playbackController
+                                        .snapshot
+                                        .title,
                                     color = palette.text,
                                     style =
-                                        MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
+                                        MaterialTheme
+                                            .typography
+                                            .titleLarge,
+                                    fontWeight =
+                                        FontWeight.Bold,
                                     maxLines = 2
                                 )
-                                Spacer(Modifier.height(6.dp))
+                                Spacer(
+                                    Modifier.height(
+                                        FloentlyDesignTokens
+                                            .Space
+                                            .s2
+                                    )
+                                )
                                 Text(
-                                    playbackController.snapshot.status,
-                                    color = palette.muted
+                                    playbackController
+                                        .snapshot
+                                        .status,
+                                    color =
+                                        palette.muted
                                 )
                             }
 
-                            Surface(
-                                color = palette.accent,
-                                shape = CircleShape,
-                                modifier = Modifier.size(48.dp)
-                            ) {
-                                Box(
-                                    contentAlignment =
-                                        Alignment.Center
-                                ) {
-                                    Text(
-                                        if (
-                                            playbackController
-                                                .snapshot
-                                                .isPlaying
-                                        ) "Ⅱ" else "▶",
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
+                            Text(
+                                "Open",
+                                color =
+                                    FloentlyDesignTokens
+                                        .Colors
+                                        .brandBright,
+                                style =
+                                    MaterialTheme
+                                        .typography
+                                        .labelLarge,
+                                fontWeight =
+                                    FontWeight.SemiBold
+                            )
                         }
 
                         val duration =
-                            playbackController.snapshot.durationMs
-                                .coerceAtLeast(1L)
+                            playbackController
+                                .snapshot
+                                .durationMs
+                                .coerceAtLeast(
+                                    1L
+                                )
                         LinearProgressIndicator(
                             progress = {
                                 (
@@ -1599,11 +1636,25 @@ private fun ReadHomeScreen(
                                         .snapshot
                                         .positionMs
                                         .toFloat()
-                                        / duration.toFloat()
-                                    ).coerceIn(0f, 1f)
+                                        / duration
+                                            .toFloat()
+                                    ).coerceIn(
+                                        0f,
+                                        1f
+                                    )
                             },
-                            color = palette.accent,
-                            modifier = Modifier.fillMaxWidth()
+                            color =
+                                FloentlyDesignTokens
+                                    .Colors
+                                    .brand,
+                            trackColor =
+                                FloentlyDesignTokens
+                                    .Colors
+                                    .borderSoft,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(2.dp)
                         )
                     }
                 }
