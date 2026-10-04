@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  localOriginalFromStorage,
   originalRecordForStorage,
   sameOriginalIdentity,
   storageBlobForFile,
@@ -50,11 +51,16 @@ describe("local original File persistence", () => {
 });
 
 describe("local original document IndexedDB storage", () => {
-  it("omits a pending null content hash so WebKit does not index an invalid key", () => {
+  it("stores raw bytes and omits a pending null hash", async () => {
     const pending = record({ contentHash: null });
-    const stored = originalRecordForStorage(pending);
+    const stored = await originalRecordForStorage(pending);
 
+    expect("blob" in stored).toBe(false);
     expect("contentHash" in stored).toBe(false);
+    expect(stored.bytes).toBeInstanceOf(ArrayBuffer);
+    expect(
+      new TextDecoder().decode(stored.bytes),
+    ).toBe("pdf");
     expect(stored).toMatchObject({
       id: pending.id,
       quickSignature: pending.quickSignature,
@@ -62,11 +68,28 @@ describe("local original document IndexedDB storage", () => {
     });
   });
 
-  it("keeps a completed content hash available to the IndexedDB hash index", () => {
+  it("keeps a completed content hash available to the IndexedDB hash index", async () => {
     const completed = record({ contentHash: "sha256-ready" });
-    const stored = originalRecordForStorage(completed);
+    const stored = await originalRecordForStorage(completed);
 
     expect(stored.contentHash).toBe("sha256-ready");
+  });
+
+  it("reconstructs app-facing Blobs from current byte records", async () => {
+    const stored = await originalRecordForStorage(record());
+    const restored = localOriginalFromStorage(stored);
+
+    expect(restored?.blob).toBeInstanceOf(Blob);
+    expect(restored?.blob.type).toBe("application/pdf");
+    expect(await restored?.blob.text()).toBe("pdf");
+  });
+
+  it("keeps legacy Blob-backed records readable", async () => {
+    const legacy = record();
+    const restored = localOriginalFromStorage(legacy);
+
+    expect(restored?.blob).toBe(legacy.blob);
+    expect(await restored?.blob.text()).toBe("pdf");
   });
 });
 
