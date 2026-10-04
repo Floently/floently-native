@@ -77,6 +77,9 @@ struct ReadReleaseGateView: View {
                 }
             }
         }
+        .background(
+            ReadDurableProjectProgressSyncView()
+        )
         .task(id: sessionStore.session?.token) {
             await accessModel.refresh(
                 sessionStore: sessionStore
@@ -1609,10 +1612,6 @@ private struct ReadProjectReaderView: View {
         .task {
             await prepareProject()
         }
-        .readProjectProgressSync(
-            project: hydrated ?? project,
-            manifest: manifest
-        )
     }
 
     private func prepareProject() async {
