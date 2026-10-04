@@ -32,6 +32,7 @@ struct FloentlyReadApp: App {
 final class ReadBrowserRouter: ObservableObject {
     @Published var browserURL: URL?
     @Published var isBrowserPresented = false
+    @Published private(set) var pendingIncomingURL: URL?
 
     func openBrowser(_ url: URL? = nil) {
         browserURL = url
@@ -39,8 +40,24 @@ final class ReadBrowserRouter: ObservableObject {
     }
 
     func openIncomingURL(_ incomingURL: URL) {
-        guard let resolved = ReadBrowserController.resolveIncomingURL(incomingURL) else { return }
-        openBrowser(resolved)
+        guard
+            let resolved = ReadBrowserController.resolveIncomingURL(
+                incomingURL
+            )
+        else {
+            return
+        }
+
+        // Deep links are staged here. The authenticated/access-checked
+        // release shell consumes them so an incoming URL cannot bypass the
+        // account or entitlement gate.
+        pendingIncomingURL = resolved
+    }
+
+    func consumePendingIncomingURL() -> URL? {
+        let value = pendingIncomingURL
+        pendingIncomingURL = nil
+        return value
     }
 }
 
