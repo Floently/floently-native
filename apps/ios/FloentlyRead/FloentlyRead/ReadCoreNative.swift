@@ -1,10 +1,16 @@
 import Foundation
 import FloentlyReadCore
 
+struct ReadSourceAnchorResolution: Decodable {
+    let scalarStart: Int
+    let scalarLength: Int
+}
+
 enum ReadCoreNativeError: LocalizedError {
     case manifestBuildFailed
     case invalidUTF8Result
     case epubExtractionFailed
+    case sourceAnchorResolutionFailed
 
     var errorDescription: String? {
         switch self {
@@ -14,6 +20,8 @@ enum ReadCoreNativeError: LocalizedError {
             return "The shared Read Core returned invalid document data."
         case .epubExtractionFailed:
             return "The shared Read Core could not open this EPUB."
+        case .sourceAnchorResolutionFailed:
+            return "The shared Read Core could not resolve this source anchor."
         }
     }
 }
@@ -61,6 +69,61 @@ enum ReadCoreNative {
 
         return try ReadingManifestV1.decode(
             data: Data(json.utf8)
+        )
+    }
+
+    static func resolveSourceAnchor(
+        sourceText: String,
+        quote: String,
+        prefixContext: String,
+        suffixContext: String
+    ) throws -> ReadSourceAnchorResolution? {
+        let pointer =
+            sourceText.withCString {
+                sourcePointer in
+                quote.withCString {
+                    quotePointer in
+                    prefixContext.withCString {
+                        prefixPointer in
+                        suffixContext.withCString {
+                            suffixPointer in
+                            floently_read_resolve_source_anchor_json(
+                                sourcePointer,
+                                quotePointer,
+                                prefixPointer,
+                                suffixPointer
+                            )
+                        }
+                    }
+                }
+            }
+
+        guard let pointer else {
+            throw ReadCoreNativeError
+                .sourceAnchorResolutionFailed
+        }
+        defer {
+            floently_read_string_free(
+                pointer
+            )
+        }
+
+        guard
+            let json = String(
+                validatingUTF8: pointer
+            )
+        else {
+            throw ReadCoreNativeError
+                .invalidUTF8Result
+        }
+
+        if json == "null" {
+            return nil
+        }
+
+        return try JSONDecoder().decode(
+            ReadSourceAnchorResolution.self,
+            from: Data(json.utf8)
         )
     }
 
