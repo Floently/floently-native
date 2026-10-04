@@ -47,4 +47,36 @@ describe("Browser V2 VNC attach gate", () => {
 
     expect(gate.begin()).not.toBeNull();
   });
+
+  it("resets the bounded retry budget after a hide/show cycle", () => {
+    const gate = new BrowserV2VncAttachGate(true);
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const token = gate.begin();
+      expect(token).not.toBeNull();
+      gate.finish(token!);
+    }
+
+    expect(gate.attemptsSinceReset).toBe(3);
+    expect(gate.begin()).toBeNull();
+
+    gate.setActive(false);
+    expect(gate.attemptsSinceReset).toBe(0);
+
+    gate.setActive(true);
+    expect(gate.begin()).not.toBeNull();
+  });
+
+  it("can reset retries immediately after a verified frame", () => {
+    const gate = new BrowserV2VncAttachGate(true);
+    const token = gate.begin();
+
+    expect(token).not.toBeNull();
+    gate.finish(token!);
+    expect(gate.attemptsSinceReset).toBe(1);
+
+    gate.resetRetryBudget();
+
+    expect(gate.attemptsSinceReset).toBe(0);
+  });
 });
