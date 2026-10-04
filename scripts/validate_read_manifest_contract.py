@@ -9,6 +9,7 @@ cannot express cleanly.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -16,6 +17,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "shared/api-contracts/read/fixtures/reading-manifest-v1.sample.json"
 UNICODE_FIXTURE = ROOT / "shared/api-contracts/read/fixtures/unicode-scalar-offsets-v1.json"
+AUDIO_IDENTITY_FIXTURE = ROOT / "shared/api-contracts/read/fixtures/audio-identity-v1.json"
 
 
 def fail(message: str) -> None:
@@ -117,10 +119,63 @@ def main() -> int:
                 f"expected {case['utf16Length']}, got {utf16_length}"
             )
 
+    audio_identity_fixture = json.loads(
+        AUDIO_IDENTITY_FIXTURE.read_text(
+            encoding="utf-8"
+        )
+    )
+    if audio_identity_fixture.get("schemaVersion") != 1:
+        fail("audio identity fixture must use schemaVersion 1")
+
+    separator = "\x1f"
+
+    def identity_digest(parts: list[str]) -> str:
+        canonical = separator.join(parts).encode("utf-8")
+        return "sha256:" + hashlib.sha256(canonical).hexdigest()
+
+    for case in audio_identity_fixture.get("cases", []):
+        rendition_id = identity_digest(
+            [
+                case["documentId"],
+                case["revisionId"],
+                case["language"] or "auto",
+                case["voiceId"],
+                case.get("provider") or "unknown-provider",
+                case.get("model") or "unknown-model",
+                "read-audio-rendition-v1",
+            ]
+        )
+        if rendition_id != case["expectedRenditionId"]:
+            fail(
+                f"audio rendition identity mismatch for {case['id']}: "
+                f"expected {case['expectedRenditionId']}, got {rendition_id}"
+            )
+
+        duration = case.get("physicalDurationMs")
+        timing_map_id = identity_digest(
+            [
+                rendition_id,
+                case["segmentId"],
+                str(case["segmentIndex"]),
+                str(case["logicalStartMs"]),
+                str(case["logicalEndMs"]),
+                str(duration)
+                if duration is not None
+                else "unknown-duration",
+                "read-timing-map-v1",
+            ]
+        )
+        if timing_map_id != case["expectedTimingMapId"]:
+            fail(
+                f"timing-map identity mismatch for {case['id']}: "
+                f"expected {case['expectedTimingMapId']}, got {timing_map_id}"
+            )
+
     print(
         f"ReadingManifest fixture valid: {len(segments)} segments, "
         f"{total_words} words, {manifest['estimatedSourceDurationMs']} ms; "
-        f"{len(unicode_fixture.get('cases', []))} Unicode scalar cases"
+        f"{len(unicode_fixture.get('cases', []))} Unicode scalar cases; "
+        f"{len(audio_identity_fixture.get('cases', []))} audio identity cases"
     )
     return 0
 
