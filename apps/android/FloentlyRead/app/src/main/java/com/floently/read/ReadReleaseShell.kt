@@ -10,6 +10,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -1488,6 +1489,32 @@ private fun ReadHomeScreen(
                         )
                     }
 
+                    if (
+                        playbackController
+                            .snapshot
+                            .visible
+                    ) {
+                        TextButton(
+                            onClick = onAdd,
+                            modifier =
+                                Modifier.height(
+                                    FloentlyDesignTokens
+                                        .Control
+                                        .iconTarget
+                                )
+                        ) {
+                            Text(
+                                "Add",
+                                color =
+                                    FloentlyDesignTokens
+                                        .Colors
+                                        .brandBright,
+                                fontWeight =
+                                    FontWeight.SemiBold
+                            )
+                        }
+                    }
+
                     Surface(
                         color = palette.backgroundBottom,
                         shape = CircleShape,
@@ -1647,52 +1674,163 @@ private fun ReadHomeScreen(
                 }
             }
 
-            item {
-                Spacer(Modifier.height(24.dp))
-                Row(
-                    horizontalArrangement =
-                        Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Button(
-                        onClick = onAdd,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = palette.accent
-                        ),
-                        shape = RoundedCornerShape(FloentlyDesignTokens.Radius.l),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(
-                                FloentlyDesignTokens
-                                    .Control
-                                    .primaryHeight
-                            )
-                    ) {
-                        Text(
-                            "+  Add to Read",
-                            fontWeight = FontWeight.SemiBold
+            if (
+                !playbackController
+                    .snapshot
+                    .visible
+            ) {
+                item {
+                    Spacer(
+                        Modifier.height(
+                            FloentlyDesignTokens
+                                .Space
+                                .s6
                         )
-                    }
-
-                    Button(
-                        onClick = onBrowser,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor =
-                                palette.backgroundBottom
-                        ),
-                        shape = RoundedCornerShape(FloentlyDesignTokens.Radius.l),
-                        modifier = Modifier
-                            .width(64.dp)
-                            .height(
+                    )
+                    Row(
+                        horizontalArrangement =
+                            Arrangement.spacedBy(
                                 FloentlyDesignTokens
-                                    .Control
-                                    .primaryHeight
-                            )
+                                    .Space
+                                    .s3
+                            ),
+                        modifier =
+                            Modifier.fillMaxWidth()
                     ) {
-                        Text("◎")
+                        Button(
+                            onClick = onAdd,
+                            colors =
+                                ButtonDefaults
+                                    .buttonColors(
+                                        containerColor =
+                                            FloentlyDesignTokens
+                                                .Colors
+                                                .brand
+                                    ),
+                            shape =
+                                RoundedCornerShape(
+                                    FloentlyDesignTokens
+                                        .Radius
+                                        .l
+                                ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(
+                                    FloentlyDesignTokens
+                                        .Control
+                                        .primaryHeight
+                                )
+                        ) {
+                            Text(
+                                "Add to Read",
+                                color =
+                                    FloentlyDesignTokens
+                                        .Colors
+                                        .textOnBrand,
+                                fontWeight =
+                                    FontWeight
+                                        .SemiBold
+                            )
+                        }
+
+                        Button(
+                            onClick = onBrowser,
+                            colors =
+                                ButtonDefaults
+                                    .buttonColors(
+                                        containerColor =
+                                            FloentlyDesignTokens
+                                                .Colors
+                                                .surface2
+                                    ),
+                            shape =
+                                RoundedCornerShape(
+                                    FloentlyDesignTokens
+                                        .Radius
+                                        .l
+                                ),
+                            modifier = Modifier
+                                .width(
+                                    FloentlyDesignTokens
+                                        .Control
+                                        .primaryHeight
+                                )
+                                .height(
+                                    FloentlyDesignTokens
+                                        .Control
+                                        .primaryHeight
+                                )
+                        ) {
+                            Text(
+                                "Web",
+                                color = palette.text,
+                                style =
+                                    MaterialTheme
+                                        .typography
+                                        .labelSmall
+                            )
+                        }
                     }
                 }
+            } else {
+                item {
+                    Spacer(
+                        Modifier.height(
+                            FloentlyDesignTokens
+                                .Space
+                                .s4
+                        )
+                    )
+                }
             }
+        }
+    }
+}
+
+private enum class ReadLibraryFilter(
+    val label: String
+) {
+    All("All"),
+    Pdf("PDF"),
+    Epub("EPUB"),
+    Web("Web"),
+    Text("Text"),
+    Other("Other");
+
+    fun matches(
+        project: ReadContentProject
+    ): Boolean {
+        val type =
+            project.sourceType
+                .lowercase()
+
+        return when (this) {
+            All -> true
+            Pdf -> type == "pdf"
+            Epub -> type == "epub"
+            Web -> type in setOf(
+                "web",
+                "website",
+                "url"
+            )
+            Text -> type in setOf(
+                "text",
+                "txt",
+                "markdown",
+                "md"
+            )
+            Other ->
+                type !in setOf(
+                    "pdf",
+                    "epub",
+                    "web",
+                    "website",
+                    "url",
+                    "text",
+                    "txt",
+                    "markdown",
+                    "md"
+                )
         }
     }
 }
@@ -1708,6 +1846,14 @@ private fun ReadLibraryScreen(
     val palette = floentlyPalette(FloentlyProduct.Read)
     val scope = rememberCoroutineScope()
     var search by remember { mutableStateOf("") }
+    var searchVisible by remember {
+        mutableStateOf(false)
+    }
+    var selectedFilter by remember {
+        mutableStateOf(
+            ReadLibraryFilter.All
+        )
+    }
     var pendingDelete by remember {
         mutableStateOf<ReadContentProject?>(null)
     }
@@ -1717,19 +1863,24 @@ private fun ReadLibraryScreen(
         search
     ) {
         val query = search.trim()
-        if (query.isEmpty()) {
-            projectStore.projects
-        } else {
-            projectStore.projects.filter {
-                it.title.contains(
-                    query,
-                    ignoreCase = true
-                )
-                    || it.displaySource.contains(
-                        query,
-                        ignoreCase = true
+        projectStore.projects.filter {
+            project ->
+            selectedFilter.matches(
+                project
+            )
+                && (
+                    query.isEmpty()
+                        || project.title
+                            .contains(
+                                query,
+                                ignoreCase = true
+                            )
+                        || project.displaySource
+                            .contains(
+                                query,
+                                ignoreCase = true
+                            )
                     )
-            }
         }
     }
 
@@ -1740,42 +1891,206 @@ private fun ReadLibraryScreen(
             Row(
                 verticalAlignment =
                     Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        FloentlyDesignTokens
+                            .Space
+                            .s2
+                    ),
+                modifier =
+                    Modifier.fillMaxWidth()
             ) {
                 Text(
                     "Library",
                     color = palette.text,
                     style =
-                        MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
+                        MaterialTheme.typography
+                            .displaySmall,
+                    fontWeight =
+                        FontWeight.Bold,
+                    modifier =
+                        Modifier.weight(1f)
                 )
+
+                TextButton(
+                    onClick = {
+                        searchVisible =
+                            !searchVisible
+                        if (!searchVisible) {
+                            search = ""
+                        }
+                    },
+                    modifier =
+                        Modifier.size(
+                            FloentlyDesignTokens
+                                .Control
+                                .iconTarget
+                        )
+                ) {
+                    Text(
+                        if (searchVisible) {
+                            "×"
+                        } else {
+                            "⌕"
+                        },
+                        color = palette.text,
+                        style =
+                            MaterialTheme
+                                .typography
+                                .titleMedium
+                    )
+                }
 
                 Button(
                     onClick = onAdd,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor =
-                            palette.backgroundBottom
-                    ),
-                    shape = CircleShape,
-                    contentPadding = PaddingValues(0.dp),
-                    modifier = Modifier.size(48.dp)
+                    colors =
+                        ButtonDefaults
+                            .buttonColors(
+                                containerColor =
+                                    FloentlyDesignTokens
+                                        .Colors
+                                        .surface2
+                            ),
+                    shape =
+                        RoundedCornerShape(
+                            FloentlyDesignTokens
+                                .Radius
+                                .m
+                        ),
+                    contentPadding =
+                        PaddingValues(0.dp),
+                    modifier =
+                        Modifier.size(
+                            FloentlyDesignTokens
+                                .Control
+                                .iconTarget
+                        )
                 ) {
                     Text(
                         "+",
+                        color = palette.text,
                         style =
-                            MaterialTheme.typography.titleLarge
+                            MaterialTheme
+                                .typography
+                                .titleLarge
                     )
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
-            ReadTextField(
-                value = search,
-                onValueChange = { search = it },
-                label = "Search your library"
+            if (searchVisible) {
+                Spacer(
+                    Modifier.height(
+                        FloentlyDesignTokens
+                            .Space
+                            .s3
+                    )
+                )
+                ReadTextField(
+                    value = search,
+                    onValueChange = {
+                        search = it
+                    },
+                    label =
+                        "Search your library"
+                )
+            }
+
+            Spacer(
+                Modifier.height(
+                    FloentlyDesignTokens
+                        .Space
+                        .s3
+                )
             )
-            Spacer(Modifier.height(12.dp))
+            Row(
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        FloentlyDesignTokens
+                            .Space
+                            .s2
+                    ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(
+                        rememberScrollState()
+                    )
+            ) {
+                ReadLibraryFilter.entries
+                    .forEach { filter ->
+                        Button(
+                            onClick = {
+                                selectedFilter =
+                                    filter
+                            },
+                            colors =
+                                ButtonDefaults
+                                    .buttonColors(
+                                        containerColor =
+                                            if (
+                                                selectedFilter
+                                                    == filter
+                                            ) {
+                                                FloentlyDesignTokens
+                                                    .Colors
+                                                    .brandTint
+                                            } else {
+                                                FloentlyDesignTokens
+                                                    .Colors
+                                                    .surface1
+                                            },
+                                        contentColor =
+                                            if (
+                                                selectedFilter
+                                                    == filter
+                                            ) {
+                                                FloentlyDesignTokens
+                                                    .Colors
+                                                    .brandBright
+                                            } else {
+                                                palette.muted
+                                            }
+                                    ),
+                            shape =
+                                RoundedCornerShape(
+                                    FloentlyDesignTokens
+                                        .Radius
+                                        .m
+                                ),
+                            contentPadding =
+                                PaddingValues(
+                                    horizontal =
+                                        FloentlyDesignTokens
+                                            .Space
+                                            .s3,
+                                    vertical = 0.dp
+                                ),
+                            modifier =
+                                Modifier.height(
+                                    FloentlyDesignTokens
+                                        .Control
+                                        .compactHeight
+                                )
+                        ) {
+                            Text(
+                                filter.label,
+                                style =
+                                    MaterialTheme
+                                        .typography
+                                        .labelMedium,
+                                fontWeight =
+                                    FontWeight
+                                        .SemiBold
+                            )
+                        }
+                    }
+            }
+            Spacer(
+                Modifier.height(
+                    FloentlyDesignTokens
+                        .Space
+                        .s3
+                )
+            )
 
             if (
                 projectStore.activity != "idle"
