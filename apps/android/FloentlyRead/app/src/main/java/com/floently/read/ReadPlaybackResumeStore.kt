@@ -13,7 +13,11 @@ data class ReadPlaybackResumeSnapshot(
     val sourceSegmentId: String? = null,
     val sourceSegmentIndex: Int? = null,
     val voiceId: String? = null,
-    val renditionId: String? = null
+    val renditionId: String? = null,
+    val sourceAnchorQuote: String? = null,
+    val sourceAnchorPrefixContext: String? = null,
+    val sourceAnchorSuffixContext: String? = null,
+    val sourceAnchorCursorOffset: Int? = null
 )
 
 class ReadPlaybackResumeStore(
@@ -34,82 +38,148 @@ class ReadPlaybackResumeStore(
             null
         ) ?: return null
 
-        return runCatching {
-            val json = JSONObject(raw)
-            val snapshot = ReadPlaybackResumeSnapshot(
-                documentId = json.getString("document_id"),
-                revisionId = json.getString("revision_id"),
-                logicalTimeMs = json.getLong("logical_time_ms")
-                    .coerceAtLeast(0L),
-                playbackSpeed = json.getDouble("playback_speed")
-                    .toFloat()
-                    .coerceIn(0.5f, 3f),
-                updatedAtMs = json.optLong(
-                    "updated_at_ms",
-                    0L
-                ),
-                sourceScalarOffset =
-                    json.optIntOrNull(
-                        "source_scalar_offset"
-                    ),
-                sourceSegmentId =
-                    json.optStringOrNull(
-                        "source_segment_id"
-                    ),
-                sourceSegmentIndex =
-                    json.optIntOrNull(
-                        "source_segment_index"
-                    ),
-                voiceId =
-                    json.optStringOrNull("voice_id"),
-                renditionId =
-                    json.optStringOrNull(
-                        "rendition_id"
-                    )
-            )
+        return decode(raw)?.takeIf {
+            it.documentId == documentId
+                && it.revisionId == revisionId
+        }
+    }
 
-            snapshot.takeIf {
-                it.documentId == documentId
-                    && it.revisionId == revisionId
+    fun loadLatest(
+        documentId: String,
+        excludingRevisionId: String
+    ): ReadPlaybackResumeSnapshot? {
+        val keyPrefix =
+            "resume::" + documentId + "::"
+
+        return preferences.all
+            .asSequence()
+            .filter {
+                it.key.startsWith(
+                    keyPrefix
+                )
             }
-        }.getOrNull()
+            .mapNotNull {
+                it.value as? String
+            }
+            .mapNotNull(::decode)
+            .filter {
+                it.documentId == documentId
+                    && it.revisionId
+                        != excludingRevisionId
+            }
+            .maxByOrNull {
+                it.updatedAtMs
+            }
     }
 
     fun save(snapshot: ReadPlaybackResumeSnapshot) {
+        val existing =
+            load(
+                documentId =
+                    resolved.documentId,
+                revisionId =
+                    resolved.revisionId
+            )
+        val resolved =
+            snapshot.copy(
+                sourceScalarOffset =
+                    snapshot.sourceScalarOffset
+                        ?: existing
+                            ?.sourceScalarOffset,
+                sourceSegmentId =
+                    snapshot.sourceSegmentId
+                        ?: existing
+                            ?.sourceSegmentId,
+                sourceSegmentIndex =
+                    snapshot.sourceSegmentIndex
+                        ?: existing
+                            ?.sourceSegmentIndex,
+                voiceId =
+                    snapshot.voiceId
+                        ?: existing?.voiceId,
+                renditionId =
+                    snapshot.renditionId
+                        ?: existing
+                            ?.renditionId,
+                sourceAnchorQuote =
+                    snapshot.sourceAnchorQuote
+                        ?: existing
+                            ?.sourceAnchorQuote,
+                sourceAnchorPrefixContext =
+                    snapshot
+                        .sourceAnchorPrefixContext
+                        ?: existing
+                            ?.sourceAnchorPrefixContext,
+                sourceAnchorSuffixContext =
+                    snapshot
+                        .sourceAnchorSuffixContext
+                        ?: existing
+                            ?.sourceAnchorSuffixContext,
+                sourceAnchorCursorOffset =
+                    snapshot
+                        .sourceAnchorCursorOffset
+                        ?: existing
+                            ?.sourceAnchorCursorOffset
+            )
+
         val json = JSONObject()
-            .put("document_id", snapshot.documentId)
-            .put("revision_id", snapshot.revisionId)
+            .put("document_id", resolved.documentId)
+            .put("revision_id", resolved.revisionId)
             .put(
                 "logical_time_ms",
-                snapshot.logicalTimeMs.coerceAtLeast(0L)
+                resolved.logicalTimeMs.coerceAtLeast(0L)
             )
             .put(
                 "playback_speed",
-                snapshot.playbackSpeed.coerceIn(0.5f, 3f)
+                resolved.playbackSpeed.coerceIn(0.5f, 3f)
             )
-            .put("updated_at_ms", snapshot.updatedAtMs)
+            .put("updated_at_ms", resolved.updatedAtMs)
 
-        snapshot.sourceScalarOffset?.let {
+        resolved.sourceScalarOffset?.let {
             json.put("source_scalar_offset", it)
         }
-        snapshot.sourceSegmentId?.let {
+        resolved.sourceSegmentId?.let {
             json.put("source_segment_id", it)
         }
-        snapshot.sourceSegmentIndex?.let {
+        resolved.sourceSegmentIndex?.let {
             json.put("source_segment_index", it)
         }
-        snapshot.voiceId?.let {
+        resolved.voiceId?.let {
             json.put("voice_id", it)
         }
-        snapshot.renditionId?.let {
+        resolved.renditionId?.let {
             json.put("rendition_id", it)
+        }
+        resolved.sourceAnchorQuote?.let {
+            json.put(
+                "source_anchor_quote",
+                it
+            )
+        }
+        resolved.sourceAnchorPrefixContext?.let {
+            json.put(
+                "source_anchor_prefix_context",
+                it
+            )
+        }
+        resolved.sourceAnchorSuffixContext?.let {
+            json.put(
+                "source_anchor_suffix_context",
+                it
+            )
+        }
+        resolved.sourceAnchorCursorOffset?.let {
+            json.put(
+                "source_anchor_cursor_offset",
+                it
+            )
         }
 
         preferences.edit()
             .putString(
                 key(
-                    snapshot.documentId,
-                    snapshot.revisionId
+                    resolved.documentId,
+                    resolved.revisionId
                 ),
                 json.toString()
             )
@@ -124,6 +194,78 @@ class ReadPlaybackResumeStore(
             .remove(key(documentId, revisionId))
             .apply()
     }
+
+    private fun decode(
+        raw: String
+    ): ReadPlaybackResumeSnapshot? =
+        runCatching {
+            val json = JSONObject(raw)
+            ReadPlaybackResumeSnapshot(
+                documentId =
+                    json.getString(
+                        "document_id"
+                    ),
+                revisionId =
+                    json.getString(
+                        "revision_id"
+                    ),
+                logicalTimeMs =
+                    json.getLong(
+                        "logical_time_ms"
+                    )
+                        .coerceAtLeast(0L),
+                playbackSpeed =
+                    json.getDouble(
+                        "playback_speed"
+                    )
+                        .toFloat()
+                        .coerceIn(
+                            0.5f,
+                            3f
+                        ),
+                updatedAtMs =
+                    json.optLong(
+                        "updated_at_ms",
+                        0L
+                    ),
+                sourceScalarOffset =
+                    json.optIntOrNull(
+                        "source_scalar_offset"
+                    ),
+                sourceSegmentId =
+                    json.optStringOrNull(
+                        "source_segment_id"
+                    ),
+                sourceSegmentIndex =
+                    json.optIntOrNull(
+                        "source_segment_index"
+                    ),
+                voiceId =
+                    json.optStringOrNull(
+                        "voice_id"
+                    ),
+                renditionId =
+                    json.optStringOrNull(
+                        "rendition_id"
+                    ),
+                sourceAnchorQuote =
+                    json.optStringOrNull(
+                        "source_anchor_quote"
+                    ),
+                sourceAnchorPrefixContext =
+                    json.optStringOrNull(
+                        "source_anchor_prefix_context"
+                    ),
+                sourceAnchorSuffixContext =
+                    json.optStringOrNull(
+                        "source_anchor_suffix_context"
+                    ),
+                sourceAnchorCursorOffset =
+                    json.optIntOrNull(
+                        "source_anchor_cursor_offset"
+                    )
+            )
+        }.getOrNull()
 
     private fun JSONObject.optStringOrNull(
         key: String
