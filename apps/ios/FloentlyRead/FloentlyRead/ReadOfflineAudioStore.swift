@@ -6,6 +6,18 @@ struct ReadOfflineAudioAsset: Equatable {
     let duration: TimeInterval?
 }
 
+struct ReadOfflineAudioSummary: Equatable {
+    let documentCount: Int
+    let bundleCount: Int
+    let bytes: Int64
+
+    static let empty = ReadOfflineAudioSummary(
+        documentCount: 0,
+        bundleCount: 0,
+        bytes: 0
+    )
+}
+
 actor ReadOfflineAudioStore {
     static let shared = ReadOfflineAudioStore()
 
@@ -318,6 +330,103 @@ actor ReadOfflineAudioStore {
         )
     }
 
+    func summary(
+        accountIdentity: String
+    ) -> ReadOfflineAudioSummary {
+        let account = accountDirectory(
+            accountIdentity
+        )
+        guard fileManager.fileExists(
+            atPath: account.path
+        ) else {
+            return .empty
+        }
+
+        let documentDirectories =
+            (
+                try? fileManager
+                    .contentsOfDirectory(
+                        at: account,
+                        includingPropertiesForKeys:
+                            [.isDirectoryKey],
+                        options:
+                            [.skipsHiddenFiles]
+                    )
+            )?
+            .filter { url in
+                (
+                    try? url.resourceValues(
+                        forKeys:
+                            [.isDirectoryKey]
+                    ).isDirectory
+                ) == true
+            }
+            ?? []
+
+        guard
+            let enumerator =
+                fileManager.enumerator(
+                    at: account,
+                    includingPropertiesForKeys: [
+                        .isRegularFileKey,
+                        .fileSizeKey
+                    ],
+                    options: [.skipsHiddenFiles]
+                )
+        else {
+            return ReadOfflineAudioSummary(
+                documentCount:
+                    documentDirectories.count,
+                bundleCount: 0,
+                bytes: 0
+            )
+        }
+
+        var bundleCount = 0
+        var bytes: Int64 = 0
+
+        for case let url as URL in enumerator {
+            guard
+                let values =
+                    try? url.resourceValues(
+                        forKeys: [
+                            .isRegularFileKey,
+                            .fileSizeKey
+                        ]
+                    ),
+                values.isRegularFile == true
+            else {
+                continue
+            }
+
+            bytes += Int64(
+                values.fileSize ?? 0
+            )
+            if url.lastPathComponent
+                == "bundle.json"
+            {
+                bundleCount += 1
+            }
+        }
+
+        return ReadOfflineAudioSummary(
+            documentCount:
+                documentDirectories.count,
+            bundleCount: bundleCount,
+            bytes: bytes
+        )
+    }
+
+    func clearAccount(
+        accountIdentity: String
+    ) {
+        try? fileManager.removeItem(
+            at: accountDirectory(
+                accountIdentity
+            )
+        )
+    }
+
     func clearAll() {
         try? fileManager.removeItem(
             at: root
@@ -346,19 +455,26 @@ actor ReadOfflineAudioStore {
             : nil
     }
 
+    private func accountDirectory(
+        _ accountIdentity: String
+    ) -> URL {
+        root.appending(
+            path: storageKey(
+                accountIdentity
+            ),
+            directoryHint: .isDirectory
+        )
+    }
+
     private func bundleDirectory(
         accountIdentity: String,
         documentId: String,
         revisionId: String,
         voiceId: String
     ) -> URL {
-        root
-            .appending(
-                path: storageKey(
-                    accountIdentity
-                ),
-                directoryHint: .isDirectory
-            )
+        accountDirectory(
+            accountIdentity
+        )
             .appending(
                 path: storageKey(documentId),
                 directoryHint: .isDirectory
