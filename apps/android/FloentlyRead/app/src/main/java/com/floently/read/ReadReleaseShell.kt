@@ -989,6 +989,8 @@ private fun ReadAccessAccountDeletionControl(
                                     .clearAll(context)
                                 ReadOfflineAudioStore
                                     .clearAll(context)
+                                ReadAccessLeaseStore
+                                    .clearAll(context)
                             }
                                 .onSuccess {
                                     showDialog = false
@@ -2247,6 +2249,8 @@ private fun ReadSettingsScreen(
                                 ReadProjectSnapshotStore
                                     .clearAll(context)
                                 ReadOfflineAudioStore
+                                    .clearAll(context)
+                                ReadAccessLeaseStore
                                     .clearAll(context)
                             }
                                 .onSuccess {
