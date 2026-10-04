@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - build/read-native-first-release-shell-20261004
+    paths:
+      - "apps/android/**"
+      - "shared/read-core-rust/**"
+      - "shared/read-core-native-ffi/**"
+      - "shared/api-contracts/read/**"
+      - "scripts/build_read_native_core_android.sh"
+      - ".github/workflows/read-first-release-android-ci.yml"
 
 concurrency:
   group: read-first-release-android-${{ github.ref }}
