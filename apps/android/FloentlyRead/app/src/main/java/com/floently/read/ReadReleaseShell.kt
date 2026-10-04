@@ -150,6 +150,13 @@ fun ReadReleaseApp(
     val projectStore = remember { ReadProjectStore() }
     var sessionRevision by remember { mutableIntStateOf(0) }
 
+    fun clearAccountState() {
+        playbackController.clear()
+        projectStore.reset()
+        sessionStore.clear()
+        sessionRevision += 1
+    }
+
     val session = sessionStore.session
 
     LaunchedEffect(
@@ -183,9 +190,7 @@ fun ReadReleaseApp(
                 onRefresh = {
                     sessionRevision += 1
                 },
-                onSignedOut = {
-                    sessionRevision += 1
-                }
+                onSignedOut = ::clearAccountState
             )
         }
 
@@ -196,10 +201,7 @@ fun ReadReleaseApp(
                 onRetry = {
                     sessionRevision += 1
                 },
-                onSignedOut = {
-                    sessionStore.clear()
-                    sessionRevision += 1
-                }
+                onSignedOut = ::clearAccountState
             )
         }
 
@@ -211,10 +213,7 @@ fun ReadReleaseApp(
                 projectStore = projectStore,
                 playbackController = playbackController,
                 voiceSettings = voiceSettings,
-                onSignedOut = {
-                    sessionStore.clear()
-                    sessionRevision += 1
-                }
+                onSignedOut = ::clearAccountState
             )
         }
     }
@@ -589,10 +588,7 @@ private fun ReadEntitlementScreen(
             }
 
             TextButton(
-                onClick = {
-                    sessionStore.clear()
-                    onSignedOut()
-                }
+                onClick = onSignedOut
             ) {
                 Text(
                     "Sign out",
@@ -1540,10 +1536,7 @@ private fun ReadSettingsScreen(
 
             Spacer(Modifier.height(22.dp))
             Button(
-                onClick = {
-                    sessionStore.clear()
-                    onSignedOut()
-                },
+                onClick = onSignedOut,
                 colors = ButtonDefaults.buttonColors(
                     containerColor =
                         Color(0xFF6B1F2A)
