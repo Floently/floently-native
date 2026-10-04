@@ -477,6 +477,7 @@ class ReadProjectStore {
         text: String,
         accessToken: String
     ): ReadContentProject {
+        errorMessage = null
         activity = "Saving text"
         return try {
             client.createTextProject(
@@ -494,6 +495,7 @@ class ReadProjectStore {
         resolver: ContentResolver,
         accessToken: String
     ): ReadContentProject {
+        errorMessage = null
         activity = "Uploading and extracting"
         return try {
             client.uploadProject(
