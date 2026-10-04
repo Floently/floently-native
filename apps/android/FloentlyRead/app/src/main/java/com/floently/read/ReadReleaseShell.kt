@@ -2,6 +2,7 @@ package com.floently.read
 
 import android.content.Context
 import android.content.Intent
+import android.text.format.Formatter
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -2112,6 +2113,51 @@ private fun ReadSettingsScreen(
     var deleteError by remember {
         mutableStateOf<String?>(null)
     }
+    var offlineSummary by remember {
+        mutableStateOf<ReadOfflineAudioSummary?>(null)
+    }
+    var offlineStorageBusy by remember {
+        mutableStateOf(false)
+    }
+    var offlineStorageError by remember {
+        mutableStateOf<String?>(null)
+    }
+    var showClearDownloadsDialog by remember {
+        mutableStateOf(false)
+    }
+    var offlineSummaryRevision by remember {
+        mutableIntStateOf(0)
+    }
+    val offlineAccountIdentity =
+        session?.user?.let {
+            readAccountIdentity(
+                userId = it.id,
+                email = it.email
+            )
+        }
+
+    LaunchedEffect(
+        offlineAccountIdentity,
+        offlineSummaryRevision
+    ) {
+        val identity =
+            offlineAccountIdentity
+        offlineStorageBusy = true
+        offlineStorageError = null
+
+        offlineSummary =
+            if (identity == null) {
+                ReadOfflineAudioSummary.Empty
+            } else {
+                ReadOfflineAudioStore.summary(
+                    context = context,
+                    accountIdentity =
+                        identity
+                )
+            }
+
+        offlineStorageBusy = false
+    }
 
     FloentlyScreen(product = FloentlyProduct.Read) {
         Column(
@@ -2206,6 +2252,168 @@ private fun ReadSettingsScreen(
             Spacer(Modifier.height(16.dp))
 
             ReadSurfaceCard {
+                Row(
+                    verticalAlignment =
+                        Alignment.CenterVertically,
+                    modifier =
+                        Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "Offline downloads",
+                        color = palette.text,
+                        fontWeight =
+                            FontWeight.Bold,
+                        modifier =
+                            Modifier.weight(1f)
+                    )
+
+                    TextButton(
+                        enabled =
+                            !offlineStorageBusy,
+                        onClick = {
+                            offlineStorageBusy = true
+                            offlineSummaryRevision += 1
+                        }
+                    ) {
+                        Text(
+                            if (offlineStorageBusy) {
+                                "Checking…"
+                            } else {
+                                "Refresh"
+                            },
+                            color = palette.accent
+                        )
+                    }
+                }
+
+                offlineSummary?.let {
+                    summary ->
+                    SettingsValueRow(
+                        label = "Saved documents",
+                        value =
+                            summary.documentCount
+                                .toString()
+                    )
+                    SettingsValueRow(
+                        label = "Audio bundles",
+                        value =
+                            summary.bundleCount
+                                .toString()
+                    )
+                    SettingsValueRow(
+                        label = "Storage",
+                        value =
+                            Formatter
+                                .formatFileSize(
+                                    context,
+                                    summary.bytes
+                                )
+                    )
+
+                    Text(
+                        "Downloads are stored privately on this device for this Floently account.",
+                        color = palette.muted,
+                        style =
+                            MaterialTheme.typography
+                                .bodySmall
+                    )
+
+                    Button(
+                        enabled =
+                            !offlineStorageBusy
+                            && summary.bundleCount > 0,
+                        onClick = {
+                            if (
+                                playbackController
+                                    .activeDocumentId
+                                    != null
+                            ) {
+                                offlineStorageError =
+                                    "Stop playback before removing all offline downloads."
+                            } else {
+                                showClearDownloadsDialog =
+                                    true
+                            }
+                        },
+                        colors =
+                            ButtonDefaults
+                                .buttonColors(
+                                    containerColor =
+                                        FloentlyDesignTokens
+                                            .Colors
+                                            .danger
+                                            .copy(
+                                                alpha =
+                                                    0.16f
+                                            ),
+                                    contentColor =
+                                        FloentlyDesignTokens
+                                            .Colors
+                                            .danger
+                                ),
+                        shape =
+                            RoundedCornerShape(
+                                FloentlyDesignTokens
+                                    .Radius
+                                    .m
+                            ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Text(
+                            if (
+                                summary.bundleCount
+                                    == 0
+                            ) {
+                                "No offline downloads"
+                            } else {
+                                "Remove all downloads"
+                            },
+                            fontWeight =
+                                FontWeight.SemiBold
+                        )
+                    }
+                } ?: Row(
+                    verticalAlignment =
+                        Alignment.CenterVertically,
+                    horizontalArrangement =
+                        Arrangement.spacedBy(
+                            FloentlyDesignTokens
+                                .Space
+                                .s2
+                        )
+                ) {
+                    CircularProgressIndicator(
+                        strokeWidth = 2.dp,
+                        color = palette.accent,
+                        modifier = Modifier.size(
+                            20.dp
+                        )
+                    )
+                    Text(
+                        "Checking saved audio…",
+                        color = palette.muted
+                    )
+                }
+
+                offlineStorageError?.let {
+                    Text(
+                        it,
+                        color =
+                            FloentlyDesignTokens
+                                .Colors
+                                .warning,
+                        style =
+                            MaterialTheme.typography
+                                .bodySmall
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            ReadSurfaceCard {
                 Text(
                     "Privacy & support",
                     color = palette.text,
@@ -2288,6 +2496,116 @@ private fun ReadSettingsScreen(
             }
             Spacer(Modifier.height(28.dp))
         }
+    }
+
+    if (showClearDownloadsDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!offlineStorageBusy) {
+                    showClearDownloadsDialog =
+                        false
+                }
+            },
+            title = {
+                Text(
+                    "Remove all offline downloads?"
+                )
+            },
+            text = {
+                Text(
+                    "This removes saved audio for this account from this device. Your Library items remain available."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled =
+                        !offlineStorageBusy,
+                    onClick = {
+                        val identity =
+                            offlineAccountIdentity
+                        if (
+                            playbackController
+                                .activeDocumentId
+                                != null
+                        ) {
+                            showClearDownloadsDialog =
+                                false
+                            offlineStorageError =
+                                "Stop playback before removing all offline downloads."
+                            return@TextButton
+                        }
+                        if (identity == null) {
+                            showClearDownloadsDialog =
+                                false
+                            offlineStorageError =
+                                "Sign in again before managing offline downloads."
+                            return@TextButton
+                        }
+
+                        offlineStorageBusy = true
+                        offlineStorageError = null
+
+                        scope.launch {
+                            try {
+                                ReadOfflineAudioStore
+                                    .clearAccount(
+                                        context =
+                                            context,
+                                        accountIdentity =
+                                            identity
+                                    )
+                                offlineSummary =
+                                    ReadOfflineAudioStore
+                                        .summary(
+                                            context =
+                                                context,
+                                            accountIdentity =
+                                                identity
+                                        )
+                                showClearDownloadsDialog =
+                                    false
+                            } catch (
+                                error:
+                                    CancellationException
+                            ) {
+                                throw error
+                            } catch (
+                                error: Exception
+                            ) {
+                                showClearDownloadsDialog =
+                                    false
+                                offlineStorageError =
+                                    error.localizedMessage
+                                        ?: "Could not remove offline downloads."
+                            } finally {
+                                offlineStorageBusy =
+                                    false
+                            }
+                        }
+                    }
+                ) {
+                    Text(
+                        "Remove downloads",
+                        color =
+                            FloentlyDesignTokens
+                                .Colors
+                                .danger
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled =
+                        !offlineStorageBusy,
+                    onClick = {
+                        showClearDownloadsDialog =
+                            false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     if (showDeleteDialog) {
@@ -2375,6 +2693,33 @@ private fun ReadSettingsScreen(
                     Text("Cancel")
                 }
             }
+        )
+    }
+}
+
+@Composable
+private fun SettingsValueRow(
+    label: String,
+    value: String
+) {
+    val palette =
+        floentlyPalette(
+            FloentlyProduct.Read
+        )
+
+    Row(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            label,
+            color = palette.text
+        )
+        Spacer(Modifier.weight(1f))
+        Text(
+            value,
+            color = palette.muted,
+            fontWeight =
+                FontWeight.SemiBold
         )
     }
 }
