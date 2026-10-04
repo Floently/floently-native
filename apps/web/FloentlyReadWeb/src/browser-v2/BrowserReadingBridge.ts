@@ -27,6 +27,7 @@ export type BrowserReadingBridgeStatus =
 export interface BrowserReadingBridgeSnapshot {
   status: BrowserReadingBridgeStatus;
   tabId: string | null;
+  documentId: string | null;
   title: string | null;
   canonicalUrl: string | null;
   revisionId: string | null;
@@ -61,6 +62,7 @@ interface PendingHighlight {
 const EMPTY_SNAPSHOT: BrowserReadingBridgeSnapshot = {
   status: "idle",
   tabId: null,
+  documentId: null,
   title: null,
   canonicalUrl: null,
   revisionId: null,
@@ -126,6 +128,7 @@ export class BrowserReadingBridge {
     this.replaceSnapshot({
       status: "extracting",
       tabId: normalizedTabId,
+      documentId: null,
       title: null,
       canonicalUrl: null,
       revisionId: null,
@@ -166,6 +169,7 @@ export class BrowserReadingBridge {
       this.replaceSnapshot({
         status: "ready",
         tabId: normalizedTabId,
+        documentId: manifest.documentId,
         title: source.title,
         canonicalUrl: source.canonicalUrl,
         revisionId: source.revisionId,
@@ -197,6 +201,7 @@ export class BrowserReadingBridge {
 
     this.replaceSnapshot({
       status: "stale",
+      documentId: null,
       title: null,
       canonicalUrl: null,
       revisionId: null,
@@ -273,6 +278,7 @@ export class BrowserReadingBridge {
       || !source
       || !manifest
       || !tabId
+      || !this.playbackOwns(manifest)
     ) {
       return false;
     }
@@ -318,9 +324,16 @@ export class BrowserReadingBridge {
       return false;
     }
 
-    await this.playback.play();
-    if (!this.isCurrent(generation, tabId, manifest)) {
-      return false;
+    const statusAfterSeek = this.playback.getSnapshot().status;
+    if (
+      statusAfterSeek !== "playing"
+      && statusAfterSeek !== "preparing"
+      && statusAfterSeek !== "buffering"
+    ) {
+      await this.playback.play();
+      if (!this.isCurrent(generation, tabId, manifest)) {
+        return false;
+      }
     }
 
     this.enqueueHighlight(anchor);
@@ -339,6 +352,7 @@ export class BrowserReadingBridge {
       || !tabId
       || source.spans.length === 0
       || this.snapshot.status !== "ready"
+      || !this.playbackOwns(manifest)
     ) {
       return false;
     }
@@ -495,6 +509,17 @@ export class BrowserReadingBridge {
       && this.snapshot.tabId === tabId
       && this.manifest === manifest
       && this.source !== null
+      && this.playbackOwns(manifest)
+    );
+  }
+
+  private playbackOwns(
+    manifest: ReadingManifestSummary,
+  ): boolean {
+    const playback = this.playback.getSnapshot();
+    return (
+      playback.documentId === manifest.documentId
+      && playback.revisionId === manifest.revisionId
     );
   }
 

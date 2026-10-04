@@ -7,6 +7,7 @@ import type {
 const EMPTY: BrowserReadingBridgeSnapshot = {
   status: "idle",
   tabId: null,
+  documentId: null,
   title: null,
   canonicalUrl: null,
   revisionId: null,
