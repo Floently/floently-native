@@ -4,6 +4,8 @@ import Foundation
 struct ReadOfflineAudioAsset: Equatable {
     let localURL: URL
     let duration: TimeInterval?
+    let renditionId: String?
+    let timingMapId: String?
 }
 
 struct ReadOfflineAudioSummary: Equatable {
@@ -27,6 +29,8 @@ actor ReadOfflineAudioStore {
         let fileName: String
         let duration: TimeInterval?
         let sha256: String
+        let renditionId: String?
+        let timingMapId: String?
     }
 
     private struct BundleMetadata: Codable {
@@ -97,7 +101,11 @@ actor ReadOfflineAudioStore {
 
         return ReadOfflineAudioAsset(
             localURL: file,
-            duration: item.duration
+            duration: item.duration,
+            renditionId:
+                item.renditionId,
+            timingMapId:
+                item.timingMapId
         )
     }
 
@@ -244,10 +252,15 @@ actor ReadOfflineAudioStore {
                         id: sourceSegment.id,
                         index: sourceSegment.index,
                         fileName: fileName,
-                        duration: prepared.physicalDuration,
+                        duration:
+                            prepared.physicalDuration,
                         sha256: try checksum(
                             destination
-                        )
+                        ),
+                        renditionId:
+                            prepared.renditionId,
+                        timingMapId:
+                            prepared.timingMapId
                     )
                 )
             }
