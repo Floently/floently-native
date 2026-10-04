@@ -35,6 +35,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
     private weak var boundPlayback: ReadPlaybackSession?
     private var preparedSegments: [Int: ReadPlayableSegment] = [:]
     private var activeAccessToken: String?
+    private var activeAccountIdentity: String?
     private var lastUnderrunBoundaryIndex: Int?
     private var lastAnchoredSegmentIndex: Int?
     private var nextRefillAllowedAt = Date.distantPast
@@ -59,6 +60,15 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         activeVoiceId = voiceId
         activeLanguage = manifest.language
         activeAccessToken = sessionStore.session?.token
+        if let user = sessionStore.session?.user {
+            activeAccountIdentity =
+                readAccountIdentity(
+                    userId: user.id,
+                    email: user.email
+                )
+        } else {
+            activeAccountIdentity = nil
+        }
         lastUnderrunBoundaryIndex = nil
         lastAnchoredSegmentIndex = nil
         nextRefillAllowedAt = .distantPast
@@ -94,6 +104,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                     startingAt: effectiveIndex,
                     voiceId: voiceId,
                     accessToken: accessToken,
+                    accountIdentity: activeAccountIdentity,
                     maxSegments: 1
                 )
 
@@ -205,6 +216,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                     startingAt: targetIndex,
                     voiceId: newVoice,
                     accessToken: activeAccessToken,
+                    accountIdentity: activeAccountIdentity,
                     maxSegments: 1
                 )
 
@@ -300,6 +312,78 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         }
     }
 
+    func isAvailableOffline(
+        manifest: ReadingManifestV1,
+        voiceId: String,
+        sessionStore: FloentlySessionStore
+    ) async -> Bool {
+        guard
+            let coordinator,
+            let user = sessionStore.session?.user,
+            let accountIdentity = readAccountIdentity(
+                userId: user.id,
+                email: user.email
+            )
+        else {
+            return false
+        }
+
+        return await coordinator.isAvailableOffline(
+            manifest: manifest,
+            voiceId: voiceId,
+            accountIdentity: accountIdentity
+        )
+    }
+
+    func saveOffline(
+        manifest: ReadingManifestV1,
+        voiceId: String,
+        sessionStore: FloentlySessionStore
+    ) async throws {
+        guard let coordinator else {
+            throw ReadOfflineAudioStoreError.unavailable
+        }
+        guard
+            let session = sessionStore.session,
+            let accountIdentity = readAccountIdentity(
+                userId: session.user.id,
+                email: session.user.email
+            )
+        else {
+            throw ReadOfflineAudioStoreError.signedOut
+        }
+
+        try await coordinator.saveOffline(
+            manifest: manifest,
+            voiceId: voiceId,
+            accessToken: session.token,
+            accountIdentity: accountIdentity
+        )
+    }
+
+    func removeOffline(
+        manifest: ReadingManifestV1,
+        voiceId: String,
+        sessionStore: FloentlySessionStore
+    ) async {
+        guard
+            let coordinator,
+            let user = sessionStore.session?.user,
+            let accountIdentity = readAccountIdentity(
+                userId: user.id,
+                email: user.email
+            )
+        else {
+            return
+        }
+
+        await coordinator.removeOffline(
+            manifest: manifest,
+            voiceId: voiceId,
+            accountIdentity: accountIdentity
+        )
+    }
+
     func cancel() {
         cancelTasks()
         preparedSegments.removeAll()
@@ -307,6 +391,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
         activeVoiceId = nil
         activeLanguage = "auto"
         activeAccessToken = nil
+        activeAccountIdentity = nil
         lastUnderrunBoundaryIndex = nil
         lastAnchoredSegmentIndex = nil
         nextRefillAllowedAt = .distantPast
@@ -377,6 +462,7 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                     startingAt: targetIndex,
                     voiceId: voiceId,
                     accessToken: accessToken,
+                    accountIdentity: activeAccountIdentity,
                     maxSegments: 1
                 )
 
@@ -521,7 +607,8 @@ final class ReadDocumentPlaybackLoader: ObservableObject {
                 manifest: manifest,
                 startingAt: nextIndex,
                 voiceId: voiceId,
-                accessToken: accessToken
+                accessToken: accessToken,
+                accountIdentity: activeAccountIdentity
             )
 
             guard !Task.isCancelled else { return }
