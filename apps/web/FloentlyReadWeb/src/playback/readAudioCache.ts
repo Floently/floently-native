@@ -46,6 +46,7 @@ export function readAudioCacheStorageNames(
     dbName: `${DB_NAME_PREFIX}:${scope}`,
   };
 }
+
 const MIB = 1024 * 1024;
 const QUOTA_PRESSURE_MIN_HEADROOM_BYTES = 4 * MIB;
 const QUOTA_PRESSURE_MAX_HEADROOM_BYTES = 16 * MIB;
@@ -466,7 +467,7 @@ export class ReadAudioCache implements ReadAudioCachePort {
         };
 
         hydrated.push(next);
-        await writeMetadata(next);
+        await writeMetadata(this.dbName, next);
       } catch {
         // Unknown legacy size must not make the cache appear artificially
         // small. Treat it as one full budget so an idle entry is eligible
