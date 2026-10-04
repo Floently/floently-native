@@ -23,6 +23,10 @@ struct ReadOfflineAudioSummary: Equatable {
 actor ReadOfflineAudioStore {
     static let shared = ReadOfflineAudioStore()
 
+    private static let currentSchemaVersion = 2
+    private static let supportedSchemaVersions:
+        Set<Int> = [1, 2]
+
     private struct SegmentMetadata: Codable {
         let id: String
         let index: Int
@@ -164,7 +168,11 @@ actor ReadOfflineAudioStore {
     ) throws {
         guard
             !manifest.segments.isEmpty,
-            segments.count == manifest.segments.count
+            segments.count == manifest.segments.count,
+            segments.allSatisfy({
+                $0.renditionId?.isEmpty == false
+                    && $0.timingMapId?.isEmpty == false
+            })
         else {
             throw ReadOfflineAudioStoreError.incompleteBundle
         }
@@ -266,7 +274,8 @@ actor ReadOfflineAudioStore {
             }
 
             let metadata = BundleMetadata(
-                schemaVersion: 1,
+                schemaVersion:
+                    Self.currentSchemaVersion,
                 documentId: manifest.documentId,
                 revisionId: manifest.revisionId,
                 voiceId: voiceId,
@@ -472,7 +481,10 @@ actor ReadOfflineAudioStore {
             from: Data(contentsOf: url)
         )
 
-        return metadata.schemaVersion == 1
+        return Self.supportedSchemaVersions
+            .contains(
+                metadata.schemaVersion
+            )
             ? metadata
             : nil
     }
