@@ -186,6 +186,46 @@ class ReadPlaybackResumeStore(
         val segment = match.first
         val scalarOffset =
             match.second
+        val quoteLength =
+            ReadScalarOffsets
+                .scalarCount(quote)
+        val localQuoteStart =
+            (
+                scalarOffset
+                    - cursorOffset
+                    - segment.scalarStart
+                )
+                .coerceAtLeast(0)
+        val localQuoteEnd =
+            (
+                localQuoteStart
+                    + quoteLength
+                )
+                .coerceAtMost(
+                    ReadScalarOffsets
+                        .scalarCount(
+                            segment.text
+                        )
+                )
+        val migratedPrefix =
+            scalarSubstring(
+                segment.text,
+                (localQuoteStart - 32)
+                    .coerceAtLeast(0),
+                localQuoteStart
+            )
+        val migratedSuffix =
+            scalarSubstring(
+                segment.text,
+                localQuoteEnd,
+                (localQuoteEnd + 32)
+                    .coerceAtMost(
+                        ReadScalarOffsets
+                            .scalarCount(
+                                segment.text
+                            )
+                    )
+            )
         val migrated =
             ReadPlaybackResumeSnapshot(
                 documentId =
@@ -215,9 +255,9 @@ class ReadPlaybackResumeStore(
                 sourceAnchorQuote =
                     quote,
                 sourceAnchorPrefixContext =
-                    prefix,
+                    migratedPrefix,
                 sourceAnchorSuffixContext =
-                    suffix,
+                    migratedSuffix,
                 sourceAnchorCursorOffset =
                     cursorOffset
             )
