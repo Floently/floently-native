@@ -27,10 +27,10 @@ actor ReadProjectSnapshotStore {
     }
 
     func load(
-        accessToken: String
+        accountIdentity: String
     ) -> [ReadContentProject] {
         let url = snapshotURL(
-            accessToken: accessToken
+            accountIdentity: accountIdentity
         )
 
         guard
@@ -49,7 +49,7 @@ actor ReadProjectSnapshotStore {
 
     func save(
         projects: [ReadContentProject],
-        accessToken: String
+        accountIdentity: String
     ) throws {
         try ensureDirectory()
 
@@ -59,7 +59,7 @@ actor ReadProjectSnapshotStore {
         )
         let data = try JSONEncoder().encode(snapshot)
         let target = snapshotURL(
-            accessToken: accessToken
+            accountIdentity: accountIdentity
         )
 
         try data.write(
@@ -96,20 +96,20 @@ actor ReadProjectSnapshotStore {
     }
 
     private func snapshotURL(
-        accessToken: String
+        accountIdentity: String
     ) -> URL {
         directoryURL.appending(
             path:
-                storageKey(accessToken) +
+                storageKey(accountIdentity) +
                 ".json"
         )
     }
 
     private func storageKey(
-        _ accessToken: String
+        _ accountIdentity: String
     ) -> String {
         SHA256.hash(
-            data: Data(accessToken.utf8)
+            data: Data(accountIdentity.utf8)
         )
         .map {
             String(format: "%02x", $0)
