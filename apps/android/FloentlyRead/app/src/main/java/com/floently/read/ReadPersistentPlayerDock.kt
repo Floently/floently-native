@@ -2,6 +2,7 @@ package com.floently.read
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,6 +61,9 @@ fun ReadPersistentPlayerDock(
         mutableLongStateOf(-1L)
     }
     var toolsExpanded by remember {
+        mutableStateOf(false)
+    }
+    var showingFullPlayer by remember {
         mutableStateOf(false)
     }
     val displayedPosition =
@@ -166,63 +170,87 @@ fun ReadPersistentPlayerDock(
                                 .s3
                     )
             ) {
-                Surface(
-                    color =
-                        FloentlyDesignTokens
-                            .Colors
-                            .surface1,
-                    shape =
-                        RoundedCornerShape(
+                Row(
+                    verticalAlignment =
+                        Alignment.CenterVertically,
+                    horizontalArrangement =
+                        Arrangement.spacedBy(
                             FloentlyDesignTokens
-                                .Radius
-                                .m
+                                .Space
+                                .s3
                         ),
-                    modifier = Modifier.size(
-                        FloentlyDesignTokens
-                            .Control
-                            .compactHeight
-                    )
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable {
+                            showingFullPlayer =
+                                true
+                        }
                 ) {
-                    Box(
-                        contentAlignment =
-                            Alignment.Center
-                    ) {
-                        MiniPlayerGlyph(
-                            symbol =
-                                MiniPlayerSymbol
-                                    .Waveform,
-                            color =
+                    Surface(
+                        color =
+                            FloentlyDesignTokens
+                                .Colors
+                                .surface1,
+                        shape =
+                            RoundedCornerShape(
                                 FloentlyDesignTokens
-                                    .Colors
-                                    .brandBright,
-                            modifier =
-                                Modifier.size(22.dp)
+                                    .Radius
+                                    .m
+                            ),
+                        modifier = Modifier.size(
+                            FloentlyDesignTokens
+                                .Control
+                                .compactHeight
+                        )
+                    ) {
+                        Box(
+                            contentAlignment =
+                                Alignment.Center
+                        ) {
+                            MiniPlayerGlyph(
+                                symbol =
+                                    MiniPlayerSymbol
+                                        .Waveform,
+                                color =
+                                    FloentlyDesignTokens
+                                        .Colors
+                                        .brandBright,
+                                modifier =
+                                    Modifier.size(
+                                        22.dp
+                                    )
+                            )
+                        }
+                    }
+
+                    Column(
+                        modifier =
+                            Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text =
+                                snapshot.title,
+                            color =
+                                palette.text,
+                            fontWeight =
+                                FontWeight
+                                    .SemiBold,
+                            maxLines = 1
+                        )
+                        Text(
+                            text =
+                                snapshot.status,
+                            color =
+                                palette.muted,
+                            style =
+                                androidx.compose
+                                    .material3
+                                    .MaterialTheme
+                                    .typography
+                                    .bodySmall,
+                            maxLines = 1
                         )
                     }
-                }
-
-                Column(
-                    modifier =
-                        Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = snapshot.title,
-                        color = palette.text,
-                        fontWeight =
-                            FontWeight.SemiBold,
-                        maxLines = 1
-                    )
-                    Text(
-                        text = snapshot.status,
-                        color = palette.muted,
-                        style =
-                            androidx.compose
-                                .material3
-                                .MaterialTheme
-                                .typography
-                                .bodySmall,
-                        maxLines = 1
-                    )
                 }
 
                 MiniPlayerButton(
@@ -469,6 +497,18 @@ fun ReadPersistentPlayerDock(
                 }
             }
         }
+    }
+
+    if (showingFullPlayer) {
+        ReadFullPlayerDialog(
+            controller = controller,
+            voiceSettings =
+                voiceSettings,
+            onDismiss = {
+                showingFullPlayer =
+                    false
+            }
+        )
     }
 }
 
