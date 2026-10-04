@@ -69,11 +69,17 @@ function makeManifest(): ReadingManifestSummary {
 class FakeCore implements ReadPlaybackCore {
   readonly segments = makeSegments();
   prefetchResult: number[] = [];
+  positionOverride:
+    | ((elapsedMs: number) => Promise<LogicalTimePosition | null>)
+    | null = null;
 
   async segmentForLogicalTime(
     _handle: string,
     elapsedMs: number,
   ): Promise<LogicalTimePosition | null> {
+    if (this.positionOverride) {
+      return this.positionOverride(elapsedMs);
+    }
     const bounded = Math.min(29_999, Math.max(0, elapsedMs));
     const index = Math.floor(bounded / SEGMENT_DURATION_MS);
 
@@ -152,6 +158,7 @@ class FakeEngine implements ReadAudioEngine {
   }> = [];
   readonly rates: number[] = [];
   readonly primed: string[][] = [];
+  playCount = 0;
   destroyed = false;
 
   constructor(
@@ -173,6 +180,7 @@ class FakeEngine implements ReadAudioEngine {
   }
 
   async play(): Promise<void> {
+    this.playCount += 1;
     this.paused = false;
     this.callbacks.onPlaying();
   }
@@ -632,6 +640,81 @@ describe("WebPlaybackSession document-wide contract", () => {
       voiceId: "voice:new",
     });
     expect(session.getSnapshot().elapsedMs).toBe(beforeVoiceChange);
+
+    session.destroy();
+  });
+
+  it("keeps pause authoritative while an older play request is preparing", async () => {
+    const { session, core, tts, engine } = createHarness();
+    let resolvePosition!:
+      (value: LogicalTimePosition | null) => void;
+
+    core.positionOverride = () =>
+      new Promise((resolve) => {
+        resolvePosition = resolve;
+      });
+
+    session.loadDocument(makeManifest());
+    const pendingPlay = session.play();
+
+    expect(session.getSnapshot().status).toBe("preparing");
+
+    session.pause();
+    resolvePosition({
+      index: 0,
+      localOffsetMs: 0,
+    });
+    await pendingPlay;
+
+    expect(engine.playCount).toBe(0);
+    expect(tts.calls).toHaveLength(0);
+    expect(session.getSnapshot()).toMatchObject({
+      status: "paused",
+      elapsedMs: 0,
+    });
+
+    session.destroy();
+  });
+
+  it("lets the newest seek supersede an older unresolved seek", async () => {
+    const { session, core, tts } = createHarness();
+    const resolvers: Array<
+      (value: LogicalTimePosition | null) => void
+    > = [];
+
+    core.positionOverride = () =>
+      new Promise((resolve) => {
+        resolvers.push(resolve);
+      });
+
+    session.loadDocument(makeManifest());
+
+    const firstSeek = session.seek(5_000);
+    const secondSeek = session.seek(15_000);
+
+    expect(resolvers).toHaveLength(2);
+
+    resolvers[1]({
+      index: 1,
+      localOffsetMs: 5_000,
+    });
+    await secondSeek;
+
+    resolvers[0]({
+      index: 0,
+      localOffsetMs: 5_000,
+    });
+    await firstSeek;
+
+    expect(
+      tts.calls.map((call) => call.segmentId),
+    ).toEqual(["segment-1"]);
+    expect(session.getSnapshot()).toMatchObject({
+      status: "paused",
+      elapsedMs: 15_000,
+      activeSegmentIndex: 1,
+      canonicalScalarCursor: 150,
+    });
 
     session.destroy();
   });
