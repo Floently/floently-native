@@ -1653,11 +1653,9 @@ private struct ReadProjectReaderView: View {
             )
             hydrated = value
 
-            if value.sourceType.lowercased() == "pdf" {
-                originalPDFURL =
-                    await ReadOriginalDocumentStore.shared
-                        .pdfURL(for: value.id)
-            }
+            originalPDFURL =
+                await ReadOriginalDocumentStore.shared
+                    .pdfURL(for: value.id)
 
             guard let text = value.rawText, !text.isEmpty else {
                 throw ReadProjectClientError.invalidProject
