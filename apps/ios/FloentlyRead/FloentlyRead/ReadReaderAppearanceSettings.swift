@@ -104,26 +104,28 @@ final class ReadReaderAppearanceSettings:
         defaults: UserDefaults = .standard
     ) {
         self.defaults = defaults
-        textSize =
+        let storedTextSize =
             defaults.string(
                 forKey: textSizeKey
             )
-            .flatMap(
-                ReadReaderTextSize.init(
-                    rawValue:
+        textSize =
+            storedTextSize.flatMap {
+                ReadReaderTextSize(
+                    rawValue: $0
                 )
-            )
+            }
             ?? .standard
 
-        lineRhythm =
+        let storedLineRhythm =
             defaults.string(
                 forKey: lineRhythmKey
             )
-            .flatMap(
-                ReadReaderLineRhythm.init(
-                    rawValue:
+        lineRhythm =
+            storedLineRhythm.flatMap {
+                ReadReaderLineRhythm(
+                    rawValue: $0
                 )
-            )
+            }
             ?? .standard
     }
 
