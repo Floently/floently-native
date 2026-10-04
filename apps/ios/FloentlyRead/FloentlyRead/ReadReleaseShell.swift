@@ -84,28 +84,84 @@ final class ReadAccessModel: ObservableObject {
                 return
             }
 
-            if
-                let accountIdentity,
-                let lease =
-                    leaseStore.validGrantedLease(
-                        accountIdentity:
-                            accountIdentity
-                    )
-            {
-                status = lease.status
-                offlineVerifiedAt =
-                    lease.verifiedAt
-                state = .grantedOffline
-            } else {
-                state = .failed(
-                    error.localizedDescription
-                )
+            if restoreOfflineLease(
+                accountIdentity:
+                    accountIdentity
+            ) {
+                return
             }
+
+            state = .failed(
+                error.localizedDescription
+            )
+        } catch let error as FloentlyAPIError {
+            if
+                isTransientAccessError(error),
+                restoreOfflineLease(
+                    accountIdentity:
+                        accountIdentity
+                )
+            {
+                return
+            }
+
+            state = .failed(
+                error.message
+            )
         } catch {
             state = .failed(
                 error.localizedDescription
             )
         }
+    }
+
+    private func restoreOfflineLease(
+        accountIdentity: String?
+    ) -> Bool {
+        guard
+            let accountIdentity,
+            let lease =
+                leaseStore.validGrantedLease(
+                    accountIdentity:
+                        accountIdentity
+                )
+        else {
+            return false
+        }
+
+        status = lease.status
+        offlineVerifiedAt =
+            lease.verifiedAt
+        state = .grantedOffline
+        return true
+    }
+
+    private func isTransientAccessError(
+        _ error: FloentlyAPIError
+    ) -> Bool {
+        if error.retryable {
+            return true
+        }
+
+        let code = error.code.uppercased()
+        if
+            code == "HTTP_408"
+            || code == "HTTP_429"
+        {
+            return true
+        }
+
+        guard code.hasPrefix("HTTP_") else {
+            return false
+        }
+
+        let rawStatus =
+            code.dropFirst(5)
+        guard let status = Int(rawStatus) else {
+            return false
+        }
+
+        return (500...599).contains(status)
     }
 }
 
