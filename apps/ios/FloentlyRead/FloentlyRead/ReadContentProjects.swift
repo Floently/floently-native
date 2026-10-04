@@ -726,6 +726,14 @@ final class ReadProjectStore: ObservableObject {
         await originalStore.delete(
             projectId: project.id
         )
+        if let snapshotAccountIdentity {
+            await ReadOfflineAudioStore.shared
+                .removeDocument(
+                    accountIdentity:
+                        snapshotAccountIdentity,
+                    documentId: project.id
+                )
+        }
         projects.removeAll { $0.id == project.id }
         await persistSnapshotIfBound()
     }
