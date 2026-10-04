@@ -489,6 +489,16 @@ struct ReadMainShell: View {
                 return
             }
             await projectStore.refresh(accessToken: token)
+
+            if let incoming = browserRouter.consumePendingIncomingURL() {
+                browserRouter.openBrowser(incoming)
+            }
+        }
+        .onChange(of: browserRouter.pendingIncomingURL) { _, incoming in
+            guard incoming != nil else { return }
+            if let resolved = browserRouter.consumePendingIncomingURL() {
+                browserRouter.openBrowser(resolved)
+            }
         }
         .sheet(isPresented: $showingAddSheet) {
             ReadAddSourceSheet(
