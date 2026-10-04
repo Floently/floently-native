@@ -275,6 +275,51 @@ test("protected routing preserves a safe returnTo and rejects an external one", 
   await expect(page.getByRole("heading", { name: "Library", exact: true })).toBeVisible();
 });
 
+test("playback diagnostics are explicit, session-scoped qualification tooling", async ({
+  page,
+}) => {
+  await installBackend(page);
+
+  await page.goto("/app/library");
+  await expect(
+    page.getByText("Playback diagnostics", { exact: true }),
+  ).toHaveCount(0);
+
+  await page.goto("/app/library?readDiagnostics=1");
+  const diagnosticsSummary = page.getByText(
+    "Playback diagnostics",
+    { exact: true },
+  );
+  await expect(diagnosticsSummary).toBeVisible();
+  await diagnosticsSummary.click();
+  await expect(
+    page.getByText(
+      "Qualification data only. Handoff latency measures browser media start, not verified acoustic silence.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+
+  await page.getByRole("link", { name: "Import", exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/import$/);
+  await expect(
+    page.getByText("Playback diagnostics", { exact: true }),
+  ).toBeVisible();
+
+  await page.evaluate(() => {
+    window.history.pushState(
+      {},
+      "",
+      "/app/import?readDiagnostics=0",
+    );
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  });
+
+  await expect(page).toHaveURL(/readDiagnostics=0/);
+  await expect(
+    page.getByText("Playback diagnostics", { exact: true }),
+  ).toHaveCount(0);
+});
+
 test("authenticated app navigation reaches the core Read product surfaces", async ({
   page,
 }) => {
