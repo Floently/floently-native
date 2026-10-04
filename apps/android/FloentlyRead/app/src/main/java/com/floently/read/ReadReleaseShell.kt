@@ -40,7 +40,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -1100,19 +1099,44 @@ private fun ReleaseNavItem(
     label: String,
     onClick: () -> Unit
 ) {
-    NavigationBarItem(
-        selected = selected,
+    val palette = floentlyPalette(FloentlyProduct.Read)
+
+    TextButton(
         onClick = onClick,
-        icon = {
+        shape = RoundedCornerShape(18.dp),
+        colors = ButtonDefaults.textButtonColors(
+            contentColor = if (selected) {
+                palette.accent
+            } else {
+                palette.muted
+            }
+        ),
+        contentPadding = PaddingValues(
+            horizontal = 18.dp,
+            vertical = 8.dp
+        ),
+        modifier = Modifier.height(58.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
             Text(
                 glyph,
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
             )
-        },
-        label = {
-            Text(label)
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = if (selected) {
+                    FontWeight.SemiBold
+                } else {
+                    FontWeight.Normal
+                }
+            )
         }
-    )
+    }
 }
 
 @Composable
