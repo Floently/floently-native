@@ -69,6 +69,7 @@ import com.floently.shared.auth.FloentlyAuthService
 import com.floently.shared.auth.FloentlySecureSessionStore
 import com.floently.shared.billing.FloentlyAccessService
 import com.floently.shared.billing.FloentlyAccessStatus
+import com.floently.shared.design.FloentlyDesignTokens
 import com.floently.shared.design.FloentlyProduct
 import com.floently.shared.design.FloentlyScreen
 import com.floently.shared.design.floentlyPalette
@@ -606,7 +607,7 @@ private fun ReadAuthScreen(
                 errorMessage?.let {
                     Text(
                         it,
-                        color = Color(0xFFFFB86B),
+                        color = FloentlyDesignTokens.Colors.warning,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -676,12 +677,19 @@ private fun ReadAuthScreen(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = palette.accent
                     ),
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(FloentlyDesignTokens.Radius.l),
                     contentPadding = PaddingValues(
-                        horizontal = 20.dp,
-                        vertical = 15.dp
+                        horizontal =
+                            FloentlyDesignTokens.Space.s5,
+                        vertical = 0.dp
                     ),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(
+                            FloentlyDesignTokens
+                                .Control
+                                .primaryHeight
+                        )
                 ) {
                     Text(
                         if (busy) {
@@ -872,7 +880,7 @@ private fun ReadEntitlementScreen(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = palette.accent
                     ),
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(FloentlyDesignTokens.Radius.l),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Refresh access")
@@ -981,14 +989,14 @@ private fun ReadAccessAccountDeletionControl(
                 } else {
                     "Delete account"
                 },
-                color = Color(0xFFFF6B7A)
+                color = FloentlyDesignTokens.Colors.danger
             )
         }
 
         error?.let {
             Text(
                 it,
-                color = Color(0xFFFFB86B),
+                color = FloentlyDesignTokens.Colors.warning,
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -1065,7 +1073,7 @@ private fun ReadAccessAccountDeletionControl(
                 ) {
                     Text(
                         "Delete account permanently",
-                        color = Color(0xFFFF6B7A)
+                        color = FloentlyDesignTokens.Colors.danger
                     )
                 }
             },
@@ -1390,7 +1398,7 @@ private fun ReleaseNavItem(
 
     TextButton(
         onClick = onClick,
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(FloentlyDesignTokens.Radius.l),
         colors = ButtonDefaults.textButtonColors(
             contentColor = if (selected) {
                 palette.accent
@@ -1639,10 +1647,14 @@ private fun ReadHomeScreen(
                         colors = ButtonDefaults.buttonColors(
                             containerColor = palette.accent
                         ),
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(FloentlyDesignTokens.Radius.l),
                         modifier = Modifier
                             .weight(1f)
-                            .height(54.dp)
+                            .height(
+                                FloentlyDesignTokens
+                                    .Control
+                                    .primaryHeight
+                            )
                     ) {
                         Text(
                             "+  Add to Read",
@@ -1656,10 +1668,14 @@ private fun ReadHomeScreen(
                             containerColor =
                                 palette.backgroundBottom
                         ),
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(FloentlyDesignTokens.Radius.l),
                         modifier = Modifier
                             .width(64.dp)
-                            .height(54.dp)
+                            .height(
+                                FloentlyDesignTokens
+                                    .Control
+                                    .primaryHeight
+                            )
                     ) {
                         Text("◎")
                     }
@@ -1887,7 +1903,7 @@ private fun ReadLibraryScreen(
                 ) {
                     Text(
                         "Remove",
-                        color = Color(0xFFFF8A80)
+                        color = FloentlyDesignTokens.Colors.danger
                     )
                 }
             },
@@ -2226,7 +2242,11 @@ private fun ReadSettingsScreen(
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .height(
+                        FloentlyDesignTokens
+                            .Control
+                            .primaryHeight
+                    )
             ) {
                 Text("Sign out", color = palette.text)
             }
@@ -2239,11 +2259,15 @@ private fun ReadSettingsScreen(
                 },
                 colors = ButtonDefaults.buttonColors(
                     containerColor =
-                        Color(0xFF7B1F2D)
+                        FloentlyDesignTokens.Colors.danger.copy(alpha = 0.34f)
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .height(
+                        FloentlyDesignTokens
+                            .Control
+                            .primaryHeight
+                    )
             ) {
                 Text(
                     if (deletingAccount) {
@@ -2328,7 +2352,7 @@ private fun ReadSettingsScreen(
                 ) {
                     Text(
                         "Delete Account",
-                        color = Color(0xFFFF6B7A)
+                        color = FloentlyDesignTokens.Colors.danger
                     )
                 }
             },
@@ -2436,9 +2460,11 @@ private fun SourceChoice(
     onClick: () -> Unit
 ) {
     Surface(
-        color = MaterialTheme.colorScheme
-            .surfaceVariant.copy(alpha = 0.45f),
-        shape = RoundedCornerShape(18.dp),
+        color =
+            FloentlyDesignTokens.Colors.surface1,
+        shape = RoundedCornerShape(
+            FloentlyDesignTokens.Radius.m
+        ),
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
@@ -2447,12 +2473,27 @@ private fun SourceChoice(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(
+                    FloentlyDesignTokens
+                        .Space
+                        .s4
+                )
         ) {
             Surface(
-                color = MaterialTheme.colorScheme.surface,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.size(42.dp)
+                color =
+                    FloentlyDesignTokens
+                        .Colors
+                        .surface2,
+                shape = RoundedCornerShape(
+                    FloentlyDesignTokens
+                        .Radius
+                        .m
+                ),
+                modifier = Modifier.size(
+                    FloentlyDesignTokens
+                        .Control
+                        .compactHeight
+                )
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(glyph)
@@ -2526,7 +2567,7 @@ private fun ReadUrlImportSheet(
         error?.let {
             Text(
                 it,
-                color = Color(0xFFFF8A80),
+                color = FloentlyDesignTokens.Colors.danger,
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -2630,7 +2671,7 @@ private fun ReadPasteTextSheet(
                 Text(
                     it,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFFFF8A80),
+                    color = FloentlyDesignTokens.Colors.danger,
                     maxLines = 2
                 )
             }
@@ -3182,25 +3223,44 @@ private fun ReadSurfaceCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val palette = floentlyPalette(FloentlyProduct.Read)
-
     Column(
         verticalArrangement =
-            Arrangement.spacedBy(14.dp),
+            Arrangement.spacedBy(
+                FloentlyDesignTokens
+                    .Space
+                    .s3
+            ),
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(
-                palette.backgroundBottom.copy(
-                    alpha = 0.92f
+            .clip(
+                RoundedCornerShape(
+                    FloentlyDesignTokens
+                        .Radius
+                        .xl
                 )
+            )
+            .background(
+                FloentlyDesignTokens
+                    .Colors
+                    .surface2
             )
             .border(
                 width = 1.dp,
-                color = Color.White.copy(alpha = 0.10f),
-                shape = RoundedCornerShape(24.dp)
+                color =
+                    FloentlyDesignTokens
+                        .Colors
+                        .borderSoft,
+                shape = RoundedCornerShape(
+                    FloentlyDesignTokens
+                        .Radius
+                        .xl
+                )
             )
-            .padding(20.dp),
+            .padding(
+                FloentlyDesignTokens
+                    .Space
+                    .s5
+            ),
         content = content
     )
 }
@@ -3223,12 +3283,31 @@ private fun ReadImportProgress(
     val palette = floentlyPalette(FloentlyProduct.Read)
 
     Column(
-        verticalArrangement = Arrangement.spacedBy(9.dp),
+        verticalArrangement =
+            Arrangement.spacedBy(
+                FloentlyDesignTokens
+                    .Space
+                    .s2
+            ),
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(palette.backgroundBottom)
-            .padding(14.dp)
+            .clip(
+                RoundedCornerShape(
+                    FloentlyDesignTokens
+                        .Radius
+                        .l
+                )
+            )
+            .background(
+                FloentlyDesignTokens
+                    .Colors
+                    .surface1
+            )
+            .padding(
+                FloentlyDesignTokens
+                    .Space
+                    .s4
+            )
     ) {
         Text(
             message,
@@ -3261,16 +3340,41 @@ private fun ReadStatusBanner(
             Arrangement.spacedBy(10.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(palette.backgroundBottom)
+            .clip(
+                RoundedCornerShape(
+                    FloentlyDesignTokens
+                        .Radius
+                        .m
+                )
+            )
+            .background(
+                FloentlyDesignTokens
+                    .Colors
+                    .surface1
+            )
+            .border(
+                width = 1.dp,
+                color =
+                    FloentlyDesignTokens
+                        .Colors
+                        .borderSoft,
+                shape = RoundedCornerShape(
+                    FloentlyDesignTokens
+                        .Radius
+                        .m
+                )
+            )
             .padding(
-                horizontal = 12.dp,
+                horizontal =
+                    FloentlyDesignTokens
+                        .Space
+                        .s3,
                 vertical = 10.dp
             )
     ) {
         Text(
             "!",
-            color = Color(0xFFFFB86B),
+            color = FloentlyDesignTokens.Colors.warning,
             fontWeight = FontWeight.Bold
         )
         Text(
