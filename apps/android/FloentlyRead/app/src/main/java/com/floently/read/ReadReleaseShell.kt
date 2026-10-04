@@ -737,6 +737,7 @@ private fun ReadAccessAccountDeletionControl(
     sessionStore: FloentlySecureSessionStore,
     onDeleted: () -> Unit
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var showDialog by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
@@ -814,6 +815,8 @@ private fun ReadAccessAccountDeletionControl(
                                 ).deleteAccount(
                                     "read_native_access_screen"
                                 )
+                                ReadOriginalDocumentStore
+                                    .clearAll(context)
                             }
                                 .onSuccess {
                                     showDialog = false
@@ -2028,6 +2031,8 @@ private fun ReadSettingsScreen(
                                 ).deleteAccount(
                                     "in_app_settings"
                                 )
+                                ReadOriginalDocumentStore
+                                    .clearAll(context)
                             }
                                 .onSuccess {
                                     showDeleteDialog = false
