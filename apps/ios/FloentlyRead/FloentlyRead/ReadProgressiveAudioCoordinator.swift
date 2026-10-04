@@ -76,7 +76,11 @@ actor ReadProgressiveAudioCoordinator {
                             segment.logicalEndMs
                         ) / 1_000,
                         physicalDuration:
-                            offline.duration
+                            offline.duration,
+                        renditionId:
+                            offline.renditionId,
+                        timingMapId:
+                            offline.timingMapId
                     )
                 )
                 continue
@@ -85,6 +89,39 @@ actor ReadProgressiveAudioCoordinator {
             if let cached = try await cache.cachedAsset(
                 lookupKey: lookupKey
             ) {
+                let renditionId =
+                    ReadNativeAudioIdentity
+                        .renditionId(
+                            documentId:
+                                manifest.documentId,
+                            revisionId:
+                                manifest.revisionId,
+                            language:
+                                manifest.language,
+                            voiceId:
+                                cached.voiceId,
+                            provider:
+                                cached.provider,
+                            model:
+                                cached.model
+                        )
+                let timingMapId =
+                    ReadNativeAudioIdentity
+                        .timingMapId(
+                            renditionId:
+                                renditionId,
+                            segmentId:
+                                segment.id,
+                            segmentIndex:
+                                segment.index,
+                            logicalStartMs:
+                                segment.logicalStartMs,
+                            logicalEndMs:
+                                segment.logicalEndMs,
+                            physicalDuration:
+                                cached.duration
+                        )
+
                 result.append(
                     ReadPlayableSegment(
                         id: segment.id,
@@ -96,7 +133,12 @@ actor ReadProgressiveAudioCoordinator {
                         logicalEndTime: TimeInterval(
                             segment.logicalEndMs
                         ) / 1_000,
-                        physicalDuration: cached.duration
+                        physicalDuration:
+                            cached.duration,
+                        renditionId:
+                            renditionId,
+                        timingMapId:
+                            timingMapId
                     )
                 )
                 continue
@@ -109,6 +151,38 @@ actor ReadProgressiveAudioCoordinator {
                 accessToken: accessToken
             )
             let localURL = try await cache.localURL(for: asset)
+            let renditionId =
+                ReadNativeAudioIdentity
+                    .renditionId(
+                        documentId:
+                            manifest.documentId,
+                        revisionId:
+                            manifest.revisionId,
+                        language:
+                            manifest.language,
+                        voiceId:
+                            asset.voiceId,
+                        provider:
+                            asset.provider,
+                        model:
+                            asset.model
+                    )
+            let timingMapId =
+                ReadNativeAudioIdentity
+                    .timingMapId(
+                        renditionId:
+                            renditionId,
+                        segmentId:
+                            segment.id,
+                        segmentIndex:
+                            segment.index,
+                        logicalStartMs:
+                            segment.logicalStartMs,
+                        logicalEndMs:
+                            segment.logicalEndMs,
+                        physicalDuration:
+                            asset.duration
+                    )
 
             result.append(
                 ReadPlayableSegment(
@@ -121,7 +195,12 @@ actor ReadProgressiveAudioCoordinator {
                     logicalEndTime: TimeInterval(
                         segment.logicalEndMs
                     ) / 1_000,
-                    physicalDuration: asset.duration
+                    physicalDuration:
+                        asset.duration,
+                    renditionId:
+                        renditionId,
+                    timingMapId:
+                        timingMapId
                 )
             )
         }
