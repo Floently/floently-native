@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -5,7 +7,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
-val releaseSigningProperties = java.util.Properties()
+val releaseSigningProperties = Properties()
 val releaseSigningPropertiesFile =
     rootProject.file("keystore.properties")
 
