@@ -166,6 +166,7 @@ export class WebPlaybackSession {
   private readonly inFlightAudio = new Map<number, Promise<RuntimeAudio>>();
   private wantsPlayback = false;
   private generation = 0;
+  private playbackIntentGeneration = 0;
   private preferredSpeed = 1;
   private preferredVoiceId = defaultVoiceIdForLanguage("en");
   private preferredVoiceLanguage: string | null = "en";
@@ -260,6 +261,7 @@ export class WebPlaybackSession {
     } = {},
   ): void {
     this.generation += 1;
+    this.playbackIntentGeneration += 1;
     this.wantsPlayback = false;
     this.engine.pause();
     this.releaseRuntimeAudio();
@@ -320,6 +322,7 @@ export class WebPlaybackSession {
 
   clear(): void {
     this.generation += 1;
+    this.playbackIntentGeneration += 1;
     this.wantsPlayback = false;
     this.engine.pause();
     this.releaseRuntimeAudio();
@@ -343,14 +346,20 @@ export class WebPlaybackSession {
   async play(): Promise<void> {
     if (!this.manifest) return;
 
+    const intentGeneration = ++this.playbackIntentGeneration;
     this.wantsPlayback = true;
     this.emit("play_requested");
-    await this.startAtDocumentTime(this.snapshot.elapsedMs, true);
+    await this.startAtDocumentTime(
+      this.snapshot.elapsedMs,
+      true,
+      intentGeneration,
+    );
   }
 
   pause(): void {
     if (!this.manifest) return;
 
+    this.playbackIntentGeneration += 1;
     this.wantsPlayback = false;
     this.engine.pause();
     this.replaceSnapshot({
@@ -380,13 +389,19 @@ export class WebPlaybackSession {
     );
     const resumeAfterSeek = this.wantsPlayback
       || this.snapshot.status === "playing";
+    const intentGeneration = ++this.playbackIntentGeneration;
+    this.wantsPlayback = resumeAfterSeek;
 
     this.emit("seek", {
       fromMs: Math.round(this.snapshot.elapsedMs),
       toMs: Math.round(target),
     });
 
-    await this.startAtDocumentTime(target, resumeAfterSeek);
+    await this.startAtDocumentTime(
+      target,
+      resumeAfterSeek,
+      intentGeneration,
+    );
   }
 
   seekBy(deltaMs: number): Promise<void> {
@@ -432,6 +447,7 @@ export class WebPlaybackSession {
     const wasPlaying = this.wantsPlayback
       || this.snapshot.status === "playing";
     const cursor = this.snapshot.elapsedMs;
+    const intentGeneration = ++this.playbackIntentGeneration;
 
     if (options.updatePreference !== false) {
       this.preferredVoiceId = normalized;
@@ -461,12 +477,17 @@ export class WebPlaybackSession {
     this.persistResumeState(true);
 
     if (wasPlaying) {
-      await this.startAtDocumentTime(cursor, true);
+      await this.startAtDocumentTime(
+        cursor,
+        true,
+        intentGeneration,
+      );
     }
   }
 
   destroy(): void {
     this.generation += 1;
+    this.playbackIntentGeneration += 1;
     this.wantsPlayback = false;
     this.persistResumeState(true);
     this.releaseRuntimeAudio();
@@ -480,9 +501,15 @@ export class WebPlaybackSession {
   private async startAtDocumentTime(
     targetMs: number,
     autoplay: boolean,
+    intentGeneration = this.playbackIntentGeneration,
   ): Promise<void> {
     const manifest = this.manifest;
-    if (!manifest) return;
+    if (
+      !manifest
+      || intentGeneration !== this.playbackIntentGeneration
+    ) {
+      return;
+    }
 
     const generation = this.generation;
     const target = clamp(targetMs, 0, manifest.estimatedSourceDurationMs);
@@ -519,11 +546,20 @@ export class WebPlaybackSession {
         manifest.handle,
         target,
       );
-      if (!position || generation !== this.generation) return;
+      if (
+        !position
+        || generation !== this.generation
+        || intentGeneration !== this.playbackIntentGeneration
+      ) {
+        return;
+      }
 
       const runtime = await this.ensureAudio(position.index, generation);
       if (generation !== this.generation) {
         runtime.playable.release();
+        return;
+      }
+      if (intentGeneration !== this.playbackIntentGeneration) {
         return;
       }
 
@@ -570,7 +606,12 @@ export class WebPlaybackSession {
         ?? physicalDurationMs
         ?? runtime.physicalDurationMs;
 
-      if (generation !== this.generation) return;
+      if (
+        generation !== this.generation
+        || intentGeneration !== this.playbackIntentGeneration
+      ) {
+        return;
+      }
 
       this.active = runtime;
       this.lastTransitionAt = performance.now();
@@ -589,10 +630,22 @@ export class WebPlaybackSession {
       void this.prefetch(runtime.descriptor.index, generation);
 
       if (autoplay) {
-        this.wantsPlayback = true;
+        if (
+          !this.wantsPlayback
+          || intentGeneration !== this.playbackIntentGeneration
+        ) {
+          return;
+        }
+
         await this.engine.play();
-      } else {
-        this.wantsPlayback = false;
+
+        if (
+          !this.wantsPlayback
+          || intentGeneration !== this.playbackIntentGeneration
+        ) {
+          this.engine.pause();
+          return;
+        }
       }
 
       this.emit("segment_started", {
@@ -601,7 +654,12 @@ export class WebPlaybackSession {
         logicalEndMs: runtime.descriptor.logicalEndMs,
       });
     } catch (error) {
-      if (generation !== this.generation) return;
+      if (
+        generation !== this.generation
+        || intentGeneration !== this.playbackIntentGeneration
+      ) {
+        return;
+      }
       this.fail(
         error instanceof Error
           ? error.message
@@ -834,6 +892,7 @@ export class WebPlaybackSession {
     void this.startAtDocumentTime(
       active.descriptor.logicalEndMs,
       this.wantsPlayback,
+      this.playbackIntentGeneration,
     );
   }
 
@@ -856,6 +915,7 @@ export class WebPlaybackSession {
   }
 
   private fail(message: string): void {
+    this.playbackIntentGeneration += 1;
     this.wantsPlayback = false;
     this.engine.pause();
     this.replaceSnapshot({
