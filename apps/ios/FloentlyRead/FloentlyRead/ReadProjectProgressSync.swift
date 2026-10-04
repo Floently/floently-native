@@ -263,20 +263,12 @@ struct ReadProjectProgressSyncModifier: ViewModifier {
     @EnvironmentObject private var loader: ReadDocumentPlaybackLoader
     @EnvironmentObject private var sessionStore: FloentlySessionStore
     @EnvironmentObject private var projectStore: ReadProjectStore
-    @EnvironmentObject private var voiceSettings: ReadVoiceSettings
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var lastSyncedBucket = -1
 
     func body(content: Content) -> some View {
         content
-            .task(id: remoteApplyKey) {
-                guard let manifest else { return }
-                ReadRemoteProgressBridge.apply(
-                    project: project,
-                    manifest: manifest,
-                    voiceSettings: voiceSettings
-                )
-            }
             .onChange(of: playback.elapsedTime) { _, value in
                 syncIfNeeded(elapsedTime: value)
             }
@@ -288,18 +280,14 @@ struct ReadProjectProgressSyncModifier: ViewModifier {
                     break
                 }
             }
+            .onChange(of: scenePhase) { _, phase in
+                if phase != .active {
+                    syncNow()
+                }
+            }
             .onDisappear {
                 syncNow()
             }
-    }
-
-    private var remoteApplyKey: String {
-        [
-            project.id,
-            project.revisionId,
-            project.progress?.updatedAt ?? "",
-            manifest?.revisionId ?? ""
-        ].joined(separator: "::")
     }
 
     private func syncIfNeeded(
@@ -349,6 +337,36 @@ struct ReadProjectProgressSyncModifier: ViewModifier {
                 accessToken: accessToken
             )
         }
+    }
+}
+
+struct ReadDurableProjectProgressSyncView: View {
+    @EnvironmentObject private var loader: ReadDocumentPlaybackLoader
+    @EnvironmentObject private var projectStore: ReadProjectStore
+
+    var body: some View {
+        Group {
+            if
+                let manifest = loader.activeManifest,
+                let project = projectStore.projects.first(where: {
+                    $0.id == manifest.documentId
+                        && $0.revisionId == manifest.revisionId
+                })
+            {
+                Color.clear
+                    .readProjectProgressSync(
+                        project: project,
+                        manifest: manifest
+                    )
+                    .id(
+                        "read-progress-\(project.id)-\(project.revisionId)"
+                    )
+            } else {
+                Color.clear
+            }
+        }
+        .frame(width: 0, height: 0)
+        .accessibilityHidden(true)
     }
 }
 
