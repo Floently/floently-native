@@ -1,0 +1,42 @@
+name: FloentlyLearn
+options:
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+packages:
+  FloentlyShared:
+    path: ../FloentlyShared
+targets:
+  FloentlyLearn:
+    type: application
+    platform: iOS
+    sources:
+      - path: FloentlyLearn
+        excludes:
+          - Info.plist
+    dependencies:
+      - package: FloentlyShared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.vitusidi.floently.learn.native.dev
+        PRODUCT_NAME: KieliValmis
+        SWIFT_VERSION: 6.0
+        TARGETED_DEVICE_FAMILY: "1,2"
+    info:
+      path: FloentlyLearn/Info.plist
+      properties:
+        CFBundleDisplayName: KieliValmis
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        CFBundleURLTypes:
+          - CFBundleURLName: com.vitusidi.floently.learn
+            CFBundleURLSchemes:
+              - kielivalmis
+        NSMicrophoneUsageDescription: KieliValmis uses the microphone for speaking practice and roleplay when you choose those activities.
+        NSSpeechRecognitionUsageDescription: KieliValmis may use speech recognition to support speaking practice when you choose voice activities.

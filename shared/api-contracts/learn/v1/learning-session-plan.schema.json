@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://floently.com/contracts/learn/v1/learning-session-plan.schema.json",
+  "title": "PracticeSessionManifestCompatibilityAlias",
+  "description": "Mirror of packages/core/schemas/learning.ts PracticeSessionManifest.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sessionId",
+    "learnerId",
+    "createdAt",
+    "scope",
+    "targetMinutes",
+    "tasks",
+    "composerVersion"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "learning.v1" },
+    "sessionId": { "type": "string", "minLength": 1 },
+    "learnerId": { "type": "string", "minLength": 1 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "scope": {
+      "type": "string",
+      "enum": ["all", "everyday", "professional", "yki"]
+    },
+    "targetMinutes": {
+      "type": "integer",
+      "enum": [5, 10, 20]
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["order", "task", "reasons"],
+        "properties": {
+          "order": { "type": "integer", "minimum": 0 },
+          "task": { "$ref": "task-descriptor.schema.json" },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["code", "message", "evidenceMode"],
+              "properties": {
+                "code": { "type": "string", "minLength": 1 },
+                "message": { "type": "string", "minLength": 1 },
+                "evidenceMode": {
+                  "type": "string",
+                  "enum": ["learner", "curriculum"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "composerVersion": { "type": "string", "minLength": 1 }
+  }
+}
