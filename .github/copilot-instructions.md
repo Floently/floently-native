@@ -1,0 +1,1 @@
+GitHub Copilot: MANDATORY read root AGENTS.md. GLOBAL-AGENT-RUN-PROOF v1 applies to every run: exact plan subpart, before/after stage, core-function evidence, safe/licensed earlier code reused vs adapted vs scratch, original CI/live proof and DONE/IN PROGRESS/NOT STARTED/BLOCKED overall project status. Existing stricter rules remain in force.
