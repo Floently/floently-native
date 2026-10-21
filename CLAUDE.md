@@ -1,0 +1,1 @@
+Claude and other coding agents: before every run read root AGENTS.md, then report exact plan ID, before/after changed core behavior, source reuse search/provenance/licensing, adapted/improved vs new code, authoritative CI and true deployment state, whole project progress and blockers. Preserve original authorization/release holds.
