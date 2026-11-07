@@ -12,7 +12,6 @@ import {
   type ContentProject,
 } from "../content/projectApi";
 import {
-  createProjectProgressWriter,
   projectProgressFromPlayback,
   type ProjectProgressPayload,
 } from "../content/projectProgressWriter";
@@ -69,14 +68,11 @@ export function VisualDocumentPage({
     projectId: string;
     progress: ProjectProgressPayload;
   } | null>(null);
-  const progressWriterRef = useRef<
-    ReturnType<typeof createProjectProgressWriter> | null
-  >(null);
-
-  if (!progressWriterRef.current) {
-    progressWriterRef.current = createProjectProgressWriter();
-  }
-  const progressWriter = progressWriterRef.current;
+  const progressWriter = runtime?.progressWriter ?? null;
+  const sourceIdentity =
+    runtime ? `${runtime.ownerId}:${localDocumentId}` : "";
+  const activeSourceIdentityRef = useRef(sourceIdentity);
+  activeSourceIdentityRef.current = sourceIdentity;
 
   const objectUrl = useMemo(
     () => record ? URL.createObjectURL(record.blob) : null,
@@ -95,6 +91,15 @@ export function VisualDocumentPage({
     let cancelled = false;
     let timer: number | null = null;
     let attempts = 0;
+
+    runtime.documents.clear();
+    lastSavedAtRef.current = 0;
+    latestProgressRef.current = null;
+    setRecord(null);
+    setProject(null);
+    setError(null);
+    setSemanticBusy(false);
+    setSemanticWaitExpired(false);
 
     const refresh = async () => {
       try {
@@ -200,7 +205,8 @@ export function VisualDocumentPage({
 
   useEffect(() => {
     if (
-      !project
+      !progressWriter
+      || !project
       || playback.documentId !== `project:${project.id}`
     ) {
       return;
@@ -238,6 +244,8 @@ export function VisualDocumentPage({
   ]);
 
   useEffect(() => {
+    if (!progressWriter) return;
+
     const flushLatestProgress = () => {
       const latest = latestProgressRef.current;
       if (!latest) return;
@@ -264,6 +272,7 @@ export function VisualDocumentPage({
   async function retrySemanticLayer(): Promise<void> {
     if (!runtime || !record || semanticBusy) return;
 
+    const expectedSourceIdentity = sourceIdentity;
     setSemanticBusy(true);
     setError(null);
 
@@ -274,11 +283,20 @@ export function VisualDocumentPage({
           record.id,
           fileFromLocalOriginal(record),
         );
+
+      if (activeSourceIdentityRef.current !== expectedSourceIdentity) {
+        return;
+      }
+
       const refreshed =
         await getLocalOriginalDocument(
           runtime.ownerId,
           record.id,
         );
+
+      if (activeSourceIdentityRef.current !== expectedSourceIdentity) {
+        return;
+      }
 
       setProject(null);
       setRecord((current) =>
@@ -294,14 +312,18 @@ export function VisualDocumentPage({
       setSemanticWaitExpired(false);
       setSemanticLoadRevision((value) => value + 1);
     } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "The reading layer could not be prepared.",
-      );
-      setSemanticWaitExpired(true);
+      if (activeSourceIdentityRef.current === expectedSourceIdentity) {
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : "The reading layer could not be prepared.",
+        );
+        setSemanticWaitExpired(true);
+      }
     } finally {
-      setSemanticBusy(false);
+      if (activeSourceIdentityRef.current === expectedSourceIdentity) {
+        setSemanticBusy(false);
+      }
     }
   }
 

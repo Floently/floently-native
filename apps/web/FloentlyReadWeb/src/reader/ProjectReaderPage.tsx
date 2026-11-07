@@ -4,7 +4,6 @@ import {
   type ContentProject,
 } from "../content/projectApi";
 import {
-  createProjectProgressWriter,
   projectProgressFromPlayback,
   type ProjectProgressPayload,
 } from "../content/projectProgressWriter";
@@ -35,22 +34,17 @@ export function ProjectReaderPage({
     projectId: string;
     progress: ProjectProgressPayload;
   } | null>(null);
-  const progressWriterRef = useRef<
-    ReturnType<typeof createProjectProgressWriter> | null
-  >(null);
-
-  if (!progressWriterRef.current) {
-    progressWriterRef.current = createProjectProgressWriter();
-  }
-  const progressWriter = progressWriterRef.current;
+  const progressWriter = runtime?.progressWriter ?? null;
 
   useEffect(() => {
     if (!runtime || !projectId) return;
 
     let cancelled = false;
+    runtime.documents.clear();
     restoredProjectRef.current = null;
     lastSavedAtRef.current = 0;
     latestProgressRef.current = null;
+    setProject(null);
     setError(null);
 
     void getContentProject(projectId)
@@ -113,11 +107,24 @@ export function ProjectReaderPage({
 
     return () => {
       cancelled = true;
+      const latest = latestProgressRef.current;
+      if (latest) {
+        runtime.progressWriter.queue(
+          latest.projectId,
+          latest.progress,
+        );
+        void runtime.progressWriter.flush();
+      }
     };
   }, [projectId, runtime]);
 
   useEffect(() => {
-    if (!runtime || !project || playback.documentId !== `project:${project.id}`) {
+    if (
+      !runtime
+      || !progressWriter
+      || !project
+      || playback.documentId !== `project:${project.id}`
+    ) {
       return;
     }
 
@@ -154,6 +161,8 @@ export function ProjectReaderPage({
   ]);
 
   useEffect(() => {
+    if (!progressWriter) return;
+
     const flushLatestProgress = () => {
       const latest = latestProgressRef.current;
       if (!latest) return;

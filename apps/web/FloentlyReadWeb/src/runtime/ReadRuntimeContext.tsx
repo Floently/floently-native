@@ -9,9 +9,13 @@ import { ReadCoreWorkerClient } from "../readCore.client";
 import { ReadAudioCache } from "../playback/readAudioCache";
 import { WebPlaybackSession } from "../playback/webPlaybackSession";
 import { RenderReadTtsProvider } from "../tts/readTtsProvider";
-import { getAuthAccessToken } from "../auth/authStore";
+import {
+  getAuthAccessToken,
+  getAuthState,
+} from "../auth/authStore";
 import { getReadApiBaseUrl } from "../config/runtime";
 import { ReadDocumentSession } from "./readDocumentSession";
+import { createProjectProgressWriter } from "../content/projectProgressWriter";
 import { BrowserV2CloudClient } from "../browser-v2/BrowserV2CloudClient";
 import { BrowserReadingBridge } from "../browser-v2/BrowserReadingBridge";
 import {
@@ -25,6 +29,7 @@ export interface ReadWebRuntime {
   core: ReadCoreWorkerClient;
   playback: WebPlaybackSession;
   documents: ReadDocumentSession;
+  progressWriter: ReturnType<typeof createProjectProgressWriter>;
   browser: BrowserV2CloudClient;
   browserReading: BrowserReadingBridge;
   tts: RenderReadTtsProvider;
@@ -58,6 +63,13 @@ export function ReadRuntimeProvider({
       },
     });
     const documents = new ReadDocumentSession(core, playback);
+    const progressWriter = createProjectProgressWriter(
+      undefined,
+      {
+        canWrite: () =>
+          getAuthState().session?.user.id === ownerId,
+      },
+    );
     const browser = new BrowserV2CloudClient();
     const browserReading = new BrowserReadingBridge(
       browser.reader(),
@@ -83,6 +95,7 @@ export function ReadRuntimeProvider({
       core,
       playback,
       documents,
+      progressWriter,
       browser,
       browserReading,
       tts,
@@ -91,6 +104,7 @@ export function ReadRuntimeProvider({
     setRuntime(nextRuntime);
 
     return () => {
+      progressWriter.invalidate();
       unsubscribePreferences();
       browserReading.destroy();
       void browser.stop().catch(() => undefined);
