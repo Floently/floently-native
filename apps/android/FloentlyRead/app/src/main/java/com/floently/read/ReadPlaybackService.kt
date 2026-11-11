@@ -303,7 +303,8 @@ class ReadPlaybackService : MediaSessionService() {
                     manifest = request.manifest,
                     startingAt = startingAt,
                     voiceId = request.voiceId,
-                    accessToken = currentAccessToken()
+                    accessToken = currentAccessToken(),
+                    maxSegments = 1
                 )
 
                 preparedSegments.clear()
@@ -415,6 +416,8 @@ class ReadPlaybackService : MediaSessionService() {
 
         refillJob = serviceScope.launch {
             while (isActive) {
+                // Keep refill on the existing cadence until ordinary queue
+                // growth is append-only and acoustically qualified.
                 delay(1_000L)
 
                 val player = documentPlayer ?: return@launch
@@ -553,7 +556,8 @@ class ReadPlaybackService : MediaSessionService() {
                     manifest = manifest,
                     startingAt = targetIndex,
                     voiceId = voiceId,
-                    accessToken = currentAccessToken()
+                    accessToken = currentAccessToken(),
+                    maxSegments = 1
                 )
 
                 preparedSegments.clear()
@@ -673,7 +677,8 @@ class ReadPlaybackService : MediaSessionService() {
                     manifest = manifest,
                     startingAt = targetIndex,
                     voiceId = newVoice,
-                    accessToken = currentAccessToken()
+                    accessToken = currentAccessToken(),
+                    maxSegments = 1
                 )
 
                 segments.forEach {

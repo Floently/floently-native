@@ -237,6 +237,16 @@ See:
 
 ---
 
+## Active Read reconciliation roadmap
+
+The architecture paper/repository reconciliation recorded on 2026-10-02 is the active detailed road for the next-generation Read work:
+
+- `docs/READ_ARCHITECTURE_RECONCILIATION_ROADMAP_20261002.md`
+
+For Read, this detailed roadmap refines Phase 4 into evidence gates: establish truth -> reliable browser/playback -> complete reading product -> coherent visual system -> evidence-linked learning -> controlled launch. Where an older Read note conflicts with the reconciliation roadmap, record and resolve the decision explicitly rather than silently choosing one document.
+
+---
+
 ## Governing next-generation technology standard
 
 From 2026-09-30 onward, technology selection for the next-generation native app line is governed by:
