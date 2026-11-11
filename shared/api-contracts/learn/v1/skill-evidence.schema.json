@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://floently.com/contracts/learn/v1/skill-evidence.schema.json",
+  "title": "SkillEvidence",
+  "description": "Mirror of packages/core/schemas/learning.ts SkillEvidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "evidenceId",
+    "learnerId",
+    "sourceEventId",
+    "observedAt",
+    "skill",
+    "levelBand",
+    "evidenceType",
+    "pathway"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "learning.v1" },
+    "evidenceId": { "type": "string", "minLength": 1 },
+    "learnerId": { "type": "string", "minLength": 1 },
+    "sourceEventId": { "type": "string", "minLength": 1 },
+    "observedAt": { "type": "string", "format": "date-time" },
+    "skill": {
+      "type": "string",
+      "enum": [
+        "vocabulary",
+        "grammar",
+        "listening",
+        "speaking",
+        "reading",
+        "writing"
+      ]
+    },
+    "levelBand": { "type": "string", "minLength": 1 },
+    "evidenceType": {
+      "type": "string",
+      "enum": ["exposure", "retrieval", "production", "correction", "retry"]
+    },
+    "score": { "type": "number" },
+    "maxScore": { "type": "number", "minimum": 0 },
+    "pathway": {
+      "type": "string",
+      "enum": ["everyday", "professional", "yki"]
+    },
+    "profession": { "type": "string", "minLength": 1 }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://floently.com/contracts/learn/v1/task-result.schema.json",
+  "title": "TaskResult",
+  "description": "Mirror of packages/core/schemas/learning.ts TaskResult.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "taskId",
+    "contentVersion",
+    "attemptId",
+    "completion",
+    "startedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "learning.v1" },
+    "taskId": { "type": "string", "minLength": 1 },
+    "contentVersion": { "type": "string", "minLength": 1 },
+    "attemptId": { "type": "string", "minLength": 1 },
+    "completion": {
+      "type": "string",
+      "enum": ["completed", "skipped", "abandoned", "failed"]
+    },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": "string", "format": "date-time" },
+    "score": { "type": "number" },
+    "maxScore": { "type": "number", "minimum": 0 },
+    "retrySuggested": { "type": "boolean" },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "type": ["string", "number", "boolean"]
+      }
+    }
+  }
+}

@@ -1,0 +1,39 @@
+name: KieliValmis clean rebuild static checks
+
+on:
+  pull_request:
+    paths:
+      - "apps/ios/FloentlyLearn/**"
+      - "apps/ios/FloentlyShared/Sources/FloentlyShared/API/**"
+      - "apps/ios/FloentlyShared/Sources/FloentlyShared/Auth/**"
+      - "apps/ios/FloentlyShared/Sources/FloentlyShared/Billing/**"
+      - "apps/ios/FloentlyShared/Sources/FloentlyShared/Learn/**"
+      - "apps/android/FloentlyLearn/**"
+      - "apps/android/shared/src/main/java/com/floently/shared/api/**"
+      - "apps/android/shared/src/main/java/com/floently/shared/auth/**"
+      - "apps/android/shared/src/main/java/com/floently/shared/billing/**"
+      - "apps/android/shared/src/main/java/com/floently/shared/learn/**"
+      - "shared/api-contracts/learn/**"
+      - "docs/LEARN_NEXT_GENERATION_GOVERNING_RULE.md"
+      - "docs/LEARN_SESSION_ARCHITECTURE_V1.md"
+      - "docs/design/KIELIVALMIS_**"
+      - "scripts/verify_kielivalmis_clean_rebuild.sh"
+      - ".github/workflows/kielivalmis-clean-rebuild-static.yml"
+  push:
+    branches:
+      - "learn/**"
+    paths:
+      - "apps/ios/FloentlyLearn/**"
+      - "apps/ios/FloentlyShared/Sources/FloentlyShared/Learn/**"
+      - "apps/android/FloentlyLearn/**"
+      - "apps/android/shared/src/main/java/com/floently/shared/learn/**"
+      - "shared/api-contracts/learn/**"
+      - "scripts/verify_kielivalmis_clean_rebuild.sh"
+
+jobs:
+  static-contract-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify clean rebuild contracts
+        run: bash scripts/verify_kielivalmis_clean_rebuild.sh

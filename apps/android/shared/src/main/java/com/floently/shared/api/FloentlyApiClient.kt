@@ -6,6 +6,7 @@ import org.json.JSONObject
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 
 data class FloentlyApiError(
     val code: String,
@@ -14,11 +15,28 @@ data class FloentlyApiError(
 ) : Exception(message)
 
 class FloentlyApiClient(
-    private val baseUrl: String = "https://learn.floently.com",
+    private val baseUrl: String = "https://learn-api.floently.com",
     private val tokenProvider: () -> String? = { null }
 ) {
     suspend fun get(path: String): JSONObject =
         request(path = path, method = "GET", body = null)
+
+    suspend fun get(
+        path: String,
+        query: Map<String, String>
+    ): JSONObject {
+        if (query.isEmpty()) return get(path)
+
+        val encoded = query.entries.joinToString("&") { (key, value) ->
+            "${URLEncoder.encode(key, Charsets.UTF_8.name())}=" +
+                URLEncoder.encode(value, Charsets.UTF_8.name())
+        }
+        return request(
+            path = "$path?$encoded",
+            method = "GET",
+            body = null
+        )
+    }
 
     suspend fun post(path: String, body: JSONObject): JSONObject =
         request(path = path, method = "POST", body = body)

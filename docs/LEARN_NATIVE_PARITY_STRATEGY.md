@@ -123,3 +123,23 @@ The full no-loss rules are recorded in:
 - docs/LEARN_ANIMATION_AND_INTERACTION_PARITY_CHECKLIST.md
 
 A Learn feature is not complete until its function and interaction parity are verified.
+
+
+---
+
+## Clean redesign clarification — effective 2026-10-02
+
+This strategy is subordinate to `docs/LEARN_NEXT_GENERATION_GOVERNING_RULE.md` for next-generation KieliValmis architecture and visual structure.
+
+For the clean native rebuild:
+
+- parity means required capability is accounted for;
+- the old Expo app remains a behavioural/reference source;
+- old screen geometry is not a target;
+- old navigation hierarchy is not a target;
+- old React Native component structure is not a target;
+- useful behaviour may be combined, moved, improved, or replaced by a better native interaction;
+- deliberate retirement requires an explicit written decision;
+- no silent functional downgrade is allowed.
+
+This clarification resolves any apparent conflict between "no loss" and the approved clean redesign.

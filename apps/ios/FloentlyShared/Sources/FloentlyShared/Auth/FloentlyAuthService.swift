@@ -40,15 +40,27 @@ public final class FloentlyAuthService {
     public func confirmPasswordReset(token: String, password: String) async throws {
         _ = try await api.post(
             "/api/v1/auth/password-reset/confirm",
-            body: PasswordResetConfirmRequest(token: token, password: password),
+            body: PasswordResetConfirmRequest(token: token, password: password, confirmPassword: password),
             as: FloentlyEmpty.self
         )
     }
 
     public func restoreSession() async throws -> FloentlyAuthSession {
-        let session = try await api.get("/api/v1/auth/session", as: FloentlyAuthSession.self)
-        store.save(session)
-        return session
+        guard let existing = store.session, !existing.token.isEmpty else {
+            throw FloentlyAPIError(
+                code: "NO_STORED_SESSION",
+                message: "No stored session is available."
+            )
+        }
+
+        let snapshot = try await api.get("/api/v1/auth/session", as: FloentlyAuthSession.self)
+        let restored = FloentlyAuthSession(
+            user: snapshot.user,
+            token: snapshot.token.isEmpty ? existing.token : snapshot.token,
+            refreshToken: snapshot.refreshToken ?? existing.refreshToken
+        )
+        store.save(restored)
+        return restored
     }
 
     public func logout() async {

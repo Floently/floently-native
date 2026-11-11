@@ -258,3 +258,22 @@ This changes the interpretation of "native" from "one language per app" to a con
 The rule is **best tool for the component, minimum number of boundaries**. Adding languages without a concrete architecture boundary and measurable benefit is prohibited.
 
 This standard applies to the next-generation `floently-native` line. It does not order a rewrite of the current production React Native/Expo app.
+
+
+---
+
+## KieliValmis clean parallel rebuild rule — effective 2026-10-02
+
+Native Learn is now explicitly governed by:
+
+- `docs/LEARN_NEXT_GENERATION_GOVERNING_RULE.md`
+- `docs/design/KIELIVALMIS_CARD_AND_LAYOUT_SYSTEM_V1.md`
+- `docs/design/KIELIVALMIS_HOME_BLUEPRINT_V1.md`
+
+The new KieliValmis client is a clean parallel implementation. It does not merge source code with the legacy Expo client during development and is not a screen-by-screen visual port.
+
+The old app remains production/fallback until the native iOS and Android clients pass the documented replacement gates.
+
+"No-loss parity" protects required product capability. It does not freeze old navigation, screen composition, geometry, or source structure.
+
+Implementation branch work must use development application identities until an explicit production cutover is approved.

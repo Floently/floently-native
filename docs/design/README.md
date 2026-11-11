@@ -31,3 +31,18 @@ The design system is product-wide. Learn, Read and Create must not independently
 Current baseline: **Iloadi UI 1.0.0 — design specification phase**.
 
 No implementation should claim conformance until the complete 1.0.0 design specification has been reviewed and the affected screens have passed device visual QA.
+
+
+## KieliValmis clean native rebuild
+
+KieliValmis Learn has additional frozen product-specific design contracts:
+
+- `KIELIVALMIS_CARD_AND_LAYOUT_SYSTEM_V1.md` — semantic card families, dimensions, alignment, responsive behaviour and truth rules.
+- `KIELIVALMIS_HOME_BLUEPRINT_V1.md` — first clean native Home blueprint.
+- `KIELIVALMIS_NATIVE_RULES.md` — index and precedence rules for the clean rebuild.
+
+These specialize, but do not bypass, the suite design system.
+
+The governing architecture/cutover rule is `../LEARN_NEXT_GENERATION_GOVERNING_RULE.md`.
+
+For KieliValmis, parity protects required capability and interaction quality. It does not require reproducing legacy Expo screen geometry, navigation structure, or locally invented card styles.
